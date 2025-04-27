@@ -1,0 +1,1 @@
+ALTER TABLE Price MODIFY amount DECIMAL(10,2);
