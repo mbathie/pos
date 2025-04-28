@@ -68,6 +68,8 @@ model Category {
   name       String
   orgId      Int
   org        Org         @relation(fields: [orgId], references: [id])
+  recurring Boolean @default(false)
+
   locations  Location[]
   variations Variation[]
   products Product[]
@@ -91,8 +93,6 @@ model Product {
   name      String
   locations ProductLocation[]
   prices    Price[]
-
-  recurring Boolean @default(false)
 
   categoryId Int
   category   Category @relation(fields: [categoryId], references: [id])

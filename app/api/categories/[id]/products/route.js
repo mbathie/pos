@@ -8,7 +8,5 @@ export async function GET(req, { params }) {
 
   const products = await getProducts({categoryId})
 
-  // console.log(JSON.stringify(products, null, 2));
-
   return NextResponse.json(products, { status: 200 });
 }

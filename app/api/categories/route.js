@@ -7,7 +7,7 @@ export async function GET(req) {
     const { employee } = await getEmployee()
 
     const categories = await prisma.category.findMany({
-      where: { orgId: employee.orgId },
+      where: { orgId: employee.orgId, recurring: false },
     })
       
     return NextResponse.json({categories}, { status: 201 })

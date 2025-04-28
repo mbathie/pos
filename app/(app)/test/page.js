@@ -1,30 +1,77 @@
 'use client'
+import React from 'react'
+import { 
+  AlertDialog, 
+  AlertDialogContent, 
+  AlertDialogOverlay, 
+  AlertDialogPortal, 
+  AlertDialogTitle,
+  AlertDialogFooter,
+  AlertDialogCancel 
+} from "@/components/ui/alert-dialog"; // Assuming named imports
 
-import { useState } from "react"
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'; // Importing Radix DropdownMenu
 
-export default function Page() {
-  const [state, setState] = useState(false)
+// const wait = () => new Promise((resolve) => setTimeout(resolve, 1000));
+
+export default () => {
+  const [open, setOpen] = React.useState(false);  // Separate state for dialog
+  // const [openMenu, setOpenMenu] = React.useState(false);      // Separate state for dropdown menu
+
+  // Handle opening and closing of the dialog
+  // const openDialogHandler = () => {
+  //   setOpenDialog(true);
+  //   setOpenMenu(false); // Close the dropdown menu when dialog opens
+  // };
+
+  // // Handle closing the dialog and preventing UI freeze
+  // const closeDialogHandler = () => {
+  //   setOpenDialog(false);
+  // };
 
   return (
-    <>
-      <button
-        onClick={() => setState(!state)}
-        className="rounded-md bg-slate-800 py-2 px-4 text-white text-sm shadow-md hover:bg-slate-700 transition-all"
-      >
-        Toggle Collapse
-      </button>
+    <div>
+      {/* Dropdown Menu Trigger */}
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
+          <button className="bg-blue-500 text-white py-2 px-4 rounded">
+            Open Menu
+          </button>
+        </DropdownMenu.Trigger>
 
-      <div
-        id="collapseContent"
-          className={`${state ? 'max-h-0' : 'max-h-96'} max-h-0 overflow-hidden transition-all duration-300 ease-in-out`}
-      >
-        <div className="mt-4 mx-auto w-8/12 bg-white p-4 rounded-lg shadow border border-slate-200">
-          <p className="text-slate-600 font-light">
-            Use our Tailwind CSS collapse for your website. You can use it for accordion, collapsible items, and much more.
-          </p>
-        </div>
-      </div>
+        <DropdownMenu.Content className="bg-white border shadow-md rounded-md p-2">
+          {/* Dropdown Menu Items */}
+          <DropdownMenu.Item onClick={() => setOpen(true)} className="py-2 px-4 hover:bg-gray-200 cursor-pointer">
+            Open Dialog
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu.Root>
 
-    </>
-  )
-}
+      {/* Dialog itself */}
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogPortal>
+          <AlertDialogOverlay />
+          <AlertDialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            document.body.style.pointerEvents = '';
+          }}>
+            <AlertDialogTitle>Dialog Title</AlertDialogTitle>
+
+            <AlertDialogFooter>
+              <AlertDialogCancel className="bg-gray-500 text-white py-2 px-4 rounded mr-2">
+                Cancel
+              </AlertDialogCancel>
+              <button
+                type="submit"
+                className="bg-blue-500 text-white py-2 px-4 rounded"
+              >
+                Submit
+              </button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogPortal>
+      </AlertDialog>
+    </div>
+  );
+};
