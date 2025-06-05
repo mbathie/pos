@@ -1,38 +1,24 @@
-import { NextResponse } from "next/server"
-import prisma from "@/lib/db"
-import { getEmployee } from "@/lib/auth"
+import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/mongoose";
+import { getEmployee } from "@/lib/auth";
+import { Category } from "@/models";
 
 export async function GET(req) {
-  try {
-    const { employee } = await getEmployee()
+  await connectDB();
 
-    const categories = await prisma.category.findMany({
-      where: { orgId: employee.orgId, recurring: false },
-    })
-      
-    return NextResponse.json({categories}, { status: 201 })
-  } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+  const { employee } = await getEmployee();
+  const org = employee.org;
+
+  const { searchParams } = new URL(req.url);
+  const menu = searchParams.get("menu");
+
+  const query = { org };
+  if (menu) {
+    query.menu = menu;
   }
-}
 
-export async function POST(req) {
-  try {
-    const { employee } = await getEmployee()
-    const body = await req.json()
-    const { name } = body
+  const categories = await Category.find(query);
+  // console.log(categories)
 
-    const category = await prisma.category.create({
-      data: {
-        name,
-        orgId: employee.orgId
-      },
-    })
-      
-    return NextResponse.json({category}, { status: 201 })
-  } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
-  }
+  return NextResponse.json({ categories }, { status: 200 });
 }

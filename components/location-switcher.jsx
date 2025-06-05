@@ -81,10 +81,10 @@ export function LocationSwitcher({}) {
             </DropdownMenuLabel>
             {locations.map((l) => (
               <DropdownMenuItem
-                key={l.id}
+                key={l._id}
                 onClick={() => {
                   setLocation(l);
-                  setLocationStorage(l.id)
+                  setLocationStorage(l._id)
                 }}
                 className="gap-2 p-2">
                 <div className="flex size-6 items-center justify-center rounded-md border">

@@ -10,7 +10,7 @@ export async function middleware(req) {
   try {
     // Verify the token and extract the payload
     const { payload } = await jwtVerify(token, JWT_SECRET); // Verifies the token and returns the decoded payload
-    console.log("Decoded Payload:", payload); // Here you can access the token's payload
+    // console.log("Decoded Payload:", payload); // Here you can access the token's payload
 
     // Optionally, check something in the payload, e.g., the user email or id
     if (!payload?.employeeId) {

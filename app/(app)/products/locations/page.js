@@ -52,7 +52,7 @@ export default function Page() {
   }
 
   return (
-    <Card>
+    <Card className="mx-4">
       <CardHeader>
         <CardTitle className="flex text-lg">Products enabled by location</CardTitle>
         <CardDescription>Total number of products enabled by location and category. Click each number to edit product availability.</CardDescription>

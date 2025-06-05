@@ -4,19 +4,28 @@ import { getEmployee } from "@/lib/auth";
 import bcrypt from "bcrypt"
 import { generateRandomPassword } from '@/lib/utils'
 
-export async function GET() {
-  const { employee, error, status } = await getEmployee()
+export async function GET(req, { params }) {
+  const { employee } = await getEmployee();
+  const orgId = employee.orgId;
+  // const { id } = params
+  // const categoryId = parseInt(id)
 
-  if (error)
-    return NextResponse.json({ error }, { status })
+  // const { employee, error, status } = await getEmployee()
+  // if (error)
+  //   return NextResponse.json({ error }, { status })
+
+  // const products = await getProducts({
+  //   categoryId,
+  //   orgId
+  // })
 
   const employees = await prisma.employee.findMany({
-    where: { orgId: employee.org.id },
+    where: { orgId, deleted: null },
     omit: { hash: true },
     include: { location: true }
   })
 
-  return NextResponse.json(employees, { status: 200 });
+  return NextResponse.json(employees, { status: 200 })
 }
 
 export async function POST(req) {

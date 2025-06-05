@@ -1,12 +1,14 @@
 import { cookies } from 'next/headers'
 import { NextResponse } from "next/server"
 import { jwtVerify } from "jose"
-import prisma from "@/lib/db"
+import { connectDB } from "@/lib/mongoose"
+import { Employee } from "@/models"
 
 const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET)
 
 export async function GET() {
   try {
+    await connectDB()
     const cookieStore = await cookies()
     const token = cookieStore.get('token')
 
@@ -16,17 +18,15 @@ export async function GET() {
 
     const { payload } = await jwtVerify(token.value, SECRET_KEY)
 
-    const employee = await prisma.employee.findUnique({
-      where: { id: payload.employeeId },
-      omit: {
-        hash: true, createdAt: true, updatedAt: true, deletedAt: true
-      }
-    });
+    const employee = await Employee.findById(payload.employeeId).lean()
 
-    if (!employee)
+    if (!employee) {
       return NextResponse.json({ error: "User not found" }, { status: 404 })
+    }
 
-    return NextResponse.json({ employee }, { status: 200 })
+    const { hash, createdAt, updatedAt, deleted, ...safeEmployee } = employee
+
+    return NextResponse.json({ employee: safeEmployee }, { status: 200 })
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })

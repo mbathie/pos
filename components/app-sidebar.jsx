@@ -14,16 +14,18 @@ import {
 
 const teams = [{ name: "Sunny Coast" }];
 const actions = [
-  { name: "Sale", url: "/sale", icon: CircleDollarSign },
+  { name: "Sale", url: "/shop", icon: CircleDollarSign },
 ];
 
 const settings = [
   { 
     title: "Products", icon: Coffee,
     items: [
-      { title: "Subscription", url: "/products/memberships" },
-      { title: "Non Subscription", url: "/products" },
-      { title: "Location Availability", url: "/products/locations" },
+      { title: "Casual Entry", url: "/products/casual" },
+      { title: "Classes", url: "/products/classes" },
+      { title: "Membership", url: "/products/memberships" },
+      { title: "Shop", url: "/products/shop" },
+      { title: "Locations", url: "/products/locations" },
     ]
   },
   { title: "Employees", url: "/employees", icon: Users },

@@ -103,7 +103,7 @@ export default function Page () {
 // </TableCell>
 
   return (
-    <div>
+    <div className='px-4'>
       <Card>
         <CardHeader>
           <CardTitle className="flex">

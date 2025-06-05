@@ -1,140 +1,47 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/db";
+import { connectDB } from "@/lib/mongoose";
 import { getEmployee } from "@/lib/auth";
-import { getProducts } from '@/lib/products'
-
-export async function DELETE(req, { params }) {
-  const { id } = await params;
-  const productId = parseInt(id)
-
-  await prisma.product.update({
-    where: { id: productId },
-    data: { deletedAt: new Date() }
-  })
-
-  return NextResponse.json({}, { status: 201 });
-}
-
+import { Product } from "@/models";
 
 export async function PUT(req, { params }) {
-  try {
-    const { employee } = await getEmployee();
+  await connectDB();
 
-    const { id } = await params;
-    const body = await req.json();
-    const { product } = body;
+  const { product } = await req.json();
+  const { id } = await params
 
-    if (product.new) {
-      console.log(product)
-      const newProduct = await prisma.product.create({
-        data: {
-          data: { thumbnail: product.thumbnail },
-          name: product.name,
-          categories: {
-            connect: [{ id: product.categoryId }],
-          },
-        }
-      })
+  const updatedProduct = await Product.findOneAndUpdate(
+    { _id: id },
+    product,
+    { new: true }
+  );
 
-      const _product = await getProducts({categoryId: product.categoryId, productId: newProduct.id})
-      return NextResponse.json({ product: _product }, { status: 201 });
+  return NextResponse.json({ product: updatedProduct }, { status: 201 });
+}
 
-    }    
+export async function DELETE(req, { params }) {
+  await connectDB();
+  const { employee } = await getEmployee();
+  const org = employee.org;
 
-    console.log(product)
+  const { id } = await params;
 
-    await prisma.product.update({
-      data: { 
-        name: product.name, 
-        data: { thumbnail: product.data.thumbnail }
-      },
-      where: { id: parseInt(id) },
-    });
-
-
-    // Handle prices
-    for (let i = 0; i < product.prices.length; i++) {
-      const pr = product.prices[i];
-
-      // console.log(pr);
-      if (pr.delete)
-        await prisma.price.update({
-          where: { id: pr.id },
-          data: { deletedAt: new Date() },
-        });
-
-      if (!pr.name || !pr.amount) continue;
-
-      else if (pr.id)
-        await prisma.price.update({
-          where: { id: pr.id },
-          data: {
-            amount: parseFloat(pr.amount),
-            name: pr.name,
-          },
-        });
-      else {
-        await prisma.price.create({
-          data: {
-            productId: product.id,
-            amount: parseFloat(pr.amount),
-            name: pr.name,
-          },
-        });
-      }
+  const product = await Product.findById(id).populate({
+    path: 'category',
+    strictPopulate: false,
+    populate: {
+      path: 'org',
+      strictPopulate: false
     }
+  });
 
-    for (const v of product.variations) {
+  console.log(product.category?.org?._id?.toString())
+  console.log(org._id.toString())
 
-      if (v.new) {
-        const variation = await prisma.variation.create({
-          data: { name: v.name, categoryId: product.categoryId, multi: false }
-        })
-        continue
-      }
-
-      // VARIANTS
-      for (const vv of v?.variants) {
-        let variantId = vv.id;
-      
-        if (!variantId) {
-          const newVariant = await prisma.variant.create({
-            data: {
-              name: vv.name,
-              amount: vv.amount ? parseFloat(vv.amount) : 0,
-              variationId: vv.variationId,
-            },
-          });
-          variantId = newVariant.id;
-        }
-      
-        const _vv = await prisma.productVariant.upsert({
-          where: {
-            productId_variantId: {
-              productId: product.id,
-              variantId,
-            },
-          },
-          update: {
-            enabled: vv.enabled,
-          },
-          create: {
-            productId: product.id,
-            variantId,
-            enabled: vv.enabled,
-          },
-        });
-      
-        // console.log(_vv);
-      }
-    }
-
-    const _product = await getProducts({categoryId: product.categoryId, productId: parseInt(id)})
-  
-
-    return NextResponse.json({ product: _product }, { status: 201 });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  if (!product || product.category?.org?._id?.toString() !== org._id.toString()) {
+    return NextResponse.json({ error: "Unauthorized or not found" }, { status: 403 });
   }
+
+  await product.delete();
+
+  return NextResponse.json({ message: "Product deleted successfully" }, { status: 200 });
 }
