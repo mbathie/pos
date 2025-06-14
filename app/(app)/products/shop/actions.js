@@ -150,7 +150,7 @@ export function actions({category, setProducts}) {
     });
   }
 
-  const addModCat = ({ pIdx, name }) => {
+  const addModCat = ({ pIdx, name, multi }) => {
     setProducts(draft => {
       const product = draft[pIdx];
       if (!product.modCats) {
@@ -160,12 +160,23 @@ export function actions({category, setProducts}) {
       product.modCats.push({
         name,
         _id: generateObjectId(),
-        mods: []
+        mods: [],
+        multi
       });
 
       product.updated = true;
     });
   };
+
+  const updateModCat = ({ pIdx, mcIdx, key, value }) => {
+    setProducts(draft => {
+      const product = draft[pIdx];
+      if (!product?.modCats?.[mcIdx]) return;
+
+      product.modCats[mcIdx][key] = value;
+      product.updated = true;
+    });
+  }
 
   const addMod = ({ pIdx, mcIdx }) => {
     setProducts(draft => {
@@ -223,6 +234,7 @@ export function actions({category, setProducts}) {
     deleteProduct,
     deleteVariation,
     addModCat,
+    updateModCat,
     addMod,
     updateMod,
     saveMod

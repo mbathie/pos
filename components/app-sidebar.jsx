@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Users, CircleDollarSign, Coffee } from "lucide-react";
+import { MapPin, Users, CircleDollarSign, Coffee, Settings } from "lucide-react";
 import { NavMenu } from "@/components/nav-menu";
 import { NavUser } from "@/components/nav-user";
 import { LocationSwitcher } from "@/components/location-switcher";
@@ -30,6 +30,8 @@ const settings = [
   },
   { title: "Employees", url: "/employees", icon: Users },
   { title: "Locations", url: "/locations", icon: MapPin },
+  { title: "Settings", url: "/settings", icon: Settings },
+
 ];
 
 export function AppSidebar(props) {

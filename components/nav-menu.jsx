@@ -63,7 +63,7 @@ export function NavMenu({ actions, settings }) {
                     <PopoverTrigger asChild>
                       <SidebarMenuItem>
                         <SidebarMenuButton tooltip={item.title}>
-                          {item.icon && <item.icon className="h-5 w-5" />}
+                          {item.icon && <item.icon className="size-5" />}
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     </PopoverTrigger>
@@ -95,8 +95,8 @@ export function NavMenu({ actions, settings }) {
                   <SidebarMenuItem>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton tooltip={item.title}>
-                        {item.icon && <item.icon className="h-5 w-5" />}
-                        <span className="text-sm">{item.title}</span>
+                        {item.icon && <item.icon className="size-5"/>}
+                        <span className="text-sm ml-1">{item.title}</span>
                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
@@ -106,7 +106,7 @@ export function NavMenu({ actions, settings }) {
                           <SidebarMenuSubItem key={subItem.title}>
                             <SidebarMenuSubButton asChild>
                               <Link href={subItem.url}>
-                                <span>{subItem.title}</span>
+                                <span className="ml-1">{subItem.title}</span>
                               </Link>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
@@ -123,8 +123,8 @@ export function NavMenu({ actions, settings }) {
           return (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton asChild>
-                <Link href={item.url} className="flex items-center space-x-2">
-                  <item.icon className="h-5 w-5" />
+                <Link href={item.url} className="flex items-center space-x-1">
+                  <item.icon className="size-5" />
                   <span className="text-sm">{item.title}</span>
                 </Link>
               </SidebarMenuButton>
@@ -133,7 +133,7 @@ export function NavMenu({ actions, settings }) {
         })}
 
         {/* Theme toggle */}
-        <SidebarMenuItem>
+        {/* <SidebarMenuItem>
           <SidebarMenuButton asChild>
             <div className="flex items-center space-x-2">
               {isDarkMode ? (
@@ -150,7 +150,7 @@ export function NavMenu({ actions, settings }) {
               />
             </div>
           </SidebarMenuButton>
-        </SidebarMenuItem>
+        </SidebarMenuItem> */}
       </SidebarMenu>
     </SidebarGroup>
   );

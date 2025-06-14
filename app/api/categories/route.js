@@ -18,7 +18,6 @@ export async function GET(req) {
   }
 
   const categories = await Category.find(query);
-  // console.log(categories)
 
   return NextResponse.json({ categories }, { status: 200 });
 }

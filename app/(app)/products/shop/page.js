@@ -10,11 +10,12 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogDescription } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Separator } from '@radix-ui/react-separator';
-import { Button } from '@/components/ui/button';
-import { Tag, ChevronsUpDown, Plus, Ellipsis, Info } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Separator } from '@radix-ui/react-separator'
+import { Button } from '@/components/ui/button'
+import { Tag, ChevronsUpDown, Plus, Ellipsis, Info } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from "@/components/ui/switch"
 
 import { actions } from './actions'
 import { useUI } from '../useUI';
@@ -35,7 +36,7 @@ export default function Page() {
     addVariation, updateVariation, 
     updateProduct, saveProduct, addProduct, deleteProduct,
     deleteVariation, addModCat, 
-    addMod, updateMod, saveMod } = actions({category, setProducts})
+    addMod, updateMod, saveMod, updateModCat } = actions({category, setProducts})
   const contentRefs = useRef({});
   const { productsUI, toggleExpanded, toggleAll } = useUI({products, contentRefs});
 
@@ -111,7 +112,7 @@ export default function Page() {
           />
           <Button
             onClick={() => {
-              addModCat({pIdx: addItem.pIdx, name: addItem.name})
+              addModCat({pIdx: addItem.pIdx, name: addItem.name, multi: false})
               setAddItemOpen(false)
               setAddItem({})
             }}
@@ -330,7 +331,7 @@ export default function Page() {
                           </div>
 
                           <div className="flex space-x-2-">
-                            <Label className="text-sm w-32">Variations</Label>
+                            <Label className="text-sm mr-2">Variations</Label>
                             <Button
                               size="icon" variant="outline"
                               onClick={() => addVariation({pIdx})}
@@ -394,7 +395,7 @@ export default function Page() {
                           {/* ADD MODIFICATION DROPDOWN */}
 
                           <div className='flex'>
-                            <Label className='w-32'>Mod Groups</Label>
+                            <Label className='mr-2'>Mod Groups</Label>
                             <Button
                               className="text-xs"
                               variant="outline"
@@ -411,9 +412,23 @@ export default function Page() {
 
                           {/* MODIFICATIONS (used to be called variations) */}
 
-                          <div className='grid grid-cols-[1fr_4fr] gap-y-2'>
+                          <div className='grid grid-cols-[1fr_1fr_4fr] gap-y-2'>
                             <div></div>
-                            <div className='flex space-x-2 -mb-1'>
+                            <div className='flex space-x-2'>
+                              <Label className="text-xs">Multi</Label>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Info size="15"/>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Allow more than one mod to</p>
+                                    <p>be selected from the group</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                            <div className='flex space-x-2'>
                               <Label className="text-xs">Mods</Label>
                               <TooltipProvider>
                                 <Tooltip>
@@ -427,64 +442,66 @@ export default function Page() {
                                 </Tooltip>
                               </TooltipProvider>
                             </div>
-
                             {p.modCats?.map((mp, mcIdx) => {
                               return (
                                 <React.Fragment key={mcIdx}>
-                                <div key={mcIdx} className='h-full w-32 flex'>
-                                  {!mp.new &&
-                                  <Label>{mp.name}</Label>
-                                  }
-                                </div>
-
-                                <div className='flex flex-wrap space-x-2- space-y-2- gap-2'>
-                                {mp?.mods?.map((m, mIdx) => {
-                                  return (
-                                    <React.Fragment key={mIdx}>
-                                      {!m.new &&
-                                        <div key={mIdx}>
-                                          <Button
-                                            className="cursor-pointer"
-                                            onClick={() => updateMod({ pIdx, mcIdx, mIdx, key: "enabled", value: !m.enabled })}
-                                            variant={m.enabled ? "" : "outline"}>{m.name} {`${!isNaN(m?.amount) ? '$' + Number(m.amount).toFixed(2) : ''}`}
-                                          </Button>
-                                        </div>
-                                      }
-                                      {m.new &&
-                                        <div key={mIdx} className='flex space'>
-                                          <Input
-                                            value={m.name || ""} placeholder="Soy" className="w-24 rounded-r-none h-[32.5px]-"
-                                            onChange={(e) => updateMod({ pIdx, mcIdx, mIdx, key: "name", value: e.target.value })}
-                                          />
-                                          <Input
-                                            size="sm"
-                                            onChange={(e) => updateMod({ pIdx, mcIdx, mIdx, key: "amount", value: e.target.value })}
-                                            value={m.amount || ""} placeholder="$0.75" className="w-24 rounded-none h-[32.5px]-"></Input>
-                                          <Button
-                                            className="rounded-l-none"
-                                            onClick={() => saveMod({ pIdx, mcIdx, mIdx })}
-                                          >
-                                            Save
-                                          </Button>
-                                        </div>
-                                      }
-                                    </React.Fragment>
-                                  ) 
-                                })}
-                                {!mp.new &&
-                                <Button
-                                  variant="outline"
-                                  onClick={() => addMod({ pIdx, mcIdx })}
-                                >
-                                  <Plus />
-                                </Button>
-                                }
-
-                                </div>
+                                  <div className='h-full w-28 flex items-start'>
+                                    {!mp.new &&
+                                      <Label>{mp.name}</Label>
+                                    }
+                                  </div>
+                                  <div>
+                                    <Switch
+                                      checked={mp.multi}
+                                      onCheckedChange={(value) => updateModCat({ pIdx, mcIdx, key: "multi", value })}
+                                    />
+                                  </div>
+                                  <div className='flex flex-wrap space-x-2- space-y-2- gap-2'>
+                                    {mp?.mods?.map((m, mIdx) => {
+                                      return (
+                                        <React.Fragment key={mIdx}>
+                                          {!m.new &&
+                                            <div key={mIdx}>
+                                              <Button
+                                                className="cursor-pointer"
+                                                onClick={() => updateMod({ pIdx, mcIdx, mIdx, key: "enabled", value: !m.enabled })}
+                                                variant={m.enabled ? "" : "outline"}>{m.name} {`${!isNaN(m?.amount) ? '$' + Number(m.amount).toFixed(2) : ''}`}
+                                              </Button>
+                                            </div>
+                                          }
+                                          {m.new &&
+                                            <div key={mIdx} className='flex space'>
+                                              <Input
+                                                value={m.name || ""} placeholder="Soy" className="w-24 rounded-r-none h-[32.5px]-"
+                                                onChange={(e) => updateMod({ pIdx, mcIdx, mIdx, key: "name", value: e.target.value })}
+                                              />
+                                              <Input
+                                                size="sm"
+                                                onChange={(e) => updateMod({ pIdx, mcIdx, mIdx, key: "amount", value: e.target.value })}
+                                                value={m.amount || ""} placeholder="$0.75" className="w-24 rounded-none h-[32.5px]-"></Input>
+                                              <Button
+                                                className="rounded-l-none"
+                                                onClick={() => saveMod({ pIdx, mcIdx, mIdx })}
+                                              >
+                                                Save
+                                              </Button>
+                                            </div>
+                                          }
+                                        </React.Fragment>
+                                      ) 
+                                    })}
+                                    {!mp.new &&
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => addMod({ pIdx, mcIdx })}
+                                    >
+                                      <Plus />
+                                    </Button>
+                                    }
+                                  </div>
                                 </React.Fragment>
                               )
                             })}
-
                           </div>
 
                           
@@ -506,13 +523,6 @@ export default function Page() {
         onConfirm={() => {
           console.log(toDelete)
           deleteProduct({...toDelete})
-          // if (type === 'product') {
-          //   setProducts((_p) => {
-          //     _p.splice(productIdx, 1);
-          //   });
-          // } else if (type === 'variation') {
-          //   productHooks[productIdx].deleteVariation(variationIdx);
-          // }
           setDeleteOpen(false);
         }}
       />

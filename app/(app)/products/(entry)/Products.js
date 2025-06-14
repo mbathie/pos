@@ -84,7 +84,7 @@ export default function Page({products, setProducts, units, title, categoryName}
   return (
     <div className='flex flex-col space-y-4'>
       <div className="flex">
-        <div className='text-lg- font-semibold mb-2'>{title}</div>
+        <div className='font-semibold mb-2'>{title}</div>
         <div className='flex-1'/>
         <Button size="sm" className="mr-2" variant="outline" onClick={() => setAddOpen(true)}>
           New Product

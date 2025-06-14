@@ -2,28 +2,22 @@
 
 import * as React from "react"
 import { ChevronsUpDown, Plus, MapPin } from "lucide-react"
-
+import { useGlobals } from '@/lib/globals'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
+  SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
 } from "@/components/ui/sidebar"
 
 export function LocationSwitcher({}) {
-
   const { isMobile } = useSidebar()
-  const [location, setLocation] = React.useState()
   const [locations, setLocations] = React.useState([])
+  const { location, setLocation } = useGlobals()
 
+  
+  
   React.useEffect(() => {
     async function start() {
       // Fetch locations from the server
@@ -35,12 +29,8 @@ export function LocationSwitcher({}) {
       var employee = await userRes.json()
       employee = employee.employee
 
-      // Check if there's a saved locationId in localStorage, else fallback to employee's locationId
-      const storedLocationId = localStorage.getItem('locationId')
-      const defaultLocationId = storedLocationId || employee.locationId
-
-      // Find the default location based on stored or employee's locationId
-      const defaultLocation = locations.find((l) => l.id == defaultLocationId)
+      // Find the default location based on employee's locationId
+      const defaultLocation = locations.find((l) => l._id === employee.locationId)
 
       setLocations(locations)
       setLocation(defaultLocation || locations[0])
@@ -48,11 +38,15 @@ export function LocationSwitcher({}) {
     start()
   },[])
 
-  if (!locations.length) return (<></>)
-
-  const setLocationStorage = (locationId) => {
-    localStorage.setItem('locationId', locationId)
+  async function setLocationCookie(location) {
+    await fetch(`/api/auth/location`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ locationId: location._id }),
+    })
   }
+
+  if (!locations.length) return (<></>)
 
   return (
     <SidebarMenu>
@@ -83,8 +77,8 @@ export function LocationSwitcher({}) {
               <DropdownMenuItem
                 key={l._id}
                 onClick={() => {
-                  setLocation(l);
-                  setLocationStorage(l._id)
+                  setLocation(l)
+                  setLocationCookie(l)
                 }}
                 className="gap-2 p-2">
                 <div className="flex size-6 items-center justify-center rounded-md border">

@@ -5,17 +5,23 @@ const mongoose = require('mongoose');
 const OrgSchema = new mongoose.Schema({
   name: String,
   phone: String,
-}, { timestamps: true });
+}, { 
+  timestamps: true,
+  strict: false
+ });
 
 const Org = mongoose.models.Org || mongoose.model('Org', OrgSchema);
 
 // ==== Location ====
 const LocationSchema = new mongoose.Schema({
   name: String,
+  phone: String,
+  address: mongoose.Schema.Types.Mixed,
+  hours: mongoose.Schema.Types.Mixed,
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org' },
   employees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }],
   customers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }],
-}, { timestamps: true });
+}, { timestamps: true, strict: false });
 
 const Location = mongoose.models.Location || mongoose.model('Location', LocationSchema);
 
@@ -27,9 +33,19 @@ const EmployeeSchema = new mongoose.Schema({
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org' },
   location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
   role: { type: String, enum: ['ADMIN', 'MANAGER', 'STAFF', 'TERMINAL'] },
-}, { timestamps: true });
+}, { timestamps: true, strict: false });
 
 const Employee = mongoose.models.Employee || mongoose.model('Employee', EmployeeSchema);
+
+// ==== Category ====
+const CategorySchema = new mongoose.Schema({
+  name: String,
+  org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org' },
+  menu: String,
+  productIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+}, { timestamps: true });
+
+const Category = mongoose.models.Category || mongoose.model('Category', CategorySchema);
 
 // ==== Product ====
 const ProductSchema = new mongoose.Schema({
@@ -56,28 +72,41 @@ ProductSchema.plugin(mongooseDelete, { deletedAt: true, overrideMethods: 'all' }
 
 const Product = mongoose.models.Product || mongoose.model('Product', ProductSchema);
 
-// ==== Category ====
-const CategorySchema = new mongoose.Schema({
+// ==== Customer ====
+const CustomerSchema = new mongoose.Schema({
   name: String,
+  email: String,
+  phone: String,
+  orgs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Org' }],
+}, { timestamps: true, strict: false });
+
+const Customer = mongoose.models.Customer || mongoose.model('Customer', CustomerSchema);
+
+// ==== Transaction ====
+const TransactionSchema = new mongoose.Schema({
+  cart: mongoose.Schema.Types.Mixed,
+  total: Number,
+  subtotal: Number,
+  tax: Number,
+  stripe: mongoose.Schema.Types.Mixed,
+  cash: mongoose.Schema.Types.Mixed,
+  paymentMethod: String,
+  status: String,
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org' },
-}, { timestamps: true });
+  location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
+  customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+  employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
+}, { timestamps: true, strict: false });
 
-CategorySchema.virtual('products', {
-  ref: 'Product',
-  localField: '_id',
-  foreignField: 'category',
-});
+const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', TransactionSchema);
 
-CategorySchema.set('toObject', { virtuals: true });
-CategorySchema.set('toJSON', { virtuals: true });
-
-const Category = mongoose.models.Category || mongoose.model('Category', CategorySchema);
-
-// ==== Exports ====
+// ==== Updated Exports ====
 module.exports = {
   Org,
   Location,
   Employee,
+  Category,
   Product,
-  Category
+  Customer,
+  Transaction,
 };

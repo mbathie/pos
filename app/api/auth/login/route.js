@@ -12,7 +12,7 @@ export async function POST(req) {
     await connectDB();
     const { email, password } = await req.json();
 
-    const employee = await Employee.findOne({ email });
+    const employee = await Employee.findOne({ email }).populate('org').populate('location').lean();
 
     if (!employee) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
@@ -24,10 +24,13 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
+    console.log(employee.locationId)
+
     const token = await new SignJWT({
+      selectedLocationId: employee.locationId.toString(),
       email,
       employeeId: employee._id.toString(),
-      orgId: employee.orgId.toString(),
+      orgId: employee.org._id.toString(),
     })
       .setProtectedHeader({ alg: "HS256" })
       .setExpirationTime("1y")

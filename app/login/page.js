@@ -36,7 +36,6 @@ export default function LoginForm() {
         return;
       }
 
-
       window.location.href = "/dashboard"
     } catch (err) {
       setError("Something went wrong");

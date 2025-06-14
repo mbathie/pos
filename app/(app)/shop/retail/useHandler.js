@@ -2,6 +2,16 @@
 
 export function useHandler() {
 
+  const setQty = async ({ setProduct, type }) => {
+    setProduct(draft => {
+      if (type === 'increment') {
+        draft.qty = (draft.qty ?? 0) + 1;
+      } else if (type === 'decrement') {
+        draft.qty = Math.max(0, (draft.qty ?? 0) - 1);
+      }
+    });
+  }
+
   const getCategories = async ({menu}) => {
     const res = await fetch(`/api/categories?${menu}`)
     const categories = await res.json()
@@ -24,9 +34,23 @@ export function useHandler() {
 
   const selectMod = async ({ setProduct, mcIdx, mIdx }) => {
     setProduct(draft => {
-      const mod = draft.modCats?.[mcIdx]?.mods?.[mIdx];
-      if (mod) {
-        mod.selected = !mod.selected;
+      const modCat = draft.modCats?.[mcIdx];
+      const selectedMod = modCat?.mods?.[mIdx];
+      if (!modCat || !selectedMod) return;
+
+      if (!modCat.multi) {
+        if (selectedMod.selected) {
+          // Toggle off if already selected
+          selectedMod.selected = false;
+        } else {
+          // Select this mod and deselect others
+          modCat.mods.forEach((mod, index) => {
+            mod.selected = index === mIdx;
+          });
+        }
+      } else {
+        // Multi-select: toggle normally
+        selectedMod.selected = !selectedMod.selected;
       }
     });
   };
@@ -54,8 +78,9 @@ export function useHandler() {
       });
     }
 
-    return total;
+    // Multiply by quantity (default to 1 if undefined)
+    return total * (product.qty || 1);
   };
 
-  return { getCategories, getProducts, selectVariation, selectMod, getProductTotal }
+  return { getCategories, getProducts, selectVariation, selectMod, getProductTotal, setQty }
 }

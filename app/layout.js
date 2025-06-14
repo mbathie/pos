@@ -3,10 +3,9 @@ import "./globals.css";
 import { Roboto_Mono } from "next/font/google";
 import { GlobalProvider } from "@/components/global-context";
 import { cookies } from "next/headers";
-import { ThemeProvider } from "@/components/theme-provider"; // ✅ Correct Named Import
+import { ThemeProvider } from "@/components/theme-provider"
 
 const roboto = Roboto_Mono({ subsets: ['latin'] })
-
 
 export const metadata = {
   title: "POS Management dash",

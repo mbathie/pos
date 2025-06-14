@@ -5,15 +5,19 @@ import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHe
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from "@/components/ui/checkbox"
-import { Check, ChevronRight } from "lucide-react"
+import { Check, ChevronRight, Minus, Plus } from "lucide-react"
 import { useHandler } from './useHandler'
 import { useImmer } from 'use-immer'
+import { useGlobals } from '@/lib/globals'
+import { calcCartValueShop } from '@/lib/product'
 
 export default function Page() {
+
+  const { addToCart } = useGlobals()
   
   const { 
-    getCategories, getProducts, selectVariation, 
-    selectMod, getProductTotal } = useHandler()
+    getProducts, selectVariation, 
+    selectMod, getProductTotal, setQty } = useHandler()
 
   const [categories, setCategories] = useState([])
   const [category, setCategory] = useState(undefined)
@@ -35,6 +39,11 @@ export default function Page() {
       const res = await fetch('/api/categories?menu=shop');
       const c = await res.json();
       setCategories(c.categories);
+      if (c.categories.length > 0) {
+        const p = await getProducts({ category: c.categories[0] });
+        setProducts(p.products);
+        setCategory(c.categories[0]);
+      }
     }
     start()
   },[])
@@ -93,9 +102,9 @@ export default function Page() {
                   >
                     {/* <Checkbox checked={v.selected} /> */}
                     <div className='flex flex-col gap-2'>
-                      <div>{mc.name}</div>
+                      {mc.mods.some(m => m.enabled) && <div>{mc.name}</div>}
                       <div className='flex flex-wrap gap-2'>
-                        {mc.mods.map((m, mIdx) => {
+                        {mc.mods.filter(m => m.enabled).map((m, mIdx) => {
                           return (
                             <div 
                               key={m._id} className='gap-2 flex items-center flex-row'
@@ -114,6 +123,15 @@ export default function Page() {
               })}
             </div>
 
+            <div className='flex flex-col gap-2'>
+              <div className='text-sm'>Qty</div>
+              <div className='flex gap-2'>
+                <Button variant="" size="sm" onClick={() => setQty({ setProduct, type: 'decrement' })}><Minus /></Button>
+                <Button variant="" size="sm" onClick={() => setQty({ setProduct, type: 'increment' })}><Plus /></Button>
+                <div className='ml-auto'>{product?.qty || 0}</div>
+              </div>
+            </div>
+
           </div>
 
           <SheetFooter>
@@ -127,7 +145,11 @@ export default function Page() {
             <SheetClose asChild>
               <Button 
                 type="submit" 
-                disabled={!product?.variations?.some(v => v.selected)}
+                disabled={!product?.variations?.some(v => v.selected) || product?.qty === 0}
+                onClick={async () => {
+                  const _product = await calcCartValueShop({product})
+                  addToCart(_product)
+                }}
               >
                 Add
               </Button>
