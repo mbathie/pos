@@ -178,7 +178,7 @@ export default function Page() {
         {/* Left Panel */}
         <div className="flex flex-col w-40 bg-accent rounded-tr-lg overflow-y-auto h-full">
           {categories.map((c, cIdx) => (
-            <div key={cIdx} className={`${category && c.id === category.id ? 'bg-accent-foreground text-black' : ''}`}>
+            <div key={cIdx} className={`${category && c._id === category._id ? 'bg-accent-foreground text-black' : ''}`}>
               <Button
                 variant="outline"
                 onClick={async () => {

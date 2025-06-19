@@ -12,7 +12,7 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const menu = searchParams.get("menu");
 
-  const query = { org };
+  const query = { org: employee.orgId };
   if (menu) {
     query.menu = menu;
   }

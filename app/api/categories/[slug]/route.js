@@ -20,7 +20,7 @@ export async function POST(req, { params }) {
     ? { _id: slug, org }
     : { name: slug, org };
 
-  const update = isValidObjectId ? {} : { name: slug, org, ...(menu && { menu }) };
+  const update = isValidObjectId ? {} : { name: slug, org: employee.orgId, ...(menu && { menu }) };
 
   const category = await Category.findOneAndUpdate(
     query,
