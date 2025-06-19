@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react';
+import { z } from "zod";
 // import { useGlobals } from '@/lib/globals'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label';
@@ -34,6 +35,9 @@ export default function Customer({ open, onOpenChange, setCustomer }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [error, setError] = useState('');
+
+  const emailSchema = z.string().email();
 
   const handleCreateCustomer = async () => {
     const res = await fetch('/api/customers', {
@@ -44,12 +48,17 @@ export default function Customer({ open, onOpenChange, setCustomer }) {
 
     const customer = await res.json();
     if (!res.ok) {
-      console.error('Error creating customer:', customer.error);
+      if (customer?.exists) {
+        setError('A customer with this email already exists.');
+      } else {
+        setError(customer?.error || 'Failed to create customer.');
+      }
       return;
     }
 
     setCustomer(customer)
     onOpenChange(false);
+    setError('');
     setName('');
     setEmail('');
     setPhone('');
@@ -59,17 +68,19 @@ export default function Customer({ open, onOpenChange, setCustomer }) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Connect customer to transaction</DialogTitle>
+          <DialogTitle>
+          </DialogTitle>
           <DialogDescription>
-            Connect a customer to record any reward points, or apply discounts
           </DialogDescription>
         </DialogHeader>
+
+        <Label className="text-md">Search Customers</Label>
         <div className="flex gap-2">
           <SearchCustomers setCustomer={setCustomer} onOpenChange={onOpenChange} />
         </div>
 
         <div className='flex flex-col gap-2'>
-          <Label className="text-md">New Customer</Label>
+          <Label className="text-md">Or, Create a New Customer</Label>
 
           <div className='flex gap-1'>
             <Label className="w-14">Name</Label>
@@ -84,8 +95,15 @@ export default function Customer({ open, onOpenChange, setCustomer }) {
             <Input name="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
           </div>
 
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+
           <div className='flex ml-auto'>
-            <Button onClick={handleCreateCustomer}>Create Customer</Button>
+            <Button
+              onClick={handleCreateCustomer}
+              disabled={!emailSchema.safeParse(email).success}
+            >
+              Create Customer
+            </Button>
           </div>
         </div>
 
@@ -105,6 +123,7 @@ export function SearchCustomers({ setCustomer, onOpenChange }) {
   const [open, setOpen] = React.useState(false)
   const [value, setValue] = React.useState("")
   const [customers, setCustomers] = React.useState([]);
+  const [input, setInput] = React.useState("");
 
   const searchCustomers = async (search) => {
     if (search.trim().length < 3) {
@@ -133,44 +152,52 @@ export function SearchCustomers({ setCustomer, onOpenChange }) {
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[290px] justify-between"
+          className="w-[380px] justify-between"
         >
-          {value
-            ? customers.find((customer) => customer.name === value)?.name
-            : "Search customers..."}
+          {value || "Search..."}
           <ChevronsUpDown className="opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[290px] p-0">
+      <PopoverContent className="w-[380px] p-0">
         <Command>
           <CommandInput
             placeholder="Search customer..."
             className="h-9"
-            onValueChange={searchCustomers}
+            onValueChange={(val) => {
+              setInput(val);
+              if (val.trim().length >= 3) {
+                searchCustomers(val);
+              } else {
+                setCustomers([]);
+              }
+            }}
           />
           <CommandList>
             <CommandEmpty>No customer found.</CommandEmpty>
             <CommandGroup>
-              {Array.isArray(customers) && customers.map((customer) => (
-                <CommandItem
-                  key={customer._id}
-                  value={customer.name}
-                  onSelect={() => {
-                    setValue(customer.name);
-                    setOpen(false);
-                    setCustomer(customer);
-                    if (onOpenChange) onOpenChange(false);
-                  }}
-                >
-                  {customer.name} ({customer.email})
-                  <Check
-                    className={cn(
-                      "ml-auto",
-                      value === customer.name ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                </CommandItem>
-              ))}
+              {Array.isArray(customers) && customers.map((customer) => {
+                console.log(customer);
+                return (
+                  <CommandItem
+                    key={customer._id}
+                    value={`${customer.name} ${customer.email}`}
+                    onSelect={() => {
+                      setValue(`${customer.name} ${customer.email}`);
+                      setOpen(false);
+                      setCustomer(customer);
+                      if (onOpenChange) onOpenChange(false);
+                    }}
+                  >
+                    {customer.name} ({customer.email})
+                    <Check
+                      className={cn(
+                        "ml-auto",
+                        value === `${customer.name} ${customer.email}` ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                  </CommandItem>
+                )
+              })}
             </CommandGroup>
           </CommandList>
         </Command>

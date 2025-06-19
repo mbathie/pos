@@ -20,6 +20,9 @@ import { Switch } from "@/components/ui/switch"
 import { actions } from './actions'
 import { useUI } from '../useUI';
 import Delete from '../Delete'
+import { FolderSelect } from './folderSelect'
+import IconSelect  from '@/components/icon-select'
+import colors from 'tailwindcss/colors';
 
 export default function Page() {
   const [categories, setCategories] = useState([]);
@@ -32,11 +35,16 @@ export default function Page() {
   const [ addItem, setAddItem ] = useState({})
   const [ addItemOpen, setAddItemOpen ] = useState(false)
 
+  // Icon dialog state
+  const [iconDialogOpen, setIconDialogOpen] = useState(false);
+  const [iconDialogProductIdx, setIconDialogProductIdx] = useState(null);
+  const [iconDialogQuery, setIconDialogQuery] = useState('');
+
   const { 
     addVariation, updateVariation, 
     updateProduct, saveProduct, addProduct, deleteProduct,
     deleteVariation, addModCat, 
-    addMod, updateMod, saveMod, updateModCat } = actions({category, setProducts})
+    addMod, updateMod, saveMod, updateModCat, setFolder } = actions({category, setProducts})
   const contentRefs = useRef({});
   const { productsUI, toggleExpanded, toggleAll } = useUI({products, contentRefs});
 
@@ -262,14 +270,18 @@ export default function Page() {
                       >
                         <CardHeader>
                           <CardTitle className="flex w-full items-center space-x-4">
-                            <div onClick={() => setDialogOpen(p.id, true)}>
-                              {!p.data?.thumbnail ? (
-                                <Button className="bg-white rounded-lg w-14 h-14">
+                          <div onClick={() => {
+                            setIconDialogOpen(true);
+                            setIconDialogProductIdx(pIdx);
+                            setIconDialogQuery(p.name);
+                          }}>
+                              {!p?.thumbnail ? (
+                                <Button className="bg-white rounded-lg w-16 h-16">
                                   <Tag className="!w-8 !h-8" />
                                 </Button>
                               ) : (
-                                <Button className="bg-white rounded-lg p-1 w-14 h-14">
-                                  <img src={p.data.thumbnail} alt="Thumbnail" />
+                                <Button className="rounded-lg -p-1 w-16 h-16">
+                                  <img className='rounded-lg w-16 h-16' src={p.thumbnail} alt="Thumbnail" />
                                 </Button>
                               )}
                             </div>
@@ -319,15 +331,28 @@ export default function Page() {
                         </CardHeader>
                         <CardContent className="flex flex-col space-y-2">
 
-                          <div className="flex flex-col gap-1">
+                          <div className="flex flex-col gap-1 w-[320px]">
                             <Label htmlFor={c.id}>Product Name</Label>
                             <Input
-                                id={c.id}
-                                type="text"
-                                placeholder="Flat White"
-                                onChange={(e) => updateProduct({pIdx, key: "name", value: e.target.value})}
-                                value={p.name || ''}
-                              />
+                              id={c.id}
+                              type="text"
+                              placeholder="Flat White"
+                              onChange={(e) => updateProduct({pIdx, key: "name", value: e.target.value})}
+                              value={p.name || ''}
+                            />
+                          </div>
+
+                            <div className="flex flex-col gap-1">
+                            <Label>Folder</Label>
+                            <div className='flex'>
+                              <FolderSelect pIdx={pIdx} product={p} setFolder={setFolder}/>
+                              {p.folder?.color && (
+                                <div
+                                  style={{ backgroundColor: colors?.[p.folder.color.split('-')[0]]?.[p.folder.color.split('-')[1]] }}
+                                  className="size-9 rounded-md border ml-2"
+                                />
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex space-x-2-">
@@ -525,6 +550,13 @@ export default function Page() {
           deleteProduct({...toDelete})
           setDeleteOpen(false);
         }}
+      />
+      <IconSelect
+        open={iconDialogOpen}
+        setOpen={setIconDialogOpen}
+        pIdx={iconDialogProductIdx}
+        query={iconDialogQuery}
+        updateProduct={updateProduct}
       />
     </>
   );

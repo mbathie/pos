@@ -25,17 +25,19 @@ export async function POST(req, { params }) {
   if (product._id) {
     _product = await Product.findOneAndUpdate(
       { _id: product._id },
-      { ...product, category: category._id },
+      { ...product, category: category._id, folder: product.folder?._id || null },
       { new: true, upsert: true }
     );
   } else {
     _product = await Product.create({
       ...product,
       category: category._id,
+      folder: product.folder?._id || null,
     });
   }
 
-  return NextResponse.json({ product: _product }, { status: 201 });
+  const populatedProduct = await Product.findById(_product._id).populate('folder');
+  return NextResponse.json({ product: populatedProduct }, { status: 201 });
 }
 
 export async function GET(req, { params }) {
@@ -57,7 +59,9 @@ export async function GET(req, { params }) {
     return NextResponse.json({ error: "Category not found" }, { status: 404 });
   }
 
-  const products = await Product.find({ category: category._id }).sort({ createdAt: -1 });
+  const products = await Product.find({ category: category._id })
+    .populate('folder')
+    .sort({ createdAt: -1 });
 
   return NextResponse.json({ products }, { status: 200 });
 }

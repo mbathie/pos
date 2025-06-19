@@ -47,11 +47,21 @@ const CategorySchema = new mongoose.Schema({
 
 const Category = mongoose.models.Category || mongoose.model('Category', CategorySchema);
 
+// ==== Folder ====
+const FolderSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  color: { type: String, required: true },
+  org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org' },
+}, { timestamps: true });
+
+const Folder = mongoose.models.Folder || mongoose.model('Folder', FolderSchema);
+
 // ==== Product ====
 const ProductSchema = new mongoose.Schema({
   name: String,
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
   locations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Location' }],
+  folder: { type: mongoose.Schema.Types.ObjectId, ref: 'Folder' },
   type: { type: String, enum: ['class', 'course'] },
   duration: { name: Number, unit: String },
   capacity: Number,
@@ -109,4 +119,5 @@ module.exports = {
   Product,
   Customer,
   Transaction,
+  Folder,
 };

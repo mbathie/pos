@@ -32,22 +32,22 @@ export function useHandler() {
     });
   };
 
-  const selectMod = async ({ setProduct, mcIdx, mIdx }) => {
+  const selectMod = async ({ setProduct, mcIdx, mIdx, mName }) => {
     setProduct(draft => {
       const modCat = draft.modCats?.[mcIdx];
       const selectedMod = modCat?.mods?.[mIdx];
+
       if (!modCat || !selectedMod) return;
 
       if (!modCat.multi) {
-        if (selectedMod.selected) {
-          // Toggle off if already selected
-          selectedMod.selected = false;
-        } else {
-          // Select this mod and deselect others
-          modCat.mods.forEach((mod, index) => {
-            mod.selected = index === mIdx;
-          });
-        }
+        modCat.mods.forEach((mod, index) => {
+          if (!mod.enabled)
+            return
+          if (mName == mod.name)
+            mod.selected = !mod.selected
+          else
+            mod.selected = false
+        });
       } else {
         // Multi-select: toggle normally
         selectedMod.selected = !selectedMod.selected;

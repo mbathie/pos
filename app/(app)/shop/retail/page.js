@@ -5,11 +5,21 @@ import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHe
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from "@/components/ui/checkbox"
-import { Check, ChevronRight, Minus, Plus } from "lucide-react"
+import { Check, ChevronRight, Minus, Plus, Folder } from "lucide-react"
 import { useHandler } from './useHandler'
 import { useImmer } from 'use-immer'
 import { useGlobals } from '@/lib/globals'
 import { calcCartValueShop } from '@/lib/product'
+import colors from 'tailwindcss/colors';
+
+function groupProductsByFolder(products) {
+  return products.reduce((acc, prod) => {
+    const folder = prod.folder?.name || 'All Other';
+    if (!acc[folder]) acc[folder] = { products: [] };
+    acc[folder].products.push(prod);
+    return acc;
+  }, {});
+}
 
 export default function Page() {
 
@@ -41,7 +51,9 @@ export default function Page() {
       setCategories(c.categories);
       if (c.categories.length > 0) {
         const p = await getProducts({ category: c.categories[0] });
-        setProducts(p.products);
+        const grouped = groupProductsByFolder(p.products);
+        setProducts(grouped);
+
         setCategory(c.categories[0]);
       }
     }
@@ -58,15 +70,15 @@ export default function Page() {
               <div className='flex items-center space-x-1'>
                 <div>{category?.name}</div> 
                 <ChevronRight className='size-4'/> 
-                <div>{product?.name}</div>
+                <div>{product?.name?.length > 20 ? `${product.name.substring(0, 20)}...` : product?.name}</div>
                 <div className="relative size-6 ml-1">
-                  <Image
+                  {/* <Image
                     src={product?.data?.thumbnail || "https://static.thenounproject.com/png/2206029-200.png"}
                     alt="Product Icon"
                     fill
                     style={{ objectFit: 'contain' }}
                     className="invert"
-                  />
+                  /> */}
                 </div>
               </div>
             </SheetTitle>
@@ -77,21 +89,23 @@ export default function Page() {
 
           <div className='px-4 gap-4 flex flex-col'>
 
-            <div className='flex flex-col gap-2'>
-              <div className='text-sm'>Variations</div>
-              {product?.variations.map((v, vIdx) => {
-                return (
-                  <div 
-                    key={vIdx} className='text-sm flex space-x-2 items-center w-full'
-                    onClick={() => selectVariation({setProduct, vIdx})}
-                  >
-                    <Checkbox checked={v.selected} />
-                    <div>{v.name}</div>
-                    <div className='ml-auto'>${parseFloat(v.amount).toFixed(2)}</div>
-                  </div>
-                )
-              })}
-            </div>
+            {product?.variations &&
+              <div className='flex flex-col gap-2'>
+                <div className='text-sm'>Variations</div>
+                {product?.variations?.map((v, vIdx) => {
+                  return (
+                    <div 
+                      key={vIdx} className='text-sm flex space-x-2 items-center w-full'
+                      onClick={() => selectVariation({setProduct, vIdx})}
+                    >
+                      <Checkbox checked={v.selected} />
+                      <div>{v.name}</div>
+                      <div className='ml-auto'>${parseFloat(v.amount).toFixed(2)}</div>
+                    </div>
+                  )
+                })}
+              </div>
+            }
 
             <div className='flex flex-col gap-2'>
               {/* <div className='text-sm'>Mods</div> */}
@@ -108,7 +122,7 @@ export default function Page() {
                           return (
                             <div 
                               key={m._id} className='gap-2 flex items-center flex-row'
-                              onClick={() => selectMod({setProduct, mcIdx, mIdx})}
+                              onClick={() => selectMod({setProduct, mcIdx, mIdx, mName: m.name})}
                             >
                               <Checkbox checked={m.selected} />
                               <div>{m.name}</div>
@@ -145,6 +159,7 @@ export default function Page() {
             <SheetClose asChild>
               <Button 
                 type="submit" 
+                // disabled={product?.qty === 0}
                 disabled={!product?.variations?.some(v => v.selected) || product?.qty === 0}
                 onClick={async () => {
                   const _product = await calcCartValueShop({product})
@@ -167,9 +182,10 @@ export default function Page() {
               <Button
                 variant="outline"
                 onClick={async () => {
-                  const p = await getProducts({category: c})
-                  setProducts(p.products)
-                  setCategory(c)
+                  const p = await getProducts({ category: c });
+                  const grouped = groupProductsByFolder(p.products);
+                  setProducts(grouped);
+                  setCategory(c);
                 }}
                 className="hover:text-black w-full cursor-pointer h-12 rounded-none border-t-0 border-x-0 last:border-b-0"
               >
@@ -180,35 +196,113 @@ export default function Page() {
         </div>
 
         {/* Right Panel */}
-        <div className="flex-1 overflow-y-auto">
-          <div className="flex flex-wrap gap-4">
-            {products.map((p, pIdx) => (
-              <Card key={pIdx} className="aspect-square size-24 flex flex-col items-center justify-center text-center">
-                <CardContent>
-                  <Button
-                    onClick={() => {
-                      setProduct(p)
-                      setSheetOpen(true)
-                    }}
-                    className="flex flex-col space-y-1 size-24 border-0 cursor-pointer"
-                    variant="outline"
+
+        <div className='flex flex-wrap gap-4 text-sm content-start'>
+          {Object.entries(products).map(([folderName, group]) => (
+            <React.Fragment key={folderName}>
+
+              <div className='w-24 flex flex-col text-center text-xs'>
+                <div
+                  onClick={() => setProducts(prev => ({
+                    ...prev,
+                    [folderName]: {
+                      ...prev[folderName],
+                      expanded: !prev[folderName].expanded
+                    }
+                  }))}
+                  className='cursor-pointer size-24 rounded-lg flex items-center justify-center'
+                  style={{
+                    backgroundColor: colors?.[group?.products[0]?.folder?.color?.split('-')[0]]?.[group?.products[0]?.folder?.color?.split('-')[1]]
+                  }}
+                >
+                  <Folder className='size-8 opacity-60'/>
+                </div>
+                {folderName}
+              </div>
+
+              {group.expanded && group?.products.map((p, pIdx) => {
+
+                const isIcon = !p?.thumbnail || p?.thumbnail?.includes("thenounproject.com");
+
+                return (
+                  <div
+                    key={p._id}
+                    className='w-24 flex flex-col items-center text-center'
                   >
-                    <div className="relative size-9">
+                    <div 
+                      className="cursor-pointer border border-accent-foreground/50 relative size-24 rounded-lg"
+                      onClick={() => {
+                        setProduct(p)
+                        setSheetOpen(true)
+                      }}
+                    >
                       <Image
-                        src={p.data?.thumbnail || "https://static.thenounproject.com/png/2206029-200.png"}
+                        src={p?.thumbnail || "https://static.thenounproject.com/png/2206029-200.png"}
                         alt="Product Icon"
                         fill
                         style={{ objectFit: 'contain' }}
-                        className="invert"
+                        className={`rounded-lg ${isIcon ? 'invert' : ''}`}
                       />
                     </div>
-                    <div>{p.name}</div>
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    <div className="text-xs w-24">{p.name}</div>
+                  </div>
+                )
+
+
+
+              })}
+            </React.Fragment>
+          ))}
+
         </div>
+
+        {/* <div className="flex-1 overflow-y-auto">
+          <div className="flex flex-wrap gap-4">
+
+            {Object.entries(products).map(([folderName, group]) => (
+              <div key={folderName} className="size-24">
+                <div 
+                  className='flex flex-col gap-1 text-sm relative text-center'
+                  onClick={() => setExpandedFolders(prev => ({ ...prev, [folderName]: !prev[folderName] }))}
+                >
+                  <div className=''><Folder className='w-full h-full size-24' /></div>
+                  <div className='-top-3 relative'>{folderName}</div>
+                </div>
+
+                {expandedFolders[folderName] && (
+                  <div className="mb-4-">
+                    {group.products.map((p, pIdx) => {
+                      const isIcon = !p?.thumbnail || p?.thumbnail?.includes("thenounproject.com");
+
+                      return (
+                        <div
+                          key={p._id}
+                          onClick={() => {
+                            setProduct(p)
+                            setSheetOpen(true)
+                          }}
+                          className='cursor-pointer flex flex-col items-center text-center'
+                        >
+                          <div className="border border-accent-foreground relative size-24 rounded-lg">
+                            <Image
+                              src={p?.thumbnail || "https://static.thenounproject.com/png/2206029-200.png"}
+                              alt="Product Icon"
+                              fill
+                              style={{ objectFit: 'contain' }}
+                              className={`rounded-lg ${isIcon ? 'invert' : ''}`}
+                            />
+                          </div>
+                          <div className="text-sm">{p.name}</div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+
+          </div>
+        </div> */}
       </div>
     </>
   )

@@ -13,11 +13,15 @@ import {
 } from "@/components/ui/sidebar";
 
 const teams = [{ name: "Sunny Coast" }];
-const actions = [
-  { name: "Sale", url: "/shop", icon: CircleDollarSign },
-];
+
+// const actions = [
+//   { title: "Sale", name: "Sale", url: "/shop", icon: CircleDollarSign },
+// ];
 
 const settings = [
+
+  { title: "Sale", url: "/shop", icon: CircleDollarSign },
+  { groupLabel: "Setup"},
   { 
     title: "Products", icon: Coffee,
     items: [
@@ -31,7 +35,6 @@ const settings = [
   { title: "Employees", url: "/employees", icon: Users },
   { title: "Locations", url: "/locations", icon: MapPin },
   { title: "Settings", url: "/settings", icon: Settings },
-
 ];
 
 export function AppSidebar(props) {
@@ -41,7 +44,7 @@ export function AppSidebar(props) {
         <LocationSwitcher teams={teams} />
       </SidebarHeader>
       <SidebarContent>
-        <NavMenu actions={actions} settings={settings} />
+        <NavMenu settings={settings} />
       </SidebarContent>
       <SidebarFooter>
         <NavUser />

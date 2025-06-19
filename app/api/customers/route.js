@@ -32,14 +32,18 @@ export async function GET(req) {
   if (!search)
     return NextResponse.json({ error: "Missing search parameter" }, { status: 400 })
 
-  const regex = new RegExp(search, "i") // case-insensitive
+  const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // escape special chars
+  const regex = new RegExp(escaped, "i") // case-insensitive
   const customers = await Customer.find({
     orgs: orgId,
     $or: [
       { name: { $regex: regex } },
-      { email: { $regex: regex } }
+      { email: { $regex: regex } },
+      { phone: { $regex: regex } }
     ]
   })
+
+  console.log(customers)
 
   return NextResponse.json(customers)
 }

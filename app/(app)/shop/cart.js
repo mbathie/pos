@@ -33,11 +33,11 @@ export default function Cart({}) {
 
         <div className="flex-1 overflow-y-auto px-4 text-sm">
           <div className="space-y-2 w-full">
-            {cart?.products?.map((p, i) => {
+            {cart?.products?.map((p, pIdx) => {
 
               // for shop product item
               return (
-                <div key={i} className="flex flex-col">
+                <div key={pIdx} className="flex flex-col">
                   <div className="flex">
                     <div>{p.qty}x {p.name}</div>
                     <div className='ml-1'> ({p.item.variation})</div>
@@ -47,16 +47,16 @@ export default function Cart({}) {
                       className='ml-2 cursor-pointer mt-0.5'
                       onClick={(e) => {
                         e.stopPropagation();
-                        removeFromCart(p._id);
+                        removeFromCart(pIdx);
                       }}
                     >
                       <X className='size-4'/>
                     </div>
                   </div>
                   <div className='flex flex-row text-xs ml-7 italic'>
-                    {p.item.mods && p.item.mods.map((mod, i) => (
-                      <span key={i}>
-                        {mod.name}{i < p.item.mods.length - 1 ? ', ' : ''}
+                    {p.item.mods && p.item.mods.map((mod, pIdx) => (
+                      <span key={pIdx}>
+                        {mod.name}{pIdx < p.item.mods.length - 1 ? ', ' : ''}
                       </span>
                     ))}
                   </div>

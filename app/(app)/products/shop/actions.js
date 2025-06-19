@@ -64,6 +64,16 @@ function syncModAcrossProducts(draft, pIdx, modCatName, modName, modAmount) {
 
 export function actions({category, setProducts}) {
 
+  const setFolder = ({ pIdx, folder }) => {
+    setProducts(draft => {
+      const product = draft[pIdx];
+      if (!product) return;
+
+      product.folder = folder;
+      product.updated = true;
+    });
+  };
+
   const addProduct = () => {
     setProducts(draft => {
       const newModCats = buildModCatsFromProducts(draft);
@@ -237,6 +247,7 @@ export function actions({category, setProducts}) {
     updateModCat,
     addMod,
     updateMod,
-    saveMod
+    saveMod,
+    setFolder
   }
 }
