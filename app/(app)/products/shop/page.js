@@ -84,7 +84,7 @@ export default function Page() {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${category.name}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      // body: JSON.stringify({ name: category.name }),
+      body: JSON.stringify({ menu: 'shop' }),
     });
     const c = await res.json();
     setCategory({});

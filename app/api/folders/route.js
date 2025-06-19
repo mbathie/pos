@@ -16,7 +16,7 @@ export async function POST(req, { params }) {
   const folder = await Folder.create({
     name: folderName,
     color: folderColor,
-    org: org._id,
+    org: employee.orgId,
   });
 
   return NextResponse.json({ folder }, { status: 200 });

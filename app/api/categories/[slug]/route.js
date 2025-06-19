@@ -11,13 +11,16 @@ export async function POST(req, { params }) {
 
   const { slug } = await params;
 
+  const body = await req.json();
+  const { menu } = body;
+
   const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
 
   const query = isValidObjectId
     ? { _id: slug, org }
     : { name: slug, org };
 
-  const update = isValidObjectId ? {} : { name: slug, org };
+  const update = isValidObjectId ? {} : { name: slug, org, ...(menu && { menu }) };
 
   const category = await Category.findOneAndUpdate(
     query,
