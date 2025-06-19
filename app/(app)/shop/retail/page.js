@@ -46,7 +46,7 @@ export default function Page() {
 
   useEffect(() => {
     async function start() {
-      const res = await fetch('/api/categories?menu=shop');
+      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/categories?menu=shop');
       const c = await res.json();
       setCategories(c.categories);
       if (c.categories.length > 0) {

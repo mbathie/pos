@@ -92,7 +92,7 @@ export default function Page() {
   // },[])
 
   const getProducts = async () => {
-    const res = await fetch(`/api/categories/${categoryName}/products`);
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${categoryName}/products`);
     if (res.ok) {
       const data = await res.json();
       setProducts(data.products);

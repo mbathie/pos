@@ -13,13 +13,13 @@ export function useHandler() {
   }
 
   const getCategories = async ({menu}) => {
-    const res = await fetch(`/api/categories?${menu}`)
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories?${menu}`)
     const categories = await res.json()
     return categories
   }
 
   const getProducts = async ({category}) => {
-    const res = await fetch(`/api/categories/${category._id}/products`)
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${category._id}/products`)
     const products = await res.json()
     return products
   }

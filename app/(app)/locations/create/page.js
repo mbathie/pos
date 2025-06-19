@@ -27,7 +27,7 @@ export default function Page() {
   })
 
   const handleSubmit = async (location) => {
-    await fetch(`/api/locations`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/locations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(location)
@@ -86,7 +86,7 @@ export default function Page() {
 
 //   const create = async () => {
 //     try {
-//       await fetch('/api/locations', {
+//       await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/locations', {
 //         method: 'POST', headers: { 'Content-Type': 'application/json' },
 //         body: JSON.stringify(location)
 //       })

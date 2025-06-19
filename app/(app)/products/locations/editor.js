@@ -39,7 +39,7 @@ export default function Editor({ open, setOpen, selected, refetch }) {
   }
 
   const handleSave = async () => {
-    await fetch(`/api/locations/${selected.location.locationId}/products`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/locations/${selected.location.locationId}/products`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ products: editedProducts }),

@@ -51,10 +51,10 @@ export default function Page () {
 
   useEffect(() => {
     async function start() {
-      const res = await fetch(`/api/employees`, { method: "GET" })
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees`, { method: "GET" })
       setEmployees(await res.json())
 
-      const lres = await fetch(`/api/locations`, { method: "GET" })
+      const lres = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/locations`, { method: "GET" })
       setLocations(await lres.json())
     }
     start()
@@ -63,7 +63,7 @@ export default function Page () {
   // const handleEmployee = async () => {
   //   // console.log(employee)
   //   if (employee.new) {
-  //     const res = await fetch(`/api/employees`, {
+  //     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees`, {
   //       method: "POST",
   //       headers: { "Content-Type": "application/json" },
   //       body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),
@@ -72,7 +72,7 @@ export default function Page () {
   //     setEmployees([e, ...employees])
   //   }
   //   else if (employee.edit) {
-  //     const res = await fetch(`/api/employees/${employee.id}`, {
+  //     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees/${employee.id}`, {
   //       method: "PUT",
   //       headers: { "Content-Type": "application/json" },
   //       body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),
@@ -212,7 +212,7 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
   }, [e])
 
   const update = async () => {
-    const res = await fetch(`/api/employees/${employee.id}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees/${employee.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),
@@ -222,7 +222,7 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
     setIsOpen(false)
   }
   const create = async () => {
-    const res = await fetch(`/api/employees`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),

@@ -21,7 +21,7 @@ export default function Page() {
 
   useEffect(() => {
     const fetchStripeAccount = async () => {
-      const res = await fetch('/api/payments')
+      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/payments')
       const data = await res.json()
       setChargesEnabled(data.charges_enabled)
       setHasFetched(true)
@@ -31,7 +31,7 @@ export default function Page() {
 
   useEffect(() => {
     const fetchOrg = async () => {
-      const res = await fetch('/api/org')
+      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/org')
       const data = await res.json()
       setOrg(data.org)
       setOrgCpy(data.org)
@@ -41,13 +41,13 @@ export default function Page() {
 
   const handleConnect = async () => {
     setLoading(true)
-    const res = await fetch('/api/payments/setup')
+    const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/payments/setup')
     const data = await res.json()
     router.push(data.url)
   }
 
   const saveOrg = async () => {
-    const res = await fetch('/api/org', {
+    const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/org', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: org.name })
     })

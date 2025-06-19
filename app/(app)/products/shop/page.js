@@ -73,7 +73,7 @@ export default function Page() {
 
   useEffect(() => {
     async function fetchCategories() {
-      const res = await fetch('/api/categories?menu=shop');
+      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/categories?menu=shop');
       const c = await res.json();
       setCategories(c.categories);
     }
@@ -81,7 +81,7 @@ export default function Page() {
   }, []);
 
   const saveCategory = async () => {
-    const res = await fetch(`/api/categories/${category.name}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${category.name}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       // body: JSON.stringify({ name: category.name }),
@@ -92,7 +92,7 @@ export default function Page() {
   }
 
   const getCategoryProducts = async (c) => {
-    const res = await fetch(`/api/categories/${c._id}/products`);
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${c._id}/products`);
     const _products = await res.json()
     setProducts(_products.products)
   };

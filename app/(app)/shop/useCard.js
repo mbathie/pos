@@ -22,7 +22,7 @@ export function useCard({ cart }) {
 
       terminalInstance = StripeTerminal.create({
         onFetchConnectionToken: async () => {
-          const res = await fetch('/api/payments/token', { method: 'POST' });
+          const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/payments/token', { method: 'POST' });
           const data = await res.json();
           if (!res.ok || !data.secret) {
             throw new Error(data.error || 'Failed to fetch connection token');
@@ -87,7 +87,7 @@ export function useCard({ cart }) {
   };
 
   const collectPayment = async () => {
-    const res = await fetch('/api/payments/intent', {
+    const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/payments/intent', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ cart }),
@@ -119,7 +119,7 @@ export function useCard({ cart }) {
 
   const capturePayment = async () => {
 
-    const res = await fetch('/api/payments/capture', {
+    const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/payments/capture', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

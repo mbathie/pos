@@ -8,7 +8,7 @@ export default function LoginForm() {
   useEffect(() => {
     async function start() {
       console.log("Logging out...");
-      const res = await fetch("/api/auth/logout", {
+      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/api/auth/logout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });

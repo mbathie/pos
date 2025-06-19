@@ -26,7 +26,7 @@ export function FolderSelect({ product, pIdx, setFolder }) {
       }
 
       try {
-        const res = await fetch(`/api/folders?search=${encodeURIComponent(inputValue)}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders?search=${encodeURIComponent(inputValue)}`);
         const data = await res.json();
         if (res.ok) {
           setFolders(data);
@@ -50,7 +50,7 @@ export function FolderSelect({ product, pIdx, setFolder }) {
   };
 
   const handleCreateFolder = async () => {
-    const res = await fetch('/api/folders', {
+    const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/folders', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newFolder.name, colour: newFolder.color }),
     });

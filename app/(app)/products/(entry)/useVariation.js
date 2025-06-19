@@ -53,7 +53,7 @@ export function useEffectHook(setProducts) {
       draft[productIdx].variations.splice(variationIdx, 1);
     });
 
-    const res = await fetch(`/api/products/${product._id}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${product._id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ product: updatedProduct }),

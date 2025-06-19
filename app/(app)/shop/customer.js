@@ -40,7 +40,7 @@ export default function Customer({ open, onOpenChange, setCustomer }) {
   const emailSchema = z.string().email();
 
   const handleCreateCustomer = async () => {
-    const res = await fetch('/api/customers', {
+    const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/customers', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, email, phone }),
@@ -132,7 +132,7 @@ export function SearchCustomers({ setCustomer, onOpenChange }) {
     }
 
     try {
-      const res = await fetch(`/api/customers?search=${encodeURIComponent(search)}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/customers?search=${encodeURIComponent(search)}`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setCustomers(data);

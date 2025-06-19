@@ -25,7 +25,7 @@ export default function Page() {
   }, []);
 
   const fetchLocations = async () => {
-    const res = await fetch('/api/locations')
+    const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/locations')
     const data = await res.json()
     setLocations(data)
   }

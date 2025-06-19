@@ -4,7 +4,7 @@ import { generateObjectId } from '@/lib/utils';
 export function useProduct({setProducts, categoryName}) {
 
   const saveProduct = async ({product, productIdx}) => {
-    const res = await fetch(`/api/categories/${categoryName}/products`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${categoryName}/products`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ product }),

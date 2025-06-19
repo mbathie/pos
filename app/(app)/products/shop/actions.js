@@ -99,7 +99,7 @@ export function actions({category, setProducts}) {
   }
 
   const saveProduct = async ({product, pIdx}) => {
-    const res = await fetch(`/api/categories/${category._id}/products`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${category._id}/products`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ product }),
@@ -115,7 +115,7 @@ export function actions({category, setProducts}) {
   }
 
   const deleteProduct = async ({ pIdx, product }) => {
-    await fetch(`/api/products/${product._id}`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${product._id}`, {
       method: 'DELETE',
     });
 

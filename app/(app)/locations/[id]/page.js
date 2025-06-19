@@ -18,7 +18,7 @@ export default function Page() {
 
   useEffect(() => {
     const fetchLocation = async () => {
-      const res = await fetch(`/api/locations/${id}`)
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/locations/${id}`)
       const data = await res.json()
       setLocation(data)
     }
@@ -26,7 +26,7 @@ export default function Page() {
   }, [id])
 
   const handleSubmit = async (updatedLocation) => {
-    await fetch(`/api/locations/${id}`, {
+    await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/locations/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedLocation)

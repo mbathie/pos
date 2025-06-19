@@ -28,7 +28,7 @@ export default function LoginForm() {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/create", {
+      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/api/auth/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, name, nameEmployee, phone }),
