@@ -26,6 +26,7 @@ export default async function RootLayout({ children }) {
     },
   });
   const data = await res.json();
+  console.log(data)
 
   return (
     <html lang="en">

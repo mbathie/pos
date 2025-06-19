@@ -1,5 +1,4 @@
 'use client'
-import { useRouter } from 'next/navigation'
 import { useState, useEffect } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -14,7 +13,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export default function LoginForm() {
-  const router = useRouter()
   const [ error, setError ] = useState(false)
   const [ email, setEmail ] = useState("")
   const [ password, setPassword ] = useState("")
@@ -40,9 +38,7 @@ export default function LoginForm() {
         return;
       }
 
-
-      // Redirect to dashboard on success
-      router.push("/dashboard");
+      window.location.href = "/products/shop"
     } catch (err) {
       setError("Something went wrong");
     }
@@ -67,12 +63,12 @@ export default function LoginForm() {
                     <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="m@awesomegym.com" required />
                   </div>
                   <div className="grid gap-3">
-                    <Label htmlFor="email">Business Name</Label>
-                    <Input id="email" type="email" value={name} onChange={(e) => setName(e.target.value)} placeholder="Awesome Gym" required />
+                    <Label htmlFor="business-name">Business Name</Label>
+                    <Input id="business-name" type="email" value={name} onChange={(e) => setName(e.target.value)} placeholder="Awesome Gym" required />
                   </div>
                   <div className="grid gap-3">
-                    <Label htmlFor="email">My Name</Label>
-                    <Input id="email" type="email" value={nameEmployee} onChange={(e) => setNameEmployee(e.target.value)} placeholder="Dave" required />
+                    <Label htmlFor="name">My Name</Label>
+                    <Input id="name" type="email" value={nameEmployee} onChange={(e) => setNameEmployee(e.target.value)} placeholder="Dave" required />
                   </div>
                   <div className="grid gap-3">
                     <Label htmlFor="email">Phone</Label>

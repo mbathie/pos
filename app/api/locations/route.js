@@ -11,7 +11,7 @@ export async function GET() {
     return NextResponse.json({ error }, { status })
 
   const locations = await Location.find(
-    { orgId: employee.org._id },
+    { orgId: employee.orgId },
     // { _id: 1, name: 1 }
   ).lean()
 

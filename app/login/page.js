@@ -36,7 +36,7 @@ export default function LoginForm() {
         return;
       }
 
-      window.location.href = "/dashboard"
+      window.location.href = "/products/shop"
     } catch (err) {
       setError("Something went wrong");
     }
@@ -84,7 +84,7 @@ export default function LoginForm() {
                 </div>
                 <div className="mt-4 text-center text-sm">
                   Don&apos;t have an account?{" "}
-                  <a href="#" className="underline underline-offset-4">
+                  <a href="/signup" className="underline underline-offset-4">
                     Sign up
                   </a>
                 </div>
@@ -94,64 +94,5 @@ export default function LoginForm() {
         </div>
       </div>
     </div>
-  );
+  )
 }
-
-
-// "use client";
-
-// import { signIn } from "next-auth/react";
-// import { useSearchParams } from "next/navigation";
-// import { useState, useEffect } from "react";
-
-// export default function SignIn() {
-//   const searchParams = useSearchParams();
-//   // const error = searchParams.get("error");
-//   const [ error, setError ] = useState(false)
-
-//   const [errorMessage, setErrorMessage] = useState("");
-
-//   useEffect(() => {
-//     if (error) {
-//       switch (error) {
-//         case "CredentialsSignin":
-//           setErrorMessage("Invalid username or password. Please try again.");
-//           break;
-//         case "AccessDenied":
-//           setErrorMessage("You do not have permission to sign in.");
-//           break;
-//         default:
-//           setErrorMessage("An unknown error occurred. Please try again.");
-//       }
-//     }
-//   }, [error]);
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     const result = await signIn("credentials", { redirect: false, username: "test1", password: "password" });
-//     // console.log(result)
-//     setError(result?.error)
-
-//     // if (result?.error) {
-//     //   // Redirect to error page with the error message
-//     //   window.location.href = `/auth/signin?error=${result.error}`;
-//     // }
-//   };
-
-//   return (
-//     <div className="p-10">
-
-//       <fieldset className="fieldset w-xs bg-base-200 border border-base-300 p-4 rounded-box">
-//         <legend className="fieldset-legend">Login</legend>
-        
-//         <label className="fieldset-label">Email</label>
-//         <input type="email" className="input" placeholder="Email" />
-        
-//         <label className="fieldset-label">Password</label>
-//         <input type="password" className="input" placeholder="Password" />
-        
-//         <button className="btn btn-neutral mt-4">Login</button>
-//       </fieldset>
-//     </div>
-//   );
-// }
