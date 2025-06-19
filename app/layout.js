@@ -19,7 +19,7 @@ export default async function RootLayout({ children }) {
     (cookie) => `${cookie.name}=${cookie.value}`
   ).join("; ");
 
-  const res = await fetch(`${process.env.HOST}/api/users/me`, {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/me`, {
     method: "GET",
     headers: {
       Cookie: cookieString,
