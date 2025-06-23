@@ -56,7 +56,9 @@ export function useProduct(setProducts) {
         body: JSON.stringify({ product }),
       });
 
-      // return created;
+      const created = await res.json();
+      console.log(created.product)
+      return created.product;
     } catch (err) {
       console.error(err);
       throw err;

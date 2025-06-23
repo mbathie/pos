@@ -15,7 +15,7 @@ export async function POST(req, { params }) {
   const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
 
   const category = await Category.findOneAndUpdate(
-    isValidObjectId ? { _id: slug, org: employee.org._id } : { name: slug, org: employee.orgId },
+    isValidObjectId ? { _id: slug, org: employee.org._id } : { name: slug, menu: slug, org: employee.org._id },
     {},
     { new: true, upsert: !isValidObjectId }
   );
@@ -48,13 +48,10 @@ export async function GET(req, { params }) {
   const { slug } = await params;
 
   const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
-  console.log(isValidObjectId)
 
   const category = await Category.findOne(
-    isValidObjectId ? { _id: slug, org: employee.org._id } : { name: slug, org: employee.orgId }
+    isValidObjectId ? { _id: slug, org: employee.org._id } : { name: slug, org: employee.org._id }
   );
-
-  console.log(category);
 
   if (!category) {
     return NextResponse.json({ error: "Category not found" }, { status: 404 });

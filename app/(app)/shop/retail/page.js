@@ -71,13 +71,6 @@ export default function Page() {
                 <ChevronRight className='size-4'/> 
                 <div>{product?.name?.length > 20 ? `${product.name.substring(0, 20)}...` : product?.name}</div>
                 <div className="relative size-6 ml-1">
-                  {/* <Image
-                    src={product?.data?.thumbnail || "https://static.thenounproject.com/png/2206029-200.png"}
-                    alt="Product Icon"
-                    fill
-                    style={{ objectFit: 'contain' }}
-                    className="invert"
-                  /> */}
                 </div>
               </div>
             </SheetTitle>

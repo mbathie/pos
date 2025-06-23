@@ -125,13 +125,18 @@ export default function Page({products, setProducts, units, title, categoryName}
                   className="bg-lime-400"
                   onClick={async () => {
                     if (!p._id) {
-                      // If _id doesn't exist, create the product
-                      console.log(categoryName)
+                      console.log('creating')
+
                       const createdProduct = await createProduct(categoryName, p);
-                      setIsDirty((prev) => ({ ...prev, [p._id]: false }));
+                      console.log(createdProduct)
                       // originalProducts.current[pIdx] = JSON.parse(JSON.stringify(createdProduct));
-                    } 
+                      setProducts(draft => {
+                        draft[pIdx] = createdProduct;
+                      });
+                      setIsDirty((prev) => ({ ...prev, [pIdx]: false }));
+                    }
                     else {
+                      console.log('updating')
                       const updated = await updateProduct(p);
                       setIsDirty((prev) => ({ ...prev, [p._id]: false }));
                       originalProducts.current[pIdx] = JSON.parse(JSON.stringify(updated));

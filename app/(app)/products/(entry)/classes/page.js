@@ -85,11 +85,8 @@ const _products = [
 
 export default function Page() {
   const [products, setProducts] = useImmer([]);
-  const categoryName = "casual";
+  const categoryName = "class";
 
-  // useEffect(() => {
-  //   setProducts(_products)
-  // },[])
 
   const getProducts = async () => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${categoryName}/products`);

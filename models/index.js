@@ -65,9 +65,9 @@ const ProductSchema = new mongoose.Schema({
   type: { type: String, enum: ['class', 'course'] },
   duration: { name: Number, unit: String },
   capacity: Number,
-  prices: [{
-    _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
-  }],
+  // prices: [{
+  //   _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+  // }],
   times: [{
     _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
 

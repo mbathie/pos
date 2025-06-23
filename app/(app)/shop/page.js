@@ -2,55 +2,46 @@
 import React, { useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import Link from 'next/link'
-import Image from 'next/image'
 import { useGlobals } from '@/lib/globals'
+import { Coffee, Ticket, Dumbbell, IdCard } from "lucide-react";
 
 export default function Page() {
   const { pushBreadcrumb, resetBreadcrumb } = useGlobals()
 
   useEffect(() => resetBreadcrumb({ name: "Shop", href: "/shop" }), []);
 
+  const shopItems = [
+    { title: "Casual Entry", icon: Ticket, href: "/shop/casual", breadcrumb: {} },
+    { title: "Class and Courses", icon: Dumbbell, href: "/shop/courses" },
+    { title: "Membership", icon: IdCard, href: "/shop/membership" },
+    { title: "Food and Beverage", icon: Coffee, href: "/shop/retail", breadcrumb: { href: "/shop/retail", name: "Categories" } }
+  ];
+
   return (
     <div className='text-center'>
-      
-      <div className='flex gap-4 justify-center'>
-        <Card className="aspect-square size-72 text-center">
-          <CardHeader>
-            <CardTitle>Membership / Day Pass</CardTitle>
-            <CardDescription>Recurring memberships, or once off pass</CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center justify-center">
-            <div className="relative w-32 h-32 mt-4"> {/* Control the size here */}
-              <Image 
-                src="https://static.thenounproject.com/png/7637397-200.png" 
-                alt="Membership Icon"
-                fill
-                style={{ objectFit: 'contain' }}
-                className='invert'
-              />
-            </div>
-          </CardContent>
-        </Card>
+      <div className='flex gap-4 justify-center flex-wrap'>
+        {shopItems.map((item, i) => {
+          const content = (
+            <Card key={item.title} className="aspect-square size-50 text-center">
+              <CardHeader>
+                <CardTitle>{item.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex items-center justify-center h-full">
+                <item.icon className="size-10 mx-auto mt-4" />
+              </CardContent>
+            </Card>
+          );
 
-        <Link href='/shop/retail' onClick={() => pushBreadcrumb({ href: '/shop/retail', name: "Categories" })}>
-          <Card className="aspect-square size-72 text-center">
-            <CardHeader>
-              <CardTitle>Food and Beverage</CardTitle>
-              <CardDescription>Food and Beverage items for sale</CardDescription>
-            </CardHeader>
-            <CardContent className="flex items-center justify-center">
-              <div className="relative w-32 h-32 mt-4"> {/* Control the size here */}
-                <Image 
-                  src="https://static.thenounproject.com/png/7400432-200.png" 
-                  alt="Membership Icon"
-                  fill
-                  style={{ objectFit: 'contain' }}
-                  className='invert'
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+          return item.href ? (
+            <Link
+              key={item.title}
+              href={item.href}
+              onClick={() => pushBreadcrumb(item.breadcrumb)}
+            >
+              {content}
+            </Link>
+          ) : content;
+        })}
       </div>
     </div>
   )

@@ -192,7 +192,7 @@ export default function Page({products, setProducts, categoryName}) {
                   <Label className="w-38">Prices ($)</Label>
                 </div>
                 <div className='flex flex-col gap-2'>
-                  {p.prices.map((pr, prIdx) => {
+                  {p?.prices?.map((pr, prIdx) => {
                     return (
                       <Card key={pr._id} className='flex flex-col gap-2'>
                         <CardContent className="flex flex-col gap-2">

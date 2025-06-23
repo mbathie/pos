@@ -1,5 +1,3 @@
-// import { useCallback } from 'react';
-
 export function useHandler() {
 
   const setQty = async ({ setProduct, type }) => {

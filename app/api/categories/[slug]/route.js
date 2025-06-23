@@ -3,6 +3,8 @@ import { connectDB } from "@/lib/mongoose";
 import { getEmployee } from "@/lib/auth";
 import { Category } from "@/models";
 
+
+
 export async function POST(req, { params }) {
   await connectDB();
 
@@ -29,4 +31,24 @@ export async function POST(req, { params }) {
   );
 
   return NextResponse.json({ category }, { status: 201 });
+}
+
+export async function GET(req, { params }) {
+  await connectDB();
+  const { employee } = await getEmployee();
+  const org = employee.org;
+
+  const { slug: name } = await params;
+
+  if (!name) {
+    return NextResponse.json({ error: "Missing category name" }, { status: 400 });
+  }
+
+  const category = await Category.findOne({ name, org: org._id });
+
+  if (!category) {
+    return NextResponse.json({ error: "Category not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ category });
 }
