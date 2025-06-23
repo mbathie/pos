@@ -18,11 +18,12 @@ export async function GET() {
 
     const { payload } = await jwtVerify(token.value, SECRET_KEY)
 
-    const employee = await Employee.findById(payload.employeeId).lean()
+    const employee = await Employee.findById(payload.employeeId)
+      .populate({ path: "location", select: "name" })
+      .lean()
 
-    if (!employee) {
+    if (!employee)
       return NextResponse.json({ error: "User not found" }, { status: 404 })
-    }
 
     const { hash, createdAt, updatedAt, deleted, ...safeEmployee } = employee
 

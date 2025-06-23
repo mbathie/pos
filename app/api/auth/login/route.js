@@ -13,6 +13,7 @@ export async function POST(req) {
     const { email, password } = await req.json();
 
     const employee = await Employee.findOne({ email }).populate('org').populate('location').lean();
+    console.log(employee)
 
     if (!employee) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
@@ -24,10 +25,8 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    console.log(employee.locationId)
-
     const token = await new SignJWT({
-      selectedLocationId: employee.locationId.toString(),
+      selectedLocationId: employee.location._id.toString(),
       email,
       employeeId: employee._id.toString(),
       orgId: employee.org._id.toString(),

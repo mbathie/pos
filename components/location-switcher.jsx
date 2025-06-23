@@ -15,8 +15,6 @@ export function LocationSwitcher({}) {
   const { isMobile } = useSidebar()
   const [locations, setLocations] = React.useState([])
   const { location, setLocation } = useGlobals()
-
-  
   
   React.useEffect(() => {
     async function start() {
@@ -33,7 +31,7 @@ export function LocationSwitcher({}) {
       const defaultLocation = locations.find((l) => l._id === employee.locationId)
 
       setLocations(locations)
-      setLocation(defaultLocation || locations[0])
+      // setLocation(defaultLocation || locations[0])
     }
     start()
   },[])

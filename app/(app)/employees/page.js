@@ -60,47 +60,26 @@ export default function Page () {
     start()
   },[])
 
-  // const handleEmployee = async () => {
-  //   // console.log(employee)
-  //   if (employee.new) {
-  //     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees`, {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),
-  //     })
-  //     const e = await res.json()
-  //     setEmployees([e, ...employees])
-  //   }
-  //   else if (employee.edit) {
-  //     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees/${employee.id}`, {
-  //       method: "PUT",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),
-  //     })
-  //   }
-  // }
+  const handleEmployee = async () => {
+    // console.log(employee)
+    if (employee.new) {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),
+      })
+      const e = await res.json()
+      setEmployees([e, ...employees])
+    }
+    else if (employee.edit) {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees/${employee.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),
+      })
+    }
+  }
 
-  // <TableCell>
-  // <Button 
-  //   variant="outline" size="sm"
-  //   onClick={() => {
-  //     setDialogOpen(i)
-  //     // setEmployee({...e, edit: true, role: e.role.toLowerCase()})
-  //   }}
-  // >
-  //   <Pencil className="size-4" />
-  // </Button>
-
-  // <Employee 
-  //   e={e}
-  //   isOpen={dialogOpen === i}
-  //   setIsOpen={() => setDialogOpen(null)}
-  //   locations={locations}
-  //   employees={employees}
-  //   setEmployees={setEmployees}
-  // />
-
-// </TableCell>
 
   return (
     <div className='px-4'>
@@ -147,7 +126,7 @@ export default function Page () {
                     <TableRow className={`${e.password ? 'border-b-0' : ''}`}>
                       <TableCell>{e.email}</TableCell>
                       <TableCell>{e.name}</TableCell>
-                      <TableCell>{e.location.name}</TableCell>
+                      <TableCell>{e?.location?.name}</TableCell>
                       <TableCell>{e.role}</TableCell>
                       <TableCell>{dayjs(e.updatedAt).fromNow()}</TableCell>
                       <TableCell>

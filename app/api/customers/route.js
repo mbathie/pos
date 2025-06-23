@@ -14,7 +14,7 @@ export async function POST(req) {
   try {
     const customer = await Customer.create({
       name, email, phone,
-      orgs: [employee.org._id],
+      orgs: [employee.orgId],
     })
     return NextResponse.json(customer, { status: 201 })
   } catch (error) {
@@ -27,7 +27,7 @@ export async function GET(req) {
   const { employee } = await getEmployee()
   const { searchParams } = new URL(req.url)
   const search = searchParams.get("search")
-  const orgId = employee.org._id
+  const orgId = employee.orgId
 
   if (!search)
     return NextResponse.json({ error: "Missing search parameter" }, { status: 400 })

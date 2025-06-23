@@ -1,11 +1,10 @@
 'use client'
 import React, { useEffect, useState } from 'react'
-import { Card, CardContent } from "@/components/ui/card"
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from "@/components/ui/checkbox"
-import { Check, ChevronRight, Minus, Plus, Folder } from "lucide-react"
+import { ChevronRight, Minus, Plus, Folder } from "lucide-react"
 import { useHandler } from './useHandler'
 import { useImmer } from 'use-immer'
 import { useGlobals } from '@/lib/globals'
@@ -256,53 +255,7 @@ export default function Page() {
 
         </div>
 
-        {/* <div className="flex-1 overflow-y-auto">
-          <div className="flex flex-wrap gap-4">
 
-            {Object.entries(products).map(([folderName, group]) => (
-              <div key={folderName} className="size-24">
-                <div 
-                  className='flex flex-col gap-1 text-sm relative text-center'
-                  onClick={() => setExpandedFolders(prev => ({ ...prev, [folderName]: !prev[folderName] }))}
-                >
-                  <div className=''><Folder className='w-full h-full size-24' /></div>
-                  <div className='-top-3 relative'>{folderName}</div>
-                </div>
-
-                {expandedFolders[folderName] && (
-                  <div className="mb-4-">
-                    {group.products.map((p, pIdx) => {
-                      const isIcon = !p?.thumbnail || p?.thumbnail?.includes("thenounproject.com");
-
-                      return (
-                        <div
-                          key={p._id}
-                          onClick={() => {
-                            setProduct(p)
-                            setSheetOpen(true)
-                          }}
-                          className='cursor-pointer flex flex-col items-center text-center'
-                        >
-                          <div className="border border-accent-foreground relative size-24 rounded-lg">
-                            <Image
-                              src={p?.thumbnail || "https://static.thenounproject.com/png/2206029-200.png"}
-                              alt="Product Icon"
-                              fill
-                              style={{ objectFit: 'contain' }}
-                              className={`rounded-lg ${isIcon ? 'invert' : ''}`}
-                            />
-                          </div>
-                          <div className="text-sm">{p.name}</div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            ))}
-
-          </div>
-        </div> */}
       </div>
     </>
   )

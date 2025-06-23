@@ -7,12 +7,11 @@ export async function GET(req) {
   await connectDB();
 
   const { employee } = await getEmployee();
-  const org = employee.org;
 
   const { searchParams } = new URL(req.url);
   const menu = searchParams.get("menu");
 
-  const query = { org: employee.orgId };
+  const query = { org: employee.org._id };
   if (menu) {
     query.menu = menu;
   }

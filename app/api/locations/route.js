@@ -11,8 +11,7 @@ export async function GET() {
     return NextResponse.json({ error }, { status })
 
   const locations = await Location.find(
-    { orgId: employee.orgId },
-    // { _id: 1, name: 1 }
+    { org: employee.org._id },
   ).lean()
 
   return NextResponse.json(locations, { status: 200 })
@@ -32,7 +31,7 @@ export async function POST(req) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
 
   const location = await Location.create({
-    orgId: employee.org._id,
+    org: employee.org._id,
     name, phone,
     address1, city, state, postcode,
     storeHours,

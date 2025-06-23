@@ -1,5 +1,5 @@
 "use client"
-import { useGlobalContext } from '@/components/global-context'
+// import { useGlobalContext } from '@/components/global-context'
 
 import {
   ChevronsUpDown,
@@ -29,13 +29,19 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "next-themes";
 
+import { useGlobals } from '@/lib/globals'
+
 export function NavUser({
   user
 }) {
   const { isMobile, open } = useSidebar()
-  const { employee } = useGlobalContext({})
+  // const { employee } = useGlobalContext({})
+  const { employee } = useGlobals()
+
   const { setTheme, resolvedTheme } = useTheme()
   const isDarkMode = resolvedTheme === "dark"
+
+  const { resetCart, resetBreadcrumb } = useGlobals()
 
   return (
     <SidebarMenu>
@@ -103,9 +109,11 @@ export function NavUser({
             </DropdownMenuGroup>
             */}
             
-            <DropdownMenuSeparator />
+            {/* <DropdownMenuSeparator /> */}
             <DropdownMenuItem
               onClick={async () => {
+                resetBreadcrumb()
+                resetCart()
                 await fetch("/api/auth/logout", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },

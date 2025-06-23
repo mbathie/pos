@@ -15,7 +15,7 @@ export async function POST(req, { params }) {
   const totals = calcCartTotals(cart.products);
 
   const transaction = await Transaction.create({
-    org: org._id,
+    org: employee.orgId,
     total: totals.total,
     tax: totals.tax,
     subtotal: totals.subtotal,

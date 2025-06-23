@@ -180,7 +180,7 @@ export default function Page() {
                   <Button
                     key={key}
                     size="icon"
-                    className="size-16"
+                    className="size-16 active:bg-lime-400"
                     onClick={() => handleKeypadInput(key)}
                   >
                     {key}

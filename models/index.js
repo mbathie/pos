@@ -42,7 +42,7 @@ const CategorySchema = new mongoose.Schema({
   name: String,
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org' },
   menu: String,
-  productIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+  products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
 }, { timestamps: true });
 
 const Category = mongoose.models.Category || mongoose.model('Category', CategorySchema);

@@ -12,6 +12,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
+import { useGlobals } from '@/lib/globals'
+
+
 export default function LoginForm() {
   const [ error, setError ] = useState(false)
   const [ email, setEmail ] = useState("")
@@ -20,6 +23,7 @@ export default function LoginForm() {
   const [ name, setName ] = useState("")
   const [ nameEmployee, setNameEmployee ] = useState("")
 
+  const { setEmployee, setLocation } = useGlobals()
 
   const handleForm = async (e) => {
     e.preventDefault();
@@ -37,6 +41,13 @@ export default function LoginForm() {
         setError(error || "Login failed");
         return;
       }
+
+      const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/me`);
+      const data = await userRes.json();
+      console.log(data)
+      setEmployee(data.employee)
+      setLocation(data.employee.location)
+
 
       window.location.href = "/products/shop"
     } catch (err) {

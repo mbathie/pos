@@ -29,13 +29,15 @@ export async function POST(req) {
     const hash = await bcrypt.hash(password, 10)
 
     const org = await Org.create({ name, phone, deleted: false })
-    const location = await Location.create({ name: "Main HQ", orgId: org._id, deleted: false })
+    const location = await Location.create({ 
+      name: "Main HQ", org, deleted: false, phone
+    })
     const employee = await Employee.create({
       name: nameEmployee,
       email,
       hash,
-      orgId: org._id,
-      locationId: location._id,
+      org: org._id,
+      location: location._id,
       role: "ADMIN",
     })
 

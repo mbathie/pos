@@ -44,7 +44,7 @@ export default function Page({children}) {
             {!open && (
               <div className="flex text-lime-400 items-center gap-1 te-xt-muted-foreground">
                 <MapPin className="w-4 h-4" />
-                <span>{location.name}</span>
+                <span>{location?.name}</span>
               </div>
             )}
 

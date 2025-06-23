@@ -87,8 +87,9 @@ export default function Page() {
       body: JSON.stringify({ menu: 'shop' }),
     });
     const c = await res.json();
-    setCategory({});
+    setCategory(c.category);
     setCategories([c.category, ...categories]);
+    getCategoryProducts(c.category);
   }
 
   const getCategoryProducts = async (c) => {
