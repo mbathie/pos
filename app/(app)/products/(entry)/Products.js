@@ -4,10 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tag, ChevronsUpDown, Ellipsis } from 'lucide-react';
+import { Tag, ChevronsUpDown, Ellipsis } from 'lucide-react'
 import Variations from './Variations'
 import Delete from '../Delete'
-import AddProduct from './AddProduct';
+import AddProduct from './AddProduct'
+import IconSelect from '@/components/icon-select'
 
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useProduct } from './useProduct';
@@ -15,12 +16,16 @@ import { useProduct } from './useProduct';
 export default function Page({products, setProducts, units, title, categoryName}) {
   
   const [productsUI, setProductsUI] = useState({});
-  const { updateProduct, addProduct, createProduct } = useProduct(setProducts, setProductsUI);
+  const { updateProduct, updateProductKey, addProduct, createProduct } = useProduct(setProducts, setProductsUI);
   const contentRefs = useRef({});
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState({ type: null, productIdx: null, variationIdx: null });
   const [addOpen, setAddOpen] = useState(false);
+
+  const [iconDialogOpen, setIconDialogOpen] = useState(false);
+  const [iconDialogProductIdx, setIconDialogProductIdx] = useState(null);
+  const [iconDialogQuery, setIconDialogQuery] = useState('');
 
   const originalProducts = useRef({});
   const [isDirty, setIsDirty] = useState({});
@@ -40,6 +45,7 @@ export default function Page({products, setProducts, units, title, categoryName}
   }, [products]);
   
   useEffect(() => {
+    console.log(products)
     // Update the height and UI state when variations change
     const updatedUI = { ...productsUI };
     products.forEach((p) => {
@@ -94,7 +100,6 @@ export default function Page({products, setProducts, units, title, categoryName}
         </Button>
       </div>
       {products.map((p, pIdx) => {
-        console.log('re-rending');
         return (
         <Card
           ref={(el) => (contentRefs.current[p._id] = el)}
@@ -106,14 +111,19 @@ export default function Page({products, setProducts, units, title, categoryName}
         >
           <CardHeader>
             <CardTitle className='flex w-full items-center space-x-4'>
-              <div onClick={() => setDialogOpen(p._id, true)}>
-                {!p.data?.thumbnail ? (
-                  <Button className='bg-white rounded-lg w-14 h-14'>
-                    <Tag className='!w-8 !h-8' />
+              <div 
+                onClick={() => {
+                  setIconDialogOpen(true);
+                  setIconDialogProductIdx(pIdx);
+                  setIconDialogQuery(p.name);
+                }}>
+                {!p?.thumbnail ? (
+                  <Button className="bg-white rounded-lg w-16 h-16">
+                    <Tag className="!w-8 !h-8" />
                   </Button>
                 ) : (
-                  <Button className='bg-white rounded-lg p-1 w-14 h-14'>
-                    <img src={p.data.thumbnail} alt='Thumbnail' />
+                  <Button className="rounded-lg -p-1 w-16 h-16">
+                    <img className='rounded-lg w-16 h-16' src={p.thumbnail} alt="Thumbnail" />
                   </Button>
                 )}
               </div>
@@ -218,6 +228,13 @@ export default function Page({products, setProducts, units, title, categoryName}
         onOpenChange={setAddOpen}
         setProducts={setProducts}
         addProduct={addProduct}
+      />
+      <IconSelect
+        open={iconDialogOpen}
+        setOpen={setIconDialogOpen}
+        pIdx={iconDialogProductIdx}
+        query={iconDialogQuery}
+        updateProduct={updateProductKey}
       />
     </div>
   );

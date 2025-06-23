@@ -28,6 +28,20 @@ export function useProduct({setProducts, categoryName}) {
     });
   }
 
+  const updateProductKey = ({ pIdx, key, value }) => {
+    console.log(pIdx)
+    console.log(key)
+    console.log(value)
+
+    setProducts(draft => {
+      const product = draft[pIdx];
+      if (!product) return;
+
+      product[key] = value;
+      product.updated = true;
+    });
+  }
+
   const updatePrice = useCallback((productId, priceId, changes) => {
     setProducts(draft => {
       const product = draft.find(p => p._id === productId);
@@ -88,6 +102,7 @@ export function useProduct({setProducts, categoryName}) {
 
   return {
     updateProduct,
+    updateProductKey,
     updatePrice,
     addPrice,
     saveProduct,

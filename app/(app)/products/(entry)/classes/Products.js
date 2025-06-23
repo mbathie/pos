@@ -10,14 +10,19 @@ import { Label } from '@/components/ui/label'
 import { Tag, ChevronsUpDown, Plus, Info } from 'lucide-react'
 import { useUI } from '../../useUI';
 import { useProduct } from './useProduct';
-import DateTimePicker from './DateTimePicker';
+import DateTimePicker from '@/components/date-time-picker';
 import { getLastClassDate } from '@/lib/classes'
 import { Checkbox } from "@/components/ui/checkbox"
+import IconSelect from '@/components/icon-select'
 
 export default function Page({products, setProducts, categoryName}) {
   const contentRefs = useRef({});
   const { productsUI, toggleExpanded, toggleAll } = useUI({products, contentRefs});
-  const { updateProduct, updatePrice, addPrice, saveProduct, addTime, updateTime, addProduct } = useProduct({setProducts, categoryName});
+  const { updateProduct, updateProductKey, updatePrice, addPrice, saveProduct, addTime, updateTime, addProduct } = useProduct({setProducts, categoryName});
+
+  const [iconDialogOpen, setIconDialogOpen] = useState(false);
+  const [iconDialogProductIdx, setIconDialogProductIdx] = useState(null);
+  const [iconDialogQuery, setIconDialogQuery] = useState('');
 
   const originalProducts = useRef({});
   const [isDirty, setIsDirty] = useState({});
@@ -30,6 +35,7 @@ export default function Page({products, setProducts, categoryName}) {
     });
 
     products.forEach((p) => {
+      console.log(p)
       const isProductChanged = JSON.stringify(p) !== JSON.stringify(originalProducts.current[p._id]);
       updatedIsDirty[p._id] = isProductChanged || !p._id
     });
@@ -59,14 +65,19 @@ export default function Page({products, setProducts, categoryName}) {
         >
           <CardHeader>
             <CardTitle className='flex w-full items-center space-x-4'>
-              <div onClick={() => setDialogOpen(p._id, true)}>
-                {!p.data?.thumbnail ? (
-                  <Button className='bg-white rounded-lg w-14 h-14'>
-                    <Tag className='!w-8 !h-8' />
+              <div 
+                onClick={() => {
+                  setIconDialogOpen(true);
+                  setIconDialogProductIdx(pIdx);
+                  setIconDialogQuery(p.name);
+              }}>
+                {!p?.thumbnail ? (
+                  <Button className="bg-white rounded-lg w-16 h-16">
+                    <Tag className="!w-8 !h-8" />
                   </Button>
                 ) : (
-                  <Button className='bg-white rounded-lg p-1 w-14 h-14'>
-                    <img src={p.data.thumbnail} alt='Thumbnail' />
+                  <Button className="rounded-lg -p-1 w-16 h-16">
+                    <img className='rounded-lg w-16 h-16' src={p.thumbnail} alt="Thumbnail" />
                   </Button>
                 )}
               </div>
@@ -327,6 +338,13 @@ export default function Page({products, setProducts, categoryName}) {
           </CardContent>
         </Card>
         ))}
+        <IconSelect
+          open={iconDialogOpen}
+          setOpen={setIconDialogOpen}
+          pIdx={iconDialogProductIdx}
+          query={iconDialogQuery}
+          updateProduct={updateProductKey}
+        />
     </div>
   )
 }

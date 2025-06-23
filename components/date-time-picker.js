@@ -1,7 +1,7 @@
 "use client";
  
 import * as React from "react";
-import { CalendarDays } from "lucide-react";
+import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
  
 import { cn } from "@/lib/utils";
@@ -14,20 +14,14 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
  
-export default function DateTimePicker({ value = null, onChange }) {
-  const [date, setDate] = React.useState();
-
-  React.useEffect(() => {
-    if (value) setDate(new Date(value));
-  }, [value]);
-
+export default function DateTimePicker({ value, onChange }) {
+  const date = value instanceof Date ? value : new Date(value);
   const [isOpen, setIsOpen] = React.useState(false);
  
   const hours = Array.from({ length: 12 }, (_, i) => i + 1);
   const handleDateSelect = (selectedDate) => {
     if (selectedDate) {
-      setDate(selectedDate);
-      if (onChange) onChange(selectedDate);
+      onChange(selectedDate);
     }
   };
  
@@ -46,8 +40,7 @@ export default function DateTimePicker({ value = null, onChange }) {
           value === "PM" ? currentHours + 12 : currentHours - 12
         );
       }
-      setDate(newDate);
-      if (onChange) onChange(newDate);
+      onChange(newDate);
     }
   };
  
@@ -61,7 +54,7 @@ export default function DateTimePicker({ value = null, onChange }) {
             !date && "text-muted-foreground"
           )}
         >
-          <CalendarDays className="mr-2 h-4 w-4" />
+          <CalendarIcon className="mr-2 h-4 w-4" />
           {date ? (
             format(date, "MM/dd/yyyy hh:mm aa")
           ) : (
@@ -85,7 +78,7 @@ export default function DateTimePicker({ value = null, onChange }) {
                     key={hour}
                     size="icon"
                     variant={
-                      date && date.getHours() % 12 === hour % 12
+                      date instanceof Date && date.getHours() % 12 === hour % 12
                         ? "default"
                         : "ghost"
                     }
@@ -105,7 +98,7 @@ export default function DateTimePicker({ value = null, onChange }) {
                     key={minute}
                     size="icon"
                     variant={
-                      date && date.getMinutes() === minute
+                      date instanceof Date && date.getMinutes() === minute
                         ? "default"
                         : "ghost"
                     }
@@ -127,7 +120,7 @@ export default function DateTimePicker({ value = null, onChange }) {
                     key={ampm}
                     size="icon"
                     variant={
-                      date &&
+                      date instanceof Date &&
                       ((ampm === "AM" && date.getHours() < 12) ||
                         (ampm === "PM" && date.getHours() >= 12))
                         ? "default"

@@ -8,6 +8,7 @@ export async function PUT(req, { params }) {
 
   const { product } = await req.json();
   const { id } = await params
+  console.log(id)
 
   const updatedProduct = await Product.findOneAndUpdate(
     { _id: id },

@@ -7,7 +7,22 @@ export function useProduct(setProducts) {
     });
   }, [setProducts]);
 
+  const updateProductKey = ({ pIdx, key, value }) => {
+    console.log(pIdx)
+    console.log(key)
+    console.log(value)
+
+    setProducts(draft => {
+      const product = draft[pIdx];
+      if (!product) return;
+
+      product[key] = value;
+      product.updated = true;
+    });
+  }
+
   const updateProduct = async (product) => {
+    console.log(product)
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${product._id}`, {
         method: 'PUT',
@@ -65,5 +80,5 @@ export function useProduct(setProducts) {
     }
   };
 
-  return { updateProduct, addProduct, createProduct };
+  return { updateProduct, updateProductKey, addProduct, createProduct };
 }
