@@ -36,13 +36,7 @@ export async function GET(req, { params }) {
 export async function PUT(req, { params }) {
   await connectDB()
 
-  if (!Types.ObjectId.isValid(params.id)) {
-    return NextResponse.json({ error: 'Invalid location ID' }, { status: 400 })
-  }
-
   const updates = await req.json()
-  // console.log(updates)
-  // return
   const updated = await Location.findByIdAndUpdate(params.id, updates, { new: true }).lean()
 
   if (!updated) {
