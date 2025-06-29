@@ -1,0 +1,29 @@
+
+DONE - folders for shop items
+
+DONE - bg colours for shop items, icons / images
+
+- item description
+DONE - customer management
+DONE  - add/lookup customer at transaction time
+- terminal integration (real terminal)
+
+- bump screen for kitchen staff to see orders
+  - order table
+
+- checkout process for subscriptions
+- checkout process for day pass
+- checkout process for courses / classes
+
+- customer rewards & reward packages assigned to products
+
+- backend Schedule table for classes courses
+- backend Membership table for memberships
+- backend Orders table for shop items
+
+- membership mumber
+
+- ability to add multiple prices for classes/courses within a price.
+
+- waivers
+  - 

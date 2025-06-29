@@ -155,7 +155,7 @@ export default function Page() {
                 disabled={!product?.variations?.some(v => v.selected) || product?.qty === 0}
                 onClick={async () => {
                   const _product = await calcCartValueShop({product})
-                  addToCart(_product)
+                  addToCart({..._product, type: "shop"})
                 }}
               >
                 Add

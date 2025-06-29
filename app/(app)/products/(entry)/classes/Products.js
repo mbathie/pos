@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Label } from '@/components/ui/label'
-import { Tag, ChevronsUpDown, Plus, Info } from 'lucide-react'
+import { Tag, ChevronsUpDown, Plus, Info, Trash } from 'lucide-react'
 import { useUI } from '../../useUI';
 import { useProduct } from './useProduct';
 import DateTimePicker from '@/components/date-time-picker';
@@ -18,7 +18,7 @@ import IconSelect from '@/components/icon-select'
 export default function Page({products, setProducts, categoryName}) {
   const contentRefs = useRef({});
   const { productsUI, toggleExpanded, toggleAll } = useUI({products, contentRefs});
-  const { updateProduct, updateProductKey, updatePrice, addPrice, saveProduct, addTime, updateTime, addProduct } = useProduct({setProducts, categoryName});
+  const { updateProduct, updateProductKey, updateVariation, addVariation, saveProduct, addTime, updateTime, addProduct, addPrice, updatePrice, deletePrice } = useProduct({setProducts, categoryName});
 
   const [iconDialogOpen, setIconDialogOpen] = useState(false);
   const [iconDialogProductIdx, setIconDialogProductIdx] = useState(null);
@@ -200,42 +200,62 @@ export default function Page({products, setProducts, categoryName}) {
 
               <div className=''>
                 <div className='flex mb-1'>
-                  <Label className="w-38">Prices ($)</Label>
+                  <Label className="w-38">Variations ($)</Label>
                 </div>
                 <div className='flex flex-col gap-2'>
-                  {p?.prices?.map((pr, prIdx) => {
+                  {p?.variations?.map((variation, variationIdx) => {
                     return (
-                      <Card key={pr._id} className='flex flex-col gap-2'>
+                      <Card key={variation._id} className='flex flex-col gap-2'>
                         <CardContent className="flex flex-col gap-2">
-                          <div className='flex'>
-                            <div className='flex flex-col gap-1'>
-                              <Label>Price Name</Label>
-                              <Input 
-                                placeholder="Adult" className="w-38 rounded-r-none" value={pr.name}
-                                onChange={(e) => updatePrice(p._id, pr._id, { name: e.target.value })}
-                              />
+                          {/* Price input headers */}
+                          <div className="flex gap-2 mb-1- justify-start">
+                            <div className="w-38"><Label>Price Name</Label></div>
+                            <div className="w-38"><Label>Price ($)</Label></div>
+                          </div>
+                          {/* Price input rows */}
+                          <div className="flex flex-col gap-2">
+                            {(variation.prices?.length ? variation.prices : variation.prices || []).map((price, priceIdx) => (
+                              <div key={priceIdx} className="flex gap-2">
+                                <div className="w-38">
+                                  <Input
+                                    placeholder="Adult"
+                                    className="w-38 rounded-r-none-"
+                                    value={price.name}
+                                    onChange={e => updatePrice(p._id, variation._id, priceIdx, 'name', e.target.value)}
+                                  />
+                                </div>
+                                <div className="w-38">
+                                  <Input
+                                    type="number"
+                                    placeholder="20.00"
+                                    className="w-38 relative left-[-1px]"
+                                    value={price.value}
+                                    onChange={e => updatePrice(p._id, variation._id, priceIdx, 'value', e.target.value)}
+                                  />
+                                </div>
+                                <Button
+                                  type="icon"
+                                  variant="destructive"
+                                  onClick={() => deletePrice(pIdx, variationIdx, priceIdx)}
+                                >
+                                  <Trash className="size-4" />
+                                </Button>
+                              </div>
+                            ))}
+                            <div className='flex'>
+                              <Button className='flex' type="icon" variant="outline" onClick={() => addPrice(pIdx, variationIdx)}>
+                                <Plus /> New Price
+                              </Button>
                             </div>
-                            <div className="flex flex-col gap-1 w-38">
-                              <Label>Price ($)</Label>
-                              <Input
-                                type="number"
-                                placeholder="20.00"
-                                className="w-38 rounded-l-none relative left-[-1px] border-l-0" // padding to the right so the icon doesn't overlap text
-                                value={pr.value}
-                                onChange={(e) => updatePrice(p._id, pr._id, { value: e.target.value })}
-                              />
-                            </div>
+
                           </div>
 
                           <Label>Times</Label>
-                          {pr.times?.map((t, tIdx) => {
+                          {variation.times?.map((t, tIdx) => {
                             return (
-
                               <Card key={t._id} className=''>
                                 <CardContent>
                                   <div className='flex flex-col gap-2'>
-                  
-                  
                                     <div className="flex gap-2">
                                       <div>
                                         <div className='text-sm text-muted-foreground'>starts</div>
@@ -243,13 +263,12 @@ export default function Page({products, setProducts, categoryName}) {
                                           <DateTimePicker 
                                             value={t.start} 
                                             onChange={(newDate) => updateTime({
-                                              productIdx: pIdx, priceIdx: prIdx, timeIdx: tIdx,
+                                              productIdx: pIdx, variationIdx: variationIdx, timeIdx: tIdx,
                                               changes: { start: newDate }
                                             })}
                                           />
                                         </div>
                                       </div>
-                  
                                       <div>
                                         <div className='text-sm text-muted-foreground'>repeats every</div>
                                         <div className='flex flex-row items-center space-x-2 relative'>
@@ -259,7 +278,7 @@ export default function Page({products, setProducts, categoryName}) {
                                             value={t.repeatInterval || 0}
                                             placeholder="7"
                                             onChange={(e) => updateTime({
-                                              productIdx: pIdx, priceIdx: prIdx, timeIdx: tIdx,
+                                              productIdx: pIdx, variationIdx: variationIdx, timeIdx: tIdx,
                                               changes: { repeatInterval: Number(e.target.value) }
                                             })}
                                           />
@@ -268,18 +287,17 @@ export default function Page({products, setProducts, categoryName}) {
                                           </div>
                                         </div>
                                       </div>
-                  
                                       <div className="-ml-2">
                                         <div className='text-sm text-muted-foreground'>times</div>
                                         <div className='flex flex-row items-center space-x-2 relative'>
                                           <Input
                                             type="number"
-                                            className="w-28"
+                                            className="w-18"
                                             placeholder="10"
                                             value={t.repeatCnt || 0}
                                             disabled={t.repeatAlways === true}
                                             onChange={(e) => updateTime({
-                                              productIdx: pIdx, priceIdx: prIdx, timeIdx: tIdx,
+                                              productIdx: pIdx, variationIdx: variationIdx, timeIdx: tIdx,
                                               changes: { repeatCnt: Number(e.target.value) }
                                             })}
                                             />
@@ -290,32 +308,24 @@ export default function Page({products, setProducts, categoryName}) {
                                         <Checkbox 
                                           checked={t.repeatAlways || false}
                                           onCheckedChange={(e) => updateTime({
-                                            productIdx: pIdx, priceIdx: prIdx, timeIdx: tIdx,
+                                            productIdx: pIdx, variationIdx: variationIdx, timeIdx: tIdx,
                                             changes: { repeatAlways: e, repeatCnt: e ? 0 : t.repeatCnt }
                                           })}
                                         />  
                                       </div>
                                     </div>
-                                    
                                     <div>
                                       <div className='text-muted-foreground text-sm'>
                                         {getLastClassDate(t) === -1 ? "repeats until cancelled" : `last class ${getLastClassDate(t)}`}
                                       </div>
                                     </div>
-                  
-                  
                                   </div>
                                 </CardContent>
                               </Card>
-    
-
-
-
                             )
                           })}
-
                           <div>
-                            <Button type="icon" variant="outline" onClick={() => addTime({productIdx: pIdx, priceIdx: prIdx})}>
+                            <Button type="icon" variant="outline" onClick={() => addTime({productIdx: pIdx, variationIdx: variationIdx})}>
                               <Plus /> New Time
                             </Button>
                           </div>
@@ -324,11 +334,9 @@ export default function Page({products, setProducts, categoryName}) {
                     )
                   })}
                 </div>
-
-                <Button type="icon" variant="outline" className="mt-2" onClick={() => addPrice(p._id)}>
-                  <Plus /> New Price
+                <Button type="icon" variant="outline" className="mt-2" onClick={() => addVariation(p._id)}>
+                  <Plus /> New Variation
                 </Button>
-
               </div>
 
               {/* <Times product={p} setProducts={setProducts} /> */}

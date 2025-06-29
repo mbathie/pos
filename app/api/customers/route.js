@@ -4,21 +4,33 @@ import { getEmployee } from "@/lib/auth"
 import { Customer } from "@/models"
 
 export async function POST(req) {
-  await connectDB()
-  const { employee } = await getEmployee()
-  const { name, email, phone } = await req.json()
+  await connectDB();
+  const { employee } = await getEmployee();
+  console.log(employee)
+  const { name, email, phone, address1, city, state, postcode, agree, signature } = await req.json();
 
   if (await Customer.findOne({ email }))
-    return NextResponse.json({ error: 'email exists', exists: true }, { status: 400 });
+    return NextResponse.json({ error: 'email exists', exists: true, field: "email" }, { status: 400 });
 
   try {
     const customer = await Customer.create({
-      name, email, phone,
-      orgs: [employee.orgId],
-    })
-    return NextResponse.json(customer, { status: 201 })
+      name, email, phone, assigned: false,
+      address: {
+        address1,
+        city,
+        state,
+        postcode
+      },
+      waiver: {
+        signature,
+        agree,
+        signed: new Date()
+      },
+      orgs: [employee.org._id],
+    });
+    return NextResponse.json(customer, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 

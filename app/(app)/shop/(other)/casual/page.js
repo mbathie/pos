@@ -2,9 +2,9 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useGlobals } from '@/lib/globals'
-import { useHandler } from '../useHandler'
+import { useHandler } from './useHandler'
 import Products from '../products'
-import ProductDetail from '../productDetail';
+import ProductDetail from './productDetail';
 import { useImmer } from 'use-immer'
 
 export default function Page() {

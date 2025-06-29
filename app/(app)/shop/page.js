@@ -12,7 +12,7 @@ export default function Page() {
 
   const shopItems = [
     { title: "Casual Entry", icon: Ticket, href: "/shop/casual", breadcrumb: {} },
-    { title: "Classes and Courses", icon: Dumbbell, href: "/shop/courses", breadcrumb: {} },
+    { title: "Classes and Courses", icon: Dumbbell, href: "/shop/classes", breadcrumb: {} },
     { title: "Membership", icon: IdCard, href: "/shop/membership", breadcrumb: {} },
     { title: "Food and Beverage", icon: Coffee, href: "/shop/retail", breadcrumb: { href: "/shop/retail", name: "Categories" } }
   ];

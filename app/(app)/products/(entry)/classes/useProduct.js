@@ -42,12 +42,12 @@ export function useProduct({setProducts, categoryName}) {
     });
   }
 
-  const updatePrice = useCallback((productId, priceId, changes) => {
+  const updateVariation = useCallback((productId, priceId, changes) => {
     setProducts(draft => {
       const product = draft.find(p => p._id === productId);
       if (!product) return;
 
-      const price = product.prices.find(pr => pr._id === priceId);
+      const price = product.variations.find(pr => pr._id === priceId);
       if (price) {
         Object.assign(price, changes);
       }
@@ -62,8 +62,7 @@ export function useProduct({setProducts, categoryName}) {
       type: '',
       duration: { name: 1, unit: 'hour' },
       capacity: 0,
-      prices: [],
-      times: []
+      variations: [],
     };
 
     setProducts(draft => {
@@ -71,43 +70,76 @@ export function useProduct({setProducts, categoryName}) {
     });
   }
 
-  const addPrice = useCallback((productId) => {
+  const addVariation = useCallback((productId) => {
     setProducts(draft => {
       const product = draft.find(p => p._id === productId);
       if (!product) return;
 
-      product.prices.push({ _id: generateObjectId(),name: "", value: "" });
+      product.variations.push({ _id: generateObjectId(), prices: [{ name: '', value: '' }] });
     });
   }, [setProducts]);
 
-  const addTime = ({productIdx, priceIdx}) => {
+  const addTime = ({productIdx, variationIdx}) => {
     const now = new Date();
     const start = new Date(Math.round(now.getTime() / (1000 * 60 * 5)) * (1000 * 60 * 5));
 
     setProducts(draft => {
-      const price = draft[productIdx].prices[priceIdx];
-      if (!price.times) price.times = [];
-      price.times.push({ _id: generateObjectId(), start: start.toISOString(), value: "" });
+      const variation = draft[productIdx].variations[variationIdx];
+      if (!variation.times) variation.times = [];
+      variation.times.push({ _id: generateObjectId(), start: start.toISOString(), value: "" });
     });
   }
 
-  const updateTime = ({productIdx, priceIdx, timeIdx, changes}) => {
+  const updateTime = ({productIdx, variationIdx, timeIdx, changes}) => {
     setProducts(draft => {
-      const price = draft[productIdx].prices[priceIdx];
-      if (price && price.times && price.times[timeIdx]) {
-        Object.assign(price.times[timeIdx], changes);
+      const variation = draft[productIdx].variations[variationIdx];
+      if (variation && variation.times && variation.times[timeIdx]) {
+        Object.assign(variation.times[timeIdx], changes);
       }
     });
   }
 
+  // Add a new price to a variation at [productIdx][variationIdx]
+  const addPrice = (productIdx, variationIdx) => {
+    setProducts(draft => {
+      const variation = draft[productIdx]?.variations?.[variationIdx];
+      if (!variation) return;
+      if (!variation.prices) variation.prices = [];
+      variation.prices.push({ name: '', value: '' });
+    });
+  }
+
+  const updatePrice = (productId, variationId, priceIdx, key, value) => {
+    setProducts(draft => {
+      const product = draft.find(p => p._id === productId);
+      if (!product) return;
+      const variation = product.variations.find(v => v._id === variationId);
+      if (!variation) return;
+      if (!variation.prices || !variation.prices[priceIdx]) return;
+
+      variation.prices[priceIdx][key] = value;
+    });
+  };
+
+  const deletePrice = (productIdx, variationIdx, priceIdx) => {
+    setProducts(draft => {
+      const variation = draft[productIdx]?.variations?.[variationIdx];
+      if (!variation || !variation.prices) return;
+      variation.prices.splice(priceIdx, 1);
+    });
+  };
+
   return {
     updateProduct,
     updateProductKey,
+    updateVariation,
     updatePrice,
-    addPrice,
+    addVariation,
     saveProduct,
     addTime,
     updateTime,
-    addProduct
+    addProduct,
+    addPrice,
+    deletePrice
   };
 }

@@ -4,6 +4,7 @@ import { connectDB } from "@/lib/mongoose";
 import { Transaction } from "@/models";
 import { calcCartTotals } from "@/lib/cart"
 import { Types } from "mongoose";
+import { addToSchedule } from '@/lib/schedule'
 
 export async function POST(req, { params }) {
   await connectDB();
@@ -12,7 +13,13 @@ export async function POST(req, { params }) {
   const org = employee.org;
 
   const { received, change, cart, customer } = await req.json();
+  cart.products = cart.products.map(p => {
+    const { thumbnail, ...rest } = p;
+    return rest;
+  });
   const totals = calcCartTotals(cart.products);
+
+  // console.log(cart)
 
   const transaction = await Transaction.create({
     org: employee.orgId,
@@ -31,6 +38,11 @@ export async function POST(req, { params }) {
     },
     status: "succeeded"
   });
+
+  addToSchedule({transaction, cart, employee, customer})
+
+  return NextResponse.json({ }, { status: 200 });
+
 
   return NextResponse.json({ transaction }, { status: 200 });
 }

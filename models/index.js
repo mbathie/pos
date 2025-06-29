@@ -110,6 +110,26 @@ const TransactionSchema = new mongoose.Schema({
 
 const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', TransactionSchema);
 
+// ==== Schedule ====
+const ScheduleSchema = new mongoose.Schema({
+  org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
+  location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' }, // only for classes
+  product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+  capacity: Number,
+  classes: [{
+    datetime: { type: Date, required: true },
+    duration: Number,
+    available: Number,
+    customers: [{
+      customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
+      status: { type: String, enum: ['confirmed', 'cancelled', 'checkedin'] },
+      transaction: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }
+    }]
+  }]
+}, { timestamps: true, strict: false });
+
+const Schedule = mongoose.models.Schedule || mongoose.model('Schedule', ScheduleSchema);
+
 // ==== Updated Exports ====
 module.exports = {
   Org,
@@ -120,4 +140,5 @@ module.exports = {
   Customer,
   Transaction,
   Folder,
+  Schedule,
 };

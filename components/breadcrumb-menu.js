@@ -22,9 +22,13 @@ export default function BreadcrumbMenu({}) {
           <React.Fragment key={index}>
             <BreadcrumbItem>
               {index < breadcrumb.length - 1 ? (
-                <BreadcrumbLink asChild className="cursor-pointer">
-                  <Link href={item.href}>{item.name}</Link>
-                </BreadcrumbLink>
+                item.href ? (
+                  <BreadcrumbLink asChild className="cursor-pointer">
+                    <Link href={item.href}>{item.name}</Link>
+                  </BreadcrumbLink>
+                ) : (
+                  <BreadcrumbPage>{item.name}</BreadcrumbPage>
+                )
               ) : (
                 <BreadcrumbPage>{item.name}</BreadcrumbPage>
               )}

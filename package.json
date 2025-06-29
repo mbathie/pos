@@ -47,11 +47,13 @@
     "react-day-picker": "^9.7.0",
     "react-dom": "^19.0.0",
     "react-image-crop": "^11.0.10",
+    "react-signature-canvas": "^1.1.0-alpha.2",
     "stripe": "^18.2.1",
     "tailwind-merge": "^3.0.2",
     "tw-animate-css": "^1.2.4",
     "use-immer": "^0.11.0",
-    "zod": "^3.25.67"
+    "zod": "^3.25.67",
+    "zustand": "^5.0.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.4",

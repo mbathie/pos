@@ -63,7 +63,7 @@ export default function Page() {
   };
 
   return (
-    <div className="gap-4 flex flex-row -justify-start mx-20 mt-4">
+    <div className="gap-4 flex flex-row -justify-start mx-4 mt-4">
 
       <Card className="w-full">
         <CardContent>
@@ -129,7 +129,7 @@ export default function Page() {
         </CardContent>
       </Card>
 
-      <Tabs value={tab} onValueChange={setTab} className="w-[400px]">
+      <Tabs value={tab} onValueChange={setTab} className="w-3/4">
         <TabsList>
           <TabsTrigger value="card" onClick={() => setCashInput(0.00)} disabled={paymentStatus === 'succeeded'}>Card</TabsTrigger>
           <TabsTrigger value="cash" disabled={paymentStatus === 'succeeded'}>Cash</TabsTrigger>
@@ -192,8 +192,8 @@ export default function Page() {
                     disabled={parseFloat(changeInfo.received) < cart.total || paymentStatus === 'succeeded'}
                     onClick={async () => {
                       const tx = await receiveCash({ input: cashInput, customer });
-                      setPaymentStatus(tx.transaction.status);
-                      resetCart();
+                      // setPaymentStatus(tx.transaction.status);
+                      // resetCart();
                     }}
                   >
                     Accept

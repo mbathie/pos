@@ -2,13 +2,14 @@
 import Link from 'next/link';
 import { useState } from 'react';
 import { useGlobals } from '@/lib/globals'
-import { ShoppingCart, X } from 'lucide-react'
+import { ShoppingCart, Trash } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Sheet, SheetContent, SheetTrigger, SheetHeader,
   SheetTitle, SheetDescription, SheetFooter, SheetClose
 } from "@/components/ui/sheet"
 import { Separator } from '@radix-ui/react-separator'
+import dayjs from 'dayjs';
 
 export default function Cart({}) {
   const { cart, removeFromCart, pushBreadcrumb } = useGlobals()
@@ -31,18 +32,18 @@ export default function Cart({}) {
           <SheetDescription>Review before handling payment</SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-4 text-sm">
-          <div className="space-y-2 w-full">
+        <div className="flex-1 overflow-y-auto px-4- text-sm">
+          <div className="space-y-1 w-full *:even:bg-accent">
             {cart?.products?.map((p, pIdx) => {
 
               // for shop product item
-              return (
-                <div key={pIdx} className="flex flex-col">
+              if (p.type == 'shop' ) return (
+                <div key={pIdx} className="flex flex-col px-4">
                   <div className="flex">
-                    <div>{p.qty}x {p.name}</div>
+                    <div className='flex'>
+                      {p.qty}x {p.name}
+                    </div>
                     <div className='ml-1'> ({p.item.variation})</div>
-                    <div className='flex-1' />
-                    <div>${p.amount.subtotal.toFixed(2)}</div>
                     <div
                       className='ml-2 cursor-pointer mt-0.5'
                       onClick={(e) => {
@@ -50,10 +51,12 @@ export default function Cart({}) {
                         removeFromCart(pIdx);
                       }}
                     >
-                      <X className='size-4'/>
+                      <Trash className='size-4'/>
                     </div>
+                    <div className='flex-1' />
+                    <div>${p.amount.subtotal.toFixed(2)}</div>
                   </div>
-                  <div className='flex flex-row text-xs ml-7 italic'>
+                  <div className='flex flex-row text-xs ml-1'>
                     {p.item.mods && p.item.mods.map((mod, pIdx) => (
                       <span key={pIdx}>
                         {mod.name}{pIdx < p.item.mods.length - 1 ? ', ' : ''}
@@ -63,7 +66,77 @@ export default function Cart({}) {
                 </div>
 
               );
+
+              else if (p.type=='course') return (
+                <div key={pIdx} className="flex flex-col space-y-1  px-4">
+                  <div className="flex">
+                    <div className="font-semibold">{p.name}</div>
+                    <div
+                      className='ml-2 cursor-pointer mt-0.5'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFromCart(pIdx);
+                      }}
+                    >
+                      <Trash className='size-4'/>
+                    </div>
+                  </div>
+                  <div className=''>{p.variations?.[0]?.times?.[0]?.start && dayjs(p.variations[0].times[0].start).format('ddd DD/MM/YY HH:mm A')}</div>
+
+                  {p.variations?.[0]?.prices?.map((price, i) => (
+                    <div key={i} className="flex">
+                      <div>{price.qty}x {price.name}</div>
+                      <div className="ml-auto">${parseFloat(price.value).toFixed(2)}</div>
+                    </div>
+                  ))}
+                </div>
+              )
+
+              else if (p.type=='class') return (
+                <div key={pIdx} className="flex flex-col space-y-1  px-4">
+                  <div className="flex">
+                    <div className="font-semibold">{p.name}</div>
+                    <div
+                      className='ml-1 cursor-pointer mt-0.5'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFromCart(pIdx);
+                      }}
+                    >
+                      <Trash className='size-4'/>
+                    </div>
+                  </div>
+
+                  {p.variations?.map((v, vIdx) => (
+                    <div key={vIdx}>
+                      {v.prices?.map((price, i) => (
+                        <div key={i} className="flex">
+                          <div>{price.qty}x {price.name}</div>
+                          <div className="ml-auto opacity-40">${parseFloat(price.value).toFixed(2)}</div>
+                        </div>
+                      ))}
+
+                      {v.timesCalc?.filter(t => t.selected)?.map((time, tIdx) => (
+                        <div key={tIdx} className='flex'>
+                          <div className="mr-auto">
+                            {dayjs(time.value).format('ddd DD/MM/YY HH:mm A')}
+                          </div>
+                          <div className=''>
+                            {(() => {
+                              const lineTotal = v.prices?.reduce((sum, price) => {
+                                return sum + ((price.qty ?? 0) * parseFloat(price.value ?? 0));
+                              }, 0);
+                              return `$${lineTotal.toFixed(2)}`;
+                            })()}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )
             })}
+
 
             {/* for membership item */}
 
