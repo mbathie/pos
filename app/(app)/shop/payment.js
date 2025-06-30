@@ -8,19 +8,23 @@ import { Button } from "@/components/ui/button"
 import { useGlobals } from "@/lib/globals"
 import { useCard } from './useCard'
 import { useCash } from "./useCash";
+import { useCustomer } from "./useCustomer";
 import { Separator } from "@radix-ui/react-separator";
 
 import Customer from './customer'
+import CustomerWaiverConnnect from './customerWaiverConnect'
 import { User } from "lucide-react";
 
 const keypad = ['1','2','3','4','5','6','7','8','9','.','0','AC'];
 
 export default function Page() {
-  const { cart, resetCart } = useGlobals();
+  const { cart, resetCart, setCart } = useGlobals();
   const [cashInput, setCashInput] = useState('0');
   const [tab, setTab] = useState('card');
   const { discoverReaders, connectReader, collectPayment, capturePayment } = useCard({cart})
   const { calcChange, receiveCash } = useCash({cart})
+  const { getCustomers, setCustomer: setCartCustomer } = useCustomer({})
+  const [ customers, setCustomers ] = useState([])
 
   const [changeInfo, setChangeInfo] = useState({ received: "0.00", change: "0.00" });
 
@@ -30,15 +34,31 @@ export default function Page() {
   const [showCustomer, setShowCustomer] = useState(false);
   const [customer, setCustomer] = useState({})
 
+  const [showCustomerWaiverConnect, setCustomerWaiverConnect] = useState(false)
+  const [waiverCustomer, setWaiverCustomer] = useState({})
+
   const router = useRouter();
 
   useEffect(() => {
     const init = async () => {
-      await discoverReaders();
-      setTimeout(async () => {
-        await connectReader();
-      },2000)
+      const c = await getCustomers()
+      setCustomers(c)
+    }
+    init()
+  }, [cart])
+
+  useEffect(() => {
+    const init = async () => {
+      // await discoverReaders();
+      // setTimeout(async () => {
+      //   await connectReader();
+      // },2000)
+
+      // get list of potential customers
+      const c = await getCustomers()
+      setCustomers(c)
     };
+
 
     init();
   }, []);
@@ -103,8 +123,37 @@ export default function Page() {
 
             <Separator orientation="vertical" className="h-[1px] bg-muted my-2" />
 
+            {/* CUSTOMERS */}
+            <div className="flex flex-col gap-1">
+              {customers?.map((c) => {
+                return (
+                  <div className="flex items-center" key={c.name + c.pIdx + c.vIdx + c.priceIdx}>
+                    <div className="flex-1">{c.name}</div>
+                    <div>
+                      {c.customer &&
+                        <div>{c.customer.name}</div>
+                      }
+                      {!c.customer &&
+                      <Button 
+                        size="sm" variant="outline"
+                        onClick={() => {
+                          setWaiverCustomer(c)
+                          setCustomerWaiverConnect(true)
+                        }}
+                      >
+                        Connect
+                      </Button>
+                      }
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+
+
             {/* CUSTOMER */}
-            <div className="flex justify-between items-start">
+            {/* <div className="flex justify-between items-start">
               <div className="flex gap-1 items-center">
                 <User className="size-5"/>
                 <div>Customer</div>
@@ -123,7 +172,7 @@ export default function Page() {
                   <Button size="sm" onClick={() => setShowCustomer(true)}>Connect</Button>
                 )}
               </div>
-            </div>
+            </div> */}
           </div>
 
         </CardContent>
@@ -206,6 +255,12 @@ export default function Page() {
       </Tabs>
 
       <Customer setCustomer={setCustomer} open={showCustomer} onOpenChange={setShowCustomer} />
+      <CustomerWaiverConnnect 
+        // setCustomer={setCustomer} 
+        waiverCustomer={waiverCustomer}
+        setCartCustomer={setCartCustomer}
+        open={showCustomerWaiverConnect} onOpenChange={setCustomerWaiverConnect} 
+      />
 
     </div>
   )

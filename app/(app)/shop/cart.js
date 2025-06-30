@@ -12,7 +12,7 @@ import { Separator } from '@radix-ui/react-separator'
 import dayjs from 'dayjs';
 
 export default function Cart({}) {
-  const { cart, removeFromCart, pushBreadcrumb } = useGlobals()
+  const { cart, removeFromCart, resetCart, pushBreadcrumb } = useGlobals()
   const [open, setOpen] = useState(false);
 
   if (cart.products.length < 1)
@@ -172,6 +172,7 @@ export default function Cart({}) {
 
 
           <SheetClose asChild>
+            <div className='flex flex-col gap-2'>
             <Link href="/shop/retail/payment" passHref>
               <Button
                 type="submit"
@@ -182,6 +183,17 @@ export default function Cart({}) {
                 Payment
               </Button>
             </Link>
+
+            <Button
+              type="submit"
+              className="w-full"
+              variant="outline"
+              disabled={!cart.products.length}
+              onClick={() => resetCart()}
+            >
+              Clear Cart
+            </Button>
+            </div>
           </SheetClose>
         </SheetFooter>
 

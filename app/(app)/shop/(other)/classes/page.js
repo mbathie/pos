@@ -1,8 +1,9 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useGlobals } from '@/lib/globals'
+// import { useGlobals } from '@/lib/globals'
 import { useHandler } from '../useHandler'
+import { useClass } from './useClass'
 import Products from '../products'
 import ProductDetailClass from './productDetailClass';
 import ProductDetailCourse from './ProductDetailCourse';
@@ -15,6 +16,7 @@ export default function Page() {
   const [ sheetOpen, setSheetOpen ] = useState(false);
 
   const { getCategory, getProducts} = useHandler({})
+  const { setTimes } = useClass({setProduct})
 
   useEffect(() => {
     async function fetch() {
@@ -36,6 +38,7 @@ export default function Page() {
         category={category}
         onClick={(p) => {
           setProduct(p)
+          setTimes()
           setSheetOpen(true);
         }}
       />

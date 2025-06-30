@@ -6,7 +6,7 @@ import React from 'react'
 import { Minus, Plus } from "lucide-react"
 import { useGlobals } from '@/lib/globals'
 import { useState, useEffect } from 'react'
-import { calcCartValueClass } from '@/lib/product'
+import { calcCartValueClass, cleanupProduct } from '@/lib/product'
 import MultiSelect from '@/components/multi-select'
 import { useClass } from './useClass'
 
@@ -14,14 +14,15 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
   
   if (!product) return null;
 
-  const { setTimes, setQty, onSelectTime } = useClass({product, setProduct})
+  const { setQty, onSelectTime } = useClass({product, setProduct})
   
   const { addToCart } = useGlobals()
   const [total, setTotal] = useState(0)
 
-  useEffect(() => {
-    setTimes()
-  },[])
+  // useEffect(() => {
+  //   console.log('calling setTimes()')
+  //   setTimes()
+  // },[])
 
   useEffect(() => {
     console.log(product)
@@ -91,16 +92,23 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
                     ))}
 
                     {variation.prices?.some(p => p.qty > 0) && variation.times?.length > 0 && (
-                      <MultiSelect
-                        options={variation.timesCalc}
-                        onValueChange={(tcValues) => onSelectTime({ vIdx, tcValues })}
-                        // defaultValue={selectedFrameworks}
-                        placeholder="Times..."
-                        variant="inverted"
-                        animation={2}
-                        maxCount={1}
-                        disableSelectAll={true}
-                      />
+                      <>
+                        {console.log('MultiSelect debug:', {
+                          vIdx,
+                          timesCalc: variation.timesCalc,
+                          times: variation.times,
+                          prices: variation.prices,
+                        })}
+                        <MultiSelect
+                          options={variation.timesCalc}
+                          onValueChange={(tcValues) => onSelectTime({ vIdx, tcValues })}
+                          placeholder="Times..."
+                          variant="inverted"
+                          animation={2}
+                          maxCount={1}
+                          disableSelectAll={true}
+                        />
+                      </>
                     )}
                   </div>
 
@@ -126,7 +134,14 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
               disabled={!total}
               onClick={async () => {
                 const _product = await calcCartValueClass({product})
-                addToCart(_product)
+                const _productCleaned = await cleanupProduct({product:_product})
+
+                _product.variations = _product.variations?.map(v => ({
+                  ...v,
+                  prices: v.prices?.filter(price => (price.qty ?? 0) > 0) || []
+                }));
+
+                addToCart(_productCleaned)
               }}
             >
               Add

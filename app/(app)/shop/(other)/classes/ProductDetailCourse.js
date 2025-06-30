@@ -137,6 +137,12 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
               disabled={!total}
               onClick={async () => {
                 const _product = await calcCartValueCourse({product})
+
+                _product.variations = _product.variations?.map(v => ({
+                  ...v,
+                  prices: v.prices?.filter(price => (price.qty ?? 0) > 0) || []
+                }))
+                
                 addToCart(_product)
               }}
             >

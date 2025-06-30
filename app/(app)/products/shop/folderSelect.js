@@ -10,6 +10,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import Colors from '@/components/colors'
+import colors from 'tailwindcss/colors';
 
 export function FolderSelect({ product, pIdx, setFolder }) {
   const [open, setOpen] = useState(false);
@@ -120,17 +121,21 @@ export function FolderSelect({ product, pIdx, setFolder }) {
                   value={folder.name}
                   onSelect={() => handleSelect(folder)}
                 >
-                  <Check
-                    className={cn(
-                      'mr-2 h-4 w-4',
-                      value === folder.name ? 'opacity-100' : 'opacity-0'
-                    )}
-                  />
                   <div
-                    className="size-6 rounded-sm"
-                    style={{ backgroundColor: folder.color }}
-                  />
-                  {folder.name}
+                    className="size-6 rounded-sm mr-2 flex items-center justify-center"
+                    style={(() => {
+                      const [colorFamily, colorShade] = folder.color.split('-');
+                      console.log(`${colorFamily} - ${colorShade}`)
+                      const resolvedColor = colors?.[colorFamily]?.[colorShade];
+                      console.log(`Folder: ${folder.name}, Color Key: ${folder.color}, Resolved: ${resolvedColor}`);
+                      return { backgroundColor: resolvedColor };
+                    })()}
+                  >
+                    {value === folder.name && (
+                      <Check className="size-4 text-white" />
+                    )}
+                  </div>
+                  {folder.name} {folder.color}
                 </CommandItem>
               ))}
             </CommandGroup>
