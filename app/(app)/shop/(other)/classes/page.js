@@ -1,7 +1,7 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-// import { useGlobals } from '@/lib/globals'
+import { useGlobals } from '@/lib/globals'
 import { useHandler } from '../useHandler'
 import { useClass } from './useClass'
 import Products from '../products'
@@ -10,6 +10,7 @@ import ProductDetailCourse from './ProductDetailCourse';
 import { useImmer } from 'use-immer'
 
 export default function Page() {
+  // const { pushBreadcrumb } = useGlobals()
   const [ product, setProduct ] = useImmer(null)
   const [ products, setProducts ] = useImmer(null)
   const [ category, setCategory ] = useState({});
@@ -26,6 +27,9 @@ export default function Page() {
       const _products = await getProducts({category: cat.category})
       setProducts(_products.products)
       setCategory(cat.category)
+
+      // pushBreadcrumb({ name: "Class / Course", href: "/shop/classes", url: '/' });
+      
     }
 
     fetch();

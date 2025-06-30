@@ -11,9 +11,9 @@ export default function Page() {
   useEffect(() => resetBreadcrumb({ name: "Shop", href: "/shop" }), []);
 
   const shopItems = [
-    { title: "Casual Entry", icon: Ticket, href: "/shop/casual", breadcrumb: {} },
-    { title: "Classes and Courses", icon: Dumbbell, href: "/shop/classes", breadcrumb: {} },
-    { title: "Membership", icon: IdCard, href: "/shop/membership", breadcrumb: {} },
+    { title: "Casual Entry", icon: Ticket, href: "/shop/casual", breadcrumb: { href: "/shop/casual", name: "Casual Entry" } },
+    { title: "Classes / Courses", icon: Dumbbell, href: "/shop/classes", breadcrumb: { href: "/shop/classes", name: "Classes & Courses" } },
+    { title: "Membership", icon: IdCard, href: "/shop/membership", breadcrumb: { href: "/shop/membership", name: "Memberships" } },
     { title: "Food and Beverage", icon: Coffee, href: "/shop/retail", breadcrumb: { href: "/shop/retail", name: "Categories" } }
   ];
 

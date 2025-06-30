@@ -171,18 +171,18 @@ export default function Cart({}) {
           </div>
 
 
-          <SheetClose asChild>
-            <div className='flex flex-col gap-2'>
-            <Link href="/shop/retail/payment" passHref>
-              <Button
-                type="submit"
-                className="w-full"
-                disabled={!cart.products.length}
-                onClick={() => pushBreadcrumb({ href: '/shop/retail/payment', name: "Payment" })}
-              >
-                Payment
-              </Button>
-            </Link>
+            <SheetClose asChild>
+              <Link href="/shop/retail/payment" passHref>
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={!cart.products.length}
+                  onClick={() => pushBreadcrumb({ href: '/shop/retail/payment', name: "Payment" })}
+                >
+                  Payment
+                </Button>
+              </Link>
+            </SheetClose>
 
             <Button
               type="submit"
@@ -193,8 +193,6 @@ export default function Cart({}) {
             >
               Clear Cart
             </Button>
-            </div>
-          </SheetClose>
         </SheetFooter>
 
       </SheetContent>
