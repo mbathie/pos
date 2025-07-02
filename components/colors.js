@@ -17,10 +17,14 @@ export default function Colours({ initColor, onChange }) {
   const selectedRef = useRef(null);
 
   useEffect(() => {
+    setSelected(initColor || 'emerald-400');
+  }, [initColor]);
+
+  useEffect(() => {
     if (selectedRef.current) {
       selectedRef.current.scrollIntoView({ behavior: 'auto', block: 'center' });
     }
-  }, []);
+  }, [selected]);
 
   return (
     <div className="overflow-auto rounded-lg">

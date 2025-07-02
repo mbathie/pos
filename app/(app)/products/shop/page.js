@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Tag, ChevronsUpDown, Plus, Ellipsis, Info } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 
 import { actions } from './actions'
@@ -342,7 +343,7 @@ export default function Page() {
                         </CardHeader>
                         <CardContent className="flex flex-col space-y-2">
 
-                          <div className="flex flex-col gap-1 w-[320px]">
+                          <div className="flex flex-col gap-1 w-[400px]">
                             <Label>Product Name</Label>
                             <Input
                               // id={c.id}
@@ -350,6 +351,17 @@ export default function Page() {
                               placeholder="Flat White"
                               onChange={(e) => updateProduct({pIdx, key: "name", value: e.target.value})}
                               value={p.name || ''}
+                            />
+                          </div>
+
+                          <div className="flex flex-col gap-1 w-[400px]">
+                            <Label>Description</Label>
+                            <Textarea
+                              // id={c.id}
+                              type="text"
+                              placeholder=""
+                              onChange={(e) => updateProduct({pIdx, key: "desc", value: e.target.value})}
+                              value={p.desc || ''}
                             />
                           </div>
 

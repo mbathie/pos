@@ -8,15 +8,13 @@ export async function POST(req, { params }) {
 
   const { employee } = await getEmployee();
 
-  const body = await req.json();
-  const folderName = body.name;
-  const folderColor = body.colour;
+  const { name, color } = await req.json();
 
   const folder = await Folder.create({
-    name: folderName,
-    color: folderColor,
-    org: employee.org._id,
+    name, color, org: employee.org._id,
   });
+
+  console.log(folder)
 
   return NextResponse.json({ folder }, { status: 200 });
 }
@@ -28,7 +26,6 @@ export async function GET(req) {
   const search = searchParams.get("search")
 
   const { employee } = await getEmployee()
-  console.log(employee.org._id)
 
   if (!search)
     return NextResponse.json({ error: "Missing search parameter" }, { status: 400 })

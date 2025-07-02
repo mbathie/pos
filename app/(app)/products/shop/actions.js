@@ -65,6 +65,8 @@ function syncModAcrossProducts(draft, pIdx, modCatName, modName, modAmount) {
 export function actions({category, setProducts}) {
 
   const setFolder = ({ pIdx, folder }) => {
+    // console.log(folder)
+    // console.log(pIdx)
     setProducts(draft => {
       const product = draft[pIdx];
       if (!product) return;
@@ -77,7 +79,7 @@ export function actions({category, setProducts}) {
   const addProduct = () => {
     setProducts(draft => {
       const newModCats = buildModCatsFromProducts(draft);
-      console.log(newModCats)
+      // console.log(newModCats)
 
       draft.unshift({
         dirty: true,

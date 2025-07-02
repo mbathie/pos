@@ -1,29 +1,34 @@
 
 DONE - folders for shop items
-
 DONE - bg colours for shop items, icons / images
-
-- item description
 DONE - customer management
-DONE  - add/lookup customer at transaction time
-- terminal integration (real terminal)
+DONE - add/lookup customer(s) at transaction time
+DONE - checkout process for day pass
+DONE - checkout process for courses / classes
+DONE - backend Schedule table for classes courses
+DONE - backend Orders table for shop items
+DONE - ability to add multiple prices for classes/courses within a price.
+DONE - waivers
 
-- bump screen for kitchen staff to see orders
+MUST HAVES
+-----------------------
+- checkout shop item, folder should open into new screen (use breadcrumb menu)
+- bump screen for kitchen staff to see/manage orders
   - order table
-
-- checkout process for subscriptions
-- checkout process for day pass
-- checkout process for courses / classes
-
-- customer rewards & reward packages assigned to products
-
-- backend Schedule table for classes courses
-- backend Membership table for memberships
-- backend Orders table for shop items
-
+- admin / list view page for classes / courses
+- admin / list view page for casual entries
 - membership mumber assignment on creation
+- item description
+- roles for staff, admins, bump screens, terminals
+DONE - ability to edit folder colour
+- waivers 
+  - lookup existing customer before completing waiver, might have bought coffee previously, but wants gym membership
+- terminal integration (using real terminal)
+- checkout process for subscriptions
+  - backend Membership table for memberships
+- specify what products at what locations
 
-- ability to add multiple prices for classes/courses within a price.
+NICE TO HAVES
+-----------------------
+  - customer rewards & reward packages assigned to products
 
-- waivers
-  - 
