@@ -15,6 +15,8 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
 
   if (!product) return null;
 
+  console.log(product)
+
   const { setQty } = useClass({product, setProduct})
 
   const { addToCart } = useGlobals()

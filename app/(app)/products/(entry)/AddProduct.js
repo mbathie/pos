@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button'
 import { useProduct } from './useProduct';
 
-export default function Add({ open, onOpenChange, data, setProducts }) {
+export default function Add({ open, onOpenChange, data, setProducts, type }) {
   const [ name, setName ] = useState("")
   const { addProduct } = useProduct(setProducts);
  
@@ -37,7 +37,7 @@ export default function Add({ open, onOpenChange, data, setProducts }) {
           />
           <Button 
             onClick={() => {
-              addProduct(name);
+              addProduct(name, type);
               onOpenChange(false);
               setName("");
             }}

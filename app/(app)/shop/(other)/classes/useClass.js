@@ -30,7 +30,35 @@ export function useClass({setProduct}) {
     });
   };
 
-  const setTimes = () => {
+  const setTimesCourse = () => {
+    setProduct(draft => {
+      const now = new Date();
+
+      draft.variations?.forEach(variation => {
+        const time = variation.times?.[0];
+        if (!time) return;
+
+        const start = new Date(time.start);
+        const repeat = time.repeatAlways ? 100 : (time.repeatCnt || 1);
+        const interval = time.repeatInterval || 0;
+
+        variation.timesCalc = [...Array(repeat)].map((_, i) => {
+          const nextDate = new Date(start);
+          nextDate.setDate(start.getDate() + i * interval);
+
+          return {
+            label: nextDate.toLocaleString('en-AU', {
+              weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
+            }),
+            value: nextDate.toISOString(),
+            selected: true
+          };
+        }).filter(Boolean);
+      });
+    });
+  };
+
+  const setTimesClass = () => {
     setProduct(draft => {
       const now = new Date();
       const twoMonthsLater = new Date();
@@ -49,12 +77,7 @@ export function useClass({setProduct}) {
 
             return {
               label: nextDate.toLocaleString('en-AU', {
-                weekday: 'short',
-                day: '2-digit',
-                month: '2-digit',
-                year: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
+                weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
               }),
               value: nextDate.toISOString()
             };
@@ -64,5 +87,5 @@ export function useClass({setProduct}) {
     });
   }
 
-  return { setQty, onSelectTime, setTimes }
+  return { setQty, onSelectTime, setTimesClass, setTimesCourse }
 }

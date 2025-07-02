@@ -13,7 +13,7 @@ import IconSelect from '@/components/icon-select'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useProduct } from './useProduct';
 
-export default function Page({products, setProducts, units, title, categoryName}) {
+export default function Page({products, setProducts, units, title, categoryName, type}) {
   
   const [productsUI, setProductsUI] = useState({});
   const { updateProduct, updateProductKey, addProduct, createProduct } = useProduct(setProducts, setProductsUI);
@@ -228,6 +228,7 @@ export default function Page({products, setProducts, units, title, categoryName}
         onOpenChange={setAddOpen}
         setProducts={setProducts}
         addProduct={addProduct}
+        type={type}
       />
       <IconSelect
         open={iconDialogOpen}

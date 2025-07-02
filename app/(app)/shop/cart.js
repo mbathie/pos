@@ -15,6 +15,8 @@ export default function Cart({}) {
   const { cart, removeFromCart, resetCart, pushBreadcrumb } = useGlobals()
   const [open, setOpen] = useState(false);
 
+  // console.log(cart)
+
   if (cart.products.length < 1)
     return
 
@@ -135,14 +137,38 @@ export default function Cart({}) {
                   ))}
                 </div>
               )
+
+              else if (p.type=='casual') return (
+                <div key={p._id} className="flex flex-col space-y-1 px-4">
+                  <div className="flex">
+                    <div className="font-semibold">{p.name}</div>
+                    <div
+                      className="ml-1 cursor-pointer mt-0.5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFromCart(pIdx);
+                      }}
+                    >
+                      <Trash className="size-4" />
+                    </div>
+                  </div>
+                  {p.variations?.map((v, vIdx) => (
+                    <div key={vIdx}>
+                      {v.prices?.map((price, i) => (
+                        <div key={i} className="flex">
+                          <div>{price.qty}x {price.name}</div>
+                          <div className="ml-auto">${parseFloat(price.value).toFixed(2)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+
+              )
+
             })}
+            
 
-
-            {/* for membership item */}
-
-            {/* for casual entry item */}
-
-            {/* for class / course item  */}
 
           </div>
         </div>

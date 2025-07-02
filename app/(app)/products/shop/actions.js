@@ -77,6 +77,7 @@ export function actions({category, setProducts}) {
   const addProduct = () => {
     setProducts(draft => {
       const newModCats = buildModCatsFromProducts(draft);
+      console.log(newModCats)
 
       draft.unshift({
         dirty: true,

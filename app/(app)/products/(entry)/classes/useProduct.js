@@ -55,6 +55,7 @@ export function useProduct({setProducts, categoryName}) {
   }, [setProducts]);
 
   const addProduct = () => {
+    console.log(type)
     const newProduct = {
       _id: generateObjectId(),
       name: '',

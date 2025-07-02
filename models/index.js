@@ -1,5 +1,6 @@
 const mongooseDelete = require('mongoose-delete');
 const mongoose = require('mongoose');
+const { Schema } = require('zod');
 
 // ==== Org ====
 const OrgSchema = new mongoose.Schema({
@@ -128,7 +129,22 @@ const ScheduleSchema = new mongoose.Schema({
   }]
 }, { timestamps: true, strict: false });
 
+
 const Schedule = mongoose.models.Schedule || mongoose.model('Schedule', ScheduleSchema);
+
+// ==== Casual ====
+const CasualSchema = new mongoose.Schema({
+  start: { type: Date, required: true },
+  end: { type: Date },
+  hours: { type: Number },
+  product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+  customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
+  location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', required: true },
+  org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
+  transaction: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }
+}, { timestamps: true, strict: false });
+
+const Casual = mongoose.models.Casual || mongoose.model('Casual', CasualSchema);
 
 // ==== Updated Exports ====
 module.exports = {
@@ -141,4 +157,5 @@ module.exports = {
   Transaction,
   Folder,
   Schedule,
+  Casual,
 };

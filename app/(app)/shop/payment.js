@@ -8,12 +8,10 @@ import { Button } from "@/components/ui/button"
 import { useGlobals } from "@/lib/globals"
 import { useCard } from './useCard'
 import { useCash } from "./useCash";
-import { useCustomer } from "./useCustomer";
 import { Separator } from "@radix-ui/react-separator";
 
-import Customer from './customer'
-import CustomerWaiverConnnect from './customerWaiverConnect'
-import { User } from "lucide-react";
+import CustomerConnect from './customerConnect'
+// import { User } from "lucide-react";
 
 const keypad = ['1','2','3','4','5','6','7','8','9','.','0','AC'];
 
@@ -23,44 +21,47 @@ export default function Page() {
   const [tab, setTab] = useState('card');
   const { discoverReaders, connectReader, collectPayment, capturePayment } = useCard({cart})
   const { calcChange, receiveCash } = useCash({cart})
-  const { getCustomers, setCustomer: setCartCustomer } = useCustomer({})
-  const [ customers, setCustomers ] = useState([])
 
   const [changeInfo, setChangeInfo] = useState({ received: "0.00", change: "0.00" });
 
   const [ paymentIntentId, setPaymentIntentId ] = useState(0)
   const [ paymentStatus, setPaymentStatus ] = useState("")
 
-  const [showCustomer, setShowCustomer] = useState(false);
-  const [customer, setCustomer] = useState({})
+  // const [showCustomer, setShowCustomer] = useState(false);
+  // const [customer, setCustomer] = useState({})
 
-  const [showCustomerWaiverConnect, setCustomerWaiverConnect] = useState(false)
-  const [waiverCustomer, setWaiverCustomer] = useState({})
+  const [ showCustomerConnect, setShowCustomerConnect ] = useState(false)
+  const [ connectCustomerFn, setConnectCustomerFn ] = useState()
 
-  const router = useRouter();
-
-  useEffect(() => {
-    const init = async () => {
-      const c = await getCustomers()
-      setCustomers(c)
-    }
-    init()
-  }, [cart])
+  const [ requiresWaiver, setRequiresWaiver ] = useState(false)
 
   useEffect(() => {
-    const init = async () => {
-      // await discoverReaders();
-      // setTimeout(async () => {
-      //   await connectReader();
-      // },2000)
+    console.log(cart)
+  },[cart])
 
-      // get list of potential customers
-      const c = await getCustomers()
-      setCustomers(c)
-    };
+  useEffect(() => {
+    const allAreShop = cart.products.length > 0 &&
+      cart.products.every(p => p.type === 'shop');
+    setRequiresWaiver(!allAreShop);
+  }, []);
 
-
-    init();
+  useEffect(() => {
+    setCart(draft => {
+      draft.products.forEach((p) => {
+        if (['class', 'course', 'casual'].includes(p.type)) {
+          p.variations?.forEach((v) => {
+            v.prices?.forEach((pr) => {
+              const qty = pr.qty ?? 0;
+              if (!pr.customers || pr.customers.length !== qty) {
+                pr.customers = Array.from({ length: qty }, (_, i) => ({
+                  customer: pr.customers?.[i]?.customer || null
+                }));
+              }
+            });
+          });
+        }
+      });
+    });
   }, []);
 
   // Handle keypad input for cash received
@@ -123,56 +124,69 @@ export default function Page() {
 
             <Separator orientation="vertical" className="h-[1px] bg-muted my-2" />
 
+            <div className="mb-2">Customers</div>
+
             {/* CUSTOMERS */}
+            {requiresWaiver &&
             <div className="flex flex-col gap-1">
-              {customers?.map((c) => {
-                return (
-                  <div className="flex items-center" key={c.name + c.pIdx + c.vIdx + c.priceIdx}>
-                    <div className="flex-1">{c.name}</div>
-                    <div>
-                      {c.customer &&
-                        <div>{c.customer.name}</div>
-                      }
-                      {!c.customer &&
-                      <Button 
-                        size="sm" variant="outline"
-                        onClick={() => {
-                          setWaiverCustomer(c)
-                          setCustomerWaiverConnect(true)
-                        }}
-                      >
-                        Connect
-                      </Button>
-                      }
-                    </div>
-                  </div>
+              {cart.products.map((p, pIdx) =>
+                p.variations?.map((v, vIdx) =>
+                  v.prices?.map((price, priceIdx) =>
+                    price.customers?.map((c, cIdx) => (
+                      <div className="flex items-start gap-4" key={`${pIdx}-${vIdx}-${priceIdx}-${cIdx}`}>
+                        <div className="whitespace-nowrap self-start">{cIdx + 1}. {p.name}</div>
+                        <div className="flex justify-end w-full text-right">
+                          {c.customer ? (
+                            <div className="flex flex-col">
+                              <div>{c.customer.name}</div>
+                              <div className="text-xs">{c.customer.phone}, {c.customer.email}</div>
+                            </div>
+                            // <div>{c.customer.name}, {c.customer.phone}, {c.customer.email}</div>
+                          ) : (
+                            <Button
+                              size="sm" variant="outline"
+                              onClick={() => {
+                                setConnectCustomerFn(() => (_c) => {
+                                  setCart(draft => {
+                                    draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = _c;
+                                  });
+                                });
+                                setShowCustomerConnect(true);
+                              }}
+                            >
+                              Connect Customer
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )
                 )
-              })}
+              )}
             </div>
-
-
-
-            {/* CUSTOMER */}
-            {/* <div className="flex justify-between items-start">
-              <div className="flex gap-1 items-center">
-                <User className="size-5"/>
-                <div>Customer</div>
-              </div>
-
-              <div className="text-right">
-                {customer?.name ? (
-                  <div className="flex flex-col text-right">
-                    <span className="font-medium">{customer.name}</span>
-                    <span className="text-muted-foreground">{customer.email}</span>
-                    <span className="text-muted-foreground">{customer.phone}</span>
-                    <Button size="sm" className="mt-2" onClick={() => setShowCustomer(true)}>Change</Button>
-
-                  </div>
+            }
+            {!requiresWaiver &&
+              <div>
+                {cart.customer ? (
+                  <div>{cart.customer.name}, {cart.customer.phone}</div>
                 ) : (
-                  <Button size="sm" onClick={() => setShowCustomer(true)}>Connect</Button>
+                  <Button
+                    size="sm" variant="outline"
+                    onClick={() => {
+                      setConnectCustomerFn(() => (_c) => {
+                        setCart(draft => {
+                          draft.customer = _c;
+                        });
+                      });
+                      setShowCustomerConnect(true);
+                    }}
+                  >
+                    Connect Customer
+                  </Button>
                 )}
               </div>
-            </div> */}
+            }
+
           </div>
 
         </CardContent>
@@ -238,11 +252,21 @@ export default function Page() {
                 <div className="col-span-3 w-full">
                   <Button
                     className="w-full h-16"
-                    disabled={parseFloat(changeInfo.received) < cart.total || paymentStatus === 'succeeded'}
+                    disabled={
+                      parseFloat(changeInfo.received) < cart.total ||
+                      paymentStatus === 'succeeded' ||
+                      cart.products.some(p =>
+                        p.variations?.some(v =>
+                          v.prices?.some(pr =>
+                            pr.customers?.some(c => !c.customer?._id)
+                          )
+                        )
+                      )
+                    }
                     onClick={async () => {
-                      const tx = await receiveCash({ input: cashInput, customer });
-                      // setPaymentStatus(tx.transaction.status);
-                      // resetCart();
+                      const tx = await receiveCash({ input: cashInput });
+                      setPaymentStatus(tx.transaction.status);
+                      resetCart();
                     }}
                   >
                     Accept
@@ -254,12 +278,10 @@ export default function Page() {
         </TabsContent>
       </Tabs>
 
-      <Customer setCustomer={setCustomer} open={showCustomer} onOpenChange={setShowCustomer} />
-      <CustomerWaiverConnnect 
-        // setCustomer={setCustomer} 
-        waiverCustomer={waiverCustomer}
-        setCartCustomer={setCartCustomer}
-        open={showCustomerWaiverConnect} onOpenChange={setCustomerWaiverConnect} 
+      <CustomerConnect
+        connectCustomerFn={connectCustomerFn}
+        requiresWaiver={requiresWaiver}
+        open={showCustomerConnect} onOpenChange={setShowCustomerConnect} 
       />
 
     </div>

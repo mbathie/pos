@@ -49,14 +49,14 @@ export function useProduct(setProducts) {
     }
   };
 
-  const addProduct = useCallback((name) => {
+  const addProduct = useCallback((name, type) => {
     // Prevent adding a new product if name is empty or if createProduct is being used
     if (!name) return;
 
     setProducts(prev => [
       {
-        // id: `${crypto.randomUUID()}`,
         name,
+        type,
         variations: [],
       },
       ...prev

@@ -1,7 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { z } from "zod";
 
 import {
   Dialog, DialogClose, DialogContent, DialogDescription,
@@ -16,36 +18,71 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 
-export default function Customer({ open, onOpenChange, setCustomer, setCartCustomer, waiverCustomer }) {
-  const [ customers, setCustomers ] = useState([])
+export default function Customer({ open, onOpenChange, setConnectCustomer, connectCustomer, connectCustomerFn, requiresWaiver }) {
+  const [ waiverCustomers, setWaiverCustomers ] = useState([])
+
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [error, setError] = useState('')
+  const emailSchema = z.string().email();
+
+
+  const handleCreateCustomer = async () => {
+    const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + `/api/customers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, phone }),
+    });
+
+    const customer = await res.json();
+    if (!res.ok) {
+      if (customer?.exists) {
+        setError('A customer with this email already exists.');
+      } else {
+        setError(customer?.error || 'Failed to create customer.');
+      }
+      return;
+    }
+
+    onOpenChange(false)
+    connectCustomerFn(customer)
+
+    setError('');
+    setName('');
+    setEmail('');
+    setPhone('');
+  };
+  
 
   useEffect(() => {
     async function getData() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/customers/waivers`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/customers?requiresWaiver=${requiresWaiver}`);
         const data = await res.json()
-        console.log(data)
-        setCustomers(data);
+        // console.log(data)
+        setWaiverCustomers(data);
       } catch (error) {
         console.error("Failed to fetch waiver customers:", error);
       }
     }
     getData();
-  }, []);
+  }, [open]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]-">
         <DialogHeader>
           <DialogTitle>
-            Search completed waivers
+            Search customers
           </DialogTitle>
           <DialogDescription>
           </DialogDescription>
         </DialogHeader>
 
+        {requiresWaiver &&
         <div className='flex text-sm'>
-          {customers.map((c) => {
+          {waiverCustomers.map((c) => {
             return (
               <div key={c._id} className='flex w-full items-center'>
                 <div>{c.name}, {c.email}, {c.phone}</div>
@@ -54,9 +91,8 @@ export default function Customer({ open, onOpenChange, setCustomer, setCartCusto
                   <Button 
                     variant="outline" size="sm"
                     onClick={() => {
-                      setCartCustomer({...waiverCustomer, customer: c})
-                      // setWaiverCustomer({...waiverCustomer, customer: c})
                       onOpenChange(false)
+                      connectCustomerFn(c)
                     }}
                   >
                     Select
@@ -66,11 +102,44 @@ export default function Customer({ open, onOpenChange, setCustomer, setCartCusto
             )
           })}
         </div>
+        }
 
-        {/* <Label className="text-md">Search completed waivers</Label> */}
         <div className="flex gap-2">
-          <SearchCustomers setCustomer={setCustomer} onOpenChange={onOpenChange} />
+          <SearchCustomers onOpenChange={onOpenChange} connectCustomerFn={connectCustomerFn} requiresWaiver={requiresWaiver}/>
         </div>
+
+        {!requiresWaiver &&
+
+          <div className='flex flex-col gap-2'>
+            <Label>Or, Create a New Customer</Label>
+
+            <div className='flex gap-1'>
+              <Label className="w-14">Name</Label>
+              <Input name="name" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            <div className='flex gap-1'>
+              <Label className="w-14">Email</Label>
+              <Input name="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+            <div className='flex gap-1'>
+              <Label className="w-14">Phone</Label>
+              <Input name="phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
+
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+
+            <div className='flex ml-auto'>
+              <Button
+                onClick={handleCreateCustomer}
+                disabled={!emailSchema.safeParse(email).success}
+              >
+                Create Customer
+              </Button>
+            </div>
+          </div>
+
+        
+        }
 
         <DialogFooter>
           {/* <DialogClose asChild>
@@ -84,7 +153,7 @@ export default function Customer({ open, onOpenChange, setCustomer, setCartCusto
 }
 
 
-export function SearchCustomers({ setCustomer, onOpenChange }) {
+export function SearchCustomers({ onOpenChange, connectCustomerFn, requiresWaiver }) {
   const [open, setOpen] = React.useState(false)
   const [value, setValue] = React.useState("")
   const [customers, setCustomers] = React.useState([]);
@@ -97,7 +166,7 @@ export function SearchCustomers({ setCustomer, onOpenChange }) {
     }
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/customers?search=${encodeURIComponent(search)}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/customers?search=${encodeURIComponent(search)}&requiresWaiver=${requiresWaiver}`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setCustomers(data);
@@ -117,13 +186,13 @@ export function SearchCustomers({ setCustomer, onOpenChange }) {
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-[380px] justify-between"
+          className="w-full justify-between"
         >
           {value || "Search..."}
           <ChevronsUpDown className="opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[380px] p-0">
+      <PopoverContent className="w-[460px] p-0">
         <Command>
           <CommandInput
             placeholder="Search customer..."
@@ -141,7 +210,7 @@ export function SearchCustomers({ setCustomer, onOpenChange }) {
             <CommandEmpty>No customer found.</CommandEmpty>
             <CommandGroup>
               {Array.isArray(customers) && customers.map((customer) => {
-                console.log(customer);
+                // console.log(customer);
                 return (
                   <CommandItem
                     key={customer._id}
@@ -149,8 +218,9 @@ export function SearchCustomers({ setCustomer, onOpenChange }) {
                     onSelect={() => {
                       setValue(`${customer.name} ${customer.email}`);
                       setOpen(false);
-                      setCustomer(customer);
-                      if (onOpenChange) onOpenChange(false);
+                      onOpenChange(false)
+                      connectCustomerFn(customer)
+                      // if (onOpenChange) onOpenChange(false);
                     }}
                   >
                     {customer.name} ({customer.email})

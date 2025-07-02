@@ -21,7 +21,7 @@ DONE  - add/lookup customer at transaction time
 - backend Membership table for memberships
 - backend Orders table for shop items
 
-- membership mumber
+- membership mumber assignment on creation
 
 - ability to add multiple prices for classes/courses within a price.
 

@@ -31,6 +31,7 @@ export default function Page() {
         products={products}
         setProducts={setProducts}
         units={units}
+        type="casual"
         title="Casual entry products"
         categoryName={categoryName}
       />

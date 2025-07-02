@@ -51,6 +51,7 @@ export default function Page() {
   const originalProducts = useRef({});
   const [isDirty, setIsDirty] = useState({});
   useEffect(() => {
+    console.log(products)
     const updatedIsDirty = { ...isDirty };
     
     products.forEach((p) => {
@@ -65,7 +66,6 @@ export default function Page() {
   }, [products]);
 
   const handleDelete = async () => {
-    console.log(toDelete)
     if (toDelete.variationIdx !== undefined)
       deleteVariation(toDelete)
     setToDelete({})
@@ -173,7 +173,10 @@ export default function Page() {
                   </CardTitle>
                   <Button
                     size="icon"
-                    onClick={() => setCategory({ new: true, name: '' })}
+                    onClick={() => {
+                      setCategory({ new: true, name: '' })
+                      setProducts([])
+                    }}
                     variant="outline"
                     className="relative text-xs -top-2 right-0"
                   >
@@ -251,13 +254,20 @@ export default function Page() {
                   </Button>
                 )}
               </div>
-              {categories.map((c, i) => (
+
+
+
+              {/* {categories.map((c, i) => (
                 <Tabs.Content
                   key={c._id}
                   value={c.name}
                   className="flex flex-col space-y-4 w-full"
-                >
-                  {products?.map((p, pIdx) =>
+                > */}
+
+                  
+
+
+                  {products?.map((p, pIdx) => 
                     (
                       <Card
                         // key={pIdx}
@@ -333,9 +343,9 @@ export default function Page() {
                         <CardContent className="flex flex-col space-y-2">
 
                           <div className="flex flex-col gap-1 w-[320px]">
-                            <Label htmlFor={c.id}>Product Name</Label>
+                            <Label>Product Name</Label>
                             <Input
-                              id={c.id}
+                              // id={c.id}
                               type="text"
                               placeholder="Flat White"
                               onChange={(e) => updateProduct({pIdx, key: "name", value: e.target.value})}
@@ -535,8 +545,8 @@ export default function Page() {
                       </Card>
                     ),
                   )}
-                </Tabs.Content>
-              ))}
+                {/* </Tabs.Content>
+              ))} */}
             </div>
           </div>
         </Tabs.Root>

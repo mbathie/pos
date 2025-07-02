@@ -15,7 +15,7 @@ import { getLastClassDate } from '@/lib/classes'
 import { Checkbox } from "@/components/ui/checkbox"
 import IconSelect from '@/components/icon-select'
 
-export default function Page({products, setProducts, categoryName}) {
+export default function Page({products, setProducts, categoryName, type}) {
   const contentRefs = useRef({});
   const { productsUI, toggleExpanded, toggleAll } = useUI({products, contentRefs});
   const { updateProduct, updateProductKey, updateVariation, addVariation, saveProduct, addTime, updateTime, addProduct, addPrice, updatePrice, deletePrice } = useProduct({setProducts, categoryName});
@@ -88,6 +88,7 @@ export default function Page({products, setProducts, categoryName}) {
                   size="sm"
                   className="bg-lime-400"
                   onClick={async () => {
+
                     const updated = await saveProduct({product: p, productIdx: pIdx})
                     originalProducts.current[p._id] = JSON.parse(JSON.stringify(updated));
                     setIsDirty((prev) => ({ ...prev, [p._id]: false }));                  }}

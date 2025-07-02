@@ -39,23 +39,40 @@ export async function GET(req) {
   const { employee } = await getEmployee()
   const { searchParams } = new URL(req.url)
   const search = searchParams.get("search")
-  const orgId = employee.orgId
+  const requiresWaiver = searchParams.get("requiresWaiver")
+  const orgId = employee.org._id
 
-  if (!search)
-    return NextResponse.json({ error: "Missing search parameter" }, { status: 400 })
+  // if (!search)
+  //   return NextResponse.json({ error: "Missing search parameter" }, { status: 400 })
 
-  const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // escape special chars
-  const regex = new RegExp(escaped, "i") // case-insensitive
-  const customers = await Customer.find({
+  const baseQuery = {
     orgs: orgId,
-    $or: [
+  };
+
+  if (search) {
+    const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escaped, "i");
+    baseQuery.$or = [
       { name: { $regex: regex } },
       { email: { $regex: regex } },
       { phone: { $regex: regex } }
-    ]
-  })
+    ];
+  }
 
-  console.log(customers)
+  console.log(requiresWaiver)
+
+  if (requiresWaiver === "true") {
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    baseQuery["waiver.agree"] = true;
+    baseQuery.createdAt = { $gte: twoHoursAgo };
+    baseQuery.assigned = false;
+  }
+
+  console.log(baseQuery)
+
+  const customers = await Customer.find(baseQuery)
+
+  // console.log(customers)
 
   return NextResponse.json(customers)
 }

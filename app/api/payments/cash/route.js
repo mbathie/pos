@@ -3,23 +3,30 @@ import { getEmployee } from "@/lib/auth";
 import { connectDB } from "@/lib/mongoose";
 import { Transaction } from "@/models";
 import { calcCartTotals } from "@/lib/cart"
-import { Types } from "mongoose";
 import { addToSchedule } from '@/lib/schedule'
+import { addToCasual } from '@/lib/casual'
+import { Types } from "mongoose";
+// import { assignCustomers, extractCustomers } from "@/lib/customers";
 
 export async function POST(req, { params }) {
   await connectDB();
 
   const { employee } = await getEmployee();
   const org = employee.org;
-
   const { received, change, cart, customer } = await req.json();
+
+  const first = getFirstCustomer({ cart });
+  const txnCustomer = first?._id
+    ? new Types.ObjectId(first._id)
+    : cart.customer?._id
+      ? new Types.ObjectId(cart.customer._id)
+      : undefined;
+
   cart.products = cart.products.map(p => {
     const { thumbnail, ...rest } = p;
     return rest;
   });
   const totals = calcCartTotals(cart.products);
-
-  // console.log(cart)
 
   const transaction = await Transaction.create({
     org: employee.orgId,
@@ -27,7 +34,7 @@ export async function POST(req, { params }) {
     tax: totals.tax,
     subtotal: totals.subtotal,
     employeeId: employee._id,
-    customerId: customer?._id ? Types.ObjectId.createFromHexString(customer._id) : undefined,
+    customerId: txnCustomer,
     locationId: employee.selectedLocationId,
     paymentMethod: "cash",
     cart,
@@ -39,10 +46,27 @@ export async function POST(req, { params }) {
     status: "succeeded"
   });
 
-  addToSchedule({transaction, cart, employee, customer})
+  // if customers (class course)
+  await addToSchedule({transaction, cart, employee})
+  await addToCasual({transaction, cart, employee})
+  // await assignCustomers({products: cart.products})
 
-  return NextResponse.json({ }, { status: 200 });
-
+  // return NextResponse.json({ }, { status: 200 });
 
   return NextResponse.json({ transaction }, { status: 200 });
+}
+
+function getFirstCustomer({ cart }) {
+  for (const product of cart.products || []) {
+    for (const variation of product.variations || []) {
+      for (const price of variation.prices || []) {
+        for (const customerEntry of price.customers || []) {
+          if (customerEntry?.customer?._id) {
+            return customerEntry.customer;
+          }
+        }
+      }
+    }
+  }
+  return null;
 }

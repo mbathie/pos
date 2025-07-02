@@ -13,7 +13,7 @@ export default function Page() {
   const [ category, setCategory ] = useState({});
   const [ sheetOpen, setSheetOpen ] = useState(false);
 
-  const { getCategory, getProducts, selectPrice, setQty } = useHandler({product, setProduct})
+  const { getCategory, getProducts, setQty } = useHandler({product, setProduct})
 
   useEffect(() => {
     async function fetch() {
@@ -32,6 +32,7 @@ export default function Page() {
         products={products}
         category={category}
         onClick={(p) => {
+          console.log(p)
           setProduct(p);
           setSheetOpen(true);
         }}
@@ -43,7 +44,7 @@ export default function Page() {
         product={product}
         setProduct={setProduct}
         onAddToCart={() => {}}
-        onSelectPrice={selectPrice}
+        // onSelectPrice={selectPrice}
         setQty={setQty}
       />
       }
