@@ -228,7 +228,7 @@ export default function Page() {
                   <div className="ml-auto flex space-x-2">
                     <Button
                       variant="outline"
-                      className="ml-auto text-xs"
+                      className="ml-auto"
                       size="sm"
                       onClick={() => addProduct()}
                     >
@@ -321,7 +321,7 @@ export default function Page() {
                             {isDirty[p._id] && (
                               <Button
                                 size="sm"
-                                className="bg-lime-400"
+                                className="bg-lime-400 animate-pulse"
                                 onClick={async () => {
                                   const updated = await saveProduct({product: p, pIdx})
                                   originalProducts.current[p._id] = JSON.parse(JSON.stringify(updated));

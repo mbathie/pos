@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useGlobals } from '@/lib/globals'
 import { useHandler } from '../useHandler'
 import { useClass } from './useClass'
-import Products from '../products'
+import Products from '../../products'
 import ProductDetailClass from './productDetailClass';
 import ProductDetailCourse from './ProductDetailCourse';
 import { useImmer } from 'use-immer'
