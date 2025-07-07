@@ -2,7 +2,6 @@
 
 import Products from '../Products'
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button'
 import { useImmer } from 'use-immer';
 
 export default function Page() {

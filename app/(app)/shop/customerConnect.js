@@ -58,7 +58,7 @@ export default function Customer({ open, onOpenChange, setConnectCustomer, conne
   useEffect(() => {
     async function getData() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/customers?requiresWaiver=${requiresWaiver}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/customers?recentWaiver=1`);
         const data = await res.json()
         // console.log(data)
         setWaiverCustomers(data);
@@ -81,7 +81,7 @@ export default function Customer({ open, onOpenChange, setConnectCustomer, conne
         </DialogHeader>
 
         {requiresWaiver &&
-        <div className='flex text-sm'>
+        <div className='flex text-sm flex-col gap-2'>
           {waiverCustomers.map((c) => {
             return (
               <div key={c._id} className='flex w-full items-center'>

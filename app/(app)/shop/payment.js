@@ -134,7 +134,7 @@ export default function Page() {
                   v.prices?.map((price, priceIdx) =>
                     price.customers?.map((c, cIdx) => (
                       <div className="flex items-start gap-4" key={`${pIdx}-${vIdx}-${priceIdx}-${cIdx}`}>
-                        <div className="whitespace-nowrap self-start">{cIdx + 1}. {p.name}</div>
+                        <div className="whitespace-nowrap self-start">{cIdx + 1}. {price.name}</div>
                         <div className="flex justify-end w-full text-right">
                           {c.customer ? (
                             <div className="flex flex-col">

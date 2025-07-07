@@ -30,7 +30,7 @@ const Variations = ({
   const [deleteData, setDeleteData] = useState(null);
 
   return (
-    <div>
+    <div className=''>
       <div className="flex space-x-2 mb-4">
         <Button size="sm" variant="outline" onClick={() => addVariation(productIdx)}>
           Add Time

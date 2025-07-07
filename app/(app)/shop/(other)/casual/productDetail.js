@@ -40,7 +40,8 @@ export default function ProductDetail({ open, setOpen, product, setQty }) {
             </div>
           </SheetTitle>
           <SheetDescription>
-            Description goes here
+            {product.desc?.length > 100 ? `${product.desc.substring(0, 100)}...` : product.desc}
+
           </SheetDescription>
         </SheetHeader>
 
@@ -96,15 +97,6 @@ export default function ProductDetail({ open, setOpen, product, setQty }) {
 
 
           </div>
-
-            {/* <div className='flex flex-col gap-2'>
-              <div className='text-sm'>Qty</div>
-              <div className='flex gap-2'>
-                <Button variant="" size="sm" onClick={() => setQty({ type: '-' })}><Minus /></Button>
-                <Button variant="" size="sm" onClick={() => setQty({ type: '+' })}><Plus /></Button>
-                <div className='ml-auto'>{product?.qty || 0}</div>
-              </div>
-            </div> */}
 
 
         </div>

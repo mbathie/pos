@@ -1,4 +1,4 @@
-export function useClass({setProduct}) {
+export function useClass({product, setProduct}) {
 
   const setQty = async ({ type, vIdx, priceIdx }) => {
     setProduct(draft => {
@@ -30,8 +30,12 @@ export function useClass({setProduct}) {
     });
   };
 
-  const setTimesCourse = () => {
+  const setTimesCourse = async (_product) => {
+    const res = await fetch(`/api/products/${_product._id}/schedules/remaining`);
+    const schedule = res.ok ? await res.json() : {}
+
     setProduct(draft => {
+      draft.available = schedule.available;
       const now = new Date();
 
       draft.variations?.forEach(variation => {
@@ -58,7 +62,10 @@ export function useClass({setProduct}) {
     });
   };
 
-  const setTimesClass = () => {
+  const setTimesClass = async (_product) => {
+    const res = await fetch(`/api/products/${_product._id}/schedules`);
+    const schedule = res.ok ? await res.json() : [];
+
     setProduct(draft => {
       const now = new Date();
       const twoMonthsLater = new Date();
@@ -75,17 +82,23 @@ export function useClass({setProduct}) {
             nextDate.setDate(start.getDate() + i * interval);
             if (nextDate < now || nextDate > twoMonthsLater) return null;
 
+            const iso = nextDate.toISOString();
+            const match = schedule.classes.find(s => s.datetime === iso);
+            const available = match?.available ?? _product.capacity;
+
             return {
               label: nextDate.toLocaleString('en-AU', {
                 weekday: 'short', day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit',
               }),
-              value: nextDate.toISOString()
+              value: iso,
+              available,
+              disabled: available >= (_product.capacity ?? 0)
             };
           }).filter(Boolean);
         }) || [];
       });
     });
-  }
+  };
 
   return { setQty, onSelectTime, setTimesClass, setTimesCourse }
 }

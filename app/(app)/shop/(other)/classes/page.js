@@ -17,7 +17,7 @@ export default function Page() {
   const [ sheetOpen, setSheetOpen ] = useState(false);
 
   const { getCategory, getProducts} = useHandler({})
-  const { setTimesCourse, setTimesClass } = useClass({setProduct})
+  const { setTimesCourse, setTimesClass } = useClass({product, setProduct})
 
   useEffect(() => {
     async function fetch() {
@@ -43,8 +43,8 @@ export default function Page() {
         onClick={(p) => {
           console.log(p.type)
           setProduct(p)
-          if (p.type == 'class') setTimesClass()
-          else if (p.type == 'course') setTimesCourse()
+          if (p.type == 'class') setTimesClass(p)
+          else if (p.type == 'course') setTimesCourse(p)
 
           setSheetOpen(true);
         }}

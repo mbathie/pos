@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Users, CircleDollarSign, Coffee, Settings } from "lucide-react";
+import { MapPin, Users, CircleDollarSign, Coffee, Settings, Calendar } from "lucide-react";
 import { NavMenu } from "@/components/nav-menu";
 import { NavUser } from "@/components/nav-user";
 import { LocationSwitcher } from "@/components/location-switcher";
@@ -21,6 +21,12 @@ const teams = [{ name: "Sunny Coast" }];
 const settings = [
 
   { title: "Sale", url: "/shop", icon: CircleDollarSign },
+  { 
+    title: "Schedules", icon: Calendar,
+    items: [
+      { title: "Casual Entry", url: "/manage/casual" },
+    ]
+  },
   { groupLabel: "Setup"},
   { 
     title: "Products", icon: Coffee,

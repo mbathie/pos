@@ -47,7 +47,7 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
             </div>
           </SheetTitle>
           <SheetDescription>
-            Description goes here
+            {product.desc?.length > 100 ? `${product.desc.substring(0, 100)}...` : product.desc}
           </SheetDescription>
         </SheetHeader>
 
@@ -76,6 +76,11 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
                             variant="outline"
                             size="sm"
                             onClick={() => setQty({ type: '+', vIdx, priceIdx })}
+                            disabled={
+                              product.variations
+                                ?.flatMap(v => v.prices || [])
+                                .reduce((sum, p) => sum + (p.qty ?? 0), 0) >= product.available
+                            }
                           >
                             <Plus />
                           </Button>
@@ -97,6 +102,10 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
 
                       return (
                         <div key={timeIdx} className="">
+                          <div className='flex'>
+                            <div className='mr-auto'>Availability</div>
+                            <div>{product.available}/{product.capacity}</div>
+                          </div>
                           <div className='flex'>
                             <div className='mr-auto'>First class</div>
                             <div>{dayjs(start).format('ddd DD/MM/YY HH:mm A')}</div>

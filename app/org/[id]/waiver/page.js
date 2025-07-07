@@ -41,7 +41,7 @@ export default function Page() {
     setCustomer({...customer, signature: dataURL})
   }
 
-  const [ customer, setCustomer ] = useState({name: "", email: "", phone: "", signature: ""})
+  const [ customer, setCustomer ] = useState({name: "", nameParent: "", email: "", phone: "", signature: ""})
   const [ address, setAddress ] = useState({
     address1: "",
     city: "",

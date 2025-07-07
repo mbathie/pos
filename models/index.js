@@ -63,7 +63,7 @@ const ProductSchema = new mongoose.Schema({
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
   locations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Location' }],
   folder: { type: mongoose.Schema.Types.ObjectId, ref: 'Folder' },
-  type: { type: String, enum: ['class', 'course'] },
+  type: { type: String, enum: ['class', 'course','casual'] },
   duration: { name: Number, unit: String },
   capacity: Number,
   // prices: [{
@@ -117,6 +117,10 @@ const ScheduleSchema = new mongoose.Schema({
   location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' }, // only for classes
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   capacity: Number,
+  available: {
+    type: Number,
+    default: 0,
+  },
   classes: [{
     datetime: { type: Date, required: true },
     duration: Number,

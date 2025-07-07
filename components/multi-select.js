@@ -229,7 +229,8 @@ const MultiSelect = React.forwardRef(function MultiSelect(
         </div>
       </PopoverTrigger>
       <PopoverContent
-        className="p-0"
+        className="p-0 w-full"
+        style={{ width: 'var(--radix-popover-trigger-width)' }}
         align="start"
         onEscapeKeyDown={() => setIsPopoverOpen(false)}
       >
@@ -262,11 +263,16 @@ const MultiSelect = React.forwardRef(function MultiSelect(
               )}
               {options.map((option) => {
                 const isSelected = selectedValues.includes(option.value);
+                const isDisabled = option.available === 0;
                 return (
                   <CommandItem
                     key={option.value}
                     onSelect={() => toggleOption(option.value)}
-                    className="cursor-pointer w-full"
+                    className={cn(
+                      "cursor-pointer w-full",
+                      isDisabled && "opacity-50 pointer-events-none"
+                    )}
+                    disabled={isDisabled}
                   >
                     <div
                       className={cn(
@@ -281,7 +287,10 @@ const MultiSelect = React.forwardRef(function MultiSelect(
                     {option.icon && (
                       <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
                     )}
-                    <span>{option.label}</span>
+                    <div className="flex flex-row gap-4">
+                      <div>{option.label}</div>
+                      <div className="">{`(x${option.available})`}</div>
+                    </div>
                   </CommandItem>
                 );
               })}

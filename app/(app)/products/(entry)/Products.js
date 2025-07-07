@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tag, ChevronsUpDown, Ellipsis } from 'lucide-react'
 import Variations from './Variations'
@@ -194,6 +195,22 @@ export default function Page({products, setProducts, units, title, categoryName,
             }}
           />
           </div>
+
+          <div className="px-6">
+            {/* <Label>Description</Label> */}
+            <Textarea
+              type="text"
+              rows={4}
+              placeholder=""
+              onChange={(e) => {
+                setProducts(draft => {
+                  draft[pIdx].desc = e.target.value;
+                })
+              }}
+              value={p.desc || ''}
+            />
+          </div>
+
 
           <CardContent>
             <Variations

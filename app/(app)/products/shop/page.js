@@ -258,12 +258,12 @@ export default function Page() {
 
 
 
-              {/* {categories.map((c, i) => (
+              {categories.map((c, i) => (
                 <Tabs.Content
                   key={c._id}
                   value={c.name}
                   className="flex flex-col space-y-4 w-full"
-                > */}
+                >
 
                   
 
@@ -357,7 +357,6 @@ export default function Page() {
                           <div className="flex flex-col gap-1 w-[400px]">
                             <Label>Description</Label>
                             <Textarea
-                              // id={c.id}
                               type="text"
                               placeholder=""
                               onChange={(e) => updateProduct({pIdx, key: "desc", value: e.target.value})}
@@ -365,7 +364,9 @@ export default function Page() {
                             />
                           </div>
 
-                            <div className="flex flex-col gap-1">
+
+
+                          <div className="flex flex-col gap-1">
                             <Label>Folder</Label>
                             <div className='flex'>
                               <FolderSelect pIdx={pIdx} product={p} setFolder={setFolder}/>
@@ -387,7 +388,7 @@ export default function Page() {
                               <Plus />
                             </Button>
                           </div>
-                          <div className='flex flex-col'>
+                          <div className='flex flex-col gap-0.5'>
                             {p?.variations?.length > 0 && (
                               <div className="flex flex-row">
                                 <Label className="text-xs w-26">
@@ -557,8 +558,8 @@ export default function Page() {
                       </Card>
                     ),
                   )}
-                {/* </Tabs.Content>
-              ))} */}
+                </Tabs.Content>
+              ))}
             </div>
           </div>
         </Tabs.Root>

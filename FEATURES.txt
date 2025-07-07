@@ -12,23 +12,32 @@ DONE - waivers
 
 MUST HAVES
 -----------------------
-- checkout shop item, folder should open into new screen (use breadcrumb menu)
+DONE - course / class checkout, must check remaining capacity (no overbooking)
+DONE - checkout shop item, folder should open into new screen (use breadcrumb menu)
 - bump screen for kitchen staff to see/manage orders
   - order table
 - admin / list view page for classes / courses
 - admin / list view page for casual entries
 - membership mumber assignment on creation
-- item description
+DONE - item description
 - roles for staff, admins, bump screens, terminals
 DONE - ability to edit folder colour
-- waivers 
+DONE - waivers 
   - lookup existing customer before completing waiver, might have bought coffee previously, but wants gym membership
 - terminal integration (using real terminal)
 - checkout process for subscriptions
   - backend Membership table for memberships
 - specify what products at what locations
+- basic invintory system for tracking stock items.
+- customers should receive email confirm after booking a class, course, etc
+
 
 NICE TO HAVES
 -----------------------
   - customer rewards & reward packages assigned to products
+  - grouping together multiple products - for example a school holiday program
+    - e.g. 1x drink, 1x class
+    - also regarding stock qty, it should deduct the qty on the day of the event
+    - should also add to the bump screen any items that need making on the day of the event
+
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongoose"
 import { getEmployee } from "@/lib/auth"
 import { Customer } from "@/models"
+import { generateCustomerId } from "@/lib/customers";
 
 export async function POST(req) {
   await connectDB();
@@ -13,8 +14,11 @@ export async function POST(req) {
     return NextResponse.json({ error: 'email exists', exists: true, field: "email" }, { status: 400 });
 
   try {
+    const memberId = await generateCustomerId();
+
     const customer = await Customer.create({
       name, email, phone, assigned: false,
+      memberId,
       address: {
         address1,
         city,
@@ -40,6 +44,7 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url)
   const search = searchParams.get("search")
   const requiresWaiver = searchParams.get("requiresWaiver")
+  const recentWaiver = searchParams.get("recentWaiver")
   const orgId = employee.org._id
 
   // if (!search)
@@ -55,13 +60,18 @@ export async function GET(req) {
     baseQuery.$or = [
       { name: { $regex: regex } },
       { email: { $regex: regex } },
-      { phone: { $regex: regex } }
+      { phone: { $regex: regex } },
+      { memberId: { $regex: regex } }
     ];
   }
 
-  console.log(requiresWaiver)
-
   if (requiresWaiver === "true") {
+    // const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    baseQuery["waiver.agree"] = true;
+    // baseQuery.createdAt = { $gte: twoHoursAgo };
+    // baseQuery.assigned = false;
+  }
+  else if (recentWaiver === "1") {
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
     baseQuery["waiver.agree"] = true;
     baseQuery.createdAt = { $gte: twoHoursAgo };

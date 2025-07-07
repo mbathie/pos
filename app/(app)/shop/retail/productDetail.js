@@ -34,7 +34,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
             </div>
           </SheetTitle>
           <SheetDescription>
-            Description goes here
+            {product.desc?.length > 100 ? `${product.desc.substring(0, 100)}...` : product.desc}
           </SheetDescription>
         </SheetHeader>
 
@@ -111,7 +111,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
             <Button 
               type="submit" 
               // disabled={product?.qty === 0}
-              disabled={!product?.variations?.some(v => v.selected) || product?.qty === 0}
+              disabled={!product?.variations?.some(v => v.selected) || !(product?.qty >= 1)}
               onClick={async () => {
                 const _product = await calcCartValueShop({product})
                 addToCart({..._product, type: "shop"})

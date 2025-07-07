@@ -14,6 +14,7 @@ import DateTimePicker from '@/components/date-time-picker';
 import { getLastClassDate } from '@/lib/classes'
 import { Checkbox } from "@/components/ui/checkbox"
 import IconSelect from '@/components/icon-select'
+import { Textarea } from '@/components/ui/textarea';
 
 export default function Page({products, setProducts, categoryName, type}) {
   const contentRefs = useRef({});
@@ -115,6 +116,15 @@ export default function Page({products, setProducts, categoryName, type}) {
                 <Input 
                   placeholder="product name" value={p.name}
                   onChange={(e) => updateProduct(p._id, { name: e.target.value })}
+                />
+              </div>
+
+              <div className='flex flex-col gap-1'>
+                <Label>Description</Label>
+                <Textarea
+                  rows={4} 
+                  placeholder="product description" value={p.desc}
+                  onChange={(e) => updateProduct(p._id, { desc: e.target.value })}
                 />
               </div>
 

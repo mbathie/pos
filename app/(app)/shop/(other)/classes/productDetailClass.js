@@ -25,7 +25,9 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
   // },[])
 
   useEffect(() => {
+    console.log('------------')
     console.log(product)
+    console.log('------------')
     async function fetch() {
       if (product) {
         const t = await calcCartValueClass({ product });
@@ -50,7 +52,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
             </div>
           </SheetTitle>
           <SheetDescription>
-            Description goes here
+            {product.desc?.length > 100 ? `${product.desc.substring(0, 100)}...` : product.desc}
           </SheetDescription>
         </SheetHeader>
 

@@ -15,6 +15,8 @@ export async function POST(req, { params }) {
   const org = employee.org;
   const { received, change, cart, customer } = await req.json();
 
+  console.log(cart)
+
   const first = getFirstCustomer({ cart });
   const txnCustomer = first?._id
     ? new Types.ObjectId(first._id)

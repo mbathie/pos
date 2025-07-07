@@ -72,7 +72,7 @@ export function useProduct(setProducts) {
       });
 
       const created = await res.json();
-      console.log(created.product)
+      // console.log(created.product)
       return created.product;
     } catch (err) {
       console.error(err);
