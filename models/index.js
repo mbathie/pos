@@ -127,7 +127,7 @@ const ScheduleSchema = new mongoose.Schema({
     available: Number,
     customers: [{
       customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
-      status: { type: String, enum: ['confirmed', 'cancelled', 'checkedin'] },
+      status: { type: String, enum: ['confirmed', 'cancelled', 'checked in'] },
       transaction: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }
     }]
   }]

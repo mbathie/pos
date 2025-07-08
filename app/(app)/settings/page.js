@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import { TypographyLarge, TypographyMuted } from '@/components/ui/typography'
@@ -9,6 +10,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Loader, CheckCircle2 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Separator } from '@radix-ui/react-separator'
+import { QRCode } from 'react-qrcode-logo'
 
 export default function Page() {
   const router = useRouter()
@@ -74,6 +76,23 @@ export default function Page() {
               <Button onClick={saveOrg} disabled={!org?.name?.trim() || org?.name === orgCpy?.name}>
                 Save
               </Button>
+            </div>
+
+            <Separator className='border-t border-muted col-span-2' />
+
+            <div>
+              <div>Waiver Signup Page</div>
+              <TypographyMuted>
+                For new customers wanting to join, this is the URL to direct them to. You can also print the QR place it at a convenient location
+              </TypographyMuted>
+            </div>
+            <div className='flex gap-2 flex-col'>
+              <div className="rounded-lg overflow-hidden w-[148px] h-[148px]">
+                <QRCode value={`${process.env.NEXT_PUBLIC_DOMAIN}/org/${org._id}/waiver`} size={128} />
+              </div>
+              <div>
+                <Link className='underline text-sm' target="_blank" href={`${process.env.NEXT_PUBLIC_DOMAIN}/org/${org._id}/waiver`}>Waiver Link</Link>
+              </div>
             </div>
 
             <Separator className='border-t border-muted col-span-2' />

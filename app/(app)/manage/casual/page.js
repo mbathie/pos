@@ -1,17 +1,11 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { useImmer } from 'use-immer';
+import React, { useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-// import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-// import { Separator } from '@radix-ui/react-separator'
-// import { Button } from '@/components/ui/button'
-// import { Tag, ChevronsUpDown, Plus, Ellipsis, Info } from 'lucide-react'
-// import { Input } from '@/components/ui/input'
-// import { Label } from '@/components/ui/label'
 import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader,TableRow } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
 
 export default function Page() {
   const [casuals, setCasuals] = useState([]);
@@ -55,7 +49,7 @@ export default function Page() {
             {/* <TableCaption>Casual Entries</TableCaption> */}
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
+                <TableHead>Member</TableHead>
                 <TableHead>Member #</TableHead>
                 <TableHead>From / To</TableHead>
                 <TableHead>Status</TableHead>
@@ -65,7 +59,11 @@ export default function Page() {
             <TableBody>
               {casuals.map((entry) => (
                 <TableRow key={entry._id}>
-                  <TableCell className="align-top">{entry.customer?.name || '-'}</TableCell>
+                  <TableCell className="align-top flex flex-col">
+                    <div>{entry.customer?.name}</div>
+                    <div>{entry.customer?.email}</div>
+                    <div>{entry.customer?.phone}</div>
+                  </TableCell>
                   <TableCell className="align-top">{entry.customer?.memberId}</TableCell>
                   <TableCell>
                     <div>
@@ -75,9 +73,9 @@ export default function Page() {
                     </div>
                   </TableCell>
                   <TableCell className="align-top flex">
-                    <div className={`${entry.end && dayjs(entry.end).isBefore(dayjs()) ? 'bg-red-500' : 'bg-emerald-500'} flex px-2 rounded-sm`}>
+                    <Badge variant={entry.end && dayjs(entry.end).isBefore(dayjs()) ? 'destructive' : 'default'}>
                       {getStatusLabel(entry)}
-                    </div>
+                    </Badge>
 
                   </TableCell>
                   <TableCell className="align-top">{entry.product.name}</TableCell>
