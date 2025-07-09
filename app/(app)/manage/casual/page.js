@@ -10,6 +10,13 @@ import { Badge } from "@/components/ui/badge"
 export default function Page() {
   const [casuals, setCasuals] = useState([]);
 
+  const [now, setNow] = useState(dayjs());
+
+  useEffect(() => {
+    const interval = setInterval(() => setNow(dayjs()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   useEffect(() => {
     const fetchCasuals = async () => {
       const res = await fetch('/api/casuals');
@@ -20,8 +27,7 @@ export default function Page() {
     fetchCasuals();
   }, []);
 
-  const getStatusLabel = (entry) => {
-    const now = dayjs();
+  const getStatusLabel = (entry, now) => {
     const end = entry.end ? dayjs(entry.end) : null;
     const isExpired = end && end.isBefore(now);
 
@@ -74,7 +80,7 @@ export default function Page() {
                   </TableCell>
                   <TableCell className="align-top flex">
                     <Badge variant={entry.end && dayjs(entry.end).isBefore(dayjs()) ? 'destructive' : 'default'}>
-                      {getStatusLabel(entry)}
+                      {getStatusLabel(entry, now)}
                     </Badge>
 
                   </TableCell>
