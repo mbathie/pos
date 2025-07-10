@@ -2,23 +2,23 @@ import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongoose"
 import { getEmployee } from "@/lib/auth"
 import { Customer } from "@/models"
-import { generateCustomerId } from "@/lib/customers";
+// import { generateCustomerId } from "@/lib/customers";
 
 export async function POST(req) {
   await connectDB();
   const { employee } = await getEmployee();
-  console.log(employee)
+  // console.log(employee)
   const { name, email, phone, address1, city, state, postcode, agree, signature } = await req.json();
 
   if (await Customer.findOne({ email }))
     return NextResponse.json({ error: 'email exists', exists: true, field: "email" }, { status: 400 });
 
   try {
-    const memberId = await generateCustomerId();
+    // const memberId = await generateCustomerId();
 
     const customer = await Customer.create({
       name, email, phone, assigned: false,
-      memberId,
+      // memberId,
       address: {
         address1,
         city,
@@ -61,8 +61,12 @@ export async function GET(req) {
       { name: { $regex: regex } },
       { email: { $regex: regex } },
       { phone: { $regex: regex } },
-      { memberId: { $regex: regex } }
     ];
+
+    const asNumber = Number(search);
+    if (!isNaN(asNumber)) {
+      baseQuery.$or.push({ memberId: asNumber });
+    }
   }
 
   if (requiresWaiver === "true") {

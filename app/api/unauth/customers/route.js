@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongoose"
 import { Customer } from "@/models"
-import { generateCustomerId } from "@/lib/customers";
+// import { generateCustomerId } from "@/lib/customers";
 
 export async function POST(req) {
   await connectDB();
@@ -12,11 +12,11 @@ export async function POST(req) {
     return NextResponse.json({ error: 'email exists', exists: true, field: "email" }, { status: 400 });
 
   try {
-    const memberId = await generateCustomerId();
+    // const memberId = await generateCustomerId();
 
     const customer = await Customer.create({
       name, email, phone, assigned: false,
-      memberId,
+      // memberId,
       address: {
         address1,
         city,

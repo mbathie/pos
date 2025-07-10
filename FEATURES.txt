@@ -1,3 +1,6 @@
+CURRENT
+- working on schedules, different class schedules per location
+
 
 DONE - folders for shop items
 DONE - bg colours for shop items, icons / images
@@ -16,9 +19,9 @@ DONE - course / class checkout, must check remaining capacity (no overbooking)
 DONE - checkout shop item, folder should open into new screen (use breadcrumb menu)
 - bump screen for kitchen staff to see/manage orders
   - order table
-- admin / list view page for classes / courses
-- admin / list view page for casual entries
-- membership mumber assignment on creation
+DONE - admin / list view page for classes / courses
+DONE - admin / list view page for casual entries
+DONE - membership mumber assignment on creation
 DONE - item description
 - roles for staff, admins, bump screens, terminals
 DONE - ability to edit folder colour

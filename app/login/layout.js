@@ -7,7 +7,7 @@ export default function Layout({ children }) {
 
       <div className='max-w-6xl mx-auto w-full'>
         <header className="text-black px-8 sticky items-center flex top-0 bg-accent- h-16 font-rochester font-semibold text-4xl tracking-wider">
-          <div>Platypos</div>
+          <div>Cultcha</div>
         </header>
 
         <div className="mt-20">

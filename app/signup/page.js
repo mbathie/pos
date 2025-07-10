@@ -23,7 +23,7 @@ export default function LoginForm() {
   const [ name, setName ] = useState("")
   const [ nameEmployee, setNameEmployee ] = useState("")
 
-  const { setEmployee, setLocation } = useGlobals()
+  const { setEmployee, setLocation, setLocations } = useGlobals()
 
   const handleForm = async (e) => {
     e.preventDefault();
@@ -48,6 +48,9 @@ export default function LoginForm() {
       setEmployee(data.employee)
       setLocation(data.employee.location)
 
+      const locationsRes = await fetch(`/api/locations`, { method: "GET" });
+      const _l = await locationsRes.json()
+      setLocations(_l)
 
       window.location.href = "/products/shop"
     } catch (err) {

@@ -265,8 +265,9 @@ export default function Page() {
                     }
                     onClick={async () => {
                       const tx = await receiveCash({ input: cashInput });
-                      setPaymentStatus(tx.transaction.status);
-                      resetCart();
+                      // console.log(cart)
+                      // setPaymentStatus(tx.transaction.status);
+                      // resetCart();
                     }}
                   >
                     Accept

@@ -17,9 +17,24 @@ if (!uri) {
 async function clearDatabase() {
   try {
     await mongoose.connect(uri);
-    const dbName = mongoose.connection.name;
-    await mongoose.connection.dropDatabase();
-    console.log(`✅ Database "${dbName}" dropped successfully.`);
+    const db = mongoose.connection;
+
+    const collectionArg = process.argv[2];
+    if (collectionArg) {
+      const collections = await db.db.listCollections().toArray();
+      const names = collections.map(c => c.name);
+      if (names.includes(collectionArg)) {
+        await db.dropCollection(collectionArg);
+        console.log(`✅ Collection "${collectionArg}" dropped successfully.`);
+      } else {
+        console.warn(`⚠️ Collection "${collectionArg}" does not exist.`);
+      }
+    } else {
+      const dbName = db.name;
+      await db.dropDatabase();
+      console.log(`✅ Database "${dbName}" dropped successfully.`);
+    }
+
     await mongoose.disconnect();
   } catch (err) {
     console.error('❌ Failed to clear database:', err);

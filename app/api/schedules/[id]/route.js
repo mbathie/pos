@@ -11,11 +11,7 @@ export async function GET(req, { params }) {
 
   const schedule = await Schedule.findOne({ _id: id, org: orgId })
     .populate("product")
-    .populate("location")
-    .populate({
-      path: "classes.customers.customer",
-      model: "Customer"
-    });
+    .populate("locations.classes.customers.customer")
 
   if (!schedule) {
     return NextResponse.json({ error: "Schedule not found" }, { status: 404 });
@@ -24,10 +20,15 @@ export async function GET(req, { params }) {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate());
 
-  const filteredClasses = schedule.classes?.filter(cls => new Date(cls.datetime) > cutoffDate) || [];
+  const scheduleObj = schedule.toObject();
+  const loc = scheduleObj.locations?.find(loc =>
+    loc.location?.toString() === employee.selectedLocationId?.toString()
+  );
+  const filteredClasses = (loc?.classes || []).filter(cls => new Date(cls.datetime) > cutoffDate);
   const filteredSchedule = {
-    ...schedule.toObject(),
-    classes: filteredClasses
+    ...scheduleObj,
+    classes: filteredClasses,
+    locations: undefined
   };
 
   return NextResponse.json(filteredSchedule);

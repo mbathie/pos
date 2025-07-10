@@ -12,7 +12,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* Branding */}
           <div>
-            <h2 className="text-lg font-semibold text-foreground">PlatyPOS</h2>
+            <h2 className="text-lg font-semibold text-foreground">Cultcha</h2>
             <p className="text-sm mt-2">
               Building cool stuff with open-source and love.
             </p>

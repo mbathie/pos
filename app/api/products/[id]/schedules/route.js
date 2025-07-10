@@ -7,6 +7,7 @@ import mongoose from "mongoose"
 export async function GET(req, { params }) {
   await connectDB();
   const { employee } = await getEmployee();
+  console.log(employee)
   const { id } = await params
 
   const schedule = await Schedule.findOne({
@@ -15,8 +16,12 @@ export async function GET(req, { params }) {
   });
 
   if (!schedule) {
-    return NextResponse.json({ schedule: {classes: []} }, { status: 200 });
+    return NextResponse.json({ classes: [] }, { status: 200 });
   }
 
-  return NextResponse.json(schedule, { status: 200 });
+  const locationEntry = schedule.locations?.find(loc =>
+    loc.location?.toString() === employee.selectedLocationId.toString()
+  );
+
+  return NextResponse.json({ classes: locationEntry?.classes ?? [] }, { status: 200 });
 }

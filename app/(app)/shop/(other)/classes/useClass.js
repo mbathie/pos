@@ -83,7 +83,7 @@ export function useClass({product, setProduct}) {
             if (nextDate < now || nextDate > twoMonthsLater) return null;
 
             const iso = nextDate.toISOString();
-            const match = schedule.classes.find(s => s.datetime === iso);
+            const match = schedule.classes?.find(s => s.datetime === iso);
             const available = match?.available ?? _product.capacity;
 
             return {

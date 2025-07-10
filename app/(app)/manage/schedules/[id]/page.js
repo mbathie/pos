@@ -19,9 +19,9 @@ export default function Page({ params }) {
   return (
     <div className="px-4">
       {/* {schedule?.product.type} */}
-      {schedule?.product?.type == 'class' &&
-        <Class schedule={schedule} setSchedule={setSchedule}/>
-      }
+      {/* {schedule?.product?.type == 'class' && */}
+      <Class schedule={schedule} setSchedule={setSchedule}/>
+      {/* } */}
       {/* <h1 className="text-lg font-semibold">Schedule ID: {id}</h1> */}
 
 

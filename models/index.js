@@ -89,7 +89,30 @@ const CustomerSchema = new mongoose.Schema({
   email: String,
   phone: String,
   orgs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Org' }],
+  memberId: {
+    type: Number,
+    unique: true,
+    sparse: true,
+  },
 }, { timestamps: true, strict: false });
+
+CustomerSchema.pre('save', async function (next) {
+  if (this.memberId) return next();
+
+  const Customer = mongoose.model('Customer');
+  let unique = false;
+
+  while (!unique) {
+    const id = Math.floor(100000 + Math.random() * 900000);
+    const existing = await Customer.findOne({ memberId: id });
+    if (!existing) {
+      this.memberId = id;
+      unique = true;
+    }
+  }
+
+  next();
+});
 
 const Customer = mongoose.models.Customer || mongoose.model('Customer', CustomerSchema);
 
@@ -114,21 +137,23 @@ const Transaction = mongoose.models.Transaction || mongoose.model('Transaction',
 // ==== Schedule ====
 const ScheduleSchema = new mongoose.Schema({
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
-  location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' }, // only for classes
   product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   capacity: Number,
   available: {
     type: Number,
     default: 0,
   },
-  classes: [{
-    datetime: { type: Date, required: true },
-    duration: Number,
-    available: Number,
-    customers: [{
-      customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
-      status: { type: String, enum: ['confirmed', 'cancelled', 'checked in'] },
-      transaction: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }
+  locations: [{
+    location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', required: true },
+    classes: [{
+      datetime: { type: Date, required: true },
+      duration: Number,
+      available: Number,
+      customers: [{
+        customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
+        status: { type: String, enum: ['confirmed', 'cancelled', 'checked in'] },
+        transaction: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }
+      }]
     }]
   }]
 }, { timestamps: true, strict: false });

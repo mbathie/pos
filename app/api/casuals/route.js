@@ -8,11 +8,10 @@ export async function GET(req) {
   const { employee } = await getEmployee()
   const orgId = employee.org._id
 
-  const casuals = await Casual.find({ org: orgId })
+  const casuals = await Casual.find({ org: orgId, location: employee.selectedLocationId })
     .populate("customer")
     .populate("product")
     .populate("location")
-    // .populate("org")
     .populate("transaction")
     .sort({ start: -1 })
 

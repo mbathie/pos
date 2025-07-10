@@ -12,6 +12,8 @@ export async function PUT(req, { params }) {
   const { id, classId, customerId } = await params;
   const { status } = await req.json();
 
+  console.log('here 123')
+
   // console.log(`id=${id} classId=${classId} customerId=${customerId}`)
 
   const scheduleId = new mongoose.Types.ObjectId(id);

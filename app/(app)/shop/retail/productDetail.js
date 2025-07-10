@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Sheet, SheetContent, SheetFooter, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import React from 'react'
@@ -16,6 +16,13 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
     getProducts, selectVariation, 
     selectMod, getProductTotal, setQty } = useHandler()
   const { addToCart } = useGlobals()
+
+  useEffect(() => {
+    if (product?._id && product?.qty) {
+      const total = getProductTotal({product})
+      setTotal(total)
+    }
+  }, [product])
 
   if (!product?._id) return
   

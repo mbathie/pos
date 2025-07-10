@@ -83,7 +83,7 @@ export default function Page() {
                         const mostRecent = entry.classes?.reduce((latest, curr) => {
                           return !latest || dayjs(curr.datetime).isAfter(dayjs(latest.datetime)) ? curr : latest;
                         }, null);
-                        return mostRecent ? `${mostRecent.available}/${entry.capacity} (next class)` : '-';
+                        return mostRecent ? `${mostRecent.available}/${entry.capacity}` : '-';
                       })()
                     )}
                   </TableCell>
@@ -95,7 +95,7 @@ export default function Page() {
                         .sort((a, b) => dayjs(a.datetime).diff(dayjs(b.datetime)));
 
                       return upcoming?.length
-                        ? `${dayjs(upcoming[0].datetime).format('DD/MM/YY hh:mm A')} (${dayjs(upcoming[0].datetime).fromNow(true)})`
+                        ? `${dayjs(upcoming[0].datetime).format('DD/MM/YY hh:mm A')} (${dayjs(upcoming[0].datetime).fromNow(true).replace(' hours', 'h').replace(' hour', 'h').replace(' minutes', 'm').replace(' minute', 'm')})`
                         : '-';
                     })()}
                   </TableCell>

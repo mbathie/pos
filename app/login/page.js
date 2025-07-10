@@ -21,7 +21,7 @@ export default function LoginForm() {
   const [ email, setEmail ] = useState("")
   const [ password, setPassword ] = useState("")
 
-  const { setEmployee, setLocation } = useGlobals()
+  const { setEmployee, setLocation, setLocations } = useGlobals()
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -42,9 +42,12 @@ export default function LoginForm() {
 
       const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/me`);
       const data = await userRes.json();
-      console.log(data)
       setEmployee(data.employee)
       setLocation(data.employee.location)
+
+      const locationsRes = await fetch(`/api/locations`, { method: "GET" });
+      const _l = await locationsRes.json()
+      setLocations(_l)
 
       window.location.href = "/products/shop"
     } catch (err) {

@@ -17,9 +17,11 @@ export default function Page({ schedule, setSchedule }) {
 
   const isIcon = !schedule.product?.thumbnail || schedule.product.thumbnail.includes("thenounproject.com");
 
-  useEffect(() => {
-    console.log(schedule)
-  },[])
+  // useEffect(() => {
+  //   console.log(schedule)
+  // },[])
+
+  if (!schedule?.product?.name) return null
 
   return (
     <Card className='p-4'>
@@ -44,6 +46,12 @@ export default function Page({ schedule, setSchedule }) {
               <TableCell className='font-semibold'>Capacity</TableCell>
               <TableCell colSpan={4}>{schedule.product.capacity}</TableCell>
             </TableRow>
+            {schedule.product.type == 'course' &&
+            <TableRow className="border-0">
+              <TableCell className='font-semibold'>Availability</TableCell>
+              <TableCell colSpan={4}>{schedule.available}</TableCell>
+            </TableRow>
+            }
             <TableRow>
               <TableCell colSpan={4} className='font-semibold'>Variations</TableCell>
             </TableRow>
@@ -65,7 +73,7 @@ export default function Page({ schedule, setSchedule }) {
                 })}
               </TableCell>
 
-              <TableCell colSpan={3}>
+              <TableCell colSpan={4}>
                 {schedule.product.variations.map((v, vIdx) => {
                   return (
                     <div key={vIdx} className='flex flex-col'>
@@ -74,7 +82,14 @@ export default function Page({ schedule, setSchedule }) {
                             <div key={tIdx}>
                               <div>{dayjs(t.start).format('DD/MM/YY hh:mm A')}</div>
                               <div>Repeats every: {t.repeatInterval} day</div>
-                              <div>Ends: {t.repeatAlways ? 'Until cancel' : dayjs(t.repeatEnd).format('DD/MM/YY hh:mm A')}</div>
+                              <div>
+                                Ends: {t.repeatAlways
+                                  ? 'Until cancel'
+                                  : (() => {
+                                      const end = dayjs(t.start).add((t.repeatCnt - 1) * t.repeatInterval, 'day');
+                                      return `${end.format('DD/MM/YY hh:mm A')} (${end.diff(dayjs(t.start), 'day')} days)`;
+                                    })()}
+                              </div>
                               <div>
                                 Next Class: {(() => {
                                   const now = dayjs();
@@ -103,9 +118,11 @@ export default function Page({ schedule, setSchedule }) {
               <TableCell className='font-semibold'>
                 Classes
               </TableCell>
+              {schedule.product.type == 'class' &&
               <TableCell className='font-semibold'>
                 Available
               </TableCell>
+              }
               <TableCell className='font-semibold'>
                 Enrollment
               </TableCell>
@@ -121,19 +138,23 @@ export default function Page({ schedule, setSchedule }) {
                     <div>{dayjs(c.datetime).format('DD/MM/YY')}</div>
                     <div>{dayjs(c.datetime).format('hh:mm A')}</div>
                   </TableCell>
+                  {schedule.product.type == 'class' &&
                   <TableCell className="align-top">
                     {c.available}
                   </TableCell>
-                  <TableCell className='align-top flex flex-col gap-2'>
-                    {c.customers.map((cust, custIdx) => {
-                      return (
-                        <div key={cust._id} className='flex gap-2 items-center'>
-                          {/* <Checkbox /> */}
-                          <div>{cust.customer.name}</div> -
-                          <div>{cust.customer.phone}</div>
-                        </div>
-                      )
-                    })}
+                  }
+                  <TableCell className='align-top'>
+                    <div className='flex flex-col gap-2'>
+                      {c.customers.map((cust, custIdx) => {
+                        return (
+                          <div key={cust._id} className='flex gap-2 items-center'>
+                            {/* <Checkbox /> */}
+                            <div>{cust.customer.name}</div> -
+                            <div>{cust.customer.phone}</div>
+                          </div>
+                        )
+                      })}
+                    </div>
                   </TableCell>
                   <TableCell className='align-top'>
                     <div className='align-top flex flex-col gap-2'>

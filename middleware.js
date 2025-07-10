@@ -13,6 +13,8 @@ export async function middleware(req) {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
 
+    console.log(payload)
+
     if (!payload?.employeeId) {
       return NextResponse.redirect(new URL("/login", req.url));
     }

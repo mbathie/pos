@@ -48,7 +48,6 @@ export async function POST(req, { params }) {
     status: "succeeded"
   });
 
-  // if customers (class course)
   await addToSchedule({transaction, cart, employee})
   await addToCasual({transaction, cart, employee})
   // await assignCustomers({products: cart.products})
