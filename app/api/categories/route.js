@@ -11,7 +11,10 @@ export async function GET(req) {
   const { searchParams } = new URL(req.url);
   const menu = searchParams.get("menu");
 
-  const query = { org: employee.org._id };
+  const query = { 
+    org: employee.org._id,
+    deleted: { $ne: true } // Filter out deleted categories
+  };
   if (menu) {
     query.menu = menu;
   }

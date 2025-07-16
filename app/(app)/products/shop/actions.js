@@ -76,6 +76,30 @@ export function actions({category, setProducts}) {
     });
   };
 
+  const deleteCategory = async ({ category: categoryToDelete, setCategory, setCategories, categories }) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${categoryToDelete._id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log("Category deletion response:", data);
+        
+        // Remove the category from the list
+        setCategories(categories.filter(c => c._id !== categoryToDelete._id));
+        // Reset the current category if it was deleted
+        if (category._id === categoryToDelete._id) {
+          setCategory({});
+          setProducts([]);
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting category:", error);
+    }
+  };
+
   const addProduct = () => {
     setProducts(draft => {
       const newModCats = buildModCatsFromProducts(draft);
@@ -245,6 +269,7 @@ export function actions({category, setProducts}) {
     saveProduct,
     addProduct,
     deleteProduct,
+    deleteCategory,
     deleteVariation,
     addModCat,
     updateModCat,

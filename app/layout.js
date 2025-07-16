@@ -5,10 +5,6 @@ import { ThemeProvider } from "@/components/theme-provider"
 
 const roboto = Roboto_Mono({ subsets: ['latin'] })
 
-export const icons = {
-  icon: '/favicon.ico',
-};
-
 export const metadata = {
   title: "Cultcha Management dash",
   description: "Cultcha Terminal dash",
@@ -20,9 +16,13 @@ export default async function RootLayout({ children }) {
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
-      <body className={`${roboto.className} antialiased`}>
-        <ThemeProvider> {/* ✅ This should now work correctly */}
-          {/* <GlobalProvider initEmployee={data.employee}>{children}</GlobalProvider> */}
+      <body className={`${roboto.className} antialiased-`}>
+        <ThemeProvider
+          // attribute="class"
+          // defaultTheme="light"
+          // enableSystem
+          // disableTransitionOnChange
+        > 
           <GlobalProvider >{children}</GlobalProvider>
 
         </ThemeProvider>

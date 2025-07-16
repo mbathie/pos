@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/sidebar"
 
 import BreadcrumbMenu from '@/components/breadcrumb-menu'
-import Cart from './shop/cart'
+// import Cart from './shop/cart'
 
 export default function Page({children}) {
   const { location } = useGlobals()
@@ -42,7 +42,7 @@ export default function Page({children}) {
           <div className="flex items-center gap-4 px-4">
             <SidebarTrigger className="-ml-1" />
             {!open && (
-              <div className="flex text-lime-400 items-center gap-1 te-xt-muted-foreground">
+              <div className="flex items-center gap-2 text-sidebar-primary">
                 <MapPin className="w-4 h-4" />
                 <span>{location?.name}</span>
               </div>
@@ -56,7 +56,7 @@ export default function Page({children}) {
             {showHeaderExtras && (
               <>
                 <BreadcrumbMenu />
-                <Cart />
+                {/* <Cart /> */}
               </>
             )}
           </div>

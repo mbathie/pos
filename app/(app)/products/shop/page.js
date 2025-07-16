@@ -44,7 +44,7 @@ export default function Page() {
   const { 
     addVariation, updateVariation, 
     updateProduct, saveProduct, addProduct, deleteProduct,
-    deleteVariation, addModCat, 
+    deleteVariation, addModCat, deleteCategory,
     addMod, updateMod, saveMod, updateModCat, setFolder } = actions({category, setProducts})
   const contentRefs = useRef({});
   const { productsUI, toggleExpanded, toggleAll } = useUI({products, contentRefs});
@@ -67,8 +67,16 @@ export default function Page() {
   }, [products]);
 
   const handleDelete = async () => {
-    if (toDelete.variationIdx !== undefined)
+    if (toDelete.variationIdx !== undefined) {
       deleteVariation(toDelete)
+    } else if (toDelete.category) {
+      await deleteCategory({
+        category: toDelete.category, 
+        setCategory, 
+        setCategories, 
+        categories
+      });
+    }
     setToDelete({})
   }
 
@@ -81,16 +89,28 @@ export default function Page() {
     fetchCategories();
   }, []);
 
+  // Add this new useEffect to log category changes
+  useEffect(() => {
+    console.log("Current category:", category);
+  }, [category]);
+
   const saveCategory = async () => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${category.name}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ menu: 'shop' }),
     });
-    const c = await res.json();
-    setCategory(c.category);
-    setCategories([c.category, ...categories]);
-    getCategoryProducts(c.category);
+    const data = await res.json();
+    console.log("Category saved response:", data);
+    if (data.category && data.category._id) {
+      // Create a new category object without the 'new' property
+      const updatedCategory = { ...data.category };
+      delete updatedCategory.new;
+      console.log("Updated category object:", updatedCategory);
+      setCategory(updatedCategory);
+      setCategories([updatedCategory, ...categories]);
+      getCategoryProducts(updatedCategory);
+    }
   }
 
   const getCategoryProducts = async (c) => {
@@ -163,7 +183,7 @@ export default function Page() {
             Retail Shop Products
           </CardTitle>
         </CardHeader>
-        <Tabs.Root className="flex w-full" defaultValue="tab1">
+        <Tabs.Root className="flex w-full" defaultValue={category.name || "tab1"}>
           <Tabs.List className="flex flex-col min-w-56 text-sm *:font-semibold">
             <Card 
               className="ml-4">
@@ -234,14 +254,26 @@ export default function Page() {
                     >
                       New Product
                     </Button>
+                                        <Button
+                      variant="destructive"
+                      className="ml-auto"
+                      size="sm"
+                      onClick={() => {
+                        setToDelete({ category: category });
+                        setDeleteOpen(true);
+                      }}
+                    >
+                      Delete Category
+                    </Button>
                     <Button
                       variant="outline"
-                      className="ml-auto text-xs"
+                      className="ml-auto"
                       size="sm"
                       onClick={() => toggleAll()}
                     >
                       <ChevronsUpDown className="mx-auto size-4" />
                     </Button>
+
                   </div>
                 )}
                 {category.new && category.name && (
@@ -258,16 +290,14 @@ export default function Page() {
 
 
 
-              {categories.map((c, i) => (
+              {/* {categories.map((c, i) => (
                 <Tabs.Content
                   key={c._id}
                   value={c.name}
                   className="flex flex-col space-y-4 w-full"
-                >
+                > */}
 
-                  
-
-
+         
                   {products?.map((p, pIdx) => 
                     (
                       <Card
@@ -358,6 +388,7 @@ export default function Page() {
                             <Label>Description</Label>
                             <Textarea
                               type="text"
+                              rows={6}
                               placeholder=""
                               onChange={(e) => updateProduct({pIdx, key: "desc", value: e.target.value})}
                               value={p.desc || ''}
@@ -558,8 +589,8 @@ export default function Page() {
                       </Card>
                     ),
                   )}
-                </Tabs.Content>
-              ))}
+                {/* </Tabs.Content>
+              ))} */}
             </div>
           </div>
         </Tabs.Root>
@@ -568,10 +599,19 @@ export default function Page() {
       <Delete
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
-        name={`${toDelete?.product?.name}`}
+        name={toDelete?.category ? `${toDelete.category.name} category` : `${toDelete?.product?.name}`}
         onConfirm={() => {
-          console.log(toDelete)
-          deleteProduct({...toDelete})
+          console.log(toDelete);
+          if (toDelete.category) {
+            deleteCategory({
+              category: toDelete.category,
+              setCategory,
+              setCategories,
+              categories
+            });
+          } else {
+            deleteProduct({...toDelete});
+          }
           setDeleteOpen(false);
         }}
       />

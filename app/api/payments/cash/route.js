@@ -5,6 +5,8 @@ import { Transaction } from "@/models";
 import { calcCartTotals } from "@/lib/cart"
 import { addToSchedule } from '@/lib/schedule'
 import { addToCasual } from '@/lib/casual'
+import { addToOrder } from '@/lib/order'
+
 import { Types } from "mongoose";
 // import { assignCustomers, extractCustomers } from "@/lib/customers";
 
@@ -50,6 +52,7 @@ export async function POST(req, { params }) {
 
   await addToSchedule({transaction, cart, employee})
   await addToCasual({transaction, cart, employee})
+  await addToOrder({transaction, cart, employee})
   // await assignCustomers({products: cart.products})
 
   // return NextResponse.json({ }, { status: 200 });

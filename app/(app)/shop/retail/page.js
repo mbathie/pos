@@ -8,7 +8,8 @@ import Categories from './cats'
 import Product from '../product'
 import { useRouter } from 'next/navigation';
 import colors from 'tailwindcss/colors';
-import { Folder, Plus, Minus } from 'lucide-react'
+import { Plus, Minus } from 'lucide-react'
+import Cart from '../cart'
 
 export default function Page() {
   const { pushBreadcrumb, resetBreadcrumb } = useGlobals()
@@ -80,7 +81,7 @@ export default function Page() {
 
         {/* Right Panel */}
 
-        <div className='flex flex-wrap gap-4 text-sm content-start'>
+        <div className='flex flex-1 flex-wrap gap-4 text-sm content-start'>
 
           <div className='flex flex-wrap gap-4 text-sm content-start'>
 
@@ -128,6 +129,9 @@ export default function Page() {
 
 
         </div>
+
+        {/* cart */}
+        <Cart />
 
 
       </div>

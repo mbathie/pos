@@ -6,6 +6,7 @@ import { useHandler } from './useHandler'
 import Products from '../../products'
 import ProductDetail from './productDetail';
 import { useImmer } from 'use-immer'
+import Cart from '../../cart'
 
 export default function Page() {
   const [ products, setProducts ] = useState([]);
@@ -27,26 +28,30 @@ export default function Page() {
   }, []);
 
   return (
-    <div className='px-4'>
-      <Products
-        products={products}
-        category={category}
-        onClick={(p) => {
-          console.log(p)
-          setProduct(p);
-          setSheetOpen(true);
-        }}
-      />
+    <div className='px-4- flex h-full'>
+      <div className='flex-1 p-4'>
+        <Products
+          products={products}
+          category={category}
+          onClick={(p) => {
+            console.log(p)
+            setProduct(p);
+            setSheetOpen(true);
+          }}
+        />
+      </div>
+      
+      <Cart />
+
       {product &&
-      <ProductDetail
-        open={sheetOpen}
-        setOpen={setSheetOpen}
-        product={product}
-        setProduct={setProduct}
-        onAddToCart={() => {}}
-        // onSelectPrice={selectPrice}
-        setQty={setQty}
-      />
+        <ProductDetail
+          open={sheetOpen}
+          setOpen={setSheetOpen}
+          product={product}
+          setProduct={setProduct}
+          onAddToCart={() => {}}
+          setQty={setQty}
+        />
       }
     </div>
   )

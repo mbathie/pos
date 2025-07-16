@@ -168,6 +168,7 @@ export function SearchCustomers({ onOpenChange, connectCustomerFn, requiresWaive
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/customers?search=${encodeURIComponent(search)}&requiresWaiver=${requiresWaiver}`);
       const data = await res.json();
+      console.log(data)
       if (Array.isArray(data)) {
         setCustomers(data);
       } else {
@@ -214,7 +215,7 @@ export function SearchCustomers({ onOpenChange, connectCustomerFn, requiresWaive
                 return (
                   <CommandItem
                     key={customer._id}
-                    value={`${customer.name} ${customer.email}`}
+                    value={`${customer.name} ${customer.email} ${customer.memberId}`}
                     onSelect={() => {
                       setValue(`${customer.name} ${customer.email}`);
                       setOpen(false);
@@ -224,12 +225,12 @@ export function SearchCustomers({ onOpenChange, connectCustomerFn, requiresWaive
                     }}
                   >
                     {customer.name} ({customer.email})
-                    <Check
+                    {/* <Check
                       className={cn(
                         "ml-auto",
                         value === `${customer.name} ${customer.email}` ? "opacity-100" : "opacity-0"
                       )}
-                    />
+                    /> */}
                   </CommandItem>
                 )
               })}

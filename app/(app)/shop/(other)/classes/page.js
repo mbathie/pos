@@ -8,6 +8,7 @@ import Products from '../../products'
 import ProductDetailClass from './productDetailClass';
 import ProductDetailCourse from './ProductDetailCourse';
 import { useImmer } from 'use-immer'
+import Cart from '../../cart'
 
 export default function Page() {
   // const { pushBreadcrumb } = useGlobals()
@@ -36,19 +37,24 @@ export default function Page() {
   }, []);
 
   return (
-    <div className='px-4'>
-      <Products
-        products={products}
-        category={category}
-        onClick={(p) => {
-          console.log(p.type)
-          setProduct(p)
-          if (p.type == 'class') setTimesClass(p)
-          else if (p.type == 'course') setTimesCourse(p)
+    <div className='flex h-full'>
+      <div className='flex-1 p-4'>
+        <Products
+          products={products}
+          category={category}
+          onClick={(p) => {
+            console.log(p.type)
+            setProduct(p)
+            if (p.type == 'class') setTimesClass(p)
+            else if (p.type == 'course') setTimesCourse(p)
 
-          setSheetOpen(true);
-        }}
-      />
+            setSheetOpen(true);
+          }}
+        />
+      </div>
+
+      <Cart />
+      
       {product?.type == 'class' &&
         <ProductDetailClass
           open={sheetOpen}

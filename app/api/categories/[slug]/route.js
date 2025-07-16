@@ -52,3 +52,33 @@ export async function GET(req, { params }) {
 
   return NextResponse.json({ category });
 }
+
+export async function DELETE(req, { params }) {
+  await connectDB();
+  const { employee } = await getEmployee();
+  const org = employee.org;
+
+  const { slug } = await params;
+
+  if (!slug) {
+    return NextResponse.json({ error: "Missing category ID" }, { status: 400 });
+  }
+
+  // Find category
+  const category = await Category.findOne({ 
+    _id: slug, 
+    org: org._id 
+  });
+
+  if (!category) {
+    return NextResponse.json({ error: "Category not found" }, { status: 404 });
+  }
+
+
+  // Soft delete by setting deleted flag to true
+  category.deleted = true;
+  console.log("Category to delete:", category);
+  await category.save();
+
+  return NextResponse.json({ success: true, message: "Category deleted successfully" });
+}

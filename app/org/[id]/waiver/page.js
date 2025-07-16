@@ -13,6 +13,53 @@ import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem
 } from '@/components/ui/select'
 import SignatureCanvas from 'react-signature-canvas'
+import { Calendar } from '@/components/ui/calendar';
+import { ChevronDownIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import React from 'react';
+
+function DateOfBirthPicker({ value, onChange }) {
+  const [open, setOpen] = React.useState(false);
+  const [date, setDate] = React.useState(value ? new Date(value) : undefined);
+  const userLocale = typeof window !== 'undefined' && navigator.language ? navigator.language : 'en-AU';
+  console.log('Detected locale:', userLocale);
+
+  React.useEffect(() => {
+    if (date && onChange) {
+      onChange(date);
+    }
+    // eslint-disable-next-line
+  }, [date]);
+
+  return (
+    <div className="flex flex-col gap-2 w-full">
+      <Label htmlFor="dob" className="px-1">Date of birth</Label>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            id="dob"
+            className="w-full justify-between font-normal"
+          >
+            {date ? date.toLocaleDateString(userLocale) : "Select date"}
+            <ChevronDownIcon />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+          <Calendar
+            mode="single"
+            selected={date}
+            captionLayout="dropdown"
+            onSelect={(selectedDate) => {
+              setDate(selectedDate);
+              setOpen(false);
+            }}
+          />
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
 
 export default function Page() {
   const [ org, setOrg ] = useState()
@@ -41,7 +88,7 @@ export default function Page() {
     setCustomer({...customer, signature: dataURL})
   }
 
-  const [ customer, setCustomer ] = useState({name: "", nameParent: "", email: "", phone: "", signature: ""})
+  const [ customer, setCustomer ] = useState({name: "", nameParent: "", email: "", phone: "", dob: "", gender: "", signature: ""})
   const [ address, setAddress ] = useState({
     address1: "",
     city: "",
@@ -60,6 +107,8 @@ export default function Page() {
     name: z.string().min(1),
     email: z.string().email(),
     phone: z.string().min(1),
+    dob: z.string().min(1),
+    gender: z.string().min(1),
     address1: z.string().min(1),
     city: z.string().min(1),
     state: z.string().min(1),
@@ -154,6 +203,27 @@ export default function Page() {
                 onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
               />
             </div>
+            <div className="flex gap-4 w-full">
+              <div className="flex flex-col gap-2 md:w-1/2 w-full">
+                <DateOfBirthPicker
+                  value={customer.dob}
+                  onChange={(date) => setCustomer({ ...customer, dob: date ? date.toISOString().slice(0, 10) : '' })}
+                />
+              </div>
+              <div className="flex flex-col gap-2 md:w-1/2 w-full">
+                <Label>Gender</Label>
+                <Select value={customer.gender} onValueChange={(value) => setCustomer({ ...customer, gender: value })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Male">Male</SelectItem>
+                    <SelectItem value="Female">Female</SelectItem>
+a                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="flex flex-col gap-2 w-full">
               <Label>Address</Label>
               <Input

@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Users, CircleDollarSign, Coffee, Settings, Calendar, QrCode } from "lucide-react";
+import { MapPin, Users, CircleDollarSign, Coffee, Settings, Calendar, QrCode, ChefHat } from "lucide-react";
 import { NavMenu } from "@/components/nav-menu";
 import { NavUser } from "@/components/nav-user";
 import { LocationSwitcher } from "@/components/location-switcher";
@@ -14,7 +14,7 @@ import {
 
 import { useGlobals } from "@/lib/globals";
 
-const teams = [{ name: "Sunny Coast" }];
+// const teams = [{ name: "Sunny Coast" }];
 
 export function AppSidebar(props) {
   const { employee } = useGlobals()
@@ -23,6 +23,7 @@ export function AppSidebar(props) {
   const settings = [
 
     { title: "Sale", url: "/shop", icon: CircleDollarSign },
+    { title: "Bump", url: "/manage/orders", icon: ChefHat },
     { 
       title: "Schedules", icon: Calendar,
       items: [
@@ -52,7 +53,7 @@ export function AppSidebar(props) {
   return (
     <Sidebar collapsible="icon" {...props} >
       <SidebarHeader>
-        <LocationSwitcher teams={teams} />
+        <LocationSwitcher />
       </SidebarHeader>
       <SidebarContent>
         <NavMenu settings={settings} />

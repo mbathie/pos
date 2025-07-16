@@ -86,7 +86,7 @@ export async function GET(req) {
 
   const customers = await Customer.find(baseQuery)
 
-  // console.log(customers)
+  console.log(customers)
 
   return NextResponse.json(customers)
 }
