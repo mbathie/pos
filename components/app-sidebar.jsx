@@ -42,6 +42,7 @@ export function AppSidebar(props) {
         { title: "Membership", url: "/products/memberships" },
         { title: "Shop", url: "/products/shop" },
         { title: "Locations", url: "/products/locations" },
+        { title: "Accounting", url: "/accounting" },
       ]
     },
     { title: "Employees", url: "/employees", icon: Users },

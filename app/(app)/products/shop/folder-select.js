@@ -108,11 +108,11 @@ export function FolderSelect({ product, pIdx, setFolder }) {
           <CommandList>
             <CommandEmpty>
               <div
-                className="cursor-pointer px-4 -mt-2 -mb-2 w-full flex flex-col gap-1 items-start"
+                className="bg-accent- cursor-pointer px-4 -mt-2 -mb-2 w-full flex flex-col gap-1 items-start"
               >
 
                 <div className='flex ml-auto- mb-4'>
-                  <Button size="sm" variant="outline" onClick={() => _setFolder({ name: '', color: 'emerald-400' })}>
+                  <Button size="sm" onClick={() => _setFolder({ name: '', color: 'emerald-400' })}>
                     <Plus /> New Folder
                   </Button>
                 </div>
@@ -137,8 +137,6 @@ export function FolderSelect({ product, pIdx, setFolder }) {
                     onChange={(color) => _setFolder({ ..._folder, color })}
                   />
                 </div>
-
-                {_folder?._id}
 
               </div>
             </CommandEmpty>
@@ -172,4 +170,4 @@ export function FolderSelect({ product, pIdx, setFolder }) {
       </PopoverContent>
     </Popover>
   );
-}
+} 

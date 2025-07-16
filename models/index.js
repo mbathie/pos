@@ -74,32 +74,46 @@ FolderSchema.index({ org: 1 });
 
 const Folder = mongoose.models.Folder || mongoose.model('Folder', FolderSchema);
 
+// ==== Accounting ====
+const AccountingSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  code: { type: String, required: true },
+  description: String,
+  tax: { type: Boolean, default: false },
+  org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
+}, { timestamps: true });
+
+// Index for org reference
+AccountingSchema.index({ org: 1 });
+AccountingSchema.index({ code: 1, org: 1 }, { unique: true });
+
+const Accounting = mongoose.models.Accounting || mongoose.model('Accounting', AccountingSchema);
+
 // ==== Product ====
 const ProductSchema = new mongoose.Schema({
   name: String,
   category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
   locations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Location' }],
   folder: { type: mongoose.Schema.Types.ObjectId, ref: 'Folder' },
+  accounting: { type: mongoose.Schema.Types.ObjectId, ref: 'Accounting' },
   type: { type: String, enum: ['class', 'course','casual'] },
   duration: { name: Number, unit: String },
   capacity: Number,
-  // prices: [{
+  // times: [{
   //   _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+  //   except: [String]
   // }],
-  times: [{
-    _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
-    except: [String]
-  }],
 }, {
   timestamps: true,
   strict: false  // allow any additional fields
 });
 
-// Indexes for category, folder, and locations
+// Indexes for category, folder, locations, and accounting
 ProductSchema.index({ category: 1 });
 ProductSchema.index({ folder: 1 });
 ProductSchema.index({ locations: 1 });
 ProductSchema.index({ type: 1 });
+ProductSchema.index({ accounting: 1 });
 
 ProductSchema.plugin(mongooseDelete, { deletedAt: true, overrideMethods: 'all' });
 
@@ -275,4 +289,5 @@ module.exports = {
   Schedule,
   Casual,
   Order,
+  Accounting,
 };

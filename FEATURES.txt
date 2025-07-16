@@ -52,7 +52,7 @@ DONE - During purchase have a hot button for cart at bottom right. Uses permanen
 - ability to look up previous sales and do refunds, etc
 - stock items need to have a customer assigned to them, i.e. pair of shoes for warrenty.
 
-- accounting categories, GST or not
+DONE - accounting categories, GST or not
 
 - export CSV of purchases (for marketing purposes)
 

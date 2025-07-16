@@ -3,6 +3,23 @@ import { connectDB } from "@/lib/mongoose";
 import { getEmployee } from "@/lib/auth";
 import { Product } from "@/models";
 
+export async function GET(req, { params }) {
+  await connectDB();
+  
+  const { id } = await params;
+  
+  const product = await Product.findById(id)
+    .populate({ path: 'accounting', strictPopulate: false })
+    .populate('category')
+    .populate('folder');
+    
+  if (!product) {
+    return NextResponse.json({ error: "Product not found" }, { status: 404 });
+  }
+  
+  return NextResponse.json({ product }, { status: 200 });
+}
+
 export async function PUT(req, { params }) {
   await connectDB();
 
@@ -14,7 +31,8 @@ export async function PUT(req, { params }) {
     { _id: id },
     product,
     { new: true }
-  );
+  )
+    .populate('accounting');
 
   return NextResponse.json({ product: updatedProduct }, { status: 201 });
 }

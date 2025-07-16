@@ -37,7 +37,9 @@ export async function POST(req, { params }) {
     });
   }
 
-  const populatedProduct = await Product.findById(_product._id).populate('folder');
+  const populatedProduct = await Product.findById(_product._id)
+    .populate('folder')
+    .populate({ path: 'accounting', strictPopulate: false });
   return NextResponse.json({ product: populatedProduct }, { status: 201 });
 }
 
@@ -60,6 +62,7 @@ export async function GET(req, { params }) {
 
   const products = await Product.find({ category: category._id })
     .populate('folder')
+    .populate({ path: 'accounting', strictPopulate: false })
     .sort({ createdAt: -1 });
 
   return NextResponse.json({ products }, { status: 200 });

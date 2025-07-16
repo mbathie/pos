@@ -18,10 +18,10 @@ export default async function RootLayout({ children }) {
       </head>
       <body className={`${roboto.className} antialiased-`}>
         <ThemeProvider
-          // attribute="class"
-          // defaultTheme="light"
-          // enableSystem
-          // disableTransitionOnChange
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
         > 
           <GlobalProvider >{children}</GlobalProvider>
 

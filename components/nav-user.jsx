@@ -4,6 +4,8 @@
 import {
   ChevronsUpDown,
   LogOut,
+  Moon,
+  Sun
 } from "lucide-react"
 
 import {
@@ -85,31 +87,12 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
 
-            {/* <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <Sparkles />
-                Upgrade to Pro
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheck />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Bell />
-                Notifications
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            */}
+            <DropdownMenuItem onClick={() => setTheme(isDarkMode ? "light" : "dark")}>
+              {isDarkMode ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+              {isDarkMode ? "Light Mode" : "Dark Mode"}
+            </DropdownMenuItem>
             
-            {/* <DropdownMenuSeparator /> */}
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={async () => {
                 resetBreadcrumb()
@@ -121,7 +104,7 @@ export function NavUser({
                 window.location.href = "/login"
               }}
             >
-              <LogOut />
+              <LogOut className="mr-2 h-4 w-4" />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

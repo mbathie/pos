@@ -21,8 +21,9 @@ import { Switch } from "@/components/ui/switch"
 import { actions } from './actions'
 import { useUI } from '../useUI';
 import Delete from '../Delete'
-import { FolderSelect } from './folderSelect'
+import { FolderSelect } from './folder-select'
 import IconSelect  from '@/components/icon-select'
+import AccountingSelect from './accounting-select'
 import colors from 'tailwindcss/colors';
 
 export default function Page() {
@@ -297,7 +298,7 @@ export default function Page() {
                   className="flex flex-col space-y-4 w-full"
                 > */}
 
-         
+                  <div className='flex flex-col gap-4'>
                   {products?.map((p, pIdx) => 
                     (
                       <Card
@@ -408,6 +409,16 @@ export default function Page() {
                                 />
                               )}
                             </div>
+                          </div>
+
+                          <div className="flex flex-col gap-1 w-[400px]">
+                            <Label>Accounting Code</Label>
+                            <AccountingSelect 
+                              value={p.accounting} 
+                              onChange={(value) => {
+                                updateProduct({pIdx, key: "accounting", value});
+                              }}
+                            />
                           </div>
 
                           <div className="flex space-x-2-">
@@ -589,6 +600,7 @@ export default function Page() {
                       </Card>
                     ),
                   )}
+                  </div>
                 {/* </Tabs.Content>
               ))} */}
             </div>

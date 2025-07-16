@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 
 import { TypographyLarge, TypographyMuted } from '@/components/ui/typography'
 import { Card, CardContent } from '@/components/ui/card'
-import { Loader, CheckCircle2 } from 'lucide-react'
+import { Loader, CheckCircle2, Calculator } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Separator } from '@radix-ui/react-separator'
 import { QRCode } from 'react-qrcode-logo'
@@ -117,6 +117,22 @@ export default function Page() {
                   </div>
                 )
               )}
+            </div>
+
+            <Separator className='border-t border-muted col-span-2' />
+
+            <div>
+              <div>Accounting Codes</div>
+              <TypographyMuted>
+                Manage accounting codes for your products and services. Set up tax categories and organize your financial reporting.
+              </TypographyMuted>
+            </div>
+            <div>
+              <Link href="/accounting">
+                <Button>
+                  Manage Codes
+                </Button>
+              </Link>
             </div>
 
           </div>
