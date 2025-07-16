@@ -171,8 +171,8 @@ export default function AccountingPage() {
             <CardTitle className="text-lg">Accounting Codes</CardTitle>
             <CardDescription>Manage accounting codes for your products</CardDescription>
           </div>
-          <Button onClick={addNewCode}>
-            <Plus className="size-4" /> Add Code
+          <Button onClick={addNewCode} size="sm">
+            <Plus className="size-4"/> Add Code
           </Button>
         </div>
       </CardHeader>
@@ -209,13 +209,13 @@ export default function AccountingPage() {
                         onCheckedChange={() => toggleTax(code)} 
                       />
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(code)}>
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(code)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                    <TableCell className="text-right flex gap-2 justify-end">
+                      {/* <Button variant="ghost" size="icon" onClick={() => handleEdit(code)}> */}
+                        <Edit className="size-4 cursor-pointer" onClick={() => handleEdit(code)}/>
+                      {/* </Button> */}
+                      {/* <Button variant="ghost" size="icon" onClick={() => openDeleteDialog(code)}> */}
+                        <Trash2 className="size-4 cursor-pointer" onClick={() => openDeleteDialog(code)}/>
+                      {/* </Button> */}
                     </TableCell>
                   </TableRow>
                 ))

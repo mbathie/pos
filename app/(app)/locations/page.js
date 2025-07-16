@@ -1,7 +1,7 @@
 'use client'
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Pencil } from 'lucide-react'
+import { Edit, Plus } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useGlobals } from '@/lib/globals'
 
@@ -35,16 +35,21 @@ export default function Page() {
   }, [])
 
   return (
-    <div className="px-4">
-      <div className='flex items-center mb-2'>
-        <div className='font-semibold mb-2 mr-auto'>Store Locations</div>
-        <Link href="/locations/create">
-          <Button size="sm">New</Button>
-        </Link>
-      </div>
-
-      <Card>
-        <CardContent>
+    <Card className="mx-4">
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <div>
+            <CardTitle className="text-lg">Store Locations</CardTitle>
+            <CardDescription>Manage your business locations</CardDescription>
+          </div>
+          <Link href="/locations/create">
+            <Button size="sm">
+              <Plus className="size-4"/> Add Location
+            </Button>
+          </Link>
+        </div>
+      </CardHeader>
+      <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
@@ -58,9 +63,9 @@ export default function Page() {
                 <TableRow key={loc._id}>
                   <TableCell>{loc.name}</TableCell>
                   <TableCell>{[loc.address1, loc.city].filter(Boolean).join(', ') || '—'}</TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right flex gap-2 justify-end">
                     <Link href={`/locations/${loc._id}`}>
-                      <Pencil className="size-4 hover:text-foreground" />
+                      <Edit className="size-4 hover:text-foreground" />
                     </Link>
                   </TableCell>
                 </TableRow>
@@ -69,6 +74,5 @@ export default function Page() {
           </Table>
         </CardContent>
       </Card>
-    </div>
   )
 }
