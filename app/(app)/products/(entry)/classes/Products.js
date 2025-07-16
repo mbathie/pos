@@ -10,11 +10,16 @@ import { Label } from '@/components/ui/label'
 import { Tag, ChevronsUpDown, Plus, Info, Trash } from 'lucide-react'
 import { useUI } from '../../useUI';
 import { useProduct } from './useProduct';
-import DateTimePicker from '@/components/date-time-picker';
+
 import { getLastClassDate } from '@/lib/classes'
 import { Checkbox } from "@/components/ui/checkbox"
 import IconSelect from '@/components/icon-select'
-import { Textarea } from '@/components/ui/textarea';
+import { Textarea } from '@/components/ui/textarea'
+import { Calendar } from "@/components/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarIcon } from "lucide-react"
+import { format } from "date-fns"
+import { cn } from "@/lib/utils"
 
 export default function Page({products, setProducts, categoryName, type}) {
   const contentRefs = useRef({});
@@ -271,13 +276,62 @@ export default function Page({products, setProducts, categoryName, type}) {
                                       <div>
                                         <div className='text-sm text-muted-foreground'>starts</div>
                                         <div className='flex flex-row items-center space-x-2'>
-                                          <DateTimePicker 
-                                            value={t.start} 
-                                            onChange={(newDate) => updateTime({
-                                              productIdx: pIdx, variationIdx: variationIdx, timeIdx: tIdx,
-                                              changes: { start: newDate }
-                                            })}
-                                          />
+                                          <Popover>
+                                            <PopoverTrigger asChild>
+                                              <Button
+                                                variant={"outline"}
+                                                className={cn(
+                                                  "w-[280px] justify-start text-left font-normal",
+                                                  !t.start && "text-muted-foreground"
+                                                )}
+                                              >
+                                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                                {t.start ? format(new Date(t.start), "PPP p") : <span>Pick a date and time</span>}
+                                              </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0">
+                                              <Calendar
+                                                mode="single"
+                                                selected={t.start ? new Date(t.start) : undefined}
+                                                onSelect={(date) => {
+                                                  if (date) {
+                                                    // If there's an existing time, preserve it
+                                                    const existingDate = t.start ? new Date(t.start) : new Date();
+                                                    const newDateTime = new Date(date);
+                                                    newDateTime.setHours(existingDate.getHours());
+                                                    newDateTime.setMinutes(existingDate.getMinutes());
+                                                    
+                                                    updateTime({
+                                                      productIdx: pIdx, variationIdx: variationIdx, timeIdx: tIdx,
+                                                      changes: { start: newDateTime.toISOString() }
+                                                    });
+                                                  }
+                                                }}
+                                                initialFocus
+                                              />
+                                              <div className="p-3 border-t">
+                                                <div className="flex items-center space-x-2">
+                                                  <Input
+                                                    type="time"
+                                                    value={t.start ? format(new Date(t.start), "HH:mm") : ""}
+                                                    onChange={(e) => {
+                                                      if (e.target.value) {
+                                                        const [hours, minutes] = e.target.value.split(':');
+                                                        const date = t.start ? new Date(t.start) : new Date();
+                                                        date.setHours(parseInt(hours), parseInt(minutes));
+                                                        
+                                                        updateTime({
+                                                          productIdx: pIdx, variationIdx: variationIdx, timeIdx: tIdx,
+                                                          changes: { start: date.toISOString() }
+                                                        });
+                                                      }
+                                                    }}
+                                                    className="flex-1"
+                                                  />
+                                                </div>
+                                              </div>
+                                            </PopoverContent>
+                                          </Popover>
                                         </div>
                                       </div>
                                       <div>
