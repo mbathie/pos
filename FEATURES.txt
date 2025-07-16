@@ -13,7 +13,7 @@ MUST HAVES
 -----------------------
 DONE - Setting for a product/category to go to bump screen or not
 - Name field (not email/phone) required during checkout (only if bump screen item)
-- classes and courses - dedicated checkin button
+DONE - classes and courses - dedicated checkin button
 - create new staff accounts
 - connect terminals to locations
 - roles for staff, admins, bump screens, terminals
@@ -35,7 +35,6 @@ DONE - During purchase have a hot button for cart at bottom right. Uses permanen
 - checkout process for subscriptions
   - backend Membership table for memberships
 - specify what products at what locations
-- basic invintory system for tracking stock items.
 - customers should receive email confirm after booking a class, course, etc
 - use baked in calendar component instead of 3rd party one https://ui.shadcn.com/docs/components/calendar
 - Email out QR code for classes and courses & memberships
