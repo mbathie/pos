@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogOverlay,
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Separator } from '@radix-ui/react-separator'
 import { Button } from '@/components/ui/button'
-import { Tag, ChevronsUpDown, Plus, Ellipsis, Info } from 'lucide-react'
+import { Tag, ChevronsUpDown, Plus, Ellipsis, Info, Trash } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from "@/components/ui/textarea"
@@ -245,27 +245,27 @@ export default function Page() {
                 <div className="ml-1 text-lg font-semibold">
                   {category?.name ? category.name : ''}
                 </div>
+                <Button
+                  variant="destructive"
+                  className="ml-4"
+                  size="sm"
+                  onClick={() => {
+                    setToDelete({ category: category });
+                    setDeleteOpen(true);
+                  }}
+                >
+                  <Trash className="size-4" />
+                </Button>
                 {category._id && (
                   <div className="ml-auto flex space-x-2">
                     <Button
-                      variant="outline"
                       className="ml-auto"
                       size="sm"
                       onClick={() => addProduct()}
                     >
                       New Product
                     </Button>
-                                        <Button
-                      variant="destructive"
-                      className="ml-auto"
-                      size="sm"
-                      onClick={() => {
-                        setToDelete({ category: category });
-                        setDeleteOpen(true);
-                      }}
-                    >
-                      Delete Category
-                    </Button>
+
                     <Button
                       variant="outline"
                       className="ml-auto"
@@ -329,7 +329,9 @@ export default function Page() {
                               )}
                             </div>
 
-                            <div>{p.name}</div>
+                            <div className="flex items-center gap-3">
+                              <span>{p.name}</span>
+                            </div>
 
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -352,7 +354,7 @@ export default function Page() {
                             {isDirty[p._id] && (
                               <Button
                                 size="sm"
-                                className="bg-lime-400 animate-pulse"
+                                className="animate-pulse"
                                 onClick={async () => {
                                   const updated = await saveProduct({product: p, pIdx})
                                   originalProducts.current[p._id] = JSON.parse(JSON.stringify(updated));
@@ -372,7 +374,7 @@ export default function Page() {
 
                           </CardTitle>
                         </CardHeader>
-                        <CardContent className="flex flex-col space-y-2">
+                        <CardContent className="flex flex-col space-y-4">
 
                           <div className="flex flex-col gap-1 w-[400px]">
                             <Label>Product Name</Label>
@@ -383,6 +385,29 @@ export default function Page() {
                               onChange={(e) => updateProduct({pIdx, key: "name", value: e.target.value})}
                               value={p.name || ''}
                             />
+                          </div>
+
+                            <div className="flex items-center gap-2">
+                             <Label>Send to Bump</Label>
+                             <Switch
+                               id={`bump-${p._id}`}
+                               checked={p.bump !== undefined ? p.bump : true}
+                               onCheckedChange={(checked) => {
+                                 updateProduct({pIdx, key: "bump", value: checked});
+                               }}
+                             />
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Info size="15"/>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>After a purchase of this product</p>
+                                  <p>should it be sent to the bump screen</p>
+                                  <p>for processing?</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
 
                           <div className="flex flex-col gap-1 w-[400px]">
@@ -514,7 +539,7 @@ export default function Page() {
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p>Allow more than one mod to</p>
-                                    <p>be selected from the group</p>
+                                    <p>be selectepd from the group</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>

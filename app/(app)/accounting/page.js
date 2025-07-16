@@ -172,7 +172,7 @@ export default function AccountingPage() {
             <CardDescription>Manage accounting codes for your products</CardDescription>
           </div>
           <Button onClick={addNewCode}>
-            <Plus className="mr-2 h-4 w-4" /> Add Code
+            <Plus className="size-4" /> Add Code
           </Button>
         </div>
       </CardHeader>

@@ -11,8 +11,7 @@ DONE - waivers
 
 MUST HAVES
 -----------------------
-- Setting for a product/category to go to bump screen or not
-  - i.e. chaulk, shoes don;t need to go to the bump screen.
+DONE - Setting for a product/category to go to bump screen or not
 - Name field (not email/phone) required during checkout (only if bump screen item)
 - classes and courses - dedicated checkin button
 - create new staff accounts

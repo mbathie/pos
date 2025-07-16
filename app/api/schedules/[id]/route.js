@@ -11,7 +11,10 @@ export async function GET(req, { params }) {
 
   const schedule = await Schedule.findOne({ _id: id, org: orgId })
     .populate("product")
-    .populate("locations.classes.customers.customer")
+    .populate({
+      path: "locations.classes.customers.customer",
+      select: "name email phone memberId"
+    })
 
   if (!schedule) {
     return NextResponse.json({ error: "Schedule not found" }, { status: 404 });

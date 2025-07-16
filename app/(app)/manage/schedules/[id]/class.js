@@ -7,19 +7,16 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from '@/components/ui/card'
 import { Separator } from '@radix-ui/react-separator';
 import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader,TableRow } from "@/components/ui/table"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Ellipsis } from 'lucide-react';
+// import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from '@/components/ui/button'
+import { Ellipsis, Check } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import Image from 'next/image'
+// import Image from 'next/image'
 import ProductIcon from '@/components/icon';
 
 export default function Page({ schedule, setSchedule }) {
 
-  const isIcon = !schedule.product?.thumbnail || schedule.product.thumbnail.includes("thenounproject.com");
-
-  // useEffect(() => {
-  //   console.log(schedule)
-  // },[])
+  // const isIcon = !schedule.product?.thumbnail || schedule.product.thumbnail.includes("thenounproject.com");
 
   if (!schedule?.product?.name) return null
 
@@ -147,10 +144,11 @@ export default function Page({ schedule, setSchedule }) {
                     <div className='flex flex-col gap-2'>
                       {c.customers.map((cust, custIdx) => {
                         return (
-                          <div key={cust._id} className='flex gap-2 items-center'>
-                            {/* <Checkbox /> */}
-                            <div>{cust.customer.name}</div> -
+                          <div key={cust._id} className='flex flex-col'>
+                            <div>{cust.customer.name}</div>
                             <div>{cust.customer.phone}</div>
+                            <div>{cust.customer.memberId}</div>
+
                           </div>
                         )
                       })}
@@ -164,16 +162,17 @@ export default function Page({ schedule, setSchedule }) {
                             <div>{cust.status}</div>
                             <div className='flex-1'/>
                             <ManageCustomer 
+                              schedule={schedule}
                               scheduleId={schedule._id} 
                               customer={cust}
                               classId={c._id}
                               setSchedule={setSchedule}
                             />
-                            {/* <div>{schedule._id}</div> */}
                           </div>
                         )
                       })}
                     </div>
+                    
 
                   </TableCell>
 
@@ -189,9 +188,12 @@ export default function Page({ schedule, setSchedule }) {
   );
 }
 
-function ManageCustomer({ customer, classId, scheduleId, setSchedule }) {
+function ManageCustomer({ schedule, customer, classId, scheduleId, setSchedule }) {
 
   const handleUpdateStatus = async (newStatus) => {
+    console.log('Updating status to:', newStatus);
+    console.log('Current schedule before update:', schedule);
+    
     const res = await fetch(`/api/schedules/${scheduleId}/classes/${classId}/customers/${customer._id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -204,18 +206,28 @@ function ManageCustomer({ customer, classId, scheduleId, setSchedule }) {
     }
 
     const updated = await res.json();
+    console.log('Updated schedule from API:', updated);
     setSchedule(updated);
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger><Ellipsis className='size-5' /></DropdownMenuTrigger>
-      <DropdownMenuContent>
-        <DropdownMenuLabel>Set Status</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => handleUpdateStatus("checkin")}>Checkin</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleUpdateStatus("cancel")}>Cancel</DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex gap-2">
+      <Button 
+        variant={customer.status === "checked in" ? undefined : "secondary"}
+        size="icon"
+        onClick={() => handleUpdateStatus(customer.status === "checked in" ? "cancel" : "checkin")}
+      >
+        <Check className='size-4' />
+      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger><Ellipsis className='size-5' /></DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuLabel>Set Status</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => handleUpdateStatus("checkin")}>Checkin</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleUpdateStatus("cancel")}>Cancel</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }

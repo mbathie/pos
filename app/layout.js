@@ -1,9 +1,9 @@
 import "./globals.css";
-import { Roboto_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import { GlobalProvider } from "@/components/global-context";
 import { ThemeProvider } from "@/components/theme-provider"
 
-const roboto = Roboto_Mono({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
   title: "Cultcha Management dash",
@@ -16,14 +16,14 @@ export default async function RootLayout({ children }) {
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
       </head>
-      <body className={`${roboto.className} antialiased-`}>
+      <body className={`${inter.className} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         > 
-          <GlobalProvider >{children}</GlobalProvider>
+          <GlobalProvider>{children}</GlobalProvider>
 
         </ThemeProvider>
       </body>

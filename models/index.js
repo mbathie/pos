@@ -99,6 +99,7 @@ const ProductSchema = new mongoose.Schema({
   type: { type: String, enum: ['class', 'course','casual'] },
   duration: { name: Number, unit: String },
   capacity: Number,
+  bump: { type: Boolean, default: false },
   // times: [{
   //   _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
   //   except: [String]
