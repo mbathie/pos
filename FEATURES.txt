@@ -18,7 +18,7 @@ DONE - classes and courses - dedicated checkin button
 - connect terminals to locations
 - roles for staff, admins, bump screens, terminals
   - ADMIN, MANAGER, STAFF, TERMINAL
-DONE - bump screen for kitchen staff to see/manage orders - order table
+DONE - bump screen for kitchen staff to see/manage orders - order table, filtering
 DONE - admin / list view page for classes / courses
 DONE - admin / list view page for casual entries
 DONE - membership mumber assignment on creation
@@ -36,7 +36,7 @@ DONE - During purchase have a hot button for cart at bottom right. Uses permanen
   - backend Membership table for memberships
 - specify what products at what locations
 - customers should receive email confirm after booking a class, course, etc
-- use baked in calendar component instead of 3rd party one https://ui.shadcn.com/docs/components/calendar
+DONE - use baked in calendar component instead of 3rd party one https://ui.shadcn.com/docs/components/calendar
 - Email out QR code for classes and courses & memberships
   - ability scan the QR to checkin at the front entry with a dedicated device - should confirm they have checked in.
   - dedicated page to see people checking in - list view, with status/ etc
@@ -49,7 +49,8 @@ DONE - During purchase have a hot button for cart at bottom right. Uses permanen
 - refunds / partial and full
 - ability to look up previous sales and do refunds, etc
 - stock items need to have a customer assigned to them, i.e. pair of shoes for warrenty.
-
+- online orders for classes/courses/memberships
+  - also abiltiy to view / edit profile
 DONE - accounting categories, GST or not
 
 - export CSV of purchases (for marketing purposes)
@@ -65,8 +66,7 @@ DONE - accounting categories, GST or not
 NICE TO HAVES
 -----------------------
   - ability to edit orders, after its complete - i.e. they wanted a chololate shake instead of vanilla
-  - online orders for classes/courses/memberships
-    - also abiltiy to view / edit profile
+
   - FOB gate entry based on memberships
   - customer rewards & reward packages assigned to products
   - gift cards
@@ -75,8 +75,5 @@ NICE TO HAVES
     - also regarding stock qty, it should deduct the qty on the day of the event
     - should also add to the bump screen any items that need making on the day of the event
   - marketing
-
-
-- BUMP screen
 
 

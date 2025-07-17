@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Users, CircleDollarSign, Coffee, Settings, Calendar, QrCode, ChefHat } from "lucide-react";
+import { MapPin, Users, CircleDollarSign, Wrench, Settings, Calendar, QrCode, ChefHat } from "lucide-react";
 import { NavMenu } from "@/components/nav-menu";
 import { NavUser } from "@/components/nav-user";
 import { LocationSwitcher } from "@/components/location-switcher";
@@ -35,7 +35,7 @@ export function AppSidebar(props) {
     { title: "Waiver", url: `${process.env.NEXT_PUBLIC_DOMAIN}/org/${employee.org}/waiver`, icon: QrCode },
     { groupLabel: "Setup"},
     { 
-      title: "Products", icon: Coffee,
+      title: "Products", icon: Wrench,
       items: [
         { title: "Casual Entry", url: "/products/casual" },
         { title: "Classes", url: "/products/classes" },

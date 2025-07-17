@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 
 import { TypographyLarge, TypographyMuted } from '@/components/ui/typography'
 import { Card, CardContent } from '@/components/ui/card'
-import { Loader, CheckCircle2, Calculator } from 'lucide-react'
+import { Loader, CheckCircle2, Calculator, Download, Link as LinkIcon } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { Separator } from '@radix-ui/react-separator'
 import { QRCode } from 'react-qrcode-logo'
@@ -60,6 +60,29 @@ export default function Page() {
     setOrgCpy(data.org);
   };
 
+  const downloadWaiverPDF = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/waiver/pdf`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'waiver-qr-code.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      alert('Failed to download PDF. Please try again.');
+    }
+  };
+
   return (
     <div className="px-4 flex flex-col gap-4">
       <TypographyLarge>Settings</TypographyLarge>
@@ -86,12 +109,25 @@ export default function Page() {
                 For new customers wanting to join, this is the URL to direct them to. You can also print the QR place it at a convenient location
               </TypographyMuted>
             </div>
-            <div className='flex gap-2 flex-col'>
+            <div className='flex gap-2 flex-row'>
               <div className="rounded-lg overflow-hidden w-[148px] h-[148px]">
                 <QRCode value={`${process.env.NEXT_PUBLIC_DOMAIN}/org/${org._id}/waiver`} size={128} />
               </div>
-              <div>
-                <Link className='underline text-sm' target="_blank" href={`${process.env.NEXT_PUBLIC_DOMAIN}/org/${org._id}/waiver`}>Waiver Link</Link>
+              <div className='flex flex-col gap-2'>
+                <div>
+                  <Link target="_blank" href={`${process.env.NEXT_PUBLIC_DOMAIN}/org/${org._id}/waiver`}>
+                    <Button className='w-38 flex justify-start'>
+                      <LinkIcon className="size-4" />
+                      Waiver Link
+                    </Button>
+                  </Link>
+                </div>
+                <div>
+                  <Button className='w-38' onClick={downloadWaiverPDF}>
+                    <Download className="size-4 flex justify-start" />
+                    Download PDF
+                  </Button>
+                </div>
               </div>
             </div>
 
@@ -131,6 +167,22 @@ export default function Page() {
               <Link href="/accounting">
                 <Button>
                   Manage Codes
+                </Button>
+              </Link>
+            </div>
+
+            <Separator className='border-t border-muted col-span-2' />
+
+            <div>
+              <div>Discounts</div>
+              <TypographyMuted>
+                Create and manage discount codes for your products and services. Set up percentage or fixed amount discounts.
+              </TypographyMuted>
+            </div>
+            <div>
+              <Link href="/discounts">
+                <Button>
+                  Manage Discounts
                 </Button>
               </Link>
             </div>

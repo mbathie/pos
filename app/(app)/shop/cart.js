@@ -157,6 +157,14 @@ export default function Cart({}) {
               ${cart.subtotal.toFixed(2)}
             </div>
           </div>
+          {cart.discount && (
+            <div className='flex text-green-600'>
+              <div className=''>Discount ({cart.discount.name})</div>
+              <div className='ml-auto'>
+                -${cart.discountAmount.toFixed(2)}
+              </div>
+            </div>
+          )}
           <div className='flex'>
             <div className=''>Tax</div>
             <div className='ml-auto'>

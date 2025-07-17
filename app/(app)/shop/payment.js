@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 import { useGlobals } from "@/lib/globals"
 import { useCard } from './useCard'
@@ -16,7 +17,7 @@ import CustomerConnect from './customerConnect'
 const keypad = ['1','2','3','4','5','6','7','8','9','.','0','AC'];
 
 export default function Page() {
-  const { cart, resetCart, setCart } = useGlobals();
+  const { cart, resetCart, setCart, applyDiscount, removeDiscount } = useGlobals();
   const [cashInput, setCashInput] = useState('0');
   const [tab, setTab] = useState('card');
   const { discoverReaders, connectReader, collectPayment, capturePayment } = useCard({cart})
@@ -34,10 +35,34 @@ export default function Page() {
   const [ connectCustomerFn, setConnectCustomerFn ] = useState()
 
   const [ requiresWaiver, setRequiresWaiver ] = useState(false)
+  
+  // Discount state
+  const [discounts, setDiscounts] = useState([])
+  const [loadingDiscounts, setLoadingDiscounts] = useState(false)
 
   useEffect(() => {
     console.log(cart)
   },[cart])
+
+  // Fetch current discount codes
+  useEffect(() => {
+    const fetchDiscounts = async () => {
+      setLoadingDiscounts(true)
+      try {
+        const response = await fetch('/api/discounts?current=true')
+        if (response.ok) {
+          const data = await response.json()
+          setDiscounts(data)
+        }
+      } catch (error) {
+        console.error('Error fetching discounts:', error)
+      } finally {
+        setLoadingDiscounts(false)
+      }
+    }
+
+    fetchDiscounts()
+  }, [])
 
   useEffect(() => {
     const allAreShop = cart.products.length > 0 &&
@@ -100,6 +125,12 @@ export default function Page() {
               <span className="text-right">${cart.subtotal.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
+              <span>Discount {cart.discount ? `(${cart.discount.name})` : ''}</span>
+              <span className="text-right">
+                {cart.discount ? `-$${cart.discountAmount.toFixed(2)}` : '$0.00'}
+              </span>
+            </div>
+            <div className="flex justify-between">
               <span>Tax</span>
               <span className="text-right">${cart.tax.toFixed(2)}</span>
             </div>
@@ -120,6 +151,46 @@ export default function Page() {
             <div className="flex justify-between">
               <span>Status</span>
               <span className={`text-right ${paymentStatus === 'succeeded' ? 'text-lime-400' : ''}`}>{paymentStatus}</span>
+            </div>
+
+            <Separator orientation="vertical" className="h-[1px] bg-muted my-2" />
+
+            {/* Discount Code Selection */}
+            <div className="flex flex-row gap-2 mb-4">
+              <div className="text-sm font-medium">Discount</div>
+              <div className="flex-1" />
+              <Select
+                value={cart.discount?._id || "none"}
+                onValueChange={(value) => {
+                  if (value === "none") {
+                    removeDiscount()
+                  } else {
+                    const selectedDiscount = discounts.find(d => d._id === value)
+                    if (selectedDiscount) {
+                      applyDiscount(selectedDiscount)
+                    }
+                  }
+                }}
+                disabled={loadingDiscounts || paymentStatus === 'succeeded'}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={loadingDiscounts ? "Loading..." : "Select a discount code"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Select Discount</SelectItem>
+                  {discounts.map((discount) => (
+                    <SelectItem key={discount._id} value={discount._id}>
+                      {discount.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {/* {cart.discount && (
+                <div className="text-sm text-green-600">
+                  Applied: {cart.discount.name} (-${cart.discountAmount.toFixed(2)})
+                </div>
+              )} */}
             </div>
 
             <Separator orientation="vertical" className="h-[1px] bg-muted my-2" />

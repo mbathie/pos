@@ -166,6 +166,8 @@ const TransactionSchema = new mongoose.Schema({
   total: Number,
   subtotal: Number,
   tax: Number,
+  discountAmount: Number,
+  discount: { type: mongoose.Schema.Types.ObjectId, ref: 'Discount' },
   stripe: mongoose.Schema.Types.Mixed,
   cash: mongoose.Schema.Types.Mixed,
   paymentMethod: String,
@@ -264,11 +266,15 @@ OrderSchema.pre('save', async function (next) {
   if (this.orderNumber) return next();
 
   const Order = mongoose.model('Order');
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
+  // Set startOfWeek to most recent Sunday at midnight
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0 = Sunday
+  const diff = now.getDate() - dayOfWeek;
+  const startOfWeek = new Date(now.setDate(diff));
+  startOfWeek.setHours(0, 0, 0, 0);
 
   const count = await Order.countDocuments({
-    createdAt: { $gte: startOfDay }
+    createdAt: { $gte: startOfWeek }
   });
 
   this.orderNumber = count + 1;
@@ -276,6 +282,21 @@ OrderSchema.pre('save', async function (next) {
 });
 
 const Order = mongoose.models.Order || mongoose.model('Order', OrderSchema);
+
+// ==== Discount ====
+const DiscountSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  value: { type: Number, required: true },
+  type: { type: String, enum: ['percent', 'amount'], required: true },
+  expiry: { type: Date },
+  description: String,
+  org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
+}, { timestamps: true });
+
+// Index for org reference
+DiscountSchema.index({ org: 1 });
+
+const Discount = mongoose.models.Discount || mongoose.model('Discount', DiscountSchema);
 
 // ==== Updated Exports ====
 module.exports = {
@@ -291,4 +312,5 @@ module.exports = {
   Casual,
   Order,
   Accounting,
+  Discount,
 };

@@ -2,18 +2,26 @@
 import colors from 'tailwindcss/colors';
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader,TableRow } from "@/components/ui/table"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { Badge } from "@/components/ui/badge"
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { Button } from "@/components/ui/button";
-import { Circle, CircleCheck, CircleX } from "lucide-react";
+import { Circle, CircleCheck, CircleX, Filter } from "lucide-react";
 dayjs.extend(relativeTime);
 
 export default function Page({ params }) {
   const { id } = useParams();
   const [orders, setOrders] = useState([]);
   const [now, setNow] = useState(dayjs());
+  const [filters, setFilters] = useState({
+    status: 'placed',
+    dateRange: '2'
+  });
+  const [loading, setLoading] = useState(false);
 
   async function updateStatus(id, status) {
     const res = await fetch(`/api/orders/${id}/status`, {
@@ -43,14 +51,22 @@ export default function Page({ params }) {
     }
   }
 
-  useEffect(() => {
-    async function getOrders() {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/orders?hours=24`);
+  async function getOrders() {
+    setLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/orders?hours=${filters.dateRange}`);
       const data = await res.json();
       setOrders(data);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+    } finally {
+      setLoading(false);
     }
+  }
+
+  useEffect(() => {
     getOrders();
-  }, []);
+  }, [filters.dateRange]); // Only re-fetch when date range changes
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -59,11 +75,92 @@ export default function Page({ params }) {
     return () => clearInterval(interval);
   }, []);
 
-  return (
-    <div className="px-4">
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
 
-      <div className="flex flex-col gap-4">
-        {orders?.map((o, oIdx) => {
+  const clearFilters = () => {
+    setFilters({
+      status: 'all',
+      dateRange: '24'
+    });
+  };
+
+  // Frontend filtering logic
+  const filteredOrders = orders.filter(order => {
+    if (filters.status !== 'all' && order.status !== filters.status) {
+      return false;
+    }
+    return true;
+  });
+
+  return (
+    <div className="flex flex-col">
+      {/* Fixed Filter Section */}
+      <div className="sticky top-0 z-10 p-4 bg-background">
+        <div className="flex gap-4 py-4- rounded-lg-">
+        <div className="flex flex-col gap-2">
+          {/* <Label className="text-sm font-medium">Status</Label> */}
+          <Select size="sm" value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Orders</SelectItem>
+              <SelectItem value="placed">Placed</SelectItem>
+              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="flex flex-col gap-2">
+          {/* <Label className="text-sm font-medium">Time Period</Label> */}
+          <Select value={filters.dateRange} onValueChange={(value) => handleFilterChange('dateRange', value)}>
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">Last hour</SelectItem>
+              <SelectItem value="2">Last 2 hours</SelectItem>
+              <SelectItem value="24">Last 24 hours</SelectItem>
+              <SelectItem value="48">Last 48 hours</SelectItem>
+              <SelectItem value="168">Last 7 days</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="flex items-end">
+          <Button variant="outline" onClick={clearFilters}>
+            <Filter className="size-4 mr-2" />
+            Clear Filters
+          </Button>
+        </div>
+        
+        <div className="flex items-end ml-auto">
+          <Badge variant="secondary" className="text-sm">
+            {filters.status !== 'all' ? `${filteredOrders.length}/${orders.length}` : filteredOrders.length} order{filteredOrders.length !== 1 ? 's' : ''}
+          </Badge>
+        </div>
+        </div>
+      </div>
+
+      {/* Scrollable Orders Area */}
+      <div className="overflow-y-auto px-4 py-4-">
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-8 text-muted-foreground">
+            Loading orders...
+          </div>
+        )}
+
+        {/* Orders List */}
+        {!loading && (
+          <div className="flex flex-col gap-4">
+        {filteredOrders?.map((o, oIdx) => {
           return (
             <Card key={o._id}>
               <CardContent>
@@ -86,9 +183,15 @@ export default function Page({ params }) {
                         <div>Order #</div>
                         <div>{o.orderNumber || 0}</div>
                       </div>
-                      <div className="flex flex-col text-xs text-muted-foreground">
-                        <div>{o?.customer?.name}, {o?.customer?.phone}</div>
-                        <div className="text-xs text-muted-foreground">{o.customer?.memberId}</div>
+                      <div className="flex flex-col ´text-muted-foreground">
+                        {!o?.customer?.name ? (
+                          <div>Guest</div>
+                        ) : (
+                          <>
+                            <div>{o?.customer?.name}, {o?.customer?.phone}</div>
+                            <div className="text-xs text-muted-foreground">{o.customer?.memberId}</div>
+                          </>
+                        )}
                       </div>
                     </div>
 
@@ -159,44 +262,21 @@ export default function Page({ params }) {
             </Card>
           )
         })}
+        </div>
+      )}
+
+        {/* No Orders State */}
+        {!loading && filteredOrders.length === 0 && orders.length > 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            No orders match the selected filters.
+          </div>
+        )}
+        {!loading && orders.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground">
+            No orders found for the selected time period.
+          </div>
+        )}
       </div>
-
     </div>
-    // <div className="px-4">
-    //   <Card className='p-0'>
-    //     <CardContent className='p-0'>
-    //       <Table>
-    //         <TableHeader>
-    //           <TableRow>
-    //             <TableHead>Order #</TableHead>
-    //             <TableHead>Time</TableHead>
-    //             <TableHead>Customer</TableHead>
-    //             <TableHead>Products</TableHead>
-    //             <TableHead></TableHead>
-    //           </TableRow>
-    //         </TableHeader>
-    //         <TableBody>
-    //           {Array.isArray(orders) && orders.map((order) => (
-    //             <TableRow key={order._id}>
-    //               <TableCell>{order.orderNumber}</TableCell>
-    //               <TableCell>
-    //                 <div>{dayjs(order.createdAt).format('h:mm A')}</div>
-    //                 <div className="text-xs text-muted-foreground">{dayjs(order.createdAt).fromNow()}</div>
-    //               </TableCell>
-    //               <TableCell className="align-top">
-    //                 <div>{order.customer?.name}</div>
-    //                 <div className="text-xs text-muted-foreground">{order.customer?.memberId}</div>
-    //               </TableCell>
-    //               <TableCell></TableCell>
-    //               <TableCell></TableCell>
-    //             </TableRow>
-    //           ))}
-    //         </TableBody>
-    //       </Table>
-    //     </CardContent>
-    //   </Card>
-
-
-    // </div>
   );
 }
