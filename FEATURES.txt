@@ -40,18 +40,20 @@ DONE - use baked in calendar component instead of 3rd party one https://ui.shadc
 - Email out QR code for classes and courses & memberships
   - ability scan the QR to checkin at the front entry with a dedicated device - should confirm they have checked in.
   - dedicated page to see people checking in - list view, with status/ etc
-- ability to add a discount at sale time
-  - set end date or recurring
-  - basically like a product, with % discount, then you apply that discount "product" to whatever your buying.
+DONE - ability to add a discount at sale time
+DONE - set end date 
+  - set recurring (expiry null)
   - should be able to assign arbitrary discount amounts or percentages at checkout time (at MANAGER level only)
+  - assign discounts to products, so they are automatically applied at checkout time.
 - Customer list view page
 - basic accounting reporing
-- refunds / partial and full
 - ability to look up previous sales and do refunds, etc
 - stock items need to have a customer assigned to them, i.e. pair of shoes for warrenty.
 - online orders for classes/courses/memberships
   - also abiltiy to view / edit profile
 DONE - accounting categories, GST or not
+DONE - transaction list view page
+- individual transaction view page, allow for refunds (partial and full), and view order details.
 
 - export CSV of purchases (for marketing purposes)
 

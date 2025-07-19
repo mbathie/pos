@@ -33,8 +33,9 @@ export async function POST(req, { params }) {
     tax: totals.tax,
     subtotal: totals.subtotal,
     paymentMethod: "stripe",
-    locationId: employee.selectedLocationId,
-    customerId: customer?._id ? Types.ObjectId.createFromHexString(customer._id) : undefined,
+    location: employee.selectedLocationId,
+    customer: customer?._id ? Types.ObjectId.createFromHexString(customer._id) : undefined,
+    employee: employee._id,
     cart,
     stripe: {
       paymentIntent

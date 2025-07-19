@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Users, CircleDollarSign, Wrench, Settings, Calendar, QrCode, ChefHat } from "lucide-react";
+import { MapPin, Users, CircleDollarSign, Wrench, Settings, Calendar, QrCode, ChefHat, Receipt } from "lucide-react";
 import { NavMenu } from "@/components/nav-menu";
 import { NavUser } from "@/components/nav-user";
 import { LocationSwitcher } from "@/components/location-switcher";
@@ -33,6 +33,7 @@ export function AppSidebar(props) {
       ]
     },
     { title: "Waiver", url: `${process.env.NEXT_PUBLIC_DOMAIN}/org/${employee.org}/waiver`, icon: QrCode },
+    { title: "Transactions", url: "/manage/transactions", icon: Receipt },
     { groupLabel: "Setup"},
     { 
       title: "Products", icon: Wrench,
@@ -42,7 +43,6 @@ export function AppSidebar(props) {
         { title: "Membership", url: "/products/memberships" },
         { title: "Shop", url: "/products/shop" },
         { title: "Locations", url: "/products/locations" },
-        { title: "Accounting", url: "/accounting" },
       ]
     },
     { title: "Employees", url: "/employees", icon: Users },

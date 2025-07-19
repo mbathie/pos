@@ -33,15 +33,15 @@ export async function POST(req, { params }) {
   const totals = calcCartTotals(cart.products, cart.discount);
 
   const transaction = await Transaction.create({
-    org: employee.orgId,
+    org: employee.org._id,
     total: totals.total,
     tax: totals.tax,
     subtotal: totals.subtotal,
     discountAmount: totals.discountAmount || 0,
     discount: cart.discount?._id || null,
-    employeeId: employee._id,
-    customerId: txnCustomer,
-    locationId: employee.selectedLocationId,
+    employee: employee._id,
+    customer: txnCustomer,
+    location: employee.selectedLocationId,
     paymentMethod: "cash",
     cart,
     cash: {
