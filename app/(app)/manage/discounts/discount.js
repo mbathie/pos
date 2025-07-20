@@ -212,9 +212,9 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
           <ArrowLeft className="size-4" />
           Back to Discounts
         </Button>
-        <h1 className="text-2xl font-bold">
+        {/* <h1 className="text-2xl font-bold">
           {mode === 'edit' ? 'Edit Discount' : 'Create New Discount'}
-        </h1>
+        </h1> */}
       </div>
 
       <Form {...form}>
@@ -231,11 +231,15 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
                   name="name"
                   render={({ field, fieldState }) => (
                     <FormItem className="relative">
-                      <FormLabel className={fieldState.error ? "text-destructive" : ""}>Name</FormLabel>
+                      <FormLabel 
+                        className={fieldState.error ? "!text-destructive" : ""}
+                      >
+                        Name
+                      </FormLabel>
                       <FormControl>
                         <Input 
                           placeholder="e.g. Student Discount" 
-                          className={fieldState.error ? "border-destructive focus:border-destructive" : ""}
+                          className={fieldState.error ? "!border-destructive " : ""}
                           {...field} 
                         />
                       </FormControl>
@@ -251,7 +255,7 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
                       <FormLabel className={fieldState.error ? "text-destructive" : ""}>Type</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <SelectTrigger className={fieldState.error ? "border-destructive focus:border-destructive" : ""}>
+                          <SelectTrigger className={fieldState.error ? "!border-destructive !focus:border-destructive" : ""}>
                             <SelectValue placeholder="Select discount type" />
                           </SelectTrigger>
                         </FormControl>
@@ -269,7 +273,7 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
                   name="value"
                   render={({ field, fieldState }) => (
                     <FormItem className="relative">
-                      <FormLabel className={fieldState.error ? "text-destructive" : ""}>
+                      <FormLabel className={fieldState.error ? "!text-destructive" : ""}>
                         Value {form.watch('type') === 'percent' ? '(%)' : '($)'}
                       </FormLabel>
                       <FormControl>
@@ -279,7 +283,7 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
                           min="0"
                           max={form.watch('type') === 'percent' ? '100' : undefined}
                           placeholder={form.watch('type') === 'percent' ? 'e.g. 15' : 'e.g. 5.00'}
-                          className={fieldState.error ? "border-destructive focus:border-destructive" : ""}
+                          className={fieldState.error ? "!border-destructive !focus:border-destructive" : ""}
                           {...field}
                         />
                       </FormControl>
@@ -292,7 +296,7 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
                   name="expiry"
                   render={({ field, fieldState }) => (
                     <FormItem className="relative">
-                      <FormLabel className={fieldState.error ? "text-destructive" : ""}>Expiry Date</FormLabel>
+                      <FormLabel className={fieldState.error ? "!text-destructive" : ""}>Expiry Date</FormLabel>
                       <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
                         <PopoverTrigger asChild>
                           <FormControl>
@@ -301,7 +305,7 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
                               className={cn(
                                 "justify-start text-left font-normal",
                                 !field.value && "text-muted-foreground",
-                                fieldState.error && "border-destructive focus:border-destructive"
+                                fieldState.error && "!border-destructive !focus:border-destructive"
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -347,12 +351,12 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
                 name="description"
                 render={({ field, fieldState }) => (
                   <FormItem className="relative">
-                    <FormLabel className={fieldState.error ? "text-destructive" : ""}>Description</FormLabel>
+                    <FormLabel className={fieldState.error ? "!text-destructive" : ""}>Description</FormLabel>
                     <FormControl>
                       <Textarea
                         placeholder="Optional description"
                         rows={3}
-                        className={fieldState.error ? "border-destructive focus:border-destructive" : ""}
+                        className={fieldState.error ? "!border-destructive !focus:border-destructive" : ""}
                         {...field}
                       />
                     </FormControl>
