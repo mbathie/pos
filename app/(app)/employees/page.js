@@ -257,9 +257,9 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
             </SelectTrigger>
             <SelectContent>
               <SelectGroup>
-                {locations.map((l) => {
+                {locations.map((l, lIdx) => {
                   return (
-                    <SelectItem key={l.id} value={l.name}>{l.name}</SelectItem>
+                    <SelectItem key={lIdx} value={l.name}>{l.name}</SelectItem>
                   )
                 })}
               </SelectGroup>

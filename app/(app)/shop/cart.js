@@ -1,7 +1,7 @@
 'use client'
 import Link from 'next/link';
 import { useGlobals } from '@/lib/globals'
-import { Trash } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import dayjs from 'dayjs';
 
@@ -31,10 +31,10 @@ export default function Cart({}) {
                     removeFromCart(pIdx);
                   }}
                 >
-                  <Trash className='size-4'/>
+                  <Trash2 className='size-4'/>
                 </div>
                 <div className='flex-1' />
-                <div>${p.amount.subtotal.toFixed(2)}</div>
+                <div>${p.amount.total.toFixed(2)}</div>
               </div>
               <div className='flex flex-row text-xs ml-1'>
                 {p.item.mods && p.item.mods.map((mod, pIdx) => (
@@ -58,7 +58,7 @@ export default function Cart({}) {
                     removeFromCart(pIdx);
                   }}
                 >
-                  <Trash className='size-4'/>
+                  <Trash2 className='size-4'/>
                 </div>
               </div>
               <div className=''>{p.variations?.[0]?.times?.[0]?.start && dayjs(p.variations[0].times[0].start).format('ddd DD/MM/YY HH:mm A')}</div>
@@ -83,7 +83,7 @@ export default function Cart({}) {
                     removeFromCart(pIdx);
                   }}
                 >
-                  <Trash className='size-4'/>
+                  <Trash2 className='size-4'/>
                 </div>
               </div>
 
@@ -117,9 +117,9 @@ export default function Cart({}) {
           )
 
           else if (p.type=='casual') return (
-            <div key={p._id} className="flex flex-col space-y-1 px-4">
+            <div key={p._id} className="flex flex-col space-y-1-">
               <div className="flex">
-                <div className="font-semibold">{p.name}</div>
+                <div>{p.name}</div>
                 <div
                   className="ml-1 cursor-pointer mt-0.5"
                   onClick={(e) => {
@@ -127,7 +127,7 @@ export default function Cart({}) {
                     removeFromCart(pIdx);
                   }}
                 >
-                  <Trash className="size-4" />
+                  <Trash2 className="size-4" />
                 </div>
               </div>
               {p.variations?.map((v, vIdx) => (
@@ -157,14 +157,6 @@ export default function Cart({}) {
               ${cart.subtotal.toFixed(2)}
             </div>
           </div>
-          {cart.discount && (
-            <div className='flex text-green-600'>
-              <div className=''>Discount ({cart.discount.name})</div>
-              <div className='ml-auto'>
-                -${cart.discountAmount.toFixed(2)}
-              </div>
-            </div>
-          )}
           <div className='flex'>
             <div className=''>Tax</div>
             <div className='ml-auto'>

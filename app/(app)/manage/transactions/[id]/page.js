@@ -194,7 +194,7 @@ export default function TransactionDetailsPage() {
   const CourseProductsCard = ({ products }) => (
     <Card>
       <CardHeader>
-        <CardTitle>Course Bookings</CardTitle>
+        <CardTitle>Courses</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
@@ -225,7 +225,7 @@ export default function TransactionDetailsPage() {
                           {price.qty}x {price.name}
                           {price.customers?.map((customer, cIndex) => (
                             customer.customer && (
-                              <div key={cIndex} className="text-xs text-muted-foreground ml-2">
+                              <div key={cIndex} className="text-xs">
                                 {customer.customer.name}
                               </div>
                             )
@@ -236,6 +236,63 @@ export default function TransactionDetailsPage() {
                   </div>
                 </TableCell>
                 <TableCell className="text-right font-medium">
+                  {formatCurrency(product.amount?.subtotal)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+
+  const CasualProductsCard = ({ products }) => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Casual Entries</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Entry Pass</TableHead>
+              <TableHead>Duration</TableHead>
+              <TableHead>Attendees</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {products.map((product, index) => (
+              <TableRow key={index}>
+                <TableCell className="font-medium align-top">{product.name}</TableCell>
+                <TableCell className="align-top">
+                  <div className="space-y-1">
+                    {product.variations?.map((variation, vIndex) => (
+                      <div key={vIndex} className="text-sm">
+                        {variation.name} {variation.unit}
+                      </div>
+                    ))}
+                  </div>
+                </TableCell>
+                <TableCell className="align-top">
+                  <div className="space-y-1">
+                    {product.variations?.map((variation, vIndex) => 
+                      variation.prices?.map((price, pIndex) => (
+                        <div key={`${vIndex}-${pIndex}`} className="text-sm">
+                          {price.qty}x {price.name}
+                          {price.customers?.map((customer, cIndex) => (
+                            customer.customer && (
+                              <div key={cIndex} className="text-xs">
+                                {customer.customer.name}
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right align-top">
                   {formatCurrency(product.amount?.subtotal)}
                 </TableCell>
               </TableRow>
@@ -373,14 +430,7 @@ export default function TransactionDetailsPage() {
       )}
 
       {productGroups.casual && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Casual Bookings</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">Casual products view coming soon...</p>
-          </CardContent>
-        </Card>
+        <CasualProductsCard products={productGroups.casual} />
       )}
     </div>
   );

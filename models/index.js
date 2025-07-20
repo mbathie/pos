@@ -290,6 +290,7 @@ const DiscountSchema = new mongoose.Schema({
   type: { type: String, enum: ['percent', 'amount'], required: true },
   expiry: { type: Date },
   description: String,
+  products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
 }, { timestamps: true });
 

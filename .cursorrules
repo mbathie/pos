@@ -1,0 +1,69 @@
+# Cursor AI Coding Rules
+
+## Authentication for API Testing
+
+### Development Token
+For testing authenticated API endpoints, use this cookie value:
+- **Cookie Name**: `token`
+- **Cookie Value**: `eyJhbGciOiJIUzI1NiJ9.eyJzZWxlY3RlZExvY2F0aW9uSWQiOiI2ODZmNjI5NDljYmI1NTRiNjlkNjNhYTYiLCJlbWFpbCI6Im1iYXRoaWVAZ21haWwuY29tIiwiZW1wbG95ZWVJZCI6IjY4NjQ4NjkwZWNmMTJkMzAyMDkwMmJhMCIsIm9yZ0lkIjoiNjg2NDg2OTBlY2YxMmQzMDIwOTAyYjliIiwiZXhwIjoxNzg0MTQwMDY3fQ.CC4NxD5KLgbhKi7DrUkZpCYfj-Abp2ErYLVd4yBVqmA`
+
+### Usage Example
+```bash
+curl -X GET http://localhost:3000/api/discounts \
+  -H "Cookie: token=eyJhbGciOiJIUzI1NiJ9.eyJzZWxlY3RlZExvY2F0aW9uSWQiOiI2ODZmNjI5NDljYmI1NTRiNjlkNjNhYTYiLCJlbWFpbCI6Im1iYXRoaWVAZ21haWwuY29tIiwiZW1wbG95ZWVJZCI6IjY4NjQ4NjkwZWNmMTJkMzAyMDkwMmJhMCIsIm9yZ0lkIjoiNjg2NDg2OTBlY2YxMmQzMDIwOTAyYjliIiwiZXhwIjoxNzg0MTQwMDY3fQ.CC4NxD5KLgbhKi7DrUkZpCYfj-Abp2ErYLVd4yBVqmA"
+```
+
+## UI Component Guidelines
+
+### Icons
+- **ALWAYS use Lucide icons**: Import icons from `lucide-react` package
+- ✅ Correct: `import { ChevronDown, Plus, Edit } from 'lucide-react'`
+- ❌ Incorrect: Using other icon libraries or custom SVGs
+- **Standard sizing**: Use `size-4` (16px) for most UI icons, `size-6` (24px) for larger buttons
+
+### Examples
+```javascript
+// ✅ Correct - Lucide icons
+import { ArrowLeft, Calendar, Trash2 } from 'lucide-react'
+
+<Button>
+  <Plus className="size-4 mr-2" />
+  Add Item
+</Button>
+```
+
+```javascript
+// ❌ Incorrect - Other icon libraries
+import { FaPlus } from 'react-icons/fa' // Don't use
+import AddIcon from '@mui/icons-material/Add' // Don't use
+```
+
+## Next.js 15+ Requirements
+
+### API Route Parameters
+- **CRITICAL**: When accessing route parameters in API routes, always use `await` to destructure from params
+- ✅ Correct: `const { id } = await params;`
+- ❌ Incorrect: `const { id } = params;`
+- This is required in Next.js 15+ where params is a Promise that must be awaited
+
+### Examples
+```javascript
+// ✅ Correct - API Route with async params
+export async function GET(request, { params }) {
+  const { id } = await params; // Always await params
+  // ... rest of route logic
+}
+
+export async function PUT(request, { params }) {
+  const { id, slug } = await params; // Always await params
+  // ... rest of route logic
+}
+```
+
+```javascript
+// ❌ Incorrect - Will cause errors in Next.js 15+
+export async function GET(request, { params }) {
+  const { id } = params; // Missing await - will fail
+  // ... rest of route logic
+}
+``` 

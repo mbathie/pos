@@ -3,75 +3,111 @@ import { connectDB } from '@/lib/mongoose';
 import { getEmployee } from '@/lib/auth';
 import { Discount } from '@/models';
 
+export async function GET(request, { params }) {
+  await connectDB();
+  
+  try {
+    const { employee } = await getEmployee();
+    if (!employee) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const discount = await Discount.findOne({
+      _id: id,
+      org: employee.org._id
+    }).lean();
+
+    if (!discount) {
+      return NextResponse.json({ error: 'Discount not found' }, { status: 404 });
+    }
+
+    console.log('Retrieved discount for editing:', discount);
+    console.log('Discount products field:', discount.products);
+    return NextResponse.json(discount);
+
+  } catch (error) {
+    console.error('Error fetching discount:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch discount' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(request, { params }) {
   await connectDB();
   
-  const { employee } = await getEmployee();
-  const { id } = params;
-  const body = await request.json();
-  
-  const { name, value, type, description, expiry } = body;
-
-  // Validation
-  if (!name || value === undefined || !type) {
-    return NextResponse.json({ error: 'Name, value, and type are required' }, { status: 400 });
-  }
-
-  if (!['percent', 'amount'].includes(type)) {
-    return NextResponse.json({ error: 'Type must be either "percent" or "amount"' }, { status: 400 });
-  }
-
-  if (typeof value !== 'number' || value < 0) {
-    return NextResponse.json({ error: 'Value must be a positive number' }, { status: 400 });
-  }
-
-  if (type === 'percent' && value > 100) {
-    return NextResponse.json({ error: 'Percentage value cannot exceed 100' }, { status: 400 });
-  }
-
   try {
+    const { employee } = await getEmployee();
+    if (!employee) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const body = await request.json();
+    const { name, value, type, expiry, description, products } = body;
+
+    console.log('Updating discount with data:', { name, value, type, expiry, description, products });
+
     const discount = await Discount.findOneAndUpdate(
       { _id: id, org: employee.org._id },
-      { 
-        name, 
-        value, 
-        type, 
+      {
+        name,
+        value,
+        type,
+        expiry: expiry ? new Date(expiry) : null,
         description,
-        expiry: expiry ? new Date(expiry) : null
+        products: products || []
       },
       { new: true }
     );
+
+    console.log('Updated discount result:', discount);
 
     if (!discount) {
       return NextResponse.json({ error: 'Discount not found' }, { status: 404 });
     }
 
     return NextResponse.json(discount);
+
   } catch (error) {
-    // Check for duplicate key error
-    if (error.code === 11000) {
-      return NextResponse.json({ error: 'Discount with this name already exists' }, { status: 400 });
-    }
-    
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Error updating discount:', error);
+    return NextResponse.json(
+      { error: 'Failed to update discount' },
+      { status: 500 }
+    );
   }
 }
 
 export async function DELETE(request, { params }) {
   await connectDB();
   
-  const { employee } = await getEmployee();
-  const { id } = params;
-
   try {
-    const discount = await Discount.findOneAndDelete({ _id: id, org: employee.org._id });
+    const { employee } = await getEmployee();
+    if (!employee) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+
+    const discount = await Discount.findOneAndDelete({
+      _id: id,
+      org: employee.org._id
+    });
 
     if (!discount) {
       return NextResponse.json({ error: 'Discount not found' }, { status: 404 });
     }
 
     return NextResponse.json({ message: 'Discount deleted successfully' });
+
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Error deleting discount:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete discount' },
+      { status: 500 }
+    );
   }
 } 

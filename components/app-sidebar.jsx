@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, Users, CircleDollarSign, Wrench, Settings, Calendar, QrCode, ChefHat, Receipt } from "lucide-react";
+import { MapPin, Users, CircleDollarSign, Wrench, Settings, Calendar, QrCode, ChefHat, Receipt, Percent } from "lucide-react";
 import { NavMenu } from "@/components/nav-menu";
 import { NavUser } from "@/components/nav-user";
 import { LocationSwitcher } from "@/components/location-switcher";
@@ -42,11 +42,13 @@ export function AppSidebar(props) {
         { title: "Classes", url: "/products/classes" },
         { title: "Membership", url: "/products/memberships" },
         { title: "Shop", url: "/products/shop" },
-        { title: "Locations", url: "/products/locations" },
-      ]
-    },
+                { title: "Locations", url: "/products/locations" },
+        { title: "Accounting", url: "/manage/accounting" },
+        ]
+      },
     { title: "Employees", url: "/employees", icon: Users },
     { title: "Locations", url: "/locations", icon: MapPin },
+    { title: "Discounts", url: "/manage/discounts", icon: Percent },
     { title: "Settings", url: "/settings", icon: Settings },
   ];
 

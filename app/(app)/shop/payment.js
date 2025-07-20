@@ -10,6 +10,7 @@ import { useGlobals } from "@/lib/globals"
 import { useCard } from './useCard'
 import { useCash } from "./useCash";
 import { Separator } from "@radix-ui/react-separator";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 import CustomerConnect from './customerConnect'
 // import { User } from "lucide-react";
@@ -39,12 +40,13 @@ export default function Page() {
   // Discount state
   const [discounts, setDiscounts] = useState([])
   const [loadingDiscounts, setLoadingDiscounts] = useState(false)
+  const [discountExpanded, setDiscountExpanded] = useState(false)
 
   useEffect(() => {
     console.log(cart)
   },[cart])
 
-  // Fetch current discount codes
+  // Fetch current discount codes for manual selection
   useEffect(() => {
     const fetchDiscounts = async () => {
       setLoadingDiscounts(true)
@@ -124,12 +126,43 @@ export default function Page() {
               <span>Subtotal</span>
               <span className="text-right">${cart.subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Discount {cart.discount ? `(${cart.discount.name})` : ''}</span>
+            <div 
+              className="flex justify-between cursor-pointer hover:bg-muted/50 px-2 -py-1 rounded -mx-2"
+              onClick={() => setDiscountExpanded(!discountExpanded)}
+            >
+              <div className="flex items-center gap-1">
+                <span>
+                  {cart.discount ? 
+                    `${cart.discount.name} (${cart.discount.type === 'percent' ? `${cart.discount.value}%` : `$${cart.discount.value}`})` : 
+                    'Discount'
+                  }
+                </span>
+                {cart.discountAmount > 0 && (
+                  discountExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />
+                )}
+              </div>
               <span className="text-right">
                 {cart.discount ? `-$${cart.discountAmount.toFixed(2)}` : '$0.00'}
               </span>
             </div>
+            
+            {/* Expanded discount details */}
+            {discountExpanded && cart.discountAmount > 0 && (
+              <div className="space-y-1- text-sm-  -pl-3 mt-2-">
+                {cart.products
+                  .filter(product => product.amount?.discount > 0)
+                  .map((product, index) => (
+                    <div key={index} className="flex justify-between">
+                      <span>{product.name}</span>
+                      <span>-${product.amount.discount.toFixed(2)}</span>
+                    </div>
+                  ))
+                }
+                {cart.products.filter(product => product.amount?.discount > 0).length === 0 && (
+                  <div className="text-center py-2">No individual product discounts</div>
+                )}
+              </div>
+            )}
             <div className="flex justify-between">
               <span>Tax</span>
               <span className="text-right">${cart.tax.toFixed(2)}</span>
@@ -157,40 +190,43 @@ export default function Page() {
 
             {/* Discount Code Selection */}
             <div className="flex flex-row gap-2 mb-4">
-              <div className="text-sm font-medium">Discount</div>
+              <div className="">Discount</div>
               <div className="flex-1" />
-              <Select
-                value={cart.discount?._id || "none"}
-                onValueChange={(value) => {
-                  if (value === "none") {
-                    removeDiscount()
-                  } else {
-                    const selectedDiscount = discounts.find(d => d._id === value)
-                    if (selectedDiscount) {
-                      applyDiscount(selectedDiscount)
-                    }
-                  }
-                }}
-                disabled={loadingDiscounts || paymentStatus === 'succeeded'}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={loadingDiscounts ? "Loading..." : "Select a discount code"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Select Discount</SelectItem>
-                  {discounts.map((discount) => (
-                    <SelectItem key={discount._id} value={discount._id}>
-                      {discount.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
               
-              {/* {cart.discount && (
-                <div className="text-sm text-green-600">
-                  Applied: {cart.discount.name} (-${cart.discountAmount.toFixed(2)})
+              {cart.discount ? (
+                // Show applied discount as text
+                <div className="text-sm-">
+                  {cart.discount.name}
                 </div>
-              )} */}
+              ) : (
+                // Show dropdown for manual selection
+                <Select
+                  value="none"
+                  onValueChange={(value) => {
+                    if (value === "none") {
+                      removeDiscount()
+                    } else {
+                      const selectedDiscount = discounts.find(d => d._id === value)
+                      if (selectedDiscount) {
+                        applyDiscount(selectedDiscount)
+                      }
+                    }
+                  }}
+                  disabled={loadingDiscounts || paymentStatus === 'succeeded'}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={loadingDiscounts ? "Loading..." : "Select a discount code"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Select Discount</SelectItem>
+                    {discounts.map((discount) => (
+                      <SelectItem key={discount._id} value={discount._id}>
+                        {discount.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <Separator orientation="vertical" className="h-[1px] bg-muted my-2" />

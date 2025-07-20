@@ -52,7 +52,7 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { name, value, type, expiry, description } = body;
+    const { name, value, type, expiry, description, products } = body;
 
     const discount = new Discount({
       name,
@@ -60,6 +60,7 @@ export async function POST(request) {
       type,
       expiry: expiry ? new Date(expiry) : null,
       description,
+      products: products || [],
       org: employee.org._id
     });
 
