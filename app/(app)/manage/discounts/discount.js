@@ -2,18 +2,44 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import dayjs from 'dayjs';
+
+// Zod validation schema
+const discountSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
+  type: z.enum(["percent", "amount"], {
+    required_error: "Please select a discount type",
+  }),
+  value: z.string()
+    .min(1, "Value is required")
+    .refine((val) => !isNaN(Number(val)) && Number(val) > 0, "Value must be a positive number"),
+  description: z.string().optional(),
+  expiry: z.date().optional().nullable(),
+  products: z.array(z.string()).min(0, "Select at least one product").optional(),
+}).refine((data) => {
+  // Cross-field validation: percentage value cannot exceed 100%
+  if (data.type === "percent" && Number(data.value) > 100) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Percentage value cannot exceed 100%",
+  path: ["value"], // This will show the error on the value field
+});
 
 export default function DiscountForm({ mode = 'create', discountId = null }) {
   const router = useRouter();
@@ -22,12 +48,17 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
   const [categoriesWithProducts, setCategoriesWithProducts] = useState([]);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState(new Set());
-  const [formData, setFormData] = useState({
-    name: '',
-    value: '',
-    type: 'percent',
-    description: '',
-    expiry: null
+
+  const form = useForm({
+    resolver: zodResolver(discountSchema),
+    defaultValues: {
+      name: '',
+      value: '',
+      type: 'percent',
+      description: '',
+      expiry: null,
+      products: [],
+    },
   });
 
   useEffect(() => {
@@ -44,14 +75,14 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
       const discountRes = await fetch(`/api/discounts/${discountId}`);
       if (discountRes.ok) {
         const discount = await discountRes.json();
-        console.log('Loaded discount:', discount);
-        console.log('Discount products:', discount.products);
-        setFormData({
+        // Update form with fetched discount data
+        form.reset({
           name: discount.name,
           value: discount.value.toString(),
           type: discount.type,
           description: discount.description || '',
-          expiry: discount.expiry ? new Date(discount.expiry) : null
+          expiry: discount.expiry ? new Date(discount.expiry) : null,
+          products: discount.products || [],
         });
         setSelectedProducts(new Set(discount.products || []));
       }
@@ -84,14 +115,7 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
     }
   };
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
 
-  const handleSelectChange = (value) => {
-    setFormData({ ...formData, type: value });
-  };
 
   const handleProductToggle = (productId, checked) => {
     const newSelected = new Set(selectedProducts);
@@ -101,6 +125,8 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
       newSelected.delete(productId);
     }
     setSelectedProducts(newSelected);
+    // Update form with new products array
+    form.setValue('products', Array.from(newSelected));
   };
 
   const handleCategoryToggle = (category, checked) => {
@@ -113,6 +139,8 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
       }
     });
     setSelectedProducts(newSelected);
+    // Update form with new products array
+    form.setValue('products', Array.from(newSelected));
   };
 
   const isCategorySelected = (category) => {
@@ -126,32 +154,20 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
     return selectedCount > 0 && selectedCount < category.products.length;
   };
 
-  const handleFormSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (data) => {
     setLoading(true);
 
-    // Convert value to number and format expiry
-    const submitData = {
-      ...formData,
-      value: parseFloat(formData.value),
-      expiry: formData.expiry ? formData.expiry.toISOString() : null,
-      products: Array.from(selectedProducts)
-    };
-
-    // Validation
-    if (isNaN(submitData.value) || submitData.value < 0) {
-      alert('Please enter a valid positive number for value');
-      setLoading(false);
-      return;
-    }
-
-    if (submitData.type === 'percent' && submitData.value > 100) {
-      alert('Percentage value cannot exceed 100%');
-      setLoading(false);
-      return;
-    }
-
     try {
+      // Prepare submission data
+      const submitData = {
+        name: data.name,
+        type: data.type,
+        value: parseFloat(data.value),
+        description: data.description || '',
+        expiry: data.expiry ? data.expiry.toISOString() : null,
+        products: Array.from(selectedProducts)
+      };
+
       const url = mode === 'edit' ? `/api/discounts/${discountId}` : '/api/discounts';
       const method = mode === 'edit' ? 'PUT' : 'POST';
       
@@ -169,6 +185,7 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
       } else {
         const error = await res.json();
         console.error('Save error:', error);
+        // You could use toast notifications here instead of alert
         alert(error.error || 'Something went wrong');
       }
     } catch (error) {
@@ -200,116 +217,150 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
         </h1>
       </div>
 
-      <form onSubmit={handleFormSubmit} className="space-y-4">
-        {/* Discount Details Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Discount Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input
-                  id="name"
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {/* Discount Details Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Discount Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
                   name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="e.g. Student Discount"
-                  required
+                  render={({ field, fieldState }) => (
+                    <FormItem className="relative">
+                      <FormLabel className={fieldState.error ? "text-destructive" : ""}>Name</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="e.g. Student Discount" 
+                          className={fieldState.error ? "border-destructive focus:border-destructive" : ""}
+                          {...field} 
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
                 />
-              </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="type">Type</Label>
-                <Select value={formData.type} onValueChange={handleSelectChange}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="percent">Percentage</SelectItem>
-                    <SelectItem value="amount">Fixed Amount</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+                <FormField
+                  control={form.control}
+                  name="type"
+                  render={({ field, fieldState }) => (
+                    <FormItem className="relative">
+                      <FormLabel className={fieldState.error ? "text-destructive" : ""}>Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className={fieldState.error ? "border-destructive focus:border-destructive" : ""}>
+                            <SelectValue placeholder="Select discount type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="percent">Percentage</SelectItem>
+                          <SelectItem value="amount">Fixed Amount</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
 
-              <div className="space-y-2">
-                <Label htmlFor="value">
-                  Value {formData.type === 'percent' ? '(%)' : '($)'}
-                </Label>
-                <Input
-                  id="value"
+                <FormField
+                  control={form.control}
                   name="value"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max={formData.type === 'percent' ? '100' : undefined}
-                  value={formData.value}
-                  onChange={handleInputChange}
-                  placeholder={formData.type === 'percent' ? 'e.g. 15' : 'e.g. 5.00'}
-                  required
+                  render={({ field, fieldState }) => (
+                    <FormItem className="relative">
+                      <FormLabel className={fieldState.error ? "text-destructive" : ""}>
+                        Value {form.watch('type') === 'percent' ? '(%)' : '($)'}
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max={form.watch('type') === 'percent' ? '100' : undefined}
+                          placeholder={form.watch('type') === 'percent' ? 'e.g. 15' : 'e.g. 5.00'}
+                          className={fieldState.error ? "border-destructive focus:border-destructive" : ""}
+                          {...field}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="expiry"
+                  render={({ field, fieldState }) => (
+                    <FormItem className="relative">
+                      <FormLabel className={fieldState.error ? "text-destructive" : ""}>Expiry Date</FormLabel>
+                      <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              className={cn(
+                                "justify-start text-left font-normal",
+                                !field.value && "text-muted-foreground",
+                                fieldState.error && "border-destructive focus:border-destructive"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {field.value ? dayjs(field.value).format("DD/MM/YYYY") : "Never expires"}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={(date) => {
+                              field.onChange(date);
+                              if (date) setCalendarOpen(false);
+                            }}
+                            initialFocus
+                            disabled={(date) => date < new Date().setHours(0, 0, 0, 0)}
+                          />
+                          {field.value && (
+                            <div className="p-3 border-t">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  field.onChange(null);
+                                  setCalendarOpen(false);
+                                }}
+                                className="w-full"
+                              >
+                                Clear Date (Never Expires)
+                              </Button>
+                            </div>
+                          )}
+                        </PopoverContent>
+                      </Popover>
+                    </FormItem>
+                  )}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="expiry">Expiry Date</Label>
-                <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "justify-start text-left font-normal",
-                        !formData.expiry && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.expiry ? dayjs(formData.expiry).format("DD/MM/YYYY") : "Never expires"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={formData.expiry}
-                      onSelect={(date) => {
-                        setFormData({ ...formData, expiry: date });
-                        if (date) setCalendarOpen(false);
-                      }}
-                      initialFocus
-                      disabled={(date) => date < new Date().setHours(0, 0, 0, 0)}
-                    />
-                    {formData.expiry && (
-                      <div className="p-3 border-t">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setFormData({ ...formData, expiry: null });
-                            setCalendarOpen(false);
-                          }}
-                          className="w-full"
-                        >
-                          Clear Date (Never Expires)
-                        </Button>
-                      </div>
-                    )}
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
+              <FormField
+                control={form.control}
                 name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="Optional description"
-                rows={3}
+                render={({ field, fieldState }) => (
+                  <FormItem className="relative">
+                    <FormLabel className={fieldState.error ? "text-destructive" : ""}>Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Optional description"
+                        rows={3}
+                        className={fieldState.error ? "border-destructive focus:border-destructive" : ""}
+                        {...field}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
               />
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
         {/* Product Selection Card */}
         <Card>
@@ -320,27 +371,27 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
             </p>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-2">
               {categoriesWithProducts.map((category) => (
-                <div key={category._id} className="space-y-2">
+                <div key={category._id} className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <Checkbox
                       checked={isCategorySelected(category)}
                       onCheckedChange={(checked) => handleCategoryToggle(category, checked)}
                       className={isCategoryPartiallySelected(category) ? "data-[state=checked]:bg-orange-500" : ""}
                     />
-                    <h3 className="font-semibold text-lg">{category.name}</h3>
+                    <h3 className="">{category.name}</h3>
                   </div>
 
                   {category.products?.length > 0 && (
                     <div className="ml-4 space-y-1">
                       {category.products.map((product) => (
-                        <div key={product._id} className="flex items-center gap-2 py-2">
+                        <div key={product._id} className="flex items-center gap-2">
                           <Checkbox
                             checked={selectedProducts.has(product._id)}
                             onCheckedChange={(checked) => handleProductToggle(product._id, checked)}
                           />
-                          <span className="font-medium">{product.name}</span>
+                          <span className="">{product.name}</span>
                         </div>
                       ))}
                     </div>
@@ -369,7 +420,8 @@ export default function DiscountForm({ mode = 'create', discountId = null }) {
             }
           </Button>
         </div>
-      </form>
+        </form>
+      </Form>
     </div>
   );
 } 

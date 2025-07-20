@@ -66,4 +66,141 @@ export async function GET(request, { params }) {
   const { id } = params; // Missing await - will fail
   // ... rest of route logic
 }
-``` 
+```
+
+## Form Development Guidelines
+
+### React Hook Form + Zod Pattern
+- **ALWAYS use React Hook Form with Zod validation** for all forms
+- **ALWAYS use ShadCN UI Form components** following the official documentation pattern
+- **Visual error feedback only**: Use border styling, no error text messages to prevent layout shifts
+
+### Required Dependencies
+```javascript
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
+```
+
+### Form Schema Pattern
+```javascript
+// Define Zod schema for validation
+const formSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
+  email: z.string().email("Invalid email address"),
+  type: z.enum(["option1", "option2"], {
+    required_error: "Please select an option",
+  }),
+}).refine((data) => {
+  // Cross-field validation example
+  if (data.type === "percent" && Number(data.value) > 100) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Custom validation message",
+  path: ["fieldName"], // Shows error on specific field
+});
+```
+
+### Form Implementation Pattern
+```javascript
+const form = useForm({
+  resolver: zodResolver(formSchema),
+  defaultValues: {
+    name: '',
+    email: '',
+    type: 'option1',
+  },
+});
+
+const onSubmit = async (data) => {
+  // Handle form submission
+  try {
+    // API call logic
+  } catch (error) {
+    // Error handling
+  }
+};
+```
+
+### Form Field Pattern
+```javascript
+<Form {...form}>
+  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+    <FormField
+      control={form.control}
+      name="fieldName"
+      render={({ field, fieldState }) => (
+        <FormItem className="relative">
+          <FormLabel className={fieldState.error ? "text-destructive" : ""}>
+            Field Label
+          </FormLabel>
+          <FormControl>
+            <Input 
+              placeholder="Placeholder text"
+              className={fieldState.error ? "border-destructive focus:border-destructive" : ""}
+              {...field} 
+            />
+          </FormControl>
+          {/* NO error message div - visual feedback only */}
+        </FormItem>
+      )}
+    />
+  </form>
+</Form>
+```
+
+### Error Styling Rules
+- **Border styling**: Use `border-destructive focus:border-destructive` for error states
+- **Label styling**: Use `text-destructive` for error labels  
+- **NO error text**: Do not render error message text to prevent layout shifts
+- **Visual feedback only**: Errors indicated through red borders and labels only
+- **Relative positioning**: Use `className="relative"` on FormItem for proper styling
+
+### Form Component Types
+```javascript
+// Input field
+<Input 
+  className={fieldState.error ? "border-destructive focus:border-destructive" : ""}
+  {...field} 
+/>
+
+// Select field  
+<Select onValueChange={field.onChange} defaultValue={field.value}>
+  <FormControl>
+    <SelectTrigger className={fieldState.error ? "border-destructive focus:border-destructive" : ""}>
+      <SelectValue placeholder="Select option" />
+    </SelectTrigger>
+  </FormControl>
+  <SelectContent>
+    <SelectItem value="option1">Option 1</SelectItem>
+  </SelectContent>
+</Select>
+
+// Textarea field
+<Textarea
+  className={fieldState.error ? "border-destructive focus:border-destructive" : ""}
+  {...field}
+/>
+
+// Date picker button
+<Button
+  variant="outline" 
+  className={cn(
+    "justify-start text-left font-normal",
+    !field.value && "text-muted-foreground",
+    fieldState.error && "border-destructive focus:border-destructive"
+  )}
+>
+  {/* Date picker content */}
+</Button>
+```
+
+### Form Best Practices
+- Use `form.watch('fieldName')` for reactive field values
+- Implement cross-field validation with schema-level `.refine()`
+- Always destructure `{ field, fieldState }` in render function
+- Use theme-consistent `destructive` color classes
+- Maintain clean, layout-stable error indication
