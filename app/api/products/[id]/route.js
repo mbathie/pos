@@ -32,7 +32,9 @@ export async function PUT(req, { params }) {
     product,
     { new: true }
   )
-    .populate('accounting');
+    .populate('accounting')
+    .populate('category')
+    .populate('folder');
 
   return NextResponse.json({ product: updatedProduct }, { status: 201 });
 }

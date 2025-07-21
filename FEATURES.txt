@@ -12,12 +12,8 @@ DONE - waivers
 MUST HAVES
 -----------------------
 DONE - Setting for a product/category to go to bump screen or not
-- Name field (not email/phone) required during checkout (only if bump screen item)
+DONE - Name field (not email/phone) required during checkout (only if bump screen item)
 DONE - classes and courses - dedicated checkin button
-- create new staff accounts
-- connect terminals to locations
-- roles for staff, admins, bump screens, terminals
-  - ADMIN, MANAGER, STAFF, TERMINAL
 DONE - bump screen for kitchen staff to see/manage orders - order table, filtering
 DONE - admin / list view page for classes / courses
 DONE - admin / list view page for casual entries
@@ -29,32 +25,36 @@ DONE - DOB field for waiver and gender
 DONE - course / class checkout, must check remaining capacity (no overbooking)
 DONE - checkout shop item, folder should open into new screen (use breadcrumb menu)
 DONE - During purchase have a hot button for cart at bottom right. Uses permanent side bar now for cart during the purchase process
+DONE - use baked in calendar component instead of 3rd party one https://ui.shadcn.com/docs/components/calendar
+DONE on transaction list view page- ability to look up previous sales and do refunds, etc
+DONE - ability to add a discount at sale time
+DONE - set end date 
+DONE  - set recurring (expiry null)
+DONE  - assign discounts to products, so they are automatically applied at checkout time.
+DONE  - if a discount is product specific i.e. just to coffees, and there are other products (not coffees), then make sure the discount only gets applied to the relevant products
+DONE - accounting categories, GST or not
+DONE - transaction list view page
+DONE - individual transaction view page, allow for refunds (partial and full), and view order details.
 
+
+- create new staff accounts
+- connect terminals to locations
+- roles for staff, admins, bump screens, terminals
+  - ADMIN, MANAGER, STAFF, TERMINAL
 - lookup existing customer before completing waiver, might have bought coffee previously, but wants gym membership
 - terminal integration (using real terminal)
 - checkout process for subscriptions
   - backend Membership table for memberships
 - specify what products at what locations
-- customers should receive email confirm after booking a class, course, etc
-DONE - use baked in calendar component instead of 3rd party one https://ui.shadcn.com/docs/components/calendar
 - Email out QR code for classes and courses & memberships
   - ability scan the QR to checkin at the front entry with a dedicated device - should confirm they have checked in.
   - dedicated page to see people checking in - list view, with status/ etc
-DONE - ability to add a discount at sale time
-DONE - set end date 
-DONE  - set recurring (expiry null)
-  - should be able to assign arbitrary discount amounts or percentages at checkout time (at MANAGER level only)
-DONE  - assign discounts to products, so they are automatically applied at checkout time.
-DONE  - if a discount is product specific i.e. just to coffees, and there are other products (not coffees), then make sure the discount only gets applied to the relevant products
+- should be able to assign arbitrary discount amounts or percentages at checkout time (at MANAGER level only)
 - Customer list view page
 - basic accounting reporing
-DONE on transaction list vidw page- ability to look up previous sales and do refunds, etc
 - stock items need to have a customer assigned to them, i.e. pair of shoes for warrenty.
 - online orders for classes/courses/memberships
   - also abiltiy to view / edit profile
-DONE - accounting categories, GST or not
-DONE - transaction list view page
-DONE - individual transaction view page, allow for refunds (partial and full), and view order details.
 - refunds
 
 - export CSV of purchases (for marketing purposes)
@@ -80,4 +80,14 @@ NICE TO HAVES
     - should also add to the bump screen any items that need making on the day of the event
   - marketing
 
+
+
+
+PAR QTY system
+----------------
+- idea is to integrate an ability to track qty and par of individual stock items for category.menu='shop' items
+- on the /products/shop page, need 2 new fields below accounting code called Qty and Par (integers). They define the total qty of this item in stock and par represents at what level remaining of the stock to issue a warning at (we'll handle how display the warning later - not at this stage). We can store these values in the Products table
+- need a new /manage/products page similar to the /manage/transactions page which lists all products from all categories, with filters
+  up the top of the page to filter by category, and a search box to filter by product name, and clear filter button.
+  columns should be product name, category name, accounting code, folder (only relevant for shop items), send to bump (bool)
 

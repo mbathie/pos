@@ -21,7 +21,7 @@ export default function Page() {
   const { pushBreadcrumb, resetBreadcrumb } = useGlobals()
   
   useEffect(() => {
-    resetBreadcrumb({ name: "Locations", href: "/locations" })
+    resetBreadcrumb({ name: "Locations", href: "/manage/locations" })
   }, []);
 
   const fetchLocations = async () => {

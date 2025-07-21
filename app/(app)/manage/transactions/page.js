@@ -151,8 +151,8 @@ export default function TransactionsPage() {
         </div>
         
         <Button variant="outline" onClick={clearFilters}>
-          <Filter className="size-4" />
-          Clear
+          {/* <Filter className="size-4" /> */}
+          Reset
         </Button>
 
         <Badge variant="secondary" className="text-sm mt-1 ml-auto">
@@ -172,7 +172,7 @@ export default function TransactionsPage() {
               <Table>
                 <TableHeader className="sticky top-0   z-10">
                   <TableRow>
-                                          <TableHead>Date & Time</TableHead>
+                    <TableHead>Date & Time</TableHead>
                       <TableHead>Total</TableHead>
                       <TableHead>Payment</TableHead>
                       <TableHead>Status</TableHead>
@@ -184,7 +184,7 @@ export default function TransactionsPage() {
                 </TableHeader>
                 <TableBody>
                     {transactions.length === 0 ? (
-                                        <TableRow>
+                  <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       No transactions found for the selected filters.
                     </TableCell>

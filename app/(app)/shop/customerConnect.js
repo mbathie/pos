@@ -26,6 +26,7 @@ export default function Customer({ open, onOpenChange, setConnectCustomer, conne
   const [phone, setPhone] = useState('')
   const [error, setError] = useState('')
   const emailSchema = z.string().email();
+  const nameSchema = z.string().min(1, "Name is required");
 
 
   const handleCreateCustomer = async () => {
@@ -131,7 +132,7 @@ export default function Customer({ open, onOpenChange, setConnectCustomer, conne
             <div className='flex ml-auto'>
               <Button
                 onClick={handleCreateCustomer}
-                disabled={!emailSchema.safeParse(email).success}
+                disabled={!nameSchema.safeParse(name).success || (email.trim() !== "" && !emailSchema.safeParse(email).success)}
               >
                 Create Customer
               </Button>

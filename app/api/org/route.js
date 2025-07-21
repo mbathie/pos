@@ -3,8 +3,6 @@ import { connectDB } from "@/lib/mongoose"
 import { Org } from "@/models"
 import { getEmployee } from "@/lib/auth";
 
-const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET)
-
 export async function GET() {
   await connectDB();
 

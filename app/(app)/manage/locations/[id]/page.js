@@ -31,7 +31,7 @@ export default function Page() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(updatedLocation)
     })
-    router.push('/locations')
+          router.push('/manage/locations')
   }
 
   if (!location) return <div className="p-4">Loading...</div>

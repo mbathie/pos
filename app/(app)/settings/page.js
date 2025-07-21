@@ -84,7 +84,7 @@ export default function Page() {
   };
 
   return (
-    <div className="px-4 flex flex-col gap-4">
+    <div className="px-4 flex flex-col gap-4 mb-4">
       <TypographyLarge>Settings</TypographyLarge>
       <Card>
         <CardContent>
@@ -158,13 +158,61 @@ export default function Page() {
             <Separator className='border-t border-muted col-span-2' />
 
             <div>
+              <div>Products</div>
+              <TypographyMuted>
+                Products overview
+              </TypographyMuted>
+            </div>
+            <div>
+              <Link href="/manage/products">
+                <Button>
+                  Manage Products
+                </Button>
+              </Link>
+            </div>
+
+            <Separator className='border-t border-muted col-span-2' />
+
+            <div>
+              <div>Shop Locations</div>
+              <TypographyMuted>
+                If your business has multiple locations, you can manage them here.
+              </TypographyMuted>
+            </div>
+            <div>
+              <Link href="/manage/locations">
+                <Button>
+                  Manage Locations
+                </Button>
+              </Link>
+            </div>
+
+            <Separator className='border-t border-muted col-span-2' />
+
+            <div>
+              <div>Product Location Availability</div>
+              <TypographyMuted>
+                Manage which locations are available for each product.
+              </TypographyMuted>
+            </div>
+            <div>
+              <Link href="/products/locations">
+                <Button>
+                  Manage Locations
+                </Button>
+              </Link>
+            </div>
+
+            <Separator className='border-t border-muted col-span-2' />
+
+            <div>
               <div>Accounting Codes</div>
               <TypographyMuted>
                 Manage accounting codes for your products and services. Set up tax categories and organize your financial reporting.
               </TypographyMuted>
             </div>
             <div>
-              <Link href="/accounting">
+              <Link href="/manage/accounting">
                 <Button>
                   Manage Codes
                 </Button>
@@ -180,7 +228,7 @@ export default function Page() {
               </TypographyMuted>
             </div>
             <div>
-              <Link href="/discounts">
+              <Link href="/manage/discounts">
                 <Button>
                   Manage Discounts
                 </Button>

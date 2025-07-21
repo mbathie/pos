@@ -436,7 +436,7 @@ export default function Page() {
                             </div>
                           </div>
 
-                          <div className="flex flex-col gap-1 w-[400px]">
+                          <div className="flex flex-col gap-1 w-72">
                             <Label>Accounting Code</Label>
                             <AccountingSelect 
                               value={p.accounting} 
@@ -444,6 +444,60 @@ export default function Page() {
                                 updateProduct({pIdx, key: "accounting", value});
                               }}
                             />
+                          </div>
+
+                          <div className="flex gap-2">
+                            <div className="flex flex-col gap-1 w-24">
+                              <div className="flex items-center gap-1">
+                                <Label>Qty</Label>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Info size="15"/>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      Quanty in stock of this item
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={p.qty || ''}
+                                onChange={(e) => {
+                                  updateProduct({pIdx, key: "qty", value: parseInt(e.target.value) || 0});
+                                }}
+                                placeholder="0"
+                              />
+
+                            </div>
+                            <div className="flex flex-col gap-1 w-24">
+
+                              <div className="flex items-center gap-1">
+                                <Label>Par</Label>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Info size="15"/>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      Remaining stock level to issue a warning
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
+
+                              <Input
+                                type="number"
+                                min="0"
+                                value={p.par || ''}
+                                onChange={(e) => {
+                                  updateProduct({pIdx, key: "par", value: parseInt(e.target.value) || 0});
+                                }}
+                                placeholder="0"
+                              />
+                            </div>
                           </div>
 
                           <div className="flex space-x-2-">

@@ -70,7 +70,7 @@ export function LocationSwitcher({}) {
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="gap-2 p-2"
-              onClick={() => router.push('/locations')}
+              onClick={() => router.push('/manage/locations')}
             >
               <div className="flex size-6 items-center justify-center rounded-md border bg-transparent">
                 <Plus className="size-4" />
