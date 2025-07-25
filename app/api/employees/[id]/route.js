@@ -1,26 +1,57 @@
-// import { NextResponse } from "next/server"
-// import prisma from "@/lib/db"
+import { NextResponse } from "next/server"
+import { connectDB } from "@/lib/mongoose"
+import { getEmployee } from "@/lib/auth"
+import { Employee } from "@/models"
 
-// export async function PUT(req, { params }) {
-//   try {
+export async function PUT(req, { params }) {
+  await connectDB()
+  const { employee: currentEmployee } = await getEmployee()
+  
+  if (!currentEmployee) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
 
-//     const { id } = await params
-//     const body = await req.json()
-//     const { name, email, locationId, role } = body
+  try {
+    const { id } = await params
+    const body = await req.json()
+    const { name, email, locationId, role } = body
 
-//     if (!name || !email || !locationId)
-//       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    if (!name || !email || !locationId || !role) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+    }
 
-//     const newEmployee = await prisma.employee.update({
-//       where: { id: parseInt(id) },
-//       data: { name, email, locationId, role },
-//       omit: { hash: true },
-//       include: { location: true }
-//     })
+    // Check if email is already taken by another employee
+    const existingEmployee = await Employee.findOne({ 
+      email, 
+      _id: { $ne: id },
+      org: currentEmployee.org 
+    })
+    
+    if (existingEmployee) {
+      return NextResponse.json({ error: 'Email already exists' }, { status: 400 })
+    }
 
-//     return NextResponse.json({...newEmployee}, { status: 201 })
-//   } catch (error) {
-//     console.error(error)
-//     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
-//   }
-// }
+    const updatedEmployee = await Employee.findOneAndUpdate(
+      { _id: id, org: currentEmployee.org },
+      { 
+        name, 
+        email, 
+        location: locationId, 
+        role 
+      },
+      { 
+        new: true,
+        runValidators: true
+      }
+    ).populate({ path: 'location', select: 'name' })
+
+    if (!updatedEmployee) {
+      return NextResponse.json({ error: "Employee not found" }, { status: 404 })
+    }
+
+    return NextResponse.json(updatedEmployee, { status: 200 })
+  } catch (error) {
+    console.error('Error updating employee:', error)
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
+  }
+}

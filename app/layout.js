@@ -1,9 +1,9 @@
 import "./globals.css";
-import { Geist } from "next/font/google";
+import { Inter } from "next/font/google";
 import { GlobalProvider } from "@/components/global-context";
 import { ThemeProvider } from "@/components/theme-provider"
 
-const geist = Geist({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
   title: "Cultcha Lifestyle Management",
@@ -20,7 +20,7 @@ export default async function RootLayout({ children }) {
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
       </head>
-      <body className={`${geist.className} antialiased`}>
+      <body className={`${inter.className} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

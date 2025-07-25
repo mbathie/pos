@@ -1,0 +1,49 @@
+{
+  "roles": {
+    "ADMIN": {
+      "permissions": ["*"],
+      "description": "Full access to all features"
+    },
+    "MANAGER": {
+      "permissions": [
+        "/shop",
+        "/shop/retail",
+        "/shop/retail/payment",
+        "/shop/casual",
+        "/shop/classes",
+        "/manage/orders",
+        "/manage/casual",
+        "/manage/classes",
+        "/manage/transactions",
+        "/employees",
+        "/manage/locations",
+        "/manage/terminals",
+        "/manage/discounts",
+        "/settings"
+      ],
+      "description": "Management access including staff and location management"
+    },
+    "STAFF": {
+      "permissions": [
+        "/shop",
+        "/shop/retail",
+        "/shop/retail/payment",
+        "/shop/casual",
+        "/shop/classes",
+        "/manage/orders",
+        "/manage/casual",
+        "/manage/classes",
+        "/manage/transactions"
+      ],
+      "description": "Limited access to sales and basic operations"
+    },
+    "TERMINAL": {
+      "permissions": [
+        "/shop",
+        "/shop/retail",
+        "/shop/retail/payment"
+      ],
+      "description": "Terminal-only access for point of sale"
+    }
+  }
+} 

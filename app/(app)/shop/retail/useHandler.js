@@ -3,9 +3,9 @@ export function useHandler() {
   const setQty = async ({ setProduct, type }) => {
     setProduct(draft => {
       if (type === 'increment') {
-        draft.qty = (draft.qty ?? 0) + 1;
+        draft.qty = (draft.qty ?? 1) + 1;
       } else if (type === 'decrement') {
-        draft.qty = Math.max(0, (draft.qty ?? 0) - 1);
+        draft.qty = Math.max(1, (draft.qty ?? 1) - 1);
       }
     });
   }

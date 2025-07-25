@@ -100,7 +100,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
             <div className='flex gap-2'>
               <Button variant="" size="sm" onClick={() => setQty({ setProduct, type: 'decrement' })}><Minus /></Button>
               <Button variant="" size="sm" onClick={() => setQty({ setProduct, type: 'increment' })}><Plus /></Button>
-              <div className='ml-auto'>{product?.qty || 0}</div>
+              <div className='ml-auto'>{product?.qty || 1}</div>
             </div>
           </div>
 
@@ -121,7 +121,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
               disabled={!product?.variations?.some(v => v.selected) || !(product?.qty >= 1)}
               onClick={async () => {
                 const _product = await calcCartValueShop({product})
-                addToCart({..._product, type: "shop"})
+                await addToCart({..._product, type: "shop"})
               }}
             >
               Add

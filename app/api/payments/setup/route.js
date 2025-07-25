@@ -36,8 +36,8 @@ export async function GET(req, { params }) {
 
   const accountLink = await stripe.accountLinks.create({
     account: account.id,
-    refresh_url: `${process.env.DOMAIN}/settings`,
-    return_url: `${process.env.DOMAIN}/settings?stripeReturn=1`,
+    refresh_url: `${process.env.STRIPE_HOST}/settings`,
+    return_url: `${process.env.STRIPE_HOST}/settings?stripeReturn=1`,
     type: 'account_onboarding',
   });
 

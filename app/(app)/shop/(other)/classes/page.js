@@ -44,9 +44,15 @@ export default function Page() {
           category={category}
           onClick={(p) => {
             console.log(p.type)
-            setProduct(p)
-            if (p.type == 'class') setTimesClass(p)
-            else if (p.type == 'course') setTimesCourse(p)
+            // Initialize product for cart with proper separation of stock vs cart quantities
+            const cartProduct = {
+              ...p,
+              stockQty: p.qty, // Preserve original stock quantity
+              qty: 0 // Initialize cart quantity to 0
+            }
+            setProduct(cartProduct)
+            if (p.type == 'class') setTimesClass(cartProduct)
+            else if (p.type == 'course') setTimesCourse(cartProduct)
 
             setSheetOpen(true);
           }}

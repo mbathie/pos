@@ -174,20 +174,54 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
   const employeeSchema = z.object({
     email: z.string().email(),
     name: z.string().min(1, "Name is required"),
-    role: z.enum(["ADMIN", "MANAGER", "STAFF", "TERMINAL"]),
+    role: z.enum(["ADMIN", "STAFF"]), // Only include available roles
     location: z.object({
-      id: z.number().int().positive("Location ID must be a positive integer"),
+      id: z.string().min(1, "Location must be selected"),
     }),
   });
 
   useEffect(() => {
-    console.log(employee)
-    setIsValid(employeeSchema.safeParse(employee).success);
-    console.log(employeeSchema.safeParse(employee).error)
+    console.log('Employee state:', JSON.stringify(employee, null, 2));
+    const validationResult = employeeSchema.safeParse(employee);
+    setIsValid(validationResult.success);
+    if (!validationResult.success) {
+      console.log('Validation errors:', validationResult.error.issues);
+      console.log('Validation failed for:', {
+        email: employee.email,
+        name: employee.name, 
+        role: employee.role,
+        location: employee.location,
+        locationId: employee.location?.id
+      });
+    } else {
+      console.log('Validation passed for employee:', employee.email || 'new employee');
+    }
   }, [employee])
 
   useEffect(() => {
-    setEmployee(e || { email: "", name: "", role: "", location: {} })
+    const baseEmployee = { 
+      email: "", 
+      name: "", 
+      role: "", 
+      location: {},
+      new: false,
+    };
+
+    if (e) {
+      // For existing employees, ensure location has the right structure
+      const processedEmployee = {
+        ...baseEmployee,
+        ...e,
+        id: e._id || e.id, // Ensure employee has id field for API calls
+        location: e.location ? {
+          ...e.location,
+          id: e.location._id || e.location.id // Ensure location id field exists
+        } : {}
+      };
+      setEmployee(processedEmployee);
+    } else {
+      setEmployee(baseEmployee);
+    }
   }, [e])
 
   const update = async () => {
@@ -197,7 +231,12 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
       body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),
     })
     const _e = await res.json()
-    setEmployees(employees.map(emp => emp.id === _e.id ? _e : emp))
+    // Update the specific employee in the list without refetching
+    setEmployees(employees.map(emp => {
+      const empId = emp._id || emp.id;
+      const updatedId = _e._id || _e.id;
+      return empId === updatedId ? _e : emp;
+    }))
     setIsOpen(false)
   }
   const create = async () => {
@@ -217,9 +256,9 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
       {/* <DialogTrigger>Open</DialogTrigger> */}
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Update Employee</DialogTitle>
+          <DialogTitle>{employee.new ? 'New Employee' : 'Update Employee'}</DialogTitle>
           <DialogDescription>
-            {employee.email}, {employee.name}
+            {employee.new ? 'Create a new employee account' : `${employee.email}, ${employee.name}`}
           </DialogDescription>
         </DialogHeader>
 
@@ -249,7 +288,13 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
           <Label htmlFor="location">Location</Label>
           <Select id="location" value={employee?.location?.name} 
             onValueChange={(value) => {
-              setEmployee({ ...employee, location: locations.find(l => l.name === value) })
+              const selectedLocation = locations.find(l => l.name === value);
+              // Ensure the location has an 'id' field for validation
+              const locationWithId = {
+                ...selectedLocation,
+                id: selectedLocation._id || selectedLocation.id
+              };
+              setEmployee({ ...employee, location: locationWithId });
             }}
           >
             <SelectTrigger className="w-full">
@@ -268,7 +313,7 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
         </div>
 
         <div className="grid w-full max-w-sm items-center gap-1.5">
-          <Label htmlFor="roles">Location</Label>
+          <Label htmlFor="roles">Role</Label>
 
           <Select id="roles" value={employee.role} onValueChange={(value) => setEmployee({ ...employee, role: value })}>
             <SelectTrigger className="w-full">
@@ -278,9 +323,9 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
               <SelectGroup>
                 <SelectLabel>Roles</SelectLabel>
                 <SelectItem value="ADMIN">Admin</SelectItem>
-                <SelectItem value="MANAGER">Manager</SelectItem>
+                {/* <SelectItem value="MANAGER">Manager</SelectItem> */}
                 <SelectItem value="STAFF">Staff</SelectItem>
-                <SelectItem value="TERMINAL">Terminal</SelectItem>
+                {/* <SelectItem value="TERMINAL">Terminal</SelectItem> */}
               </SelectGroup>
             </SelectContent>
           </Select>
@@ -289,13 +334,13 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
         <Button 
           className={`${employeeSchema.safeParse(employee).success ? '' : ''} max-w-sm`}
           disabled={!isValid}
-          onClick={() => e.new ? create() : update()}
+          onClick={() => employee.new ? create() : update()}
         >
-          {e.new &&
-            <>Create User</>
+          {employee.new &&
+            <>Create Employee</>
           }
-          {!e.new &&
-            <>Save User</>
+          {!employee.new &&
+            <>Save Employee</>
           }
 
         </Button>

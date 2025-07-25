@@ -119,7 +119,13 @@ export default function Page() {
                 product={p}
                 onClick={() => {
                   console.log(p)
-                  setProduct(p)
+                  // Initialize product for cart with separate cart quantity
+                  const cartProduct = {
+                    ...p,
+                    stockQty: p.qty, // Preserve original stock quantity
+                    qty: 1 // Initialize cart quantity to 1
+                  }
+                  setProduct(cartProduct)
                   setOpen(true)
                 }}
               />

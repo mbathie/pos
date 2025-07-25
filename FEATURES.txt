@@ -36,12 +36,13 @@ DONE - accounting categories, GST or not
 DONE - transaction list view page
 DONE - individual transaction view page, allow for refunds (partial and full), and view order details.
 
+DONE - when purchasing a shop item - make qty automatically 1
+- Par warning - only for manager, admin's
 
 - create new staff accounts
 - connect terminals to locations
 - roles for staff, admins, bump screens, terminals
   - ADMIN, MANAGER, STAFF, TERMINAL
-- lookup existing customer before completing waiver, might have bought coffee previously, but wants gym membership
 - terminal integration (using real terminal)
 - checkout process for subscriptions
   - backend Membership table for memberships
@@ -59,13 +60,13 @@ DONE - individual transaction view page, allow for refunds (partial and full), a
 
 - export CSV of purchases (for marketing purposes)
 
-- Par/qty screen
-  - par = min quantity before warning, i.e. to place another order with the supplier
-  - qty = click update qty - add/subttact or overrise total qty of stock (required for launch)
-  - list view of all items, should be able to edit product name/price also
+DONE - Par/qty screen
+DONE  - par = min quantity before warning, i.e. to place another order with the supplier
+DONE  - qty = click update qty - add/subttact or overrise total qty of stock (required for launch)
+DONE  - list view of all items, should be able to edit product name/price also
   - tag system - new feature too add generic tags per product
-  - notifications when stock (par) is low - alert / bell icon down the bottom left
-  - ability to filter for items below or at par, or cloase to par
+DONE  - notifications when stock (par) is low - alert / bell icon down the bottom left
+DONE  - ability to filter for items below or at par, or cloase to par
 
 NICE TO HAVES
 -----------------------
@@ -79,6 +80,8 @@ NICE TO HAVES
     - also regarding stock qty, it should deduct the qty on the day of the event
     - should also add to the bump screen any items that need making on the day of the event
   - marketing
+  - ?lookup existing customer before completing waiver, might have bought coffee previously, but wants gym membership
+
 
 
 
@@ -91,3 +94,15 @@ PAR QTY system
   up the top of the page to filter by category, and a search box to filter by product name, and clear filter button.
   columns should be product name, category name, accounting code, folder (only relevant for shop items), send to bump (bool)
 
+
+ROLES system
+===================
+- 
+
+
+
+
+- Login as any account staff, admin, MANAGER
+- PIN number per staff, required before any purchase when sale is clicked
+- need to make sure if logged in as admin role, Jnr staff can't see admin functions
+- need to select terminal when pos is first setup - set a cookie so it knows for next time.

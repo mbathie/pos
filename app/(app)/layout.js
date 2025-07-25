@@ -2,8 +2,9 @@
 import Cookies from 'js-cookie'
 import { useEffect, useState } from 'react'
 import { MapPin } from 'lucide-react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { useGlobals } from '@/lib/globals'
+import { hasPermission, requiresAuth, getDefaultPath } from '@/lib/permissions'
 
 import { AppSidebar } from "@/components/app-sidebar"
 import {
@@ -16,13 +17,33 @@ import BreadcrumbMenu from '@/components/breadcrumb-menu'
 // import Cart from './shop/cart'
 
 export default function Page({children}) {
-  const { location } = useGlobals()
+  const { location, employee } = useGlobals()
   const [ open, setOpen ] = useState(false)
+  const pathname = usePathname();
+  const router = useRouter();
+
   useEffect(() => {
     const d = Cookies.get("sidebar_state")
     const isOpen = d === "true"
     setOpen(isOpen)
   }, [])
+
+  // Permission checking effect
+  useEffect(() => {
+    if (!employee?._id) return; // Wait for employee to load
+    
+    const userRole = employee?.role || 'STAFF';
+    
+    // Check if current path requires auth and if user has permission
+    if (requiresAuth(pathname)) {
+      if (!hasPermission(userRole, pathname)) {
+        console.log(`Access denied to ${pathname} for role ${userRole}`);
+        const defaultPath = getDefaultPath(userRole);
+        router.replace(defaultPath);
+        return;
+      }
+    }
+  }, [pathname, employee, router]);
 
   const handleChange = (state) => {
     Cookies.set('sidebar_state', String(state))
@@ -30,7 +51,6 @@ export default function Page({children}) {
   }
 
   const showBreadcrumbs = ['/shop', '/locations']
-  const pathname = usePathname();
   const showHeaderExtras = showBreadcrumbs.some(path => pathname.startsWith(path));
 
   return (

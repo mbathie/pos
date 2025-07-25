@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, X, ChevronsUpDown, Edit } from 'lucide-react';
+import { Search, X, ChevronsUpDown, Edit, Warehouse } from 'lucide-react';
 import colors from 'tailwindcss/colors';
 import AccountingSelect from '@/app/(app)/products/shop/accounting-select';
 
@@ -35,6 +35,13 @@ export default function ManageProductsPage() {
     qty: '',
     par: '',
     accounting: null,
+  });
+  const [receiveDialog, setReceiveDialog] = useState({
+    open: false,
+    product: null,
+  });
+  const [receiveForm, setReceiveForm] = useState({
+    quantity: '',
   });
 
   useEffect(() => {
@@ -179,6 +186,69 @@ export default function ManageProductsPage() {
     }
   };
 
+  const openReceiveDialog = (product) => {
+    setReceiveForm({
+      quantity: '',
+    });
+    setReceiveDialog({
+      open: true,
+      product: product,
+    });
+  };
+
+  const closeReceiveDialog = () => {
+    setReceiveDialog({
+      open: false,
+      product: null,
+    });
+    setReceiveForm({
+      quantity: '',
+    });
+  };
+
+  const saveReceiveChanges = async () => {
+    try {
+      const quantityToAdd = parseInt(receiveForm.quantity) || 0;
+      if (quantityToAdd <= 0) {
+        alert('Please enter a valid quantity greater than 0');
+        return;
+      }
+
+      const currentQty = receiveDialog.product.qty || 0;
+      const newQty = currentQty + quantityToAdd;
+
+      const res = await fetch(`/api/products/${receiveDialog.product._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          product: { 
+            qty: newQty,
+          } 
+        }),
+      });
+
+      if (res.ok) {
+        const { product: updatedProduct } = await res.json();
+        // Update the local state with the new quantity
+        setAllProducts(prev => 
+          prev.map(product => 
+            product._id === receiveDialog.product._id 
+              ? { ...product, qty: newQty }
+              : product
+          )
+        );
+        closeReceiveDialog();
+        console.log('Stock received successfully');
+      } else {
+        console.error('Failed to receive stock');
+      }
+    } catch (error) {
+      console.error('Error receiving stock:', error);
+    }
+  };
+
   // Filter and sort products locally
   const filteredProducts = allProducts
     .filter(product => {
@@ -258,15 +328,15 @@ export default function ManageProductsPage() {
           </Select>
         </div>
 
-        <div className="flex-1 max-w-xs">
+        <div className="flex-1- w-48">
           {/* <label className="text-sm font-medium mb-2 block">Search Products</label> */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground size-4" />
             <Input
-              placeholder="Search by product name..."
+              placeholder="Product name"
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="pl-10 text-sm"
+              className="pl-8 text-sm"
             />
           </div>
         </div>
@@ -280,17 +350,17 @@ export default function ManageProductsPage() {
       </div>
 
       {/* Products Table */}
-      <Card>
+      <Card className="p-0 m-0">
 
-        <CardContent>
+        <CardContent className="p-0 m-0 rounded-t-lg">
           {loading ? (
             <div className="text-center py-8">Loading products...</div>
           ) : (
             <Table>
-              <TableHeader>
-                <TableRow>
+              <TableHeader className="">
+                <TableRow className="*:bg-muted">
                   <TableHead 
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="cursor-pointer bg-muted rounded-tl-lg"
                     onClick={() => handleSort('name')}
                   >
                     <div className="flex items-center gap-1">
@@ -299,7 +369,7 @@ export default function ManageProductsPage() {
                     </div>
                   </TableHead>
                   <TableHead 
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="cursor-pointer bg-muted hover:bg-muted/80"
                     onClick={() => handleSort('category')}
                   >
                     <div className="flex items-center gap-1">
@@ -308,7 +378,7 @@ export default function ManageProductsPage() {
                     </div>
                   </TableHead>
                   <TableHead 
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="cursor-pointer bg-muted hover:bg-muted/80"
                     onClick={() => handleSort('accounting')}
                   >
                     <div className="flex items-center gap-1">
@@ -317,7 +387,7 @@ export default function ManageProductsPage() {
                     </div>
                   </TableHead>
                   <TableHead 
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="cursor-pointer bg-muted hover:bg-muted/80"
                     onClick={() => handleSort('folder')}
                   >
                     <div className="flex items-center gap-1">
@@ -326,7 +396,7 @@ export default function ManageProductsPage() {
                     </div>
                   </TableHead>
                   <TableHead 
-                    className="cursor-pointer hover:bg-muted/50 text-center"
+                    className="cursor-pointer bg-muted hover:bg-muted/80"
                     onClick={() => handleSort('qty')}
                   >
                     <div className="flex items-center justify-start gap-1">
@@ -335,7 +405,7 @@ export default function ManageProductsPage() {
                     </div>
                   </TableHead>
                   <TableHead 
-                    className="cursor-pointer hover:bg-muted/50 text-center"
+                    className="cursor-pointer bg-muted hover:bg-muted/80"
                     onClick={() => handleSort('par')}
                   >
                     <div className="flex items-center justify-start gap-1">
@@ -344,7 +414,7 @@ export default function ManageProductsPage() {
                     </div>
                   </TableHead>
                   <TableHead 
-                    className="cursor-pointer hover:bg-muted/50"
+                    className="cursor-pointer bg-muted hover:bg-muted/80"
                     onClick={() => handleSort('bump')}
                   >
                     <div className="flex items-center gap-1">
@@ -352,7 +422,7 @@ export default function ManageProductsPage() {
                       <ChevronsUpDown className="size-4" />
                     </div>
                   </TableHead>
-                  <TableHead>
+                  <TableHead className="bg-muted rounded-tr-lg">
                     {/* Actions */}
                   </TableHead>
                 </TableRow>
@@ -399,7 +469,18 @@ export default function ManageProductsPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {product.qty || 0}
+                        <span className={
+                          product.qty !== null && 
+                          product.qty !== undefined && 
+                          product.par !== null && 
+                          product.par !== undefined && 
+                          product.qty <= product.par && 
+                          product.qty > 0
+                            ? 'text-destructive font-medium' 
+                            : ''
+                        }>
+                          {product.qty || 0}
+                        </span>
                       </TableCell>
                       <TableCell>
                         {product.par || 0}
@@ -412,11 +493,22 @@ export default function ManageProductsPage() {
                           }}
                         />
                       </TableCell>
-                      <TableCell className="justify-end flex">
+                      <TableCell className="justify-end flex gap-2-">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openReceiveDialog(product)}
+                          className="cursor-pointer"
+                          title="Receive Stock"
+                        >
+                          <Warehouse className="size-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => openEditDialog(product)}
+                          className="cursor-pointer"
+                          title="Edit Product"
                         >
                           <Edit className="size-4" />
                         </Button>
@@ -489,6 +581,46 @@ export default function ManageProductsPage() {
               </Button>
               <Button onClick={saveEditChanges}>
                 Save Changes
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receive Stock Dialog */}
+      <Dialog open={receiveDialog.open} onOpenChange={(open) => {
+        if (!open) closeReceiveDialog();
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Receive Stock - {receiveDialog.product?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Current Stock: {receiveDialog.product?.qty || 0}</Label>
+              <Label htmlFor="receive-quantity">Quantity to Receive</Label>
+              <Input
+                id="receive-quantity"
+                type="number"
+                min="1"
+                value={receiveForm.quantity}
+                onChange={(e) => setReceiveForm(prev => ({ ...prev, quantity: e.target.value }))}
+                placeholder="Enter quantity to add"
+                className="text-sm"
+              />
+              {receiveForm.quantity && (
+                <p className="text-sm text-muted-foreground">
+                  New total: {(receiveDialog.product?.qty || 0) + (parseInt(receiveForm.quantity) || 0)}
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-4">
+              <Button variant="outline" onClick={closeReceiveDialog}>
+                Cancel
+              </Button>
+              <Button onClick={saveReceiveChanges}>
+                Receive Stock
               </Button>
             </div>
           </div>

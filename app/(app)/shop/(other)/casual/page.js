@@ -35,7 +35,13 @@ export default function Page() {
           category={category}
           onClick={(p) => {
             console.log(p)
-            setProduct(p);
+            // Initialize product for cart with proper separation of stock vs cart quantities
+            const cartProduct = {
+              ...p,
+              stockQty: p.qty, // Preserve original stock quantity
+              qty: 0 // Initialize cart quantity to 0
+            }
+            setProduct(cartProduct);
             setSheetOpen(true);
           }}
         />

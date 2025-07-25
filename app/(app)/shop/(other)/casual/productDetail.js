@@ -121,7 +121,7 @@ export default function ProductDetail({ open, setOpen, product, setQty }) {
                   prices: v.prices?.filter(price => (price.qty ?? 0) > 0) || []
                 }))
 
-                addToCart(_product)
+                await addToCart(_product)
               }}
             >
               Add

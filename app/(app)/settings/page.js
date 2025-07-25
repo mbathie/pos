@@ -147,7 +147,7 @@ export default function Page() {
                     Connect
                   </Button>
                 ) : (
-                  <div className="gap-2 flex items-start text-lime-400">
+                  <div className="gap-2 flex items-start text-primary">
                     <CheckCircle2/>
                     Completed
                   </div>
@@ -158,9 +158,10 @@ export default function Page() {
             <Separator className='border-t border-muted col-span-2' />
 
             <div>
-              <div>Products</div>
+              <div>Products & Quantities</div>
               <TypographyMuted>
-                Products overview
+                Manage Products, product quantities, and stock par levels
+
               </TypographyMuted>
             </div>
             <div>

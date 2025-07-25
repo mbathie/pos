@@ -64,7 +64,7 @@ export default function Page() {
                   <TableCell>{loc.name}</TableCell>
                   <TableCell>{[loc.address1, loc.city].filter(Boolean).join(', ') || '—'}</TableCell>
                   <TableCell className="text-right flex gap-2 justify-end">
-                    <Link href={`/locations/${loc._id}`}>
+                    <Link href={`/manage/locations/${loc._id}`}>
                       <Edit className="size-4 hover:text-foreground" />
                     </Link>
                   </TableCell>
