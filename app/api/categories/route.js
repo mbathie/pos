@@ -6,7 +6,15 @@ import { Category, Product } from "@/models";
 export async function GET(req) {
   await connectDB();
 
-  const { employee } = await getEmployee();
+  const result = await getEmployee();
+  
+  if (result.error) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
+  }
+  
+  const { employee } = result;
+
+  console.log('Employee in categories route:', employee)
 
   const { searchParams } = new URL(req.url);
   const menu = searchParams.get("menu");

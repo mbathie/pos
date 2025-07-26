@@ -44,9 +44,9 @@ export function AppSidebar(props) {
         { title: "Class & Courses", url: "/manage/classes" },
       ]
     },
-    { title: "Waiver", url: `${process.env.NEXT_PUBLIC_DOMAIN}/org/${employee?.org || 'default'}/waiver`, icon: QrCode },
+    { title: "Waiver", url: `${process.env.NEXT_PUBLIC_DOMAIN}/org/${employee?.org?._id || 'default'}/waiver`, icon: QrCode },
     { title: "Transactions", url: "/manage/transactions", icon: Receipt },
-    { groupLabel: "Setup"},
+    { groupLabel: "Setup", permission: "group:setup"},
     { 
       title: "Products", icon: Wrench,
       items: [

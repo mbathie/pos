@@ -1,6 +1,6 @@
 'use client'
-import { useState, useEffect } from "react";
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from "react";
+import { useRouter, usePathname } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,9 +18,12 @@ import CustomerConnect from './customerConnect'
 const keypad = ['1','2','3','4','5','6','7','8','9','.','0','AC'];
 
 export default function Page() {
-  const { cart, resetCart, setCart, applyDiscount, removeDiscount } = useGlobals();
+  const { cart, resetCart, setCart, applyDiscount, removeDiscount, employee, setEmployee } = useGlobals();
   const [cashInput, setCashInput] = useState('0');
   const [tab, setTab] = useState('card');
+  const router = useRouter();
+  const pathname = usePathname();
+  const hasSuccessfulPayment = useRef(false);
   const { discoverReaders, connectReader, collectPayment, capturePayment } = useCard({cart})
   const { calcChange, receiveCash } = useCash({cart})
 
@@ -28,9 +31,6 @@ export default function Page() {
 
   const [ paymentIntentId, setPaymentIntentId ] = useState(0)
   const [ paymentStatus, setPaymentStatus ] = useState("")
-
-  // const [showCustomer, setShowCustomer] = useState(false);
-  // const [customer, setCustomer] = useState({})
 
   const [ showCustomerConnect, setShowCustomerConnect ] = useState(false)
   const [ connectCustomerFn, setConnectCustomerFn ] = useState()
@@ -45,6 +45,54 @@ export default function Page() {
   useEffect(() => {
     console.log(cart)
   },[cart])
+
+
+  // Handle PIN auth removal when navigating away after successful payment
+  useEffect(() => {
+    const removePinAuthOnLeave = () => {
+      if (hasSuccessfulPayment.current) {
+        // Use setTimeout to defer the state update to avoid React errors
+        setTimeout(() => {
+          setEmployee({
+            ...employee,
+            pinAuth: undefined
+          })
+        }, 0)
+      }
+    }
+
+    // Handle route changes within the app
+    const handleRouteChange = () => {
+      removePinAuthOnLeave()
+    }
+    
+    // For Next.js app router, we need to listen for route changes differently
+    // We'll use a custom approach since we can't access router events in app router
+    const originalPushState = history.pushState
+    const originalReplaceState = history.replaceState
+
+    history.pushState = function(...args) {
+      setTimeout(() => handleRouteChange(), 0)
+      return originalPushState.apply(history, args)
+    }
+
+    history.replaceState = function(...args) {
+      setTimeout(() => handleRouteChange(), 0)
+      return originalReplaceState.apply(history, args)
+    }
+
+    // Listen for popstate (back/forward buttons)
+    window.addEventListener('popstate', () => {
+      setTimeout(() => handleRouteChange(), 0)
+    })
+
+    // Cleanup
+    return () => {
+      window.removeEventListener('popstate', handleRouteChange)
+      history.pushState = originalPushState
+      history.replaceState = originalReplaceState
+    }
+  }, [employee, setEmployee])
 
   // Fetch current discount codes for manual selection
   useEffect(() => {
@@ -328,6 +376,11 @@ export default function Page() {
                   const intent = await capturePayment();
                   console.log(intent.status)
                   setPaymentStatus(intent.status)
+                  
+                  // Mark that we have a successful payment (PIN will be removed on navigation)
+                  if (intent.status === 'succeeded') {
+                    hasSuccessfulPayment.current = true
+                  }
                 }}
               >
                 Capture Payment
@@ -374,6 +427,12 @@ export default function Page() {
                       const tx = await receiveCash({ input: cashInput });
                       // console.log(cart)
                       setPaymentStatus(tx.transaction.status);
+                      
+                      // Mark that we have a successful payment (PIN will be removed on navigation)
+                      if (tx.transaction.status === 'succeeded') {
+                        hasSuccessfulPayment.current = true
+                      }
+                      
                       resetCart();
                     }}
                   >

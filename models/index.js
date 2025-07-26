@@ -61,7 +61,7 @@ const EmployeeSchema = new mongoose.Schema({
   name: String,
   email: { type: String, unique: true },
   hash: String,
-  pin: String,
+  pin: Number,
   locked: Date,
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org' },
   location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },

@@ -1,12 +1,23 @@
 import { useState, useEffect } from 'react'
+import { useGlobals } from '@/lib/globals'
+import { hasPermission } from '@/lib/permissions'
 
 export function useLowStock() {
   const [hasLowStock, setHasLowStock] = useState(false)
   const [lowStockCount, setLowStockCount] = useState(0)
   const [lowStockProducts, setLowStockProducts] = useState([])
+  const { employee } = useGlobals()
 
   useEffect(() => {
     const checkLowStock = async () => {
+      // Only check low stock if user has permission
+      if (!employee?.role || !hasPermission(employee.role, 'lowstock:check')) {
+        setHasLowStock(false)
+        setLowStockCount(0)
+        setLowStockProducts([])
+        return
+      }
+
       try {
         const res = await fetch('/api/products/lowstock')
         if (res.ok) {
@@ -27,14 +38,17 @@ export function useLowStock() {
       }
     }
 
-    // Check on mount
+    // Check on mount and when employee role changes
     checkLowStock()
     
-    // Check every 5 minutes
-    const interval = setInterval(checkLowStock, 2 * 60 * 1000)
-    
-    return () => clearInterval(interval)
-  }, [])
+    // Only set up interval if user has permission
+    if (employee?.role && hasPermission(employee.role, 'lowstock:check')) {
+      // Check every 5 minutes
+      const interval = setInterval(checkLowStock, 2 * 60 * 1000)
+      
+      return () => clearInterval(interval)
+    }
+  }, [employee?.role])
 
   return {
     hasLowStock,

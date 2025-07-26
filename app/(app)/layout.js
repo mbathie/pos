@@ -31,8 +31,8 @@ export default function Page({children}) {
 
   // Permission and lock checking effect
   useEffect(() => {
+    console.log(employee)
     if (!employee?._id || isRedirecting) return; // Wait for employee to load or skip if redirecting
-    
     // Check if account is locked
     const checkAccountLock = async () => {
       try {

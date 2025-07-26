@@ -36,13 +36,20 @@ DONE - accounting categories, GST or not
 DONE - transaction list view page
 DONE - individual transaction view page, allow for refunds (partial and full), and view order details.
 
-DONE - when purchasing a shop item - make qty automatically 1
-- Par warning - only for manager, admin's
+DONE - Login as any account staff, admin, MANAGER
+DONE - PIN number per staff, required before any purchase when sale is clicked
+DONE - need to make sure if logged in as admin role, Jnr staff can't see admin functions
+- need to select terminal when pos is first setup - set a cookie so it knows for next time.
 
-- create new staff accounts
+
+DONE - when purchasing a shop item - make qty automatically 1
+DONE - Par warning - only for manager, admin's
+
+DONE - create new staff accounts
 - connect terminals to locations
-- roles for staff, admins, bump screens, terminals
-  - ADMIN, MANAGER, STAFF, TERMINAL
+DONE - roles for staff, admins, bump screens, terminals
+DONE  - ADMIN, MANAGER, STAFF, TERMINAL
+DONE - set a pin if no pin is set for new employees
 - terminal integration (using real terminal)
 - checkout process for subscriptions
   - backend Membership table for memberships
@@ -102,7 +109,10 @@ ROLES system
 
 
 
-- Login as any account staff, admin, MANAGER
-- PIN number per staff, required before any purchase when sale is clicked
-- need to make sure if logged in as admin role, Jnr staff can't see admin functions
-- need to select terminal when pos is first setup - set a cookie so it knows for next time.
+
+Whenever anyone clicks on a /shop/* page it should throw a shared component modal using https://ui.shadcn.com/docs/components/dialog
+which prompts the user for their employee pin number.
+- need a new API route which allows to lookup an employee of the same Org (based on current session) based on the pin number entered
+- If its the same employee thats already logged in, great, update the global variable (employee) in lib/globals.js and set employee.pinAuth: timestamp
+- If its not the same user then we need to re-authenticate the user similar to how the API route does it when you switch locations (/api/auth/location) except
+what it does it switch the authenticated user (and cookie token) to match that of the employee who's pin matches. It should then set employee.pinAuth: timestamp variable also

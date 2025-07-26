@@ -33,10 +33,13 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'Password already set for this employee' }, { status: 400 })
     }
 
+    // Convert PIN to integer
+    const pinNumber = parseInt(pin, 10)
+
     // Check if PIN is unique among employees in this organization
     const existingEmployeeWithPin = await Employee.findOne({
       org: employee.org,
-      pin: pin,
+      pin: pinNumber,
       _id: { $ne: id } // Exclude current employee
     })
 
@@ -44,13 +47,13 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: 'PIN is already in use by another employee in this organization' }, { status: 400 })
     }
 
-    // Hash the password but store PIN as plain text
+    // Hash the password but store PIN as integer
     const hashedPassword = await bcrypt.hash(password, 10)
 
     // Update employee with new password and PIN
     await Employee.findByIdAndUpdate(id, {
       hash: hashedPassword,
-      pin: pin, // Store PIN as plain text
+      pin: pinNumber, // Store PIN as integer
       passwordSetAt: new Date()
     })
 

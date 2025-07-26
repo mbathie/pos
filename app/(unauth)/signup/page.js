@@ -45,7 +45,13 @@ export default function SignUpPage() {
       const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/me`);
       const data = await userRes.json();
       console.log(data)
-      setEmployee(data.employee)
+      // Only set pinAuth if employee has a PIN configured
+      const employeeData = { ...data.employee };
+      if (data.employee.pin != null) {
+        employeeData.pinAuth = new Date();
+      }
+      
+      setEmployee(employeeData)
       setLocation(data.employee.location)
 
       const locationsRes = await fetch(`/api/locations`, { method: "GET" });

@@ -168,7 +168,7 @@ export default function Page({ params }) {
 
                   <div className="flex gap-4">
                     <div>
-                      <div className="flex flex-row items-center gap-2 text-lg font-bold">
+                      <div className="flex flex-row items-center gap-2 text-lg- font-semibold">
                         {statuses[o.status] && (() => {
                           const { icon: StatusIcon, color } = statuses[o.status];
                           return (
@@ -183,7 +183,7 @@ export default function Page({ params }) {
                         <div>Order #</div>
                         <div>{o.orderNumber || 0}</div>
                       </div>
-                      <div className="flex flex-col ´text-muted-foreground">
+                      <div className="flex flex-col ´text-muted-foreground text-sm">
                         {!o?.customer?.name ? (
                           <div>Guest</div>
                         ) : (
@@ -211,7 +211,7 @@ export default function Page({ params }) {
 
                     <div className="flex flex-row text-right">
                       <div className="flex flex-col">
-                        <div className="text-lg font-bold">{dayjs(o.createdAt).format('h:mm A')}</div>
+                        <div className="text-lg- font-bold">{dayjs(o.createdAt).format('h:mm A')}</div>
                         <div className="text-xs text-muted-foreground">{dayjs(o.createdAt).from(now)}</div>
                       </div>
                     </div>
