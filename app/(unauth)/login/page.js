@@ -38,10 +38,17 @@ export default function LoginPage() {
       if (!res.ok) {
         const { error } = await res.json();
         setError(error || "Login failed");
-        return;
+        return; // Stop execution here if login failed
       }
 
+      // Only proceed if login was successful
       const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/me`);
+      
+      if (!userRes.ok) {
+        setError("Failed to load user data");
+        return;
+      }
+      
       const data = await userRes.json();
       setEmployee(data.employee)
       setLocation(data.employee.location)

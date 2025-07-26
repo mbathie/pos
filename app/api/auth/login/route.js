@@ -25,6 +25,11 @@ export async function POST(req) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
+    // Check if account is locked
+    if (employee.locked) {
+      return NextResponse.json({ error: "Account locked" }, { status: 401 });
+    }
+
     const token = await new SignJWT({
       selectedLocationId: employee.location._id.toString(),
       email,

@@ -28,6 +28,11 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
+  // Allow employee setup pages without authentication
+  if (pathname.startsWith("/employee/")) {
+    return NextResponse.next();
+  }
+
   // Allow all /api/auth/* and /api/unauth/* routes through
   if (
     pathname.startsWith("/api/auth/") ||
@@ -55,6 +60,8 @@ export async function middleware(req) {
     }
   }
 
+
+
   // For all other routes, do nothing (let them through)
   return NextResponse.next();
 }
@@ -63,6 +70,7 @@ export const config = {
   matcher: [
     "/api/:path*",
     "/login",
-    "/signup"
+    "/signup",
+    "/employee/:path*"
   ],
 };

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongoose"
 import { getEmployee } from "@/lib/auth"
-import { Employee } from "@/models"
+import { Employee, Org } from "@/models"
 import bcrypt from 'bcrypt'
+import { sendNewEmployeeEmail } from "@/lib/mailer"
 
 export async function POST(req) {
   await connectDB()
@@ -24,29 +25,37 @@ export async function POST(req) {
       return NextResponse.json({ error: 'Email already exists' }, { status: 400 })
     }
 
-    // Generate a temporary password
-    const tempPassword = Math.random().toString(36).slice(-8)
-    const hashedPassword = await bcrypt.hash(tempPassword, 10)
-
     const newEmployee = await Employee.create({
       name,
       email,
       role,
       location: locationId,
       org: currentEmployee.org,
-      hash: hashedPassword
+      // No hash or pin initially - will be set during setup
     })
 
     // Populate the location for the response
     await newEmployee.populate({ path: 'location', select: 'name' })
 
-    // Return the employee with the temporary password (for display purposes)
-    const employeeWithPassword = {
-      ...newEmployee.toObject(),
-      password: tempPassword
+    // Get organization name for email
+    const org = await Org.findById(currentEmployee.org).select('name').lean()
+    const orgName = org?.name || 'Your Organization'
+
+    // Send welcome email with setup link
+    try {
+      const emailResult = await sendNewEmployeeEmail(email, name, newEmployee._id.toString(), orgName);
+      if (emailResult.success) {
+        console.log('Welcome email sent successfully:', emailResult.previewUrl);
+      } else {
+        console.error('Failed to send welcome email:', emailResult.error);
+      }
+    } catch (emailError) {
+      console.error('Error sending welcome email:', emailError);
+      // Don't fail the employee creation if email fails
     }
 
-    return NextResponse.json(employeeWithPassword, { status: 201 })
+    // Return the employee without any password info
+    return NextResponse.json(newEmployee, { status: 201 })
   } catch (error) {
     console.error('Error creating employee:', error)
     return NextResponse.json({ error: error.message }, { status: 500 })

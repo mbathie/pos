@@ -61,6 +61,8 @@ const EmployeeSchema = new mongoose.Schema({
   name: String,
   email: { type: String, unique: true },
   hash: String,
+  pin: String,
+  locked: Date,
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org' },
   location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
   role: { type: String, enum: ['ADMIN', 'MANAGER', 'STAFF', 'TERMINAL'] },

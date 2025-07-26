@@ -35,12 +35,19 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
-import { Plus, Pencil } from "lucide-react"
+import { Plus, Pencil, Loader, Send, Ellipsis, Lock, Unlock } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import dayjs from "dayjs"
 import relativeTime from "dayjs/plugin/relativeTime"
+import { checkApiResponse } from "@/lib/client-auth"
 dayjs.extend(relativeTime)
 
 export default function Page () {
@@ -48,6 +55,7 @@ export default function Page () {
   const [ locations, setLocations ] = useState([])
   const [ dialogOpen, setDialogOpen ] = useState(null)
   const [ newEmployee, setNewEmployee ] = useState({})
+  const [ actionLoading, setActionLoading ] = useState({})
 
   useEffect(() => {
     async function start() {
@@ -60,23 +68,56 @@ export default function Page () {
     start()
   },[])
 
-  const handleEmployee = async () => {
-    // console.log(employee)
-    if (employee.new) {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees`, {
+  const handleResendEmail = async (employeeId) => {
+    setActionLoading(prev => ({...prev, [`resend-${employeeId}`]: true}))
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees/${employeeId}/resend-email`, {
+        method: "POST",
+      })
+      checkApiResponse(res) // Check for locked account
+      const result = await res.json()
+      if (result.success) {
+        console.log('Email sent successfully:', result.previewUrl)
+        // Show success message or toast
+      } else {
+        console.error('Failed to send email:', result.error)
+      }
+    } catch (error) {
+      console.error('Error re-sending email:', error)
+    } finally {
+      setActionLoading(prev => ({...prev, [`resend-${employeeId}`]: false}))
+    }
+  }
+
+  const handleLockUnlock = async (employeeId, action) => {
+    setActionLoading(prev => ({...prev, [`lock-${employeeId}`]: true}))
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees/${employeeId}/lock`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),
+        body: JSON.stringify({ action })
       })
-      const e = await res.json()
-      setEmployees([e, ...employees])
-    }
-    else if (employee.edit) {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees/${employee.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),
-      })
+      checkApiResponse(res) // Check for locked account
+      const result = await res.json()
+      if (result.success) {
+        // Update the employee in the list
+        setEmployees(employees.map(emp => {
+          const empId = emp._id || emp.id
+          if (empId === employeeId) {
+            return {
+              ...emp,
+              locked: action === 'lock' ? new Date().toISOString() : null
+            }
+          }
+          return emp
+        }))
+      } else {
+        console.error('Failed to update lock status:', result.error)
+      }
+    } catch (error) {
+      console.error('Error updating lock status:', error)
+    } finally {
+      setActionLoading(prev => ({...prev, [`lock-${employeeId}`]: false}))
     }
   }
 
@@ -114,7 +155,7 @@ export default function Page () {
                 <TableHead>Default Location</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Last Activity</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead></TableHead>
               </TableRow>
             </TableHeader>
 
@@ -123,22 +164,66 @@ export default function Page () {
               {employees.map((e, i) => {
                 return (
                   <React.Fragment key={i}>
-                    <TableRow className={`${e.password ? 'border-b-0' : ''}`}>
-                      <TableCell>{e.email}</TableCell>
+                    <TableRow>
+                      <TableCell className="flex items-center gap-2">
+                        {e.email}
+                        {e.locked && <Lock className="size-4 text-destructive" />}
+                      </TableCell>
                       <TableCell>{e.name}</TableCell>
                       <TableCell>{e?.location?.name}</TableCell>
                       <TableCell>{e.role}</TableCell>
                       <TableCell>{dayjs(e.updatedAt).fromNow()}</TableCell>
-                      <TableCell>
-                        <Button 
-                          variant="outline" size="sm"
-                          onClick={() => {
-                            setDialogOpen(i)
-                            // setEmployee({...e, edit: true, role: e.role.toLowerCase()})
-                          }}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <span className="sr-only">Open menu</span>
+                              <Ellipsis className="size-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setDialogOpen(i)}>
+                              <Pencil className="size-4" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleResendEmail(e._id || e.id)}
+                              disabled={actionLoading[`resend-${e._id || e.id}`]}
+                            >
+                              {actionLoading[`resend-${e._id || e.id}`] ? (
+                                <Loader className="size-4 mr-2 animate-spin" />
+                              ) : (
+                                <Send className="size-4" />
+                              )}
+                              Reset pass & pin
+                            </DropdownMenuItem>
+                            {e.locked ? (
+                              <DropdownMenuItem 
+                                onClick={() => handleLockUnlock(e._id || e.id, 'unlock')}
+                                disabled={actionLoading[`lock-${e._id || e.id}`]}
+                              >
+                                {actionLoading[`lock-${e._id || e.id}`] ? (
+                                  <Loader className="size-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Unlock className="size-4" />
+                                )}
+                                Unlock account
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem 
+                                onClick={() => handleLockUnlock(e._id || e.id, 'lock')}
+                                disabled={actionLoading[`lock-${e._id || e.id}`]}
+                              >
+                                {actionLoading[`lock-${e._id || e.id}`] ? (
+                                  <Loader className="size-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Lock className="size-4" />
+                                )}
+                                Lock account
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
 
                         <Employee 
                           e={e}
@@ -151,12 +236,7 @@ export default function Page () {
 
                       </TableCell>
                     </TableRow>
-                    {e.password &&
-                      <TableRow>
-                        <TableCell colSpan="6" className="ml-2 pt-0 text-xs text-gray-500">temp password: {e.password}</TableCell>
-                      </TableRow>
-                    }
-                  </React.Fragment>                 
+                  </React.Fragment>
                 )
               })}
             </TableBody>
@@ -170,6 +250,7 @@ export default function Page () {
 export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locations }) {
   const [ employee, setEmployee ] = useState({})
   const [ isValid, setIsValid ] = useState(false)
+  const [ isLoading, setIsLoading ] = useState(false)
 
   const employeeSchema = z.object({
     email: z.string().email(),
@@ -240,15 +321,21 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
     setIsOpen(false)
   }
   const create = async () => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),
-    })    
-    const _e = await res.json()
-    setEmployees([_e, ...employees])
-    setIsOpen(false)
-
+    setIsLoading(true)
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),
+      })    
+      const _e = await res.json()
+      setEmployees([_e, ...employees])
+      setIsOpen(false)
+    } catch (error) {
+      console.error('Error creating employee:', error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -333,12 +420,21 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
 
         <Button 
           className={`${employeeSchema.safeParse(employee).success ? '' : ''} max-w-sm`}
-          disabled={!isValid}
+          disabled={!isValid || isLoading}
           onClick={() => employee.new ? create() : update()}
         >
-          {employee.new &&
-            <>Create Employee</>
-          }
+          {employee.new && (
+            <>
+              {isLoading ? (
+                <>
+                  <Loader className="size-4 mr-2 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>Create Employee</>
+              )}
+            </>
+          )}
           {!employee.new &&
             <>Save Employee</>
           }
