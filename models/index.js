@@ -40,18 +40,17 @@ const TerminalSchema = new mongoose.Schema({
   type: { type: String, enum: ['simulated', 'physical'], default: 'simulated' },
   status: { type: String, enum: ['online', 'offline', 'unknown'], default: 'unknown' },
   location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', required: true },
-  employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
+  browser: String, // Unique browser ID for terminal-browser linking
   lastSeen: Date,
   serialNumber: String,
   deviceType: String,
   metadata: mongoose.Schema.Types.Mixed,
 }, { timestamps: true });
 
-// Indexes for org, location, and employee references
+// Indexes for org, location, and stripeTerminalId references
 TerminalSchema.index({ org: 1 });
 TerminalSchema.index({ location: 1 });
-TerminalSchema.index({ employee: 1 });
 TerminalSchema.index({ stripeTerminalId: 1 });
 
 const Terminal = mongoose.models.Terminal || mongoose.model('Terminal', TerminalSchema);

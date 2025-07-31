@@ -45,10 +45,14 @@ export async function GET(req) {
   const search = searchParams.get("search")
   const requiresWaiver = searchParams.get("requiresWaiver")
   const recentWaiver = searchParams.get("recentWaiver")
+  
+  // Pagination parameters
+  const page = parseInt(searchParams.get("page")) || 1;
+  const limit = parseInt(searchParams.get("limit")) || 25;
+  const sortField = searchParams.get("sortField") || "createdAt";
+  const sortDirection = searchParams.get("sortDirection") || "desc";
+  
   const orgId = employee.org._id
-
-  // if (!search)
-  //   return NextResponse.json({ error: "Missing search parameter" }, { status: 400 })
 
   const baseQuery = {
     orgs: orgId,
@@ -70,10 +74,7 @@ export async function GET(req) {
   }
 
   if (requiresWaiver === "true") {
-    // const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
     baseQuery["waiver.agree"] = true;
-    // baseQuery.createdAt = { $gte: twoHoursAgo };
-    // baseQuery.assigned = false;
   }
   else if (recentWaiver === "1") {
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
@@ -82,11 +83,34 @@ export async function GET(req) {
     baseQuery.assigned = false;
   }
 
-  console.log(baseQuery)
+  // Build sort object
+  const sortObj = {};
+  sortObj[sortField] = sortDirection === "desc" ? -1 : 1;
 
+  // For pagination requests, return structured response
+  if (searchParams.has("page") || searchParams.has("limit")) {
+    const skip = (page - 1) * limit;
+    
+    const [customers, total] = await Promise.all([
+      Customer.find(baseQuery)
+        .sort(sortObj)
+        .skip(skip)
+        .limit(limit),
+      Customer.countDocuments(baseQuery)
+    ]);
+
+    return NextResponse.json({
+      customers,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+      hasNextPage: page < Math.ceil(total / limit),
+      hasPrevPage: page > 1
+    });
+  }
+
+  // Legacy behavior for existing endpoints
   const customers = await Customer.find(baseQuery)
-
-  console.log(customers)
 
   return NextResponse.json(customers)
 }

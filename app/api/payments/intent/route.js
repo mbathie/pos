@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 import { connectDB } from "@/lib/mongoose";
-import { Transaction } from "@/models";
-
 import { getEmployee } from "@/lib/auth";
-import { calcCartTotals } from "@/lib/cart"
-import { Types } from "mongoose";
+import { calcCartTotals } from "@/lib/cart";
+import { createStripeTransaction } from '@/lib/payments/success'
 
 export async function POST(req, { params }) {
   await connectDB()
@@ -14,9 +12,10 @@ export async function POST(req, { params }) {
   const { employee } = await getEmployee()
   const org = employee.org
 
+  // Calculate totals for Stripe payment intent
   const totals = calcCartTotals(cart.products);
-
   const amountInCents = Math.round(totals.total * 100);
+  
   const paymentIntent = await stripe.paymentIntents.create({
     amount: amountInCents,
     currency: 'aud',
@@ -26,22 +25,8 @@ export async function POST(req, { params }) {
     stripeAccount: org.stripeAccountId
   });
 
-  const transaction = await Transaction.create({
-    org: org._id,
-    paymentIntentId: paymentIntent.id,
-    total: totals.total,
-    tax: totals.tax,
-    subtotal: totals.subtotal,
-    paymentMethod: "stripe",
-    location: employee.selectedLocationId,
-    customer: customer?._id ? Types.ObjectId.createFromHexString(customer._id) : undefined,
-    employee: employee._id,
-    cart,
-    stripe: {
-      paymentIntent
-    },
-    status: paymentIntent.status
-  });
+  // Create the stripe transaction
+  const transaction = await createStripeTransaction({ cart, employee, customer, paymentIntent });
 
   return NextResponse.json({
     clientSecret: paymentIntent.client_secret,

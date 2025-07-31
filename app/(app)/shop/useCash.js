@@ -27,7 +27,7 @@ export function useCash({ cart }) {
     }
 
     const transaction = await res.json();
-    console.log(transaction)
+    // console.log(transaction)
     return transaction;
   };
 

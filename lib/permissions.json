@@ -14,7 +14,8 @@
         "/manage/orders",
         "/manage/casual",
         "/manage/classes",
-        "/manage/transactions"
+        "/manage/transactions",
+        "/manage/customers"
       ],
       "description": "Limited access to sales and basic operations"
     },
@@ -32,6 +33,7 @@
         "/manage/locations",
         "/manage/terminals",
         "/manage/discounts",
+        "/manage/customers",
         "/employees",
         "group:setup",
         "lowstock:check"

@@ -20,6 +20,7 @@ export async function GET() {
 
     const employee = await Employee.findById(payload.employeeId)
       .populate({ path: "location", select: "name" })
+      .populate({ path: "org", select: "name stripeAccountId" })
       .lean()
 
     if (!employee)

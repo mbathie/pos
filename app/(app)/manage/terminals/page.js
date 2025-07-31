@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
-import { Plus, Terminal, Wifi, WifiOff, Trash2 } from 'lucide-react'
+import { Plus, Terminal, Wifi, WifiOff, Trash2, MoreHorizontal, Link, Unlink, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useGlobals } from '@/lib/globals'
 import {
   fetchTerminalsData,
@@ -17,15 +18,14 @@ import {
   getStatusColor,
   getStatusIconType,
   createInitialTerminalState,
-  formatEmployeeDisplay,
   formatTerminalType,
   useTerminalManagement
 } from './effects'
+import { useTerminalLink } from './useTerminalLink'
 
 export default function TerminalsPage() {
   const { locations } = useGlobals()
   const [terminals, setTerminals] = useState([])
-  const [employees, setEmployees] = useState([])
   const [loading, setLoading] = useState(true)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [selectedLocationId, setSelectedLocationId] = useState('')
@@ -33,6 +33,13 @@ export default function TerminalsPage() {
   const [error, setError] = useState(null)
 
   const { handleAddTerminal, handleDeleteTerminal } = useTerminalManagement()
+  const { 
+    browserId, 
+    linkTerminal, 
+    unlinkTerminal, 
+    isTerminalLinked, 
+    getTerminalStatus 
+  } = useTerminalLink()
 
   // Load data on component mount
   useEffect(() => {
@@ -46,7 +53,6 @@ export default function TerminalsPage() {
     const result = await fetchTerminalsData()
     
     setTerminals(result.terminals)
-    setEmployees(result.employees)
     setError(result.error)
     setLoading(false)
   }
@@ -121,7 +127,10 @@ export default function TerminalsPage() {
           
           <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
             <DialogTrigger asChild>
-              {/* Commented out as per user changes */}
+              <Button>
+                <Plus className="size-4 mr-2" />
+                Add Terminal
+              </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -141,7 +150,7 @@ export default function TerminalsPage() {
                 <div className="flex flex-col gap-1">
                   <Label htmlFor="location">Location</Label>
                   <Select value={selectedLocationId} onValueChange={setSelectedLocationId}>
-                    <SelectTrigger>
+                    <SelectTrigger className='w-52'>
                       <SelectValue placeholder="Select a location" />
                     </SelectTrigger>
                     <SelectContent>
@@ -154,30 +163,13 @@ export default function TerminalsPage() {
                   </Select>
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor="employee">Assigned Employee</Label>
-                  <Select 
-                    value={newTerminal.employeeId} 
-                    onValueChange={(value) => setNewTerminal(prev => ({ ...prev, employeeId: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select an employee" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {employees?.map((employee) => (
-                        <SelectItem key={employee._id} value={employee._id}>
-                          {formatEmployeeDisplay(employee)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
 
-                <div className="flex flex-col gap-1">
+
+                <div className="flex flex-col gap-1 w-52">
                   <Label htmlFor="label">Terminal Label</Label>
                   <Input
                     id="label"
-                    placeholder="e.g. Main Counter Terminal"
+                    placeholder="i.e. Cafe"
                     value={newTerminal.label}
                     onChange={(e) => setNewTerminal(prev => ({ ...prev, label: e.target.value }))}
                   />
@@ -186,15 +178,16 @@ export default function TerminalsPage() {
                 <div className="flex flex-col gap-1">
                   <Label htmlFor="type">Terminal Type</Label>
                   <Select 
+                    
                     value={newTerminal.type} 
                     onValueChange={(value) => setNewTerminal(prev => ({ ...prev, type: value }))}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className='w-52'>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="simulated">Simulated (Testing)</SelectItem>
                       <SelectItem value="physical">Physical Terminal</SelectItem>
+                      <SelectItem value="simulated">Simulated (Testing)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -203,8 +196,9 @@ export default function TerminalsPage() {
                   <div className="flex flex-col gap-1">
                     <Label htmlFor="registrationCode">Registration Code</Label>
                     <Input
+                      className='w-52'
                       id="registrationCode"
-                      placeholder="Enter terminal registration code"
+                      placeholder="i.e. shop-bell-thursday"
                       value={newTerminal.registrationCode}
                       onChange={(e) => setNewTerminal(prev => ({ ...prev, registrationCode: e.target.value }))}
                     />
@@ -218,7 +212,7 @@ export default function TerminalsPage() {
                 </Button>
                 <Button 
                   onClick={onAddTerminal} 
-                  disabled={!selectedLocationId || !newTerminal.label || !newTerminal.employeeId}
+                  disabled={!selectedLocationId || !newTerminal.label}
                 >
                   Add Terminal
                 </Button>
@@ -237,12 +231,12 @@ export default function TerminalsPage() {
 
         <Table>
           <TableHeader>
-            <TableRow>
-              <TableHead>Location / Terminal</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>User</TableHead>
+            <TableRow className='bg-muted'>
+              <TableHead className='rounded-tl-lg'></TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right"></TableHead>
+              <TableHead>Linked</TableHead>
+              <TableHead className='rounded-tr-lg'></TableHead>
+              {/* <TableHead colSpan={2}></TableHead> */}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -252,21 +246,20 @@ export default function TerminalsPage() {
               return (
                 <Fragment key={location._id}>
                   {/* Location Row */}
-                  <TableRow className="bg-muted/30-">
-                    <TableCell className="font-medium">
+                  <TableRow className="bg-muted/50">
+                    <TableCell className="font-medium-">
                       <div className="flex items-center gap-2">
                         {location.name}
-                        <Badge variant="secondary" className="ml-2">
+                        {/* <Badge variant="secondary" className="ml-2">
                           {locationTerminals.length} terminal{locationTerminals.length !== 1 ? 's' : ''}
-                        </Badge>
+                        </Badge> */}
                       </div>
                     </TableCell>
                     <TableCell></TableCell>
                     <TableCell></TableCell>
-                    <TableCell></TableCell>
                     <TableCell className="flex justify-end">
                       <Plus 
-                        className="size-4 cursor-pointer" 
+                        className="size-4 cursor-pointer hover:text-primary" 
                         onClick={() => {
                           setSelectedLocationId(location._id)
                           setAddDialogOpen(true)
@@ -277,40 +270,87 @@ export default function TerminalsPage() {
 
                   {/* Terminal Rows */}
                   {locationTerminals.map((terminal) => (
-                    <TableRow key={terminal._id} className="border-l-4 border-l-muted ml-4">
-                      <TableCell className="pl-8">
+                    <TableRow key={terminal._id}>
+                      <TableCell>
                         <div className="flex items-center gap-2">
-                          <div className={`size-2 rounded-full ${terminal.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`} />
+                          {/* <div className={`size-2 rounded-full ${terminal.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`} /> */}
                           {terminal.label}
+
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {formatTerminalType(terminal.type)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{terminal.employee?.name}</div>
-                          <div className="text-sm text-muted-foreground">{terminal.employee?.email}</div>
-                        </div>
-                      </TableCell>
+                      {/* <TableCell> */}
+                        {/* <Badge variant="outline"> */}
+                          {/* {formatTerminalType(terminal.type)} */}
+                        {/* </Badge> */}
+                      {/* </TableCell> */}
                       <TableCell>
                         <div className={`flex items-center gap-1 ${getStatusColor(terminal.status)}`}>
                           {getStatusIcon(terminal.status)}
                           <span className="capitalize">{terminal.status || 'Unknown'}</span>
                         </div>
                       </TableCell>
+                      <TableCell>
+                        {terminal.browser && (
+                          terminal.browser === browserId ? (
+                            <Badge className="flex items-center gap-1">
+                              <Link className="size-3" />
+                              Linked
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">
+                              Other POS
+                            </span>
+                          )
+                        )}
+                      </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex gap-1 justify-end">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => onDeleteTerminal(terminal._id)}
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="size-4 p-0">
+                              {getTerminalStatus(terminal._id) ? (
+                                <Loader2 className="size-4 animate-spin" />
+                              ) : (
+                                <MoreHorizontal className="size-4" />
+                              )}
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {terminal.browser ? (
+                              <DropdownMenuItem 
+                                onClick={async () => {
+                                  const success = await unlinkTerminal(terminal._id)
+                                  if (success) {
+                                    loadData() // Refresh terminals data
+                                  }
+                                }}
+                                disabled={getTerminalStatus(terminal._id) === 'unlinking'}
+                              >
+                                <Unlink className="size-4" />
+                                Unlink POS
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem 
+                                onClick={async () => {
+                                  const success = await linkTerminal(terminal._id)
+                                  if (success) {
+                                    loadData() // Refresh terminals data
+                                  }
+                                }}
+                                disabled={getTerminalStatus(terminal._id) === 'linking'}
+                              >
+                                <Link className="size-4" />
+                                Link POS
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem 
+                              onClick={() => onDeleteTerminal(terminal._id)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="size-4 text-destructive" />
+                              Delete Terminal
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -321,13 +361,13 @@ export default function TerminalsPage() {
         </Table>
 
         {locations?.length === 0 && (
-          <div className="text-center py-12">
-            <Terminal className="size-16 mx-auto mb-4 opacity-50" />
-            <h3 className="text-lg font-medium mb-2">No Locations Found</h3>
+          <div className="text-center py-8">
+            {/* <Terminal className="size-16 mx-auto mb-4 opacity-50" /> */}
+            <h3 className="mb-2">No Locations Found</h3>
             <p className="text-muted-foreground mb-4">
               You need to create locations before you can add terminals
             </p>
-            <Button variant="outline">
+            <Button>
               Create Location
             </Button>
           </div>

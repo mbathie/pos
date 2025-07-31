@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, MapPinCheckInside, Users, CircleDollarSign, Wrench, Landmark, Settings, Calendar, QrCode, ChefHat, Receipt, Percent, Terminal } from "lucide-react";
+import { MapPin, MapPinCheckInside, Users, CircleDollarSign, Wrench, Landmark, Settings, Calendar, QrCode, ChefHat, Receipt, Percent, Terminal, UserCheck } from "lucide-react";
 import { NavMenu } from "@/components/nav-menu";
 import { NavUser } from "@/components/nav-user";
 import { LocationSwitcher } from "@/components/location-switcher";
@@ -44,6 +44,7 @@ export function AppSidebar(props) {
         { title: "Class & Courses", url: "/manage/classes" },
       ]
     },
+    { title: "Customers", url: "/manage/customers", icon: UserCheck },
     { title: "Waiver", url: `${process.env.NEXT_PUBLIC_DOMAIN}/org/${employee?.org?._id || 'default'}/waiver`, icon: QrCode },
     { title: "Transactions", url: "/manage/transactions", icon: Receipt },
     { groupLabel: "Setup", permission: "group:setup"},
@@ -59,8 +60,8 @@ export function AppSidebar(props) {
     },
     { title: "Employees", url: "/employees", icon: Users },
     { title: "Shop Locations", url: "/manage/locations", icon: MapPin },
-    { title: "Product Locations", url: "/products/locations", icon: MapPinCheckInside },
-    { title: "Terminals", url: "/manage/terminals", icon: Terminal },
+    // { title: "Product Locations", url: "/products/locations", icon: MapPinCheckInside },
+    // { title: "Terminals", url: "/manage/terminals", icon: Terminal },
     { title: "Accounting", url: "/manage/accounting", icon: Landmark },
     { title: "Discounts", url: "/manage/discounts", icon: Percent },
     { title: "Settings", url: "/settings", icon: Settings },

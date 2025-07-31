@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongoose'
 import { getEmployee } from '@/lib/auth'
-import { Terminal, Employee } from '@/models'
+import { Terminal } from '@/models'
 import Stripe from 'stripe'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
@@ -20,8 +20,7 @@ export async function GET(req, { params }) {
       _id: id, 
       org: employee.org._id 
     }).populate([
-      { path: 'location', select: 'name address1 city state' },
-      { path: 'employee', select: 'name email' }
+      { path: 'location', select: 'name address1 city state' }
     ]).lean()
 
     if (!terminal) {
@@ -45,7 +44,7 @@ export async function PUT(req, { params }) {
     }
 
     const { id } = await params
-    const { label, status: terminalStatus, employeeId } = await req.json()
+    const { label, status: terminalStatus } = await req.json()
 
     const terminal = await Terminal.findOne({ 
       _id: id, 
@@ -56,27 +55,13 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ error: 'Terminal not found' }, { status: 404 })
     }
 
-    // Verify employee exists if updating employee assignment
-    if (employeeId) {
-      const assignedEmployee = await Employee.findOne({ 
-        _id: employeeId, 
-        org: employee.org._id 
-      })
-
-      if (!assignedEmployee) {
-        return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
-      }
-      terminal.employee = employeeId
-    }
-
     // Update terminal
     if (label) terminal.label = label
     if (terminalStatus) terminal.status = terminalStatus
 
     await terminal.save()
     await terminal.populate([
-      { path: 'location', select: 'name address1 city state' },
-      { path: 'employee', select: 'name email' }
+      { path: 'location', select: 'name address1 city state' }
     ])
 
     return NextResponse.json(terminal, { status: 200 })

@@ -3,27 +3,20 @@
  * Contains all business logic and data fetching for terminal management
  */
 
-// Fetch terminals and employees data
+// Fetch terminals data
 export const fetchTerminalsData = async () => {
   try {
-    const [terminalsResponse, employeesResponse] = await Promise.all([
-      fetch('/api/terminals'),
-      fetch('/api/employees')
-    ])
-
+    const terminalsResponse = await fetch('/api/terminals')
     const terminalsData = terminalsResponse.ok ? await terminalsResponse.json() : []
-    const employeesData = employeesResponse.ok ? await employeesResponse.json() : []
 
     return {
       terminals: terminalsData,
-      employees: employeesData,
       error: null
     }
   } catch (error) {
     console.error('Failed to fetch data:', error)
     return {
       terminals: [],
-      employees: [],
       error: error.message
     }
   }
@@ -122,8 +115,8 @@ export const getTerminalsForLocation = (terminals, locationId) => {
 // Get status color for terminal status
 export const getStatusColor = (status) => {
   switch (status) {
-    case 'online': return 'text-green-600'
-    case 'offline': return 'text-red-600'
+    case 'online': return 'text-primary'
+    case 'offline': return 'text-destructive'
     default: return 'text-gray-600'
   }
 }
@@ -139,10 +132,6 @@ export const validateTerminalForm = (terminalData) => {
 
   if (!terminalData.locationId) {
     errors.locationId = 'Location is required'
-  }
-
-  if (!terminalData.employeeId) {
-    errors.employeeId = 'Employee assignment is required'
   }
 
   if (!terminalData.label || terminalData.label.trim().length === 0) {
@@ -162,19 +151,14 @@ export const validateTerminalForm = (terminalData) => {
 // Create initial terminal form state
 export const createInitialTerminalState = () => ({
   label: '',
-  employeeId: '',
   registrationCode: '',
-  type: 'simulated'
+  type: 'physical'
 })
 
 // Reset terminal form to initial state
 export const resetTerminalForm = () => createInitialTerminalState()
 
-// Format employee display name
-export const formatEmployeeDisplay = (employee) => {
-  if (!employee) return 'Unassigned'
-  return `${employee.name}${employee.email ? ` (${employee.email})` : ''}`
-}
+
 
 // Format terminal type display
 export const formatTerminalType = (type) => {

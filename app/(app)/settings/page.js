@@ -155,6 +155,33 @@ export default function Page() {
               )}
             </div>
 
+            <div>
+              <div>Payment Terminals</div>
+              <TypographyMuted>
+                {chargesEnabled 
+                  ? 'Manage payment terminals for taking card payments.'
+                  : 'Complete Stripe account setup to enable payment terminals.'
+                }
+              </TypographyMuted>
+            </div>
+            <div>
+              {chargesEnabled ? (
+                <Link href="/manage/terminals">
+                  <Button className='cursor-pointer'>
+                    Manage Terminals
+                  </Button>
+                </Link>
+              ) : (
+                <Button 
+                  disabled
+                  variant="secondary"
+                  className='cursor-not-allowed'
+                >
+                  Complete Stripe Setup First
+                </Button>
+              )}
+            </div>
+
             <Separator className='border-t border-muted col-span-2' />
 
             <div>

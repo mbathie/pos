@@ -24,7 +24,6 @@ import { Switch } from "@/components/ui/switch";
 import { useTheme } from "next-themes";
 
 import { useGlobals } from '@/lib/globals'
-import { useLowStock } from '@/hooks/use-low-stock'
 
 export function NavUser({
   user
@@ -37,9 +36,7 @@ export function NavUser({
   const { setTheme, resolvedTheme } = useTheme()
   const isDarkMode = resolvedTheme === "dark"
 
-  const { resetCart, resetBreadcrumb } = useGlobals()
-  
-  const { hasLowStock, lowStockCount } = useLowStock()
+  const { resetCart, resetBreadcrumb, hasLowStock, lowStockCount } = useGlobals()
 
   return (
     <div>

@@ -394,21 +394,21 @@ export default function TransactionDetailsPage() {
           <div className="mt-4 pt-4 border-t text-sm">
             <div className="space-y-2 ml-auto">
               <div className="flex justify-between">
-                <span>Subtotal:</span>
+                <span>Subtotal</span>
                 <span>{formatCurrency(transaction.subtotal)}</span>
               </div>
               {transaction.discountAmount > 0 && (
                 <div className="flex justify-between">
-                  <span>Discount ({transaction.discount?.name}):</span>
+                <span>Discount ({transaction.discount?.name})</span>
                   <span>-{formatCurrency(transaction.discountAmount)}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span>Tax (GST):</span>
+                <span>Tax (GST)</span>
                 <span>{formatCurrency(transaction.tax)}</span>
               </div>
               <div className="flex justify-between border-t pt-2">
-                <span>Total:</span>
+                <span>Total</span>
                 <span>{formatCurrency(transaction.total)}</span>
               </div>
             </div>

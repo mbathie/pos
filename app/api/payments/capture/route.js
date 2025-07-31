@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { connectDB } from "@/lib/mongoose";
 import { Transaction } from "@/models";
 import { getEmployee } from '@/lib/auth';
+import { handleTransactionSuccess } from '@/lib/payments/success';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
@@ -20,10 +21,19 @@ export async function POST(req) {
     });
 
     // Update the transaction with the captured payment intent
-    await Transaction.findByIdAndUpdate(transactionId, {
+    const updatedTransaction = await Transaction.findByIdAndUpdate(transactionId, {
       'stripe.paymentIntent': paymentIntent,
       status: paymentIntent.status
-    });
+    }, { new: true });
+
+    // Handle post-transaction success operations if payment succeeded
+    if (paymentIntent.status === 'succeeded' && updatedTransaction?.cart) {
+      await handleTransactionSuccess({ 
+        transaction: updatedTransaction, 
+        cart: updatedTransaction.cart, 
+        employee 
+      });
+    }
 
     console.log(`✅ PaymentIntent captured: ${paymentIntent.id}`);
     return NextResponse.json(paymentIntent);

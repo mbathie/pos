@@ -64,6 +64,7 @@ DONE - set a pin if no pin is set for new employees
 - online orders for classes/courses/memberships
   - also abiltiy to view / edit profile
 - refunds
+- 4 digit PIN numbers - enforce some basic rules, i.e. not 1234, 1111, etc.
 
 - export CSV of purchases (for marketing purposes)
 

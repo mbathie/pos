@@ -303,16 +303,11 @@ export default function ManageProductsPage() {
   const hasActiveFilters = (filters.category && filters.category !== 'all') || filters.search;
 
   return (
-    <div className="mx-4 mt-4 space-y-4">
-      {/* <div>
-        <h1 className="text-2xl font-bold">Manage Products</h1>
-        <p className="text-muted-foreground">View and manage all products across categories</p>
-      </div> */}
+    <div className="mx-4 h-[calc(100vh-65px)] flex flex-col">
 
       {/* Filters */}
-      <div className="flex gap-2 items-end-">
-        <div className="flex-1- max-w-xs">
-          {/* <label className="text-sm font-medium mb-2 block">Category</label> */}
+      <div className="flex gap-2 items-end mb-4 flex-shrink-0">
+        <div className="max-w-xs">
           <Select value={filters.category} onValueChange={(value) => handleFilterChange('category', value)}>
             <SelectTrigger>
               <SelectValue placeholder="All categories" />
@@ -328,8 +323,7 @@ export default function ManageProductsPage() {
           </Select>
         </div>
 
-        <div className="flex-1- w-48">
-          {/* <label className="text-sm font-medium mb-2 block">Search Products</label> */}
+        <div className="w-48">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground size-4" />
             <Input
@@ -343,181 +337,197 @@ export default function ManageProductsPage() {
 
         {hasActiveFilters && (
           <Button variant="outline" onClick={clearFilters} className="flex items-center gap-2">
-            {/* <X className="size-4" /> */}
             Reset
           </Button>
         )}
+
+        <Badge variant="secondary" className="text-sm ml-auto">
+          {loading ? 'Loading...' : `${filteredProducts.length} product${filteredProducts.length !== 1 ? 's' : ''}`}
+        </Badge>
       </div>
 
       {/* Products Table */}
-      <Card className="p-0 m-0">
-
-        <CardContent className="p-0 m-0 rounded-t-lg">
-          {loading ? (
-            <div className="text-center py-8">Loading products...</div>
+      <Card className="p-0 m-0 flex-1 flex flex-col overflow-hidden">
+        <CardContent className="p-0 m-0 flex-1 flex flex-col overflow-hidden">
+          {loading && allProducts.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground flex-1 flex items-center justify-center">
+              Loading products...
+            </div>
           ) : (
-            <Table>
-              <TableHeader className="">
-                <TableRow className="*:bg-muted">
-                  <TableHead 
-                    className="cursor-pointer bg-muted rounded-tl-lg"
-                    onClick={() => handleSort('name')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Name
-                      <ChevronsUpDown className="size-4" />
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer bg-muted hover:bg-muted/80"
-                    onClick={() => handleSort('category')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Category
-                      <ChevronsUpDown className="size-4" />
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer bg-muted hover:bg-muted/80"
-                    onClick={() => handleSort('accounting')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Acct. Code
-                      <ChevronsUpDown className="size-4" />
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer bg-muted hover:bg-muted/80"
-                    onClick={() => handleSort('folder')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Folder
-                      <ChevronsUpDown className="size-4" />
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer bg-muted hover:bg-muted/80"
-                    onClick={() => handleSort('qty')}
-                  >
-                    <div className="flex items-center justify-start gap-1">
-                      Qty
-                      <ChevronsUpDown className="size-4" />
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer bg-muted hover:bg-muted/80"
-                    onClick={() => handleSort('par')}
-                  >
-                    <div className="flex items-center justify-start gap-1">
-                      Par
-                      <ChevronsUpDown className="size-4" />
-                    </div>
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer bg-muted hover:bg-muted/80"
-                    onClick={() => handleSort('bump')}
-                  >
-                    <div className="flex items-center gap-1">
-                      Bump
-                      <ChevronsUpDown className="size-4" />
-                    </div>
-                  </TableHead>
-                  <TableHead className="bg-muted rounded-tr-lg">
-                    {/* Actions */}
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredProducts.length === 0 ? (
+            <div className="flex-1 min-h-0 relative">
+              <Table className="table-fixed w-full">
+                <TableHeader className="sticky top-0 z-10 bg-background">
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8">
-                      {hasActiveFilters ? 'No products match your filters.' : 
-                       allProducts.length === 0 ? 'No products found.' : 'No products match your filters.'}
-                    </TableCell>
+                    <TableHead 
+                      className="cursor-pointer bg-muted rounded-tl-lg w-1/5"
+                      onClick={() => handleSort('name')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Name
+                        <ChevronsUpDown className="size-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer bg-muted hover:bg-muted/80 w-1/8"
+                      onClick={() => handleSort('category')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Category
+                        <ChevronsUpDown className="size-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer bg-muted hover:bg-muted/80 w-1/6"
+                      onClick={() => handleSort('accounting')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Acct. Code
+                        <ChevronsUpDown className="size-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer bg-muted hover:bg-muted/80 w-1/6"
+                      onClick={() => handleSort('folder')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Folder
+                        <ChevronsUpDown className="size-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer bg-muted hover:bg-muted/80 w-16"
+                      onClick={() => handleSort('qty')}
+                    >
+                      <div className="flex items-center justify-start gap-1">
+                        Qty
+                        <ChevronsUpDown className="size-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer bg-muted hover:bg-muted/80 w-16"
+                      onClick={() => handleSort('par')}
+                    >
+                      <div className="flex items-center justify-start gap-1">
+                        Par
+                        <ChevronsUpDown className="size-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer bg-muted hover:bg-muted/80 w-16"
+                      onClick={() => handleSort('bump')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Bump
+                        <ChevronsUpDown className="size-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead className="bg-muted rounded-tr-lg w-20">
+                      
+                    </TableHead>
                   </TableRow>
-                ) : (
-                  filteredProducts.map((product) => (
-                    <TableRow key={product._id}>
-                      <TableCell className="font-medium">{product.name}</TableCell>
-                      <TableCell>
-                        {product.category ? (
-                          <>{product.category.name}</>
-                        ) : (
-                          ''
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {product.accounting ? (
-                          <span className="text-sm">{product.accounting.name} ({product.accounting.code})</span>
-                        ) : (
-                          ''
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {product.folder ? (
-                          <div className="flex items-center gap-2">
-                            <div 
-                              className="size-4 rounded-sm border"
-                              style={{ backgroundColor: product.folder.color ? colors?.[product.folder.color.split('-')[0]]?.[product.folder.color.split('-')[1]] : '#e5e7eb' }}
+                </TableHeader>
+              </Table>
+              
+              <div className="absolute inset-0 top-12 overflow-y-auto">
+                <Table className="table-fixed w-full">
+                  <TableBody>
+                    {filteredProducts.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          {hasActiveFilters ? 'No products match your filters.' : 
+                           allProducts.length === 0 ? 'No products found.' : 'No products match your filters.'}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredProducts.map((product) => (
+                        <TableRow key={product._id} className="hover:bg-muted/50">
+                          <TableCell className="font-medium align-top w-1/5">{product.name}</TableCell>
+                          <TableCell className="align-top w-1/8">
+                            {product.category ? (
+                              <span className="text-sm">{product.category.name}</span>
+                            ) : (
+                              <span>-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="align-top w-1/6">
+                            {product.accounting ? (
+                              <div className="flex flex-col">
+                                <span className="text-sm">{product.accounting.name}</span>
+                                <span className="text-xs text-muted-foreground">({product.accounting.code})</span>
+                              </div>
+                            ) : (
+                              <span>-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="align-top w-1/6">
+                            {product.folder ? (
+                              <div className="flex items-center gap-2">
+                                <div 
+                                  className="size-4 rounded-sm border flex-shrink-0"
+                                  style={{ backgroundColor: product.folder.color ? colors?.[product.folder.color.split('-')[0]]?.[product.folder.color.split('-')[1]] : '#e5e7eb' }}
+                                />
+                                <Badge variant="outline" className="text-xs">
+                                  {product.folder.name}
+                                </Badge>
+                              </div>
+                            ) : (
+                              <span>-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="align-top w-16">
+                            <span className={
+                              product.qty !== null && 
+                              product.qty !== undefined && 
+                              product.par !== null && 
+                              product.par !== undefined && 
+                              product.qty <= product.par && 
+                              product.qty > 0
+                                ? 'text-destructive font-medium' 
+                                : ''
+                            }>
+                              {product.qty || 0}
+                            </span>
+                          </TableCell>
+                          <TableCell className="align-top w-16">
+                            {product.par || 0}
+                          </TableCell>
+                          <TableCell className="align-top w-16">
+                            <Checkbox
+                              checked={product.bump === true}
+                              onCheckedChange={(checked) => {
+                                updateBumpStatus(product._id, checked);
+                              }}
                             />
-                            <Badge variant="outline">
-                              {product.folder.name}
-                            </Badge>
-                          </div>
-                        ) : (
-                          ''
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span className={
-                          product.qty !== null && 
-                          product.qty !== undefined && 
-                          product.par !== null && 
-                          product.par !== undefined && 
-                          product.qty <= product.par && 
-                          product.qty > 0
-                            ? 'text-destructive font-medium' 
-                            : ''
-                        }>
-                          {product.qty || 0}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {product.par || 0}
-                      </TableCell>
-                      <TableCell>
-                        <Checkbox
-                          checked={product.bump === true}
-                          onCheckedChange={(checked) => {
-                            updateBumpStatus(product._id, checked);
-                          }}
-                        />
-                      </TableCell>
-                      <TableCell className="justify-end flex gap-2-">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openReceiveDialog(product)}
-                          className="cursor-pointer"
-                          title="Receive Stock"
-                        >
-                          <Warehouse className="size-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(product)}
-                          className="cursor-pointer"
-                          title="Edit Product"
-                        >
-                          <Edit className="size-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+                          </TableCell>
+                          <TableCell className="align-top w-20">
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openReceiveDialog(product)}
+                                className="cursor-pointer h-8 w-8 p-0"
+                                title="Receive Stock"
+                              >
+                                <Warehouse className="size-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openEditDialog(product)}
+                                className="cursor-pointer h-8 w-8 p-0"
+                                title="Edit Product"
+                              >
+                                <Edit className="size-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

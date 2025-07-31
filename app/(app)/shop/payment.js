@@ -5,12 +5,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 
 import { useGlobals } from "@/lib/globals"
 import { useCard } from './useCard'
 import { useCash } from "./useCash";
 import { Separator } from "@radix-ui/react-separator";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2 } from "lucide-react";
+import { toast } from 'sonner'
 
 import CustomerConnect from './customerConnect'
 // import { User } from "lucide-react";
@@ -18,19 +20,35 @@ import CustomerConnect from './customerConnect'
 const keypad = ['1','2','3','4','5','6','7','8','9','.','0','AC'];
 
 export default function Page() {
-  const { cart, resetCart, setCart, applyDiscount, removeDiscount, employee, setEmployee } = useGlobals();
+  const { cart, resetCart, setCart, applyDiscount, removeDiscount, employee, setEmployee, terminal, getLastDiscountFeedback, clearDiscountFeedback } = useGlobals();
   const [cashInput, setCashInput] = useState('0');
   const [tab, setTab] = useState('card');
   const router = useRouter();
   const pathname = usePathname();
   const hasSuccessfulPayment = useRef(false);
-  const { discoverReaders, connectReader, collectPayment, capturePayment } = useCard({cart})
+  const { 
+    discoverReaders, 
+    connectReader, 
+    autoConnectPhysical,
+    connectToLinkedTerminal,
+    collectPayment, 
+    capturePayment,
+    cancelPayment,
+    availableTerminals,
+    connectedReader,
+    terminalStatus,
+    paymentStatus: cardPaymentStatus,
+    autoCapture,
+    setAutoCapture
+  } = useCard({cart})
   const { calcChange, receiveCash } = useCash({cart})
 
   const [changeInfo, setChangeInfo] = useState({ received: "0.00", change: "0.00" });
 
   const [ paymentIntentId, setPaymentIntentId ] = useState(0)
   const [ paymentStatus, setPaymentStatus ] = useState("")
+  const [ isCollectingPayment, setIsCollectingPayment ] = useState(false)
+  const [ cartSnapshot, setCartSnapshot ] = useState(null)
 
   const [ showCustomerConnect, setShowCustomerConnect ] = useState(false)
   const [ connectCustomerFn, setConnectCustomerFn ] = useState()
@@ -45,6 +63,72 @@ export default function Page() {
   useEffect(() => {
     console.log(cart)
   },[cart])
+
+  // Auto-connect to linked terminal when page loads
+  useEffect(() => {
+    const autoConnectLinked = async () => {
+      if (terminal && terminalStatus === 'disconnected') {
+        console.log('🚀 Auto-connecting to linked terminal on page load...')
+        const success = await connectToLinkedTerminal(terminal)
+        if (!success) {
+          console.log('⚠️ Failed to connect to linked terminal, falling back to manual connection')
+        }
+      }
+    }
+
+    // Small delay to ensure components are ready
+    const timer = setTimeout(() => {
+      autoConnectLinked()
+    }, 1000)
+
+    return () => clearTimeout(timer)
+  }, [terminal, terminalStatus, connectToLinkedTerminal])
+
+  // Take a snapshot of cart on page load and update when discount changes
+  useEffect(() => {
+    console.log('📸 Taking/updating cart snapshot')
+    setCartSnapshot({
+      total: cart.total,
+      subtotal: cart.subtotal,
+      tax: cart.tax,
+      discount: cart.discount,
+      discountAmount: cart.discountAmount,
+      products: [...cart.products] // Deep copy for customer info
+    })
+  }, [cart.discount, cart.discountAmount, cart.total, cart.subtotal, cart.tax, cart.products]) // Update when discount-related values change
+
+  // Watch for discount feedback and show toasts
+  useEffect(() => {
+    const feedback = getLastDiscountFeedback()
+    
+    if (feedback.success) {
+      toast.success(`Applied "${feedback.success.name}" to ${feedback.success.productCount} product${feedback.success.productCount > 1 ? 's' : ''}.`)
+      clearDiscountFeedback()
+    } else if (feedback.error) {
+      toast.warning(feedback.error)
+      clearDiscountFeedback()
+    } else if (feedback.removed) {
+      toast.info(`Removed "${feedback.removed}" discount from cart.`)
+      clearDiscountFeedback()
+    }
+  }, [cart.discount, getLastDiscountFeedback, clearDiscountFeedback])
+
+  // Always use snapshot for display (updated when discounts change or on page load)
+  const displayCart = cartSnapshot || cart
+
+  // Reset cart when payment succeeds (but keep UI in completed state)
+  useEffect(() => {
+    if (cardPaymentStatus?.status === 'succeeded' || paymentStatus === 'succeeded') {
+      // Stop the collecting/loading state
+      setIsCollectingPayment(false)
+      
+      // Reset cart after successful card payment (similar to cash payments)
+      if (cardPaymentStatus?.status === 'succeeded' && cart.products.length > 0) {
+        console.log('✅ Card payment succeeded, resetting cart')
+        resetCart()
+      }
+    }
+  }, [cardPaymentStatus?.status, paymentStatus, cart.products.length, resetCart])
 
 
   // Handle PIN auth removal when navigating away after successful payment
@@ -167,53 +251,51 @@ export default function Page() {
 
             <div className="flex justify-between font-semibold">
               <span>Total</span>
-              <span className="text-right">${cart.total.toFixed(2)}</span>
+              <span className="text-right">${displayCart.total.toFixed(2)}</span>
             </div>
 
             <div className="flex justify-between">
               <span>Subtotal</span>
-              <span className="text-right">${cart.subtotal.toFixed(2)}</span>
+              <span className="text-right">${displayCart.subtotal.toFixed(2)}</span>
             </div>
-            <div 
-              className="flex justify-between cursor-pointer hover:bg-muted/50 px-2 -py-1 rounded -mx-2"
-              onClick={() => setDiscountExpanded(!discountExpanded)}
-            >
-              <div className="flex items-center gap-1">
-                <span>
-                  {cart.discount ? 
-                    `${cart.discount.name} (${cart.discount.type === 'percent' ? `${cart.discount.value}%` : `$${cart.discount.value}`})` : 
-                    'Discount'
-                  }
+            {/* Only show discount row if there's an applied discount with actual discount amount */}
+            {displayCart.discount && displayCart.discountAmount > 0 && (
+              <div 
+                className="flex justify-between cursor-pointer hover:bg-muted/50 px-2 -py-1 rounded -mx-2"
+                onClick={() => setDiscountExpanded(!discountExpanded)}
+              >
+                <div className="flex items-center gap-1">
+                  <span>
+                    {`${displayCart.discount.name} (${displayCart.discount.type === 'percent' ? `${displayCart.discount.value}%` : `$${displayCart.discount.value}`})`}
+                  </span>
+                  {discountExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                </div>
+                <span className="text-right">
+                  -${displayCart.discountAmount.toFixed(2)}
                 </span>
-                {cart.discountAmount > 0 && (
-                  discountExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />
-                )}
-              </div>
-              <span className="text-right">
-                {cart.discount ? `-$${cart.discountAmount.toFixed(2)}` : '$0.00'}
-              </span>
-            </div>
-            
-            {/* Expanded discount details */}
-            {discountExpanded && cart.discountAmount > 0 && (
-              <div className="space-y-1- text-sm-  -pl-3 mt-2-">
-                {cart.products
-                  .filter(product => product.amount?.discount > 0)
-                  .map((product, index) => (
-                    <div key={index} className="flex justify-between">
-                      <span>{product.name}</span>
-                      <span>-${product.amount.discount.toFixed(2)}</span>
-                    </div>
-                  ))
-                }
-                {cart.products.filter(product => product.amount?.discount > 0).length === 0 && (
-                  <div className="text-center py-2">No individual product discounts</div>
-                )}
               </div>
             )}
+            
+                          {/* Expanded discount details */}
+              {discountExpanded && displayCart.discountAmount > 0 && (
+                <div className="space-y-1- text-sm-  -pl-3 mt-2-">
+                  {displayCart.products
+                    .filter(product => product.amount?.discount > 0)
+                    .map((product, index) => (
+                      <div key={index} className="flex justify-between">
+                        <span>{product.name}</span>
+                        <span>-${product.amount.discount.toFixed(2)}</span>
+                      </div>
+                    ))
+                  }
+                  {displayCart.products.filter(product => product.amount?.discount > 0).length === 0 && (
+                    <div className="text-center py-2">No individual product discounts</div>
+                  )}
+                </div>
+              )}
             <div className="flex justify-between">
               <span>Tax</span>
-              <span className="text-right">${cart.tax.toFixed(2)}</span>
+              <span className="text-right">${displayCart.tax.toFixed(2)}</span>
             </div>
 
 
@@ -226,12 +308,14 @@ export default function Page() {
             <div className="flex justify-between">
               <span>Change</span>
               <span
-                className={`text-right ${parseFloat(changeInfo.received) >= cart.total ? 'text-lime-400' : ''}`}
+                className={`text-right ${parseFloat(changeInfo.received) >= cart.total ? 'text-primary' : ''}`}
               >${changeInfo.change}</span>
             </div>
             <div className="flex justify-between">
               <span>Status</span>
-              <span className={`text-right ${paymentStatus === 'succeeded' ? 'text-lime-400' : ''}`}>{paymentStatus}</span>
+              <span className={`text-right ${(paymentStatus === 'succeeded' || cardPaymentStatus?.status === 'succeeded') ? 'text-primary' : ''}`}>
+                {cardPaymentStatus?.status || paymentStatus || ''}
+              </span>
             </div>
 
             <Separator orientation="vertical" className="h-[1px] bg-muted my-2" />
@@ -241,10 +325,16 @@ export default function Page() {
               <div className="">Discount</div>
               <div className="flex-1" />
               
-              {cart.discount ? (
-                // Show applied discount as text
-                <div className="text-sm-">
-                  {cart.discount.name}
+              {cart.discount && cart.discountAmount > 0 ? (
+                // Show applied discount with remove button
+                <div className="flex items-center gap-1">
+                  <Trash2 
+                    className="size-4 cursor-pointer hover:text-destructive" 
+                    onClick={() => removeDiscount()}
+                  />
+                  <div className="text-sm">
+                    {cart.discount.name}
+                  </div>
                 </div>
               ) : (
                 // Show dropdown for manual selection
@@ -356,41 +446,193 @@ export default function Page() {
           <Card>
             <CardContent className='h-88 flex flex-col gap-2'>
 
-              {/* <Button onClick={async () => {
-                  const readers = await discoverReaders();
-              }}>Discover Reader</Button>
-              <Button onClick={async () => {
-                const reader = await connectReader();
-              }}>Connect Reader</Button> */}
-              <Button
-                onClick={async () => {
-                  const pi = await collectPayment();
-                  setPaymentIntentId(pi)
-                }}
-              >
-                Collect Payment
-              </Button>
-
-              <Button
-                onClick={async () => {
-                  const intent = await capturePayment();
-                  console.log(intent.status)
-                  setPaymentStatus(intent.status)
-                  
-                  // Mark that we have a successful payment (PIN will be removed on navigation)
-                  if (intent.status === 'succeeded') {
-                    hasSuccessfulPayment.current = true
-                  }
-                }}
-              >
-                Capture Payment
-              </Button>
-              
-              <div className="flex flex-col">
-                <div>{paymentIntentId}</div>
-                <div>{paymentStatus}</div>
+              {/* Terminal Connection Status */}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold-">Terminal Status</span>
+                  {terminalStatus === 'connected' && (
+                    <Wifi className="size-4 text-primary" />
+                  )}
+                  {terminalStatus === 'disconnected' && (
+                    <WifiOff className="size-4 text-destructive" />
+                  )}
+                  {(terminalStatus === 'discovering' || terminalStatus === 'connecting') && (
+                    <Loader2 className="size-4 animate-spin text-primary" />
+                  )}
+                </div>
+                
+                {/* Auto-capture setting - only show in dev mode */}
+                {process.env.NEXT_PUBLIC_IS_DEV === 'true' && (
+                  <div className="flex items-center justify-between pt-1">
+                    <span className="text-xs text-muted-foreground">Auto-capture payments</span>
+                    <Switch 
+                      checked={autoCapture} 
+                      onCheckedChange={setAutoCapture}
+                      size="sm"
+                    />
+                  </div>
+                )}
+                
+                {terminalStatus === 'disconnected' && !terminal && availableTerminals.length > 0 && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={autoConnectPhysical}
+                  >
+                    Connect Terminal
+                  </Button>
+                )}
+                
+                {terminalStatus === 'disconnected' && terminal && (
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => connectToLinkedTerminal(terminal)}
+                    disabled={terminalStatus === 'connecting'}
+                  >
+                    {terminalStatus === 'connecting' ? 'Connecting...' : 'Retry Connection'}
+                  </Button>
+                )}
               </div>
 
+              {/* Payment Buttons */}
+              <div className="flex flex-col gap-2">
+                <Button
+                  disabled={terminalStatus !== 'connected' || (paymentStatus === 'succeeded' || cardPaymentStatus?.status === 'succeeded') || isCollectingPayment}
+                  onClick={async () => {
+                    try {
+                      setIsCollectingPayment(true)
+                      const pi = await collectPayment();
+                      setPaymentIntentId(pi)
+                    } catch (error) {
+                      if (error.message === 'PAYMENT_CANCELLED') {
+                        console.log('🚫 Payment was cancelled')
+                        toast.info('Payment collection cancelled')
+                      } else {
+                        console.error('Payment collection failed:', error)
+                        toast.error(`Payment failed: ${error.message}`)
+                      }
+                      setIsCollectingPayment(false)
+                    }
+                  }}
+                >
+                  {isCollectingPayment && <Loader2 className="size-4 animate-spin mr-2" />}
+                  {(paymentStatus === 'succeeded' || cardPaymentStatus?.status === 'succeeded') ? 
+                    'Payment Complete' :
+                    terminalStatus === 'connected' ? 
+                      (isCollectingPayment ? 'Waiting for Card...' : 'Collect Payment') : 
+                      'Initializing...'
+                  }
+                </Button>
+
+                {/* Cancel Button - only show when collecting payment */}
+                {isCollectingPayment && (
+                  <Button
+                    variant="destructive"
+                    onClick={async () => {
+                      try {
+                        await cancelPayment()
+                        setPaymentIntentId(0)
+                        setIsCollectingPayment(false)
+                        toast.success('Payment cancelled')
+                      } catch (error) {
+                        console.error('Payment cancellation failed:', error)
+                        toast.error(`Failed to cancel payment: ${error.message}`)
+                      }
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                )}
+
+                {/* Return to Shop Button - only show after successful payment */}
+                {(paymentStatus === 'succeeded' || cardPaymentStatus?.status === 'succeeded') && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      router.push('/shop')
+                    }}
+                  >
+                    Return to Shop
+                  </Button>
+                )}
+              </div>
+
+              {/* Capture Payment button - only show in dev mode */}
+              {process.env.NEXT_PUBLIC_IS_DEV === 'true' && (
+                <Button
+                  disabled={!paymentIntentId || paymentStatus === 'succeeded' || cardPaymentStatus?.status === 'succeeded'}
+                  onClick={async () => {
+                    try {
+                                          const intent = await capturePayment();
+                    console.log(intent.status)
+                    setPaymentStatus(intent.status)
+                    
+                    // Mark that we have a successful payment (PIN will be removed on navigation)
+                    if (intent.status === 'succeeded') {
+                      hasSuccessfulPayment.current = true
+                      // Reset cart after successful manual capture
+                      if (cart.products.length > 0) {
+                        console.log('✅ Manual capture succeeded, resetting cart')
+                        resetCart()
+                      }
+                    }
+                    } catch (error) {
+                      console.error('Payment capture failed:', error)
+                      toast.error(`Payment capture failed: ${error.message}`)
+                    }
+                  }}
+                >
+                  Capture Payment
+                </Button>
+              )}
+              
+              {/* Debug payment info - only show in dev mode */}
+              {process.env.NEXT_PUBLIC_IS_DEV === 'true' && (
+                <div className="flex flex-col gap-1 text-sm">
+                  {paymentIntentId && (
+                    <div>Payment ID: {paymentIntentId}</div>
+                  )}
+                  {paymentStatus && (
+                    <div className={`${paymentStatus === 'succeeded' ? 'text-green-600' : ''}`}>
+                      Status: {paymentStatus}
+                    </div>
+                  )}
+                  {cardPaymentStatus && (
+                    <div className="text-xs text-muted-foreground">
+                      Stripe Status: {cardPaymentStatus.status}
+                      {cardPaymentStatus.status === 'succeeded' && (
+                        <span className="text-green-500 ml-1">✓ Completed</span>
+                      )}
+                      {cardPaymentStatus.needsCapture && !autoCapture && (
+                        <span className="text-orange-500 ml-1">(Ready for capture)</span>
+                      )}
+                      {cardPaymentStatus.needsCapture && autoCapture && cardPaymentStatus.status !== 'succeeded' && (
+                        <span className="text-blue-500 ml-1">(Auto-capturing...)</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Debug Info - only show in dev mode */}
+              {process.env.NEXT_PUBLIC_IS_DEV === 'true' && availableTerminals.length > 0 && (
+                <details className="text-xs">
+                  <summary className="cursor-pointer text-muted-foreground">
+                    Debug: Available Terminals ({availableTerminals.length})
+                  </summary>
+                  <div className="mt-2 space-y-1">
+                    {availableTerminals.map((terminal) => (
+                      <div key={terminal._id} className="flex justify-between">
+                        <span>{terminal.label}</span>
+                        <span className={`${terminal.availableForPayment ? 'text-green-600' : 'text-red-600'}`}>
+                          {terminal.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
 
             </CardContent>
           </Card>  
@@ -409,9 +651,9 @@ export default function Page() {
                     {key}
                   </Button>
                 ))}
-                <div className="col-span-3 w-full">
+                <div className="col-span-3 w-full gap-2 flex flex-col">
                   <Button
-                    className="w-full h-16"
+                    className="w-full h-12"
                     disabled={
                       parseFloat(changeInfo.received) < cart.total ||
                       paymentStatus === 'succeeded' ||
@@ -438,6 +680,16 @@ export default function Page() {
                   >
                     Accept
                   </Button>
+                                     <Button
+                     variant="outline"
+                     className="w-full h-12"
+                     disabled={paymentStatus !== 'succeeded'}
+                     onClick={() => {
+                       router.push('/shop')
+                     }}
+                   >
+                     Return to Shop
+                   </Button>
                 </div>
               </div>
             </CardContent>

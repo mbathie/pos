@@ -103,10 +103,10 @@ export default function TransactionsPage() {
   };
 
   return (
-    <div className="mx-4">
+    <div className="mx-4 h-[calc(100vh-65px)] flex flex-col">
       
       {/* Filters */}
-      <div className="flex gap-2 items-end mb-4">
+      <div className="flex gap-2 items-end mb-4 flex-shrink-0">
         <div className="flex flex-col gap-2">
           <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
             <SelectTrigger className="w-[140px]">
@@ -151,44 +151,47 @@ export default function TransactionsPage() {
         </div>
         
         <Button variant="outline" onClick={clearFilters}>
-          {/* <Filter className="size-4" /> */}
           Reset
         </Button>
 
         <Badge variant="secondary" className="text-sm mt-1 ml-auto">
-            {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
-          </Badge>
+          {loading ? 'Loading...' : `${transactions.length} transaction${transactions.length !== 1 ? 's' : ''}`}
+        </Badge>
       </div>
 
       {/* Table Card */}
-      <Card>
-        <CardContent className="p-0 m-0">
-          {loading ? (
-            <div className="text-center py-8 text-muted-foreground">
+      <Card className="p-0 m-0 flex-1 flex flex-col overflow-hidden">
+        <CardContent className="p-0 m-0 flex-1 flex flex-col overflow-hidden">
+          {loading && transactions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground flex-1 flex items-center justify-center">
               Loading transactions...
             </div>
           ) : (
-            <div className="max-h-[calc(100vh-300px)] overflow-y-auto">
-              <Table>
-                <TableHeader className="sticky top-0   z-10">
+            <div className="flex-1 min-h-0 relative">
+              <Table className="table-fixed w-full">
+                <TableHeader className="sticky top-0 z-10 bg-background">
                   <TableRow>
-                    <TableHead>Date & Time</TableHead>
-                      <TableHead>Total</TableHead>
-                      <TableHead>Payment</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Discount</TableHead>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Detail</TableHead>
+                    <TableHead className="bg-muted w-1/6">Date & Time</TableHead>
+                    <TableHead className="bg-muted w-1/8">Total</TableHead>
+                    <TableHead className="bg-muted w-1/8">Payment</TableHead>
+                    <TableHead className="bg-muted w-1/12">Status</TableHead>
+                    <TableHead className="bg-muted w-1/6">Discount</TableHead>
+                    <TableHead className="bg-muted w-1/12">Employee</TableHead>
+                    <TableHead className="bg-muted w-1/6">Customer</TableHead>
+                    <TableHead className="bg-muted w-16"></TableHead>
                   </TableRow>
                 </TableHeader>
-                <TableBody>
+              </Table>
+              
+              <div className="absolute inset-0 top-12 overflow-y-auto">
+                <Table className="table-fixed w-full">
+                  <TableBody>
                     {transactions.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                      No transactions found for the selected filters.
-                    </TableCell>
-                  </TableRow>
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          No transactions found for the selected filters.
+                        </TableCell>
+                      </TableRow>
                     ) : (
                       transactions.map((transaction) => (
                         <TableRow 
@@ -196,7 +199,7 @@ export default function TransactionsPage() {
                           className="hover:bg-muted/50 cursor-pointer"
                           onClick={() => router.push(`/manage/transactions/${transaction._id}`)}
                         >
-                          <TableCell>
+                          <TableCell className="align-top w-1/6">
                             <div className="flex flex-col">
                               <div>
                                 {dayjs(transaction.createdAt).format('DD/MM/YYYY')}
@@ -204,64 +207,56 @@ export default function TransactionsPage() {
                               <div className="text-sm">
                                 {dayjs(transaction.createdAt).format('h:mm A')}
                               </div>
-                              <div className="text-xs">
+                              <div className="text-xs text-muted-foreground">
                                 {dayjs(transaction.createdAt).from(now)}
                               </div>
                             </div>
                           </TableCell>
                           
-                          <TableCell className="align-top">
-                            <div className="flex flex-col">
-                              <div className="">
-                                {formatCurrency(transaction.total)}
-                              </div>
+                          <TableCell className="align-top w-1/8">
+                            <div className="font-medium">
+                              {formatCurrency(transaction.total)}
                             </div>
                           </TableCell>
                           
-                          <TableCell className="align-top">
+                          <TableCell className="align-top w-1/8">
                             <div className="flex items-center gap-2">
                               {getPaymentMethodIcon(transaction.paymentMethod)}
                               <span className="capitalize">{transaction.paymentMethod}</span>
                             </div>
                           </TableCell>
                           
-                          <TableCell className="align-top">
+                          <TableCell className="align-top w-1/12">
                             <div className="flex items-center gap-2">
                               {getStatusIcon(transaction.status)}
-                              {/* <Badge 
-                                variant={transaction.status === 'succeeded' ? 'default' : 
-                                       transaction.status === 'failed' ? 'destructive' : 'secondary'}
-                              >
-                                {transaction.status}
-                              </Badge> */}
                             </div>
                           </TableCell>
                           
-                          <TableCell className="align-top">
+                          <TableCell className="align-top w-1/6">
                             {transaction.discount ? (
                               <div className="flex flex-col">
-                                <div className="">
+                                <div className="text-sm">
                                   {transaction.discount.name}
                                 </div>
-                                <div className="text-xs">
+                                <div className="text-xs text-muted-foreground">
                                   -{formatCurrency(transaction.discountAmount)}
                                 </div>
                               </div>
                             ) : (
-                              <span></span>
+                              <span>-</span>
                             )}
                           </TableCell>
                           
-                          <TableCell className="align-top">
-                            <div className="font-medium">
+                          <TableCell className="align-top w-1/12">
+                            <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
                               {getInitials(transaction.employee?.name)}
                             </div>
                           </TableCell>
                           
-                          <TableCell className="align-top">
+                          <TableCell className="align-top w-1/6">
                             {transaction.customer ? (
                               <div className="flex flex-col">
-                                <div className="font-medium">
+                                <div className="font-medium text-sm">
                                   {transaction.customer.name}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
@@ -269,11 +264,11 @@ export default function TransactionsPage() {
                                 </div>
                               </div>
                             ) : (
-                              <span></span>
+                              <span>-</span>
                             )}
                           </TableCell>
                           
-                          <TableCell className="align-top">
+                          <TableCell className="align-top w-16">
                             <ChevronRight className="size-4 text-muted-foreground" />
                           </TableCell>
                         </TableRow>
@@ -282,6 +277,7 @@ export default function TransactionsPage() {
                   </TableBody>
                 </Table>
               </div>
+            </div>
           )}
         </CardContent>
       </Card>
