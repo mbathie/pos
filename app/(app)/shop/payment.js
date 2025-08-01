@@ -32,7 +32,8 @@ export default function Page() {
     collectPayment, 
     capturePayment,
     cancelPayment,
-    terminalStatus
+    terminalStatus,
+    paymentStatus: cardPaymentStatus
   } = useCard({cart})
   const { calcChange, receiveCash } = useCash({cart})
 
@@ -42,6 +43,7 @@ export default function Page() {
   const [ paymentStatus, setPaymentStatus ] = useState("")
   const [ isCollectingPayment, setIsCollectingPayment ] = useState(false)
   const [ cartSnapshot, setCartSnapshot ] = useState(null)
+  const hasInitialSnapshot = useRef(false)
 
   const [ showCustomerConnect, setShowCustomerConnect ] = useState(false)
   const [ connectCustomerFn, setConnectCustomerFn ] = useState()
@@ -69,18 +71,37 @@ export default function Page() {
     init();
   }, []);
 
-  // Take a snapshot of cart on page load and update when discount changes
+  // Take initial snapshot of cart on page load (only once)
   useEffect(() => {
-    console.log('📸 Taking/updating cart snapshot')
-    setCartSnapshot({
-      total: cart.total,
-      subtotal: cart.subtotal,
-      tax: cart.tax,
-      discount: cart.discount,
-      discountAmount: cart.discountAmount,
-      products: [...cart.products] // Deep copy for customer info
-    })
-  }, [cart.discount, cart.discountAmount, cart.total, cart.subtotal, cart.tax, cart.products]) // Update when discount-related values change
+    if (!hasInitialSnapshot.current && cart.products.length > 0) {
+      console.log('📸 Taking initial cart snapshot on page load')
+      setCartSnapshot({
+        total: cart.total,
+        subtotal: cart.subtotal,
+        tax: cart.tax,
+        discount: cart.discount,
+        discountAmount: cart.discountAmount,
+        products: [...cart.products] // Deep copy for customer info
+      })
+      hasInitialSnapshot.current = true
+    }
+  }, [cart.products.length])
+
+  // Update snapshot when discounts change (but keep the same products)
+  useEffect(() => {
+    if (hasInitialSnapshot.current && cartSnapshot && cart.products.length > 0) {
+      console.log('📸 Updating cart snapshot due to discount change')
+      setCartSnapshot(prev => ({
+        ...prev,
+        total: cart.total,
+        subtotal: cart.subtotal,
+        tax: cart.tax,
+        discount: cart.discount,
+        discountAmount: cart.discountAmount
+        // Keep original products from snapshot
+      }))
+    }
+  }, [cart.discount, cart.discountAmount, cart.total, cart.subtotal, cart.tax])
 
   // Watch for discount feedback and show toasts
   useEffect(() => {
@@ -103,18 +124,37 @@ export default function Page() {
 
   // Reset cart when payment succeeds (but keep UI in completed state)
   useEffect(() => {
-    if (paymentStatus === 'succeeded') {
+    if (paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') {
       // Stop the collecting/loading state
       setIsCollectingPayment(false)
       
       // Reset cart after successful card payment (similar to cash payments)
-      if (paymentStatus === 'succeeded' && cart.products.length > 0) {
+      if ((paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') && cart.products.length > 0) {
         console.log('✅ Card payment succeeded, resetting cart')
         resetCart()
+        // Keep the snapshot so the payment summary stays visible
       }
     }
-  }, [paymentStatus, cart.products.length, resetCart])
+  }, [paymentStatus, cardPaymentStatus, cart.products.length, resetCart])
 
+
+  // Clear snapshot when navigating away or when returning to shop
+  useEffect(() => {
+    const handleRouteChange = () => {
+      if (cartSnapshot) {
+        console.log('🗑️ Clearing cart snapshot on navigation')
+        setCartSnapshot(null)
+        hasInitialSnapshot.current = false
+      }
+    }
+
+    // Clear snapshot when user navigates away
+    return () => {
+      if (pathname !== '/shop/retail/payment') {
+        handleRouteChange()
+      }
+    }
+  }, [pathname, cartSnapshot])
 
   // Handle PIN auth removal when navigating away after successful payment
   useEffect(() => {
@@ -298,8 +338,8 @@ export default function Page() {
             </div>
             <div className="flex justify-between">
               <span>Status</span>
-                              <span className={`text-right ${paymentStatus === 'succeeded' ? 'text-primary' : ''}`}>
-                  {paymentStatus || ''}
+                              <span className={`text-right ${(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') ? 'text-primary' : ''}`}>
+                  {cardPaymentStatus || paymentStatus || ''}
               </span>
             </div>
 
@@ -375,6 +415,7 @@ export default function Page() {
                           ) : (
                             <Button
                               size="sm" variant="outline"
+                              disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
                               onClick={() => {
                                 setConnectCustomerFn(() => (_c) => {
                                   setCart(draft => {
@@ -402,6 +443,7 @@ export default function Page() {
                 ) : (
                   <Button
                     size="sm" variant="outline"
+                    disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
                     onClick={() => {
                       setConnectCustomerFn(() => (_c) => {
                         setCart(draft => {
@@ -429,7 +471,7 @@ export default function Page() {
         </TabsList>
         <TabsContent value="card">
           <Card>
-            <CardContent className='h-88 flex flex-col gap-2'>
+            <CardContent className='h-88 flex flex-col gap-2-'>
 
               {/* Simple Terminal Status */}
               <div className="flex items-center justify-between py-2">
@@ -438,19 +480,19 @@ export default function Page() {
                   {terminalStatus === 'connected' && (
                     <>
                       <Wifi className="size-4 text-green-600" />
-                      <span className="text-xs text-green-600">Connected</span>
+                      <span className="text-xs text-green-600">Ready</span>
                     </>
                   )}
                   {terminalStatus === 'disconnected' && (
                     <>
-                      <WifiOff className="size-4 text-red-600" />
-                      <span className="text-xs text-red-600">Disconnected</span>
+                      <WifiOff className="size-4 text-destructive" />
+                      <span className="text-xs text-destructive">Disconnected</span>
                     </>
                   )}
                   {(terminalStatus === 'discovering' || terminalStatus === 'connecting') && (
                     <>
-                      <Loader2 className="size-4 animate-spin text-blue-600" />
-                      <span className="text-xs text-blue-600">
+                      <Loader2 className="size-4 animate-spin text-yellow-500" />
+                      <span className="text-xs text-yellow-500">
                         {terminalStatus === 'discovering' ? 'Discovering...' : 'Connecting...'}
                       </span>
                     </>
@@ -461,12 +503,13 @@ export default function Page() {
               {/* Payment Buttons */}
               <div className="flex flex-col gap-2">
                 <Button
-                  disabled={terminalStatus !== 'connected' || paymentStatus === 'succeeded' || isCollectingPayment}
+                  disabled={terminalStatus !== 'connected' || paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' || isCollectingPayment || cart.products.length === 0}
                   onClick={async () => {
                     try {
                       setIsCollectingPayment(true)
                       const pi = await collectPayment();
                       setPaymentIntentId(pi)
+                      // Don't set isCollectingPayment to false here - let the payment status handle it
                     } catch (error) {
                       if (error.message === 'PAYMENT_CANCELLED') {
                         console.log('🚫 Payment was cancelled')
@@ -480,10 +523,13 @@ export default function Page() {
                   }}
                 >
                   {isCollectingPayment && <Loader2 className="size-4 animate-spin mr-2" />}
-                  {paymentStatus === 'succeeded' ? 
+                  {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') ? 
                     'Payment Complete' :
                     terminalStatus === 'connected' ? 
-                      (isCollectingPayment ? 'Waiting for Card...' : 'Collect Payment') : 
+                      (cardPaymentStatus === 'collecting' ? 'Waiting for Card...' : 
+                       cardPaymentStatus === 'processing' ? 'Processing...' :
+                       cardPaymentStatus === 'creating' ? 'Creating Payment...' :
+                       isCollectingPayment ? 'Starting...' : 'Collect Payment') : 
                       terminalStatus === 'connecting' ? 'Connecting...' :
                       terminalStatus === 'discovering' ? 'Discovering...' :
                       'Terminal Not Ready'
@@ -511,10 +557,13 @@ export default function Page() {
                 )}
 
                 {/* Return to Shop Button - only show after successful payment */}
-                {paymentStatus === 'succeeded' && (
+                {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') && (
                   <Button
                     variant="outline"
                     onClick={() => {
+                      console.log('🗑️ Clearing cart snapshot - returning to shop')
+                      setCartSnapshot(null)
+                      hasInitialSnapshot.current = false
                       router.push('/shop')
                     }}
                   >
@@ -526,10 +575,10 @@ export default function Page() {
               {/* Capture Payment button - only show in dev mode */}
               {process.env.NEXT_PUBLIC_IS_DEV === 'true' && (
                 <Button
-                  disabled={!paymentIntentId || paymentStatus === 'succeeded'}
+                  disabled={!paymentIntentId || paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
                   onClick={async () => {
                     try {
-                                          const intent = await capturePayment();
+                    const intent = await capturePayment();
                     console.log(intent.status)
                     setPaymentStatus(intent.status)
                     
@@ -590,6 +639,7 @@ export default function Page() {
                   <Button
                     className="w-full h-12"
                     disabled={
+                      cart.products.length === 0 ||
                       parseFloat(changeInfo.received) < cart.total ||
                       paymentStatus === 'succeeded' ||
                       cart.products.some(p =>
@@ -620,6 +670,9 @@ export default function Page() {
                      className="w-full h-12"
                      disabled={paymentStatus !== 'succeeded'}
                      onClick={() => {
+                       console.log('🗑️ Clearing cart snapshot - returning to shop')
+                       setCartSnapshot(null)
+                       hasInitialSnapshot.current = false
                        router.push('/shop')
                      }}
                    >

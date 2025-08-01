@@ -133,7 +133,7 @@ export default function Page({products, setProducts, units, title, categoryName,
               {isDirty[p._id] && (
                 <Button
                   size="sm"
-                  className="bg-lime-400"
+                  className="bg-primary"
                   onClick={async () => {
                     if (!p._id) {
                       console.log('creating')

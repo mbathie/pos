@@ -13,7 +13,7 @@ export default function Page() {
   const shopItems = [
     { title: "Casual Entry", icon: Ticket, href: "/shop/casual", breadcrumb: { href: "/shop/casual", name: "Casual Entry" } },
     { title: "Classes & Courses", icon: Dumbbell, href: "/shop/classes", breadcrumb: { href: "/shop/classes", name: "Classes & Courses" } },
-    { title: "Membership", icon: IdCard, href: "/shop/membership", breadcrumb: { href: "/shop/membership", name: "Memberships" } },
+    { title: "Membership", icon: IdCard, href: "/shop/memberships", breadcrumb: { href: "/shop/memberships", name: "Memberships" } },
     { title: "Food, Bev & Shop", icon: Coffee, href: "/shop/retail", breadcrumb: { href: "/shop/retail", name: "Folders" } }
   ];
 

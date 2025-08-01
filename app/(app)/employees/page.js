@@ -150,12 +150,12 @@ export default function Page () {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Email</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Default Location</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Last Activity</TableHead>
-                <TableHead></TableHead>
+                <TableHead className="bg-muted rounded-tl-lg">Email</TableHead>
+                <TableHead className="bg-muted">Name</TableHead>
+                <TableHead className="bg-muted">Default Location</TableHead>
+                <TableHead className="bg-muted">Role</TableHead>
+                <TableHead className="bg-muted">Last Activity</TableHead>
+                <TableHead className="bg-muted rounded-tr-lg"></TableHead>
               </TableRow>
             </TableHeader>
 

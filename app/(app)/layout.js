@@ -126,7 +126,7 @@ export default function Page({children}) {
       // Only set up interval if user has permission
       if (employee?.role && hasPermission(employee.role, 'lowstock:check')) {
         // Check every 2 minutes
-        const interval = setInterval(checkLowStock, 2 * 60 * 1000)
+        const interval = setInterval(checkLowStock, 5 * 60 * 1000)
         
         return () => clearInterval(interval)
       }

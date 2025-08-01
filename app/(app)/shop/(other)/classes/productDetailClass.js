@@ -25,9 +25,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
   // },[])
 
   useEffect(() => {
-    console.log('------------')
-    console.log(product)
-    console.log('------------')
+
     async function fetch() {
       if (product) {
         const t = await calcCartValueClass({ product });

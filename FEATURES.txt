@@ -39,7 +39,7 @@ DONE - individual transaction view page, allow for refunds (partial and full), a
 DONE - Login as any account staff, admin, MANAGER
 DONE - PIN number per staff, required before any purchase when sale is clicked
 DONE - need to make sure if logged in as admin role, Jnr staff can't see admin functions
-- need to select terminal when pos is first setup - set a cookie so it knows for next time.
+DONE - need to select terminal when pos is first setup - set a cookie so it knows for next time.
 
 
 DONE - when purchasing a shop item - make qty automatically 1
@@ -65,8 +65,6 @@ DONE - Customer list view page
 - refunds
 DONE - 4 digit PIN numbers - enforce some basic rules, i.e. not 1234, 1111, etc.
 
-- export CSV of purchases (for marketing purposes)
-
 DONE - Par/qty screen
 DONE  - par = min quantity before warning, i.e. to place another order with the supplier
 DONE  - qty = click update qty - add/subttact or overrise total qty of stock (required for launch)
@@ -77,6 +75,7 @@ DONE  - ability to filter for items below or at par, or cloase to par
 
 NICE TO HAVES
 -----------------------
+  - export CSV of purchases (for marketing purposes)
   - ability to edit orders, after its complete - i.e. they wanted a chololate shake instead of vanilla
   - specify what products at what locations
 

@@ -12,6 +12,7 @@ export function useCard({ cart }) {
   const clientSecret = useRef()
   const discoveredReaders = useRef([])
   const [terminalStatus, setTerminalStatus] = useState('disconnected') // disconnected, connecting, connected
+  const [paymentStatus, setPaymentStatus] = useState(null) // null, collecting, processing, succeeded, failed
 
   const initTerminal = async () => {
     if (!terminalInstance && typeof window !== 'undefined') {
@@ -42,18 +43,45 @@ export function useCard({ cart }) {
     setTerminalStatus('discovering')
     const terminal = await initTerminal();
 
-    const config = { simulated: true };
-    const result = await terminal.discoverReaders(config);
+    // First try to discover physical readers
+    console.log('🔍 Looking for physical readers...')
+    let config = { simulated: false };
+    let result = await terminal.discoverReaders(config);
 
     if (result.error) {
-      console.error('Failed to discover readers:', result.error);
+      console.error('Failed to discover physical readers:', result.error);
+    } else if (result.discoveredReaders.length > 0) {
+      console.log('📡 Found physical readers:', result.discoveredReaders.length)
+      discoveredReaders.current = result.discoveredReaders;
+      console.log('Discovered Physical Readers:', result.discoveredReaders.map(r => ({
+        id: r.id,
+        label: r.label,
+        device_type: r.device_type,
+        status: r.status
+      })));
+      setTerminalStatus('disconnected') // Ready to connect
+      return;
+    }
+
+    // If no physical readers found, fall back to simulated
+    console.log('📱 No physical readers found, trying simulated...')
+    config = { simulated: true };
+    result = await terminal.discoverReaders(config);
+
+    if (result.error) {
+      console.error('Failed to discover simulated readers:', result.error);
       setTerminalStatus('disconnected')
     } else if (result.discoveredReaders.length === 0) {
-      console.log('No available readers.');
+      console.log('No available readers (physical or simulated).');
       setTerminalStatus('disconnected')
     } else {
       discoveredReaders.current = result.discoveredReaders;
-      console.log('Discovered Readers:', discoveredReaders);
+      console.log('📡 Discovered Simulated Readers:', result.discoveredReaders.map(r => ({
+        id: r.id,
+        label: r.label,
+        device_type: r.device_type,
+        status: r.status
+      })));
       setTerminalStatus('disconnected') // Ready to connect
     }
   };
@@ -95,34 +123,76 @@ export function useCard({ cart }) {
   };
 
   const collectPayment = async () => {
-    const res = await fetch('/api/payments/intent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cart }),
-    });
-    const intent = await res.json();
-    paymentIntentId.current = intent.id
-    transactionId.current = intent.transactionId
-    clientSecret.current = intent.clientSecret
-    terminalInstance.setSimulatorConfiguration({testCardNumber: '4242424242424242'});
-    terminalInstance.collectPaymentMethod(intent.clientSecret).then(function(result) {
-      if (result.error) {
-        // Placeholder for handling result.error
+    try {
+      setPaymentStatus('creating')
+      
+      const res = await fetch('/api/payments/intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cart }),
+      });
+      const intent = await res.json();
+      paymentIntentId.current = intent.id
+      transactionId.current = intent.transactionId
+      clientSecret.current = intent.clientSecret
+      
+      console.log('💰 Payment intent created:', intent.id)
+      
+      // Only set simulator configuration for simulated readers
+      const connectedReader = await terminalInstance.getConnectedReader();
+      if (connectedReader && connectedReader.device_type === 'simulated_wpe') {
+        console.log('🧪 Setting simulator configuration for test card')
+        terminalInstance.setSimulatorConfiguration({testCardNumber: '4242424242424242'});
       } else {
-          // log('terminal.collectPaymentMethod', result.paymentIntent);
-          terminalInstance.processPayment(result.paymentIntent).then(function(result) {
-          if (result.error) {
-            console.log(result.error)
-          } else if (result.paymentIntent) {
-              // paymentIntentId.current = result.paymentIntent.id;
-              // log('terminal.processPayment', result.paymentIntent);
-          }
-        });
+        console.log('💳 Using physical terminal - no simulator configuration needed')
       }
-    });
-
-    return intent.id
-
+      
+      setPaymentStatus('collecting')
+      console.log('💳 Starting payment collection...')
+      
+      const collectResult = await terminalInstance.collectPaymentMethod(intent.clientSecret);
+      
+      if (collectResult.error) {
+        console.error('❌ Payment collection failed:', collectResult.error)
+        setPaymentStatus('failed')
+        throw new Error(collectResult.error.message || 'Payment collection failed')
+      }
+      
+      console.log('✅ Payment method collected successfully')
+      setPaymentStatus('processing')
+      console.log('⚙️ Processing payment...')
+      
+      const processResult = await terminalInstance.processPayment(collectResult.paymentIntent);
+      
+      if (processResult.error) {
+        console.error('❌ Payment processing failed:', processResult.error)
+        setPaymentStatus('failed')
+        throw new Error(processResult.error.message || 'Payment processing failed')
+      }
+      
+      console.log('🎉 Payment processed successfully!')
+      console.log('Payment Intent Status:', processResult.paymentIntent.status)
+      
+      if (processResult.paymentIntent.status === 'succeeded') {
+        setPaymentStatus('succeeded')
+        console.log('✅ Payment completed successfully!')
+      } else {
+        // If payment needs capture, auto-capture it
+        console.log('🔄 Payment requires capture, auto-capturing...')
+        const captureResult = await capturePayment()
+        if (captureResult && captureResult.status === 'succeeded') {
+          setPaymentStatus('succeeded')
+          console.log('✅ Payment captured and completed!')
+        }
+      }
+      
+      return intent.id
+      
+    } catch (error) {
+      console.error('❌ Payment collection error:', error)
+      setPaymentStatus('failed')
+      throw error
+    }
   };
 
   const capturePayment = async () => {
@@ -187,6 +257,7 @@ export function useCard({ cart }) {
     collectPayment,
     capturePayment,
     cancelPayment,
-    terminalStatus
+    terminalStatus,
+    paymentStatus
   };
 }

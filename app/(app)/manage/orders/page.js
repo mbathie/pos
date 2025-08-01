@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { Button } from "@/components/ui/button";
-import { Circle, CircleCheck, CircleX, Filter } from "lucide-react";
+import { LoaderCircle, Circle, CircleCheck, CircleX, Filter } from "lucide-react";
 dayjs.extend(relativeTime);
 
 export default function Page({ params }) {
@@ -38,7 +38,7 @@ export default function Page({ params }) {
 
   const statuses = {
     'placed': {
-      icon: Circle,
+      icon: LoaderCircle,
       color: 'yellow-500'
     },
     'cancelled': {
@@ -173,7 +173,7 @@ export default function Page({ params }) {
                           const { icon: StatusIcon, color } = statuses[o.status];
                           return (
                             <StatusIcon
-                              className="size-5 stroke-4"
+                              className="size-5 stroke-3"
                               style={{
                                 color: colors[color.split('-')[0]][color.split('-')[1]]
                               }}
