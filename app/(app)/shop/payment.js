@@ -20,7 +20,7 @@ import CustomerConnect from './customerConnect'
 const keypad = ['1','2','3','4','5','6','7','8','9','.','0','AC'];
 
 export default function Page() {
-  const { cart, resetCart, setCart, applyDiscount, removeDiscount, employee, setEmployee, terminal, getLastDiscountFeedback, clearDiscountFeedback } = useGlobals();
+  const { cart, resetCart, setCart, applyDiscount, removeDiscount, employee, setEmployee, getLastDiscountFeedback, clearDiscountFeedback } = useGlobals();
   const [cashInput, setCashInput] = useState('0');
   const [tab, setTab] = useState('card');
   const router = useRouter();
@@ -29,17 +29,10 @@ export default function Page() {
   const { 
     discoverReaders, 
     connectReader, 
-    autoConnectPhysical,
-    connectToLinkedTerminal,
     collectPayment, 
     capturePayment,
     cancelPayment,
-    availableTerminals,
-    connectedReader,
-    terminalStatus,
-    paymentStatus: cardPaymentStatus,
-    autoCapture,
-    setAutoCapture
+    terminalStatus
   } = useCard({cart})
   const { calcChange, receiveCash } = useCash({cart})
 
@@ -64,25 +57,17 @@ export default function Page() {
     console.log(cart)
   },[cart])
 
-  // Auto-connect to linked terminal when page loads
+  // Simple terminal initialization like the working version
   useEffect(() => {
-    const autoConnectLinked = async () => {
-      if (terminal && terminalStatus === 'disconnected') {
-        console.log('🚀 Auto-connecting to linked terminal on page load...')
-        const success = await connectToLinkedTerminal(terminal)
-        if (!success) {
-          console.log('⚠️ Failed to connect to linked terminal, falling back to manual connection')
-        }
-      }
-    }
+    const init = async () => {
+      await discoverReaders();
+      setTimeout(async () => {
+        await connectReader();
+      }, 2000)
+    };
 
-    // Small delay to ensure components are ready
-    const timer = setTimeout(() => {
-      autoConnectLinked()
-    }, 1000)
-
-    return () => clearTimeout(timer)
-  }, [terminal, terminalStatus, connectToLinkedTerminal])
+    init();
+  }, []);
 
   // Take a snapshot of cart on page load and update when discount changes
   useEffect(() => {
@@ -118,17 +103,17 @@ export default function Page() {
 
   // Reset cart when payment succeeds (but keep UI in completed state)
   useEffect(() => {
-    if (cardPaymentStatus?.status === 'succeeded' || paymentStatus === 'succeeded') {
+    if (paymentStatus === 'succeeded') {
       // Stop the collecting/loading state
       setIsCollectingPayment(false)
       
       // Reset cart after successful card payment (similar to cash payments)
-      if (cardPaymentStatus?.status === 'succeeded' && cart.products.length > 0) {
+      if (paymentStatus === 'succeeded' && cart.products.length > 0) {
         console.log('✅ Card payment succeeded, resetting cart')
         resetCart()
       }
     }
-  }, [cardPaymentStatus?.status, paymentStatus, cart.products.length, resetCart])
+  }, [paymentStatus, cart.products.length, resetCart])
 
 
   // Handle PIN auth removal when navigating away after successful payment
@@ -313,8 +298,8 @@ export default function Page() {
             </div>
             <div className="flex justify-between">
               <span>Status</span>
-              <span className={`text-right ${(paymentStatus === 'succeeded' || cardPaymentStatus?.status === 'succeeded') ? 'text-primary' : ''}`}>
-                {cardPaymentStatus?.status || paymentStatus || ''}
+                              <span className={`text-right ${paymentStatus === 'succeeded' ? 'text-primary' : ''}`}>
+                  {paymentStatus || ''}
               </span>
             </div>
 
@@ -446,59 +431,37 @@ export default function Page() {
           <Card>
             <CardContent className='h-88 flex flex-col gap-2'>
 
-              {/* Terminal Connection Status */}
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold-">Terminal Status</span>
+              {/* Simple Terminal Status */}
+              <div className="flex items-center justify-between py-2">
+                <span className="text-sm text-muted-foreground">Terminal Status</span>
+                <div className="flex items-center gap-2">
                   {terminalStatus === 'connected' && (
-                    <Wifi className="size-4 text-primary" />
+                    <>
+                      <Wifi className="size-4 text-green-600" />
+                      <span className="text-xs text-green-600">Connected</span>
+                    </>
                   )}
                   {terminalStatus === 'disconnected' && (
-                    <WifiOff className="size-4 text-destructive" />
+                    <>
+                      <WifiOff className="size-4 text-red-600" />
+                      <span className="text-xs text-red-600">Disconnected</span>
+                    </>
                   )}
                   {(terminalStatus === 'discovering' || terminalStatus === 'connecting') && (
-                    <Loader2 className="size-4 animate-spin text-primary" />
+                    <>
+                      <Loader2 className="size-4 animate-spin text-blue-600" />
+                      <span className="text-xs text-blue-600">
+                        {terminalStatus === 'discovering' ? 'Discovering...' : 'Connecting...'}
+                      </span>
+                    </>
                   )}
                 </div>
-                
-                {/* Auto-capture setting - only show in dev mode */}
-                {process.env.NEXT_PUBLIC_IS_DEV === 'true' && (
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="text-xs text-muted-foreground">Auto-capture payments</span>
-                    <Switch 
-                      checked={autoCapture} 
-                      onCheckedChange={setAutoCapture}
-                      size="sm"
-                    />
-                  </div>
-                )}
-                
-                {terminalStatus === 'disconnected' && !terminal && availableTerminals.length > 0 && (
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={autoConnectPhysical}
-                  >
-                    Connect Terminal
-                  </Button>
-                )}
-                
-                {terminalStatus === 'disconnected' && terminal && (
-                  <Button 
-                    size="sm" 
-                    variant="outline"
-                    onClick={() => connectToLinkedTerminal(terminal)}
-                    disabled={terminalStatus === 'connecting'}
-                  >
-                    {terminalStatus === 'connecting' ? 'Connecting...' : 'Retry Connection'}
-                  </Button>
-                )}
               </div>
 
               {/* Payment Buttons */}
               <div className="flex flex-col gap-2">
                 <Button
-                  disabled={terminalStatus !== 'connected' || (paymentStatus === 'succeeded' || cardPaymentStatus?.status === 'succeeded') || isCollectingPayment}
+                  disabled={terminalStatus !== 'connected' || paymentStatus === 'succeeded' || isCollectingPayment}
                   onClick={async () => {
                     try {
                       setIsCollectingPayment(true)
@@ -517,11 +480,13 @@ export default function Page() {
                   }}
                 >
                   {isCollectingPayment && <Loader2 className="size-4 animate-spin mr-2" />}
-                  {(paymentStatus === 'succeeded' || cardPaymentStatus?.status === 'succeeded') ? 
+                  {paymentStatus === 'succeeded' ? 
                     'Payment Complete' :
                     terminalStatus === 'connected' ? 
                       (isCollectingPayment ? 'Waiting for Card...' : 'Collect Payment') : 
-                      'Initializing...'
+                      terminalStatus === 'connecting' ? 'Connecting...' :
+                      terminalStatus === 'discovering' ? 'Discovering...' :
+                      'Terminal Not Ready'
                   }
                 </Button>
 
@@ -546,7 +511,7 @@ export default function Page() {
                 )}
 
                 {/* Return to Shop Button - only show after successful payment */}
-                {(paymentStatus === 'succeeded' || cardPaymentStatus?.status === 'succeeded') && (
+                {paymentStatus === 'succeeded' && (
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -561,7 +526,7 @@ export default function Page() {
               {/* Capture Payment button - only show in dev mode */}
               {process.env.NEXT_PUBLIC_IS_DEV === 'true' && (
                 <Button
-                  disabled={!paymentIntentId || paymentStatus === 'succeeded' || cardPaymentStatus?.status === 'succeeded'}
+                  disabled={!paymentIntentId || paymentStatus === 'succeeded'}
                   onClick={async () => {
                     try {
                                           const intent = await capturePayment();
@@ -598,41 +563,11 @@ export default function Page() {
                       Status: {paymentStatus}
                     </div>
                   )}
-                  {cardPaymentStatus && (
-                    <div className="text-xs text-muted-foreground">
-                      Stripe Status: {cardPaymentStatus.status}
-                      {cardPaymentStatus.status === 'succeeded' && (
-                        <span className="text-green-500 ml-1">✓ Completed</span>
-                      )}
-                      {cardPaymentStatus.needsCapture && !autoCapture && (
-                        <span className="text-orange-500 ml-1">(Ready for capture)</span>
-                      )}
-                      {cardPaymentStatus.needsCapture && autoCapture && cardPaymentStatus.status !== 'succeeded' && (
-                        <span className="text-blue-500 ml-1">(Auto-capturing...)</span>
-                      )}
-                    </div>
-                  )}
+
                 </div>
               )}
 
-              {/* Debug Info - only show in dev mode */}
-              {process.env.NEXT_PUBLIC_IS_DEV === 'true' && availableTerminals.length > 0 && (
-                <details className="text-xs">
-                  <summary className="cursor-pointer text-muted-foreground">
-                    Debug: Available Terminals ({availableTerminals.length})
-                  </summary>
-                  <div className="mt-2 space-y-1">
-                    {availableTerminals.map((terminal) => (
-                      <div key={terminal._id} className="flex justify-between">
-                        <span>{terminal.label}</span>
-                        <span className={`${terminal.availableForPayment ? 'text-green-600' : 'text-red-600'}`}>
-                          {terminal.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              )}
+
 
             </CardContent>
           </Card>  

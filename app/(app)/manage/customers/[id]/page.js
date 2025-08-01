@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, User, Mail, Phone, IdCard, Calendar, MapPin } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, IdCard, Calendar, MapPin, Receipt } from "lucide-react";
+import TransactionsTable from '@/components/transactions-table';
 import dayjs from 'dayjs';
 
 export default function CustomerDetailPage({ params }) {
@@ -88,20 +89,20 @@ export default function CustomerDetailPage({ params }) {
   }
 
   return (
-    <div className="mx-4">
+    <div className="mx-4 h-[calc(100vh-65px)] flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-4 flex-shrink-0">
         <Button
-          variant="outline"
+          variant="ghost"
           size="sm"
           onClick={() => router.push('/manage/customers')}
           className="flex items-center gap-2"
         >
           <ArrowLeft className="size-4" />
-          Back to Customers
+          Back
         </Button>
         
-        <div className="flex items-center gap-3">
+        {/* <div className="flex items-center gap-3">
           <div className="size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-medium">
             {getInitials(customer.name)}
           </div>
@@ -116,11 +117,11 @@ export default function CustomerDetailPage({ params }) {
               )}
             </div>
           </div>
-        </div>
+        </div> */}
       </div>
 
       {/* Customer Information */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 flex-shrink-0">
         {/* Basic Information */}
         <Card>
           <CardHeader>
@@ -270,6 +271,25 @@ export default function CustomerDetailPage({ params }) {
             )}
           </CardContent>
         </Card>
+      </div>
+
+      {/* Transactions Section */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="mb-4">
+          <h2 className="font-semibold flex items-center gap-2">
+            <Receipt className="size-5" />
+            Transaction History
+          </h2>
+          {/* <p className="text-sm text-muted-foreground">
+            All transactions for this customer
+          </p> */}
+        </div>
+        
+        <TransactionsTable 
+          customerId={customerId} 
+          showFilters={false}
+          className="flex-1"
+        />
       </div>
     </div>
   );

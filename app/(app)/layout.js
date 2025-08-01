@@ -1,7 +1,7 @@
 'use client'
 import Cookies from 'js-cookie'
 import { useEffect, useState } from 'react'
-import { MapPin, Wifi, WifiOff } from 'lucide-react'
+import { MapPin } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useGlobals } from '@/lib/globals'
 import { hasPermission, requiresAuth, getDefaultPath } from '@/lib/permissions'
@@ -21,8 +21,7 @@ export default function Page({children}) {
   const { location, employee, setEmployee, resetBreadcrumb, resetCart, setLowStockData, clearLowStockData } = useGlobals()
   const [ open, setOpen ] = useState(false)
   const [ isRedirecting, setIsRedirecting ] = useState(false)
-  const [ terminals, setTerminals ] = useState([])
-  const [ browserId, setBrowserId ] = useState(null)
+
   const pathname = usePathname();
   const router = useRouter();
 
@@ -91,57 +90,7 @@ export default function Page({children}) {
     });
   }, [pathname, employee, router]);
 
-  // Fetch terminals and set browser ID for wifi status
-  useEffect(() => {
-    // Generate or get browser ID from localStorage
-    let browserIdFromStorage = localStorage.getItem('browserId')
-    if (!browserIdFromStorage) {
-      browserIdFromStorage = `browser_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      localStorage.setItem('browserId', browserIdFromStorage)
-      console.log('🆔 [NAV WiFi Debug] Generated new browser ID:', browserIdFromStorage)
-    } else {
-      console.log('🆔 [NAV WiFi Debug] Using existing browser ID:', browserIdFromStorage)
-    }
-    setBrowserId(browserIdFromStorage)
 
-    // Fetch terminals if employee is available
-    const fetchTerminals = async () => {
-      if (!employee?.org) {
-        console.log('🏢 [NAV WiFi Debug] No employee org available, skipping terminal fetch')
-        return
-      }
-
-      console.log('📡 [NAV WiFi Debug] Fetching terminals for org:', employee.org._id)
-
-      try {
-        const response = await fetch('/api/terminals')
-        if (response.ok) {
-          const terminalsData = await response.json()
-          console.log('📱 [NAV WiFi Debug] Fetched terminals:', {
-            count: terminalsData.length,
-            terminals: terminalsData.map(t => ({
-              id: t._id,
-              label: t.label,
-              locationId: t.location._id,
-              locationName: t.location.name,
-              browser: t.browser,
-              status: t.status,
-              lastSync: t.lastSync
-            }))
-          })
-          setTerminals(terminalsData)
-        } else {
-          console.error('❌ [NAV WiFi Debug] Failed to fetch terminals, response not ok:', response.status)
-        }
-      } catch (error) {
-        console.error('❌ [NAV WiFi Debug] Failed to fetch terminals:', error)
-      }
-    }
-
-    if (employee?.org?._id) {
-      fetchTerminals()
-    }
-  }, [employee])
 
   // Low stock checking effect
   useEffect(() => {
@@ -184,87 +133,7 @@ export default function Page({children}) {
     }
   }, [employee?._id, employee?.role, setLowStockData, clearLowStockData])
 
-  // Check if this browser is linked to an online terminal at current location
-  const isLinkedToOnlineTerminal = () => {
-    console.log('🔍 [NAV WiFi Debug] Checking terminal connection status:', {
-      locationId: location?._id,
-      locationName: location?.name,
-      browserId,
-      terminalsCount: terminals.length,
-      terminals: terminals.map(t => ({
-        id: t._id,
-        label: t.label,
-        locationId: t.location._id,
-        browser: t.browser,
-        status: t.status,
-        matchesLocation: t.location._id === location?._id,
-        matchesBrowser: t.browser === browserId,
-        isOnline: t.status === 'online'
-      }))
-    })
 
-    if (!location?._id) {
-      console.log('❌ [NAV WiFi Debug] No location ID available')
-      return false
-    }
-    
-    if (!browserId) {
-      console.log('❌ [NAV WiFi Debug] No browser ID available')
-      return false
-    }
-    
-    if (!terminals.length) {
-      console.log('❌ [NAV WiFi Debug] No terminals available')
-      return false
-    }
-    
-    const matchingTerminal = terminals.find(terminal => 
-      terminal.location._id === location._id && 
-      terminal.browser === browserId && 
-      terminal.status === 'online'
-    )
-    
-    if (matchingTerminal) {
-      console.log('✅ [NAV WiFi Debug] Found matching online terminal:', {
-        id: matchingTerminal._id,
-        label: matchingTerminal.label,
-        status: matchingTerminal.status
-      })
-    } else {
-      console.log('❌ [NAV WiFi Debug] No matching online terminal found')
-      
-      // Check for terminals at this location
-      const locationTerminals = terminals.filter(t => t.location._id === location._id)
-      console.log('📍 [NAV WiFi Debug] Terminals at this location:', locationTerminals.map(t => ({
-        id: t._id,
-        label: t.label,
-        browser: t.browser,
-        status: t.status,
-        matchesBrowser: t.browser === browserId
-      })))
-      
-      // Check for terminals linked to this browser
-      const browserTerminals = terminals.filter(t => t.browser === browserId)
-      console.log('🌐 [NAV WiFi Debug] Terminals linked to this browser:', browserTerminals.map(t => ({
-        id: t._id,
-        label: t.label,
-        locationId: t.location._id,
-        locationName: t.location.name,
-        status: t.status,
-        matchesLocation: t.location._id === location?._id
-      })))
-    }
-    
-    return !!matchingTerminal
-  }
-
-  // Get tooltip message for wifi status
-  const getWifiTooltipMessage = () => {
-    const isLinked = isLinkedToOnlineTerminal()
-    return isLinked 
-      ? `Connected to online terminal at ${location?.name}`
-      : `No active terminal connection at ${location?.name}`
-  }
 
   const handleChange = (state) => {
     Cookies.set('sidebar_state', String(state))
@@ -287,22 +156,6 @@ export default function Page({children}) {
               <div className="flex items-center gap-2 text-sidebar-primary">
                 <MapPin className="w-4 h-4" />
                 <span>{location?.name}</span>
-                <Tooltip>
-                  <TooltipTrigger>
-                    {(() => {
-                      const isConnected = isLinkedToOnlineTerminal()
-                      console.log(`📡 [NAV WiFi Debug] Rendering WiFi icon: ${isConnected ? 'CONNECTED' : 'DISCONNECTED'}`)
-                      return isConnected ? (
-                        <Wifi className="w-4 h-4 text-primary" />
-                      ) : (
-                        <WifiOff className="w-4 h-4 text-destructive" />
-                      )
-                    })()}
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>{getWifiTooltipMessage()}</p>
-                  </TooltipContent>
-                </Tooltip>
               </div>
             )}
 

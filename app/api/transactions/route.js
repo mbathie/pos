@@ -16,6 +16,7 @@ export async function GET(request) {
     const status = searchParams.get('status');
     const hours = searchParams.get('hours');
     const paymentMethod = searchParams.get('paymentMethod');
+    const customerId = searchParams.get('customerId');
 
     let query = { org: employee.org._id };
 
@@ -27,6 +28,11 @@ export async function GET(request) {
     // Filter by payment method
     if (paymentMethod && paymentMethod !== 'all') {
       query.paymentMethod = paymentMethod;
+    }
+
+    // Filter by customer
+    if (customerId) {
+      query.customer = customerId;
     }
 
     // Filter by time range (hours)

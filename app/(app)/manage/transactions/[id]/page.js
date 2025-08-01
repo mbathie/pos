@@ -331,7 +331,7 @@ export default function TransactionDetailsPage() {
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="sm" onClick={() => router.back()}>
           <ArrowLeft className="size-4 mr-2-" />
-          All Transactions
+          Back
         </Button>
         <div className="flex-1" />
           <Button variant="outline" size="sm">

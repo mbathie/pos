@@ -46,25 +46,24 @@ DONE - when purchasing a shop item - make qty automatically 1
 DONE - Par warning - only for manager, admin's
 
 DONE - create new staff accounts
-- connect terminals to locations
+DONE - connect terminals to locations
 DONE - roles for staff, admins, bump screens, terminals
 DONE  - ADMIN, MANAGER, STAFF, TERMINAL
 DONE - set a pin if no pin is set for new employees
-- terminal integration (using real terminal)
+DONE - terminal integration (using real terminal)
 - checkout process for subscriptions
   - backend Membership table for memberships
-- specify what products at what locations
 - Email out QR code for classes and courses & memberships
   - ability scan the QR to checkin at the front entry with a dedicated device - should confirm they have checked in.
   - dedicated page to see people checking in - list view, with status/ etc
 - should be able to assign arbitrary discount amounts or percentages at checkout time (at MANAGER level only)
-- Customer list view page
+DONE - Customer list view page
 - basic accounting reporing
 - stock items need to have a customer assigned to them, i.e. pair of shoes for warrenty.
 - online orders for classes/courses/memberships
   - also abiltiy to view / edit profile
 - refunds
-- 4 digit PIN numbers - enforce some basic rules, i.e. not 1234, 1111, etc.
+DONE - 4 digit PIN numbers - enforce some basic rules, i.e. not 1234, 1111, etc.
 
 - export CSV of purchases (for marketing purposes)
 
@@ -79,6 +78,7 @@ DONE  - ability to filter for items below or at par, or cloase to par
 NICE TO HAVES
 -----------------------
   - ability to edit orders, after its complete - i.e. they wanted a chololate shake instead of vanilla
+  - specify what products at what locations
 
   - FOB gate entry based on memberships
   - customer rewards & reward packages assigned to products
