@@ -36,7 +36,8 @@
         "/manage/customers",
         "/employees",
         "group:setup",
-        "lowstock:check"
+        "lowstock:check",
+        "discount:custom"
       ],
       "description": "Management access including setup features"
     }

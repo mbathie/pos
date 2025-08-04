@@ -1,0 +1,780 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "POS System API",
+    "description": "API for managing point of sale operations including products, customers, transactions, and more.",
+    "version": "1.0.0",
+    "contact": {
+      "name": "API Support",
+      "email": "support@possystem.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Development server"
+    }
+  ],
+  "security": [
+    {
+      "cookieAuth": []
+    }
+  ],
+  "paths": {
+    "/auth/pincheck": {
+      "post": {
+        "summary": "Verify PIN for permission check",
+        "description": "Check if a PIN belongs to a user with the specified permission within the organization",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["pin", "permission"],
+                "properties": {
+                  "pin": {
+                    "type": "string",
+                    "description": "4-digit PIN to verify",
+                    "example": "1234"
+                  },
+                  "permission": {
+                    "type": "string",
+                    "description": "Permission to check for (e.g., 'discount:custom')",
+                    "example": "discount:custom"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PIN verified and user has permission",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "user": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "example": "John Manager"
+                        },
+                        "email": {
+                          "type": "string",
+                          "example": "manager@company.com"
+                        },
+                        "role": {
+                          "type": "string",
+                          "example": "MANAGER"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - PIN and permission are required"
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing authentication"
+          },
+          "403": {
+            "description": "Invalid PIN or insufficient permissions"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/customers": {
+      "get": {
+        "summary": "Get all customers",
+        "description": "Retrieve a list of all customers in the system",
+        "tags": ["Customers"],
+        "responses": {
+          "200": {
+            "description": "List of customers retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Customer"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Invalid or missing authentication"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new customer",
+        "description": "Add a new customer to the system",
+        "tags": ["Customers"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Customer created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid customer data"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/customers/{id}": {
+      "get": {
+        "summary": "Get customer by ID",
+        "description": "Retrieve a specific customer by their ID",
+        "tags": ["Customers"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "64f8a1b2c3d4e5f6a7b8c9d0"
+            },
+            "description": "Unique customer identifier (MongoDB ObjectId)"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Customer not found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/products": {
+      "get": {
+        "summary": "Get all products",
+        "description": "Retrieve a list of all products with optional filtering",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "classes"
+            },
+            "description": "Filter products by category name"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["class", "course", "casual", "membership", "shop"],
+              "example": "class"
+            },
+            "description": "Filter products by type"
+          },
+          {
+            "name": "location",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "64f8a1b2c3d4e5f6a7b8c9d0"
+            },
+            "description": "Filter products by location ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of products retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Product"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/transactions": {
+      "get": {
+        "summary": "Get all transactions",
+        "description": "Retrieve a list of transactions with optional filtering",
+        "tags": ["Transactions"],
+        "parameters": [
+          {
+            "name": "customerId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "example": "64f8a1b2c3d4e5f6a7b8c9d0"
+            },
+            "description": "Filter transactions by customer ID"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["pending", "succeeded", "failed", "cancelled"],
+              "example": "succeeded"
+            },
+            "description": "Filter transactions by status"
+          },
+          {
+            "name": "paymentMethod",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["card", "cash"],
+              "example": "card"
+            },
+            "description": "Filter transactions by payment method"
+          },
+          {
+            "name": "startDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2024-01-01"
+            },
+            "description": "Filter transactions from this date"
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "example": "2024-12-31"
+            },
+            "description": "Filter transactions until this date"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of transactions retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Transaction"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new transaction",
+        "description": "Process a new transaction (payment)",
+        "tags": ["Transactions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transaction created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Transaction"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Invalid transaction data"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/discounts": {
+      "get": {
+        "summary": "Get all discounts",
+        "description": "Retrieve a list of available discount codes",
+        "tags": ["Discounts"],
+        "parameters": [
+          {
+            "name": "current",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "example": true
+            },
+            "description": "Only return currently active discounts"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": ["percent", "fixed"],
+              "example": "percent"
+            },
+            "description": "Filter discounts by type"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of discounts retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Discount"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/terminals": {
+      "get": {
+        "summary": "Get all terminals",
+        "description": "Retrieve a list of payment terminals",
+        "tags": ["Terminals"],
+        "responses": {
+          "200": {
+            "description": "List of terminals retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Terminal"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "token",
+        "description": "Authentication token stored in HTTP-only cookie"
+      }
+    },
+    "schemas": {
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "Unique customer identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Customer full name"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Customer email address"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Customer phone number"
+          },
+          "org": {
+            "type": "string",
+            "description": "Organization ID"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CustomerInput": {
+        "type": "object",
+        "required": ["name", "email"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Customer full name",
+            "example": "John Smith"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "Customer email address",
+            "example": "john.smith@example.com"
+          },
+          "phone": {
+            "type": "string",
+            "description": "Customer phone number",
+            "example": "+61 412 345 678"
+          }
+        },
+        "example": {
+          "name": "John Smith",
+          "email": "john.smith@example.com",
+          "phone": "+61 412 345 678"
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "Unique product identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Product name"
+          },
+          "desc": {
+            "type": "string",
+            "description": "Product description"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["class", "course", "casual", "membership", "shop"],
+            "description": "Product type"
+          },
+          "category": {
+            "type": "string",
+            "description": "Category ID"
+          },
+          "variations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "prices": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "value": {
+                        "type": "number"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "Unique transaction identifier"
+          },
+          "amount": {
+            "type": "object",
+            "properties": {
+              "subtotal": {
+                "type": "number",
+                "format": "decimal"
+              },
+              "tax": {
+                "type": "number",
+                "format": "decimal"
+              },
+              "total": {
+                "type": "number",
+                "format": "decimal"
+              },
+              "discount": {
+                "type": "number",
+                "format": "decimal"
+              }
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "succeeded", "failed", "cancelled"]
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": ["card", "cash"]
+          },
+          "customer": {
+            "type": "string",
+            "description": "Customer ID"
+          },
+          "employee": {
+            "type": "string",
+            "description": "Employee ID who processed the transaction"
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "Products in the transaction"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TransactionInput": {
+        "type": "object",
+        "required": ["cart", "paymentMethod"],
+        "properties": {
+          "cart": {
+            "type": "object",
+            "description": "Cart object containing products and totals",
+            "properties": {
+              "products": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              },
+              "subtotal": {
+                "type": "number",
+                "format": "decimal",
+                "example": 50.00
+              },
+              "tax": {
+                "type": "number",
+                "format": "decimal",
+                "example": 5.00
+              },
+              "total": {
+                "type": "number",
+                "format": "decimal",
+                "example": 55.00
+              }
+            }
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": ["card", "cash"],
+            "example": "card"
+          },
+          "customerId": {
+            "type": "string",
+            "description": "Optional customer ID",
+            "example": "64f8a1b2c3d4e5f6a7b8c9d0"
+          }
+        },
+        "example": {
+          "cart": {
+            "products": [
+              {
+                "name": "Yoga Class",
+                "type": "class",
+                "quantity": 1,
+                "price": 25.00
+              }
+            ],
+            "subtotal": 50.00,
+            "tax": 5.00,
+            "total": 55.00
+          },
+          "paymentMethod": "card",
+          "customerId": "64f8a1b2c3d4e5f6a7b8c9d0"
+        }
+      },
+      "Discount": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "Unique discount identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Discount name/code"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["percent", "fixed"],
+            "description": "Discount type"
+          },
+          "value": {
+            "type": "number",
+            "description": "Discount value (percentage or fixed amount)"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the discount is currently active"
+          },
+          "validFrom": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "validTo": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Terminal": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "Unique terminal identifier"
+          },
+          "name": {
+            "type": "string",
+            "description": "Terminal display name"
+          },
+          "stripeTerminalId": {
+            "type": "string",
+            "description": "Stripe Terminal ID"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["online", "offline"],
+            "description": "Terminal status"
+          },
+          "location": {
+            "type": "string",
+            "description": "Location ID where terminal is installed"
+          },
+          "browser": {
+            "type": "string",
+            "description": "Browser ID linked to this terminal"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "Authentication and authorization operations"
+    },
+    {
+      "name": "Customers",
+      "description": "Customer management operations"
+    },
+    {
+      "name": "Products",
+      "description": "Product catalog management"
+    },
+    {
+      "name": "Transactions",
+      "description": "Payment and transaction processing"
+    },
+    {
+      "name": "Discounts",
+      "description": "Discount code management"
+    },
+    {
+      "name": "Terminals",
+      "description": "Payment terminal management"
+    }
+  ]
+}

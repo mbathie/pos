@@ -34,7 +34,7 @@ export default function Cart({}) {
                   <Trash2 className='size-4'/>
                 </div>
                 <div className='flex-1' />
-                <div>${p.amount.total.toFixed(2)}</div>
+                <div>${p.amount.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               </div>
               <div className='flex flex-row text-xs ml-1'>
                 {p.item.mods && p.item.mods.map((mod, pIdx) => (
@@ -66,7 +66,7 @@ export default function Cart({}) {
               {p.variations?.[0]?.prices?.map((price, i) => (
                 <div key={i} className="flex">
                   <div>{price.qty}x {price.name}</div>
-                  <div className="ml-auto">${parseFloat(price.value).toFixed(2)}</div>
+                  <div className="ml-auto">${parseFloat(price.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
               ))}
             </div>
@@ -92,7 +92,7 @@ export default function Cart({}) {
                   {v.prices?.map((price, i) => (
                     <div key={i} className="flex">
                       <div>{price.qty}x {price.name}</div>
-                      <div className="ml-auto opacity-40">${parseFloat(price.value).toFixed(2)}</div>
+                      <div className="ml-auto opacity-40">${parseFloat(price.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                     </div>
                   ))}
 
@@ -106,7 +106,7 @@ export default function Cart({}) {
                           const lineTotal = v.prices?.reduce((sum, price) => {
                             return sum + ((price.qty ?? 0) * parseFloat(price.value ?? 0));
                           }, 0);
-                          return `$${lineTotal.toFixed(2)}`;
+                          return `$${lineTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                         })()}
                       </div>
                     </div>
@@ -135,13 +135,41 @@ export default function Cart({}) {
                   {v.prices?.map((price, i) => (
                     <div key={i} className="flex">
                       <div>{price.qty}x {price.name}</div>
-                      <div className="ml-auto">${parseFloat(price.value).toFixed(2)}</div>
+                      <div className="ml-auto">${parseFloat(price.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                     </div>
                   ))}
                 </div>
               ))}
             </div>
 
+          )
+
+          else if (p.type=='membership') return (
+            <div key={pIdx} className="flex flex-col space-y-1">
+              <div className="flex">
+                <div className="font-semibold">{p.name}</div>
+                <div
+                  className='ml-1 cursor-pointer mt-0.5'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFromCart(pIdx);
+                  }}
+                >
+                  <Trash2 className='size-4'/>
+                </div>
+              </div>
+
+              {p.variations?.map((v, vIdx) => (
+                <div key={vIdx}>
+                  {v.prices?.map((price, i) => (
+                    <div key={i} className="flex">
+                      <div>{price.qty}x {price.name} {v.unit && `(${v.unit})`}</div>
+                      <div className="ml-auto">${parseFloat(price.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           )
 
         })}
@@ -154,19 +182,19 @@ export default function Cart({}) {
           <div className='flex'>
             <div className=''>Subtotal</div>
             <div className='ml-auto'>
-              ${cart.subtotal.toFixed(2)}
+              ${cart.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
           <div className='flex'>
             <div className=''>Tax</div>
             <div className='ml-auto'>
-              ${cart.tax.toFixed(2)}
+              ${cart.tax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
           <div className='flex font-semibold'>
             <div className='uppercase'>Total</div>
             <div className='ml-auto'>
-              ${cart.total.toFixed(2)}
+              ${cart.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
           </div>
         </div>

@@ -30,6 +30,7 @@ export default function Page() {
         units={units}
         title="Membership subscription products"
         categoryName={categoryName}
+        type="membership"
       />
     </div>
   );

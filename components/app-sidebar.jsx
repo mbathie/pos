@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, MapPinCheckInside, Users, CircleDollarSign, Wrench, Landmark, Settings, Calendar, QrCode, ChefHat, Receipt, Percent, Terminal, UserCheck } from "lucide-react";
+import { MapPin, MapPinCheckInside, Users, CircleDollarSign, Landmark, Settings, Calendar, QrCode, ChefHat, Receipt, Percent, Terminal, UserCheck, Tag } from "lucide-react";
 import { NavMenu } from "@/components/nav-menu";
 import { NavUser } from "@/components/nav-user";
 import { LocationSwitcher } from "@/components/location-switcher";
@@ -49,7 +49,7 @@ export function AppSidebar(props) {
     { title: "Transactions", url: "/manage/transactions", icon: Receipt },
     { groupLabel: "Setup", permission: "group:setup"},
     { 
-      title: "Products", icon: Wrench,
+      title: "Products", icon: Tag,
       items: [
         { title: "Casual Entry", url: "/products/casual" },
         { title: "Classes", url: "/products/classes" },

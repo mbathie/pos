@@ -1,206 +1,205 @@
-# Cursor AI Coding Rules
+# Cursor AI Coding Rules for POS System
 
-## Authentication for API Testing
+## API Documentation Requirements
 
-### Development Token
+### CRITICAL: Auto-Update API Documentation
+**WHENEVER a new API endpoint is created or modified, you MUST:**
+
+1. **Update `public/api-spec.json`** with the new endpoint specification
+2. **Include complete OpenAPI 3.0 documentation** with:
+   - Proper HTTP method and path
+   - Summary and description
+   - All parameters (path, query, header)
+   - Request body schema (if applicable)
+   - Response schemas for all status codes
+   - Examples for parameters and request/response bodies
+   - Appropriate tags for organization
+
+### API Documentation Standards
+
+#### Path Parameters
+```json
+{
+  "name": "id",
+  "in": "path",
+  "required": true,
+  "schema": {
+    "type": "string",
+    "example": "64f8a1b2c3d4e5f6a7b8c9d0"
+  },
+  "description": "Unique identifier (MongoDB ObjectId)"
+}
+```
+
+#### Query Parameters
+```json
+{
+  "name": "status",
+  "in": "query",
+  "required": false,
+  "schema": {
+    "type": "string",
+    "enum": ["active", "inactive"],
+    "example": "active"
+  },
+  "description": "Filter by status"
+}
+```
+
+#### Request Body Example
+```json
+{
+  "requestBody": {
+    "required": true,
+    "content": {
+      "application/json": {
+        "schema": {
+          "$ref": "#/components/schemas/ResourceInput"
+        }
+      }
+    }
+  }
+}
+```
+
+#### Response Example
+```json
+{
+  "responses": {
+    "200": {
+      "description": "Success response",
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/Resource"
+          }
+        }
+      }
+    },
+    "400": {
+      "description": "Bad request - Invalid input data"
+    },
+    "401": {
+      "description": "Unauthorized - Invalid or missing authentication"
+    },
+    "404": {
+      "description": "Resource not found"
+    }
+  }
+}
+```
+
+### Required Components for New Endpoints
+
+1. **Tags**: Organize endpoints by functional area (Customers, Products, Transactions, etc.)
+2. **Security**: Include authentication requirements
+3. **Examples**: Provide realistic sample data
+4. **Error Responses**: Document all possible error states
+5. **Schemas**: Create reusable schemas in `components/schemas`
+
+### Schema Standards
+
+#### Input Schemas
+- Mark required fields with `required` array
+- Include validation rules (min/max, patterns)
+- Provide examples for each property
+
+#### Output Schemas  
+- Include all response fields
+- Use proper data types and formats
+- Reference other schemas where appropriate
+
+### Example New Endpoint Documentation
+
+When creating `POST /api/bookings`, add this to `public/api-spec.json`:
+
+```json
+"/bookings": {
+  "post": {
+    "summary": "Create a new booking",
+    "description": "Create a new class or service booking for a customer",
+    "tags": ["Bookings"],
+    "requestBody": {
+      "required": true,
+      "content": {
+        "application/json": {
+          "schema": {
+            "$ref": "#/components/schemas/BookingInput"
+          }
+        }
+      }
+    },
+    "responses": {
+      "201": {
+        "description": "Booking created successfully",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Booking"
+            }
+          }
+        }
+      },
+      "400": {
+        "description": "Bad request - Invalid booking data"
+      },
+      "401": {
+        "description": "Unauthorized"
+      }
+    }
+  }
+}
+```
+
+### Workflow for New API Endpoints
+
+1. **Create the API route file** (e.g., `app/api/bookings/route.js`)
+2. **IMMEDIATELY update** `public/api-spec.json` with complete documentation
+3. **Test the endpoint** using the Swagger UI at `/apidocs`
+4. **Verify documentation** shows parameters, examples, and responses correctly
+
+### Common API Patterns in This Project
+
+- **Authentication**: Cookie-based with `token` cookie
+- **Error Format**: Consistent error response structure
+- **Pagination**: Use `page` and `limit` query parameters
+- **Filtering**: Use query parameters for filtering lists
+- **MongoDB ObjectIds**: Use string type with example values
+- **Date Formats**: Use ISO 8601 format (`YYYY-MM-DD` or `YYYY-MM-DDTHH:mm:ssZ`)
+
+### API Documentation Location
+- **Swagger UI**: Available at `http://localhost:3000/apidocs`
+- **OpenAPI Spec**: `public/api-spec.json`
+- **Auto-reload**: Changes to `api-spec.json` are reflected immediately
+
+## ENFORCEMENT
+**This rule is MANDATORY. Any PR with new API endpoints MUST include updated API documentation or it will be considered incomplete.**
+
+---
+
+## Additional Coding Standards
+
+### Authentication for API Testing
 For testing authenticated API endpoints, use this cookie value:
 - **Cookie Name**: `token`
 - **Cookie Value**: `eyJhbGciOiJIUzI1NiJ9.eyJzZWxlY3RlZExvY2F0aW9uSWQiOiI2ODZmNjI5NDljYmI1NTRiNjlkNjNhYTYiLCJlbWFpbCI6Im1iYXRoaWVAZ21haWwuY29tIiwiZW1wbG95ZWVJZCI6IjY4NjQ4NjkwZWNmMTJkMzAyMDkwMmJhMCIsIm9yZ0lkIjoiNjg2NDg2OTBlY2YxMmQzMDIwOTAyYjliIiwiZXhwIjoxNzg0MTQwMDY3fQ.CC4NxD5KLgbhKi7DrUkZpCYfj-Abp2ErYLVd4yBVqmA`
 
-### Usage Example
-```bash
-curl -X GET http://localhost:3000/api/discounts \
-  -H "Cookie: token=eyJhbGciOiJIUzI1NiJ9.eyJzZWxlY3RlZExvY2F0aW9uSWQiOiI2ODZmNjI5NDljYmI1NTRiNjlkNjNhYTYiLCJlbWFpbCI6Im1iYXRoaWVAZ21haWwuY29tIiwiZW1wbG95ZWVJZCI6IjY4NjQ4NjkwZWNmMTJkMzAyMDkwMmJhMCIsIm9yZ0lkIjoiNjg2NDg2OTBlY2YxMmQzMDIwOTAyYjliIiwiZXhwIjoxNzg0MTQwMDY3fQ.CC4NxD5KLgbhKi7DrUkZpCYfj-Abp2ErYLVd4yBVqmA"
-```
-
-## UI Component Guidelines
-
-### Icons
-- **ALWAYS use Lucide icons**: Import icons from `lucide-react` package
-- ✅ Correct: `import { ChevronDown, Plus, Edit } from 'lucide-react'`
-- ❌ Incorrect: Using other icon libraries or custom SVGs
+### UI Component Guidelines
+- **ALWAYS use Lucide icons**: Import from `lucide-react` package
 - **Standard sizing**: Use `size-4` (16px) for most UI icons, `size-6` (24px) for larger buttons
 
-### Examples
-```javascript
-// ✅ Correct - Lucide icons
-import { ArrowLeft, Calendar, Trash2 } from 'lucide-react'
+### Next.js 15+ Requirements
+- **API Route Parameters**: Always use `await` when accessing route parameters
+- Example: `const { id } = await params;` (not `const { id } = params;`)
 
-<Button>
-  <Plus className="size-4 mr-2" />
-  Add Item
-</Button>
-```
+### Form Development Guidelines
+- **Use React Hook Form + Zod validation** for all forms
+- **Use ShadCN UI Form components** following official documentation
+- **Visual error feedback only**: Use border styling, no error text messages
+- **Error styling**: Use `border-destructive focus:border-destructive` for errors
 
-```javascript
-// ❌ Incorrect - Other icon libraries
-import { FaPlus } from 'react-icons/fa' // Don't use
-import AddIcon from '@mui/icons-material/Add' // Don't use
-```
-
-## Next.js 15+ Requirements
-
-### API Route Parameters
-- **CRITICAL**: When accessing route parameters in API routes, always use `await` to destructure from params
-- ✅ Correct: `const { id } = await params;`
-- ❌ Incorrect: `const { id } = params;`
-- This is required in Next.js 15+ where params is a Promise that must be awaited
-
-### Examples
-```javascript
-// ✅ Correct - API Route with async params
-export async function GET(request, { params }) {
-  const { id } = await params; // Always await params
-  // ... rest of route logic
-}
-
-export async function PUT(request, { params }) {
-  const { id, slug } = await params; // Always await params
-  // ... rest of route logic
-}
-```
-
-```javascript
-// ❌ Incorrect - Will cause errors in Next.js 15+
-export async function GET(request, { params }) {
-  const { id } = params; // Missing await - will fail
-  // ... rest of route logic
-}
-```
-
-## Form Development Guidelines
-
-### React Hook Form + Zod Pattern
-- **ALWAYS use React Hook Form with Zod validation** for all forms
-- **ALWAYS use ShadCN UI Form components** following the official documentation pattern
-- **Visual error feedback only**: Use border styling, no error text messages to prevent layout shifts
-
-### Required Dependencies
-```javascript
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
-```
-
-### Form Schema Pattern
-```javascript
-// Define Zod schema for validation
-const formSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name must be less than 100 characters"),
-  email: z.string().email("Invalid email address"),
-  type: z.enum(["option1", "option2"], {
-    required_error: "Please select an option",
-  }),
-}).refine((data) => {
-  // Cross-field validation example
-  if (data.type === "percent" && Number(data.value) > 100) {
-    return false;
-  }
-  return true;
-}, {
-  message: "Custom validation message",
-  path: ["fieldName"], // Shows error on specific field
-});
-```
-
-### Form Implementation Pattern
-```javascript
-const form = useForm({
-  resolver: zodResolver(formSchema),
-  defaultValues: {
-    name: '',
-    email: '',
-    type: 'option1',
-  },
-});
-
-const onSubmit = async (data) => {
-  // Handle form submission
-  try {
-    // API call logic
-  } catch (error) {
-    // Error handling
-  }
-};
-```
-
-### Form Field Pattern
-```javascript
-<Form {...form}>
-  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-    <FormField
-      control={form.control}
-      name="fieldName"
-      render={({ field, fieldState }) => (
-        <FormItem className="relative">
-          <FormLabel className={fieldState.error ? "text-destructive" : ""}>
-            Field Label
-          </FormLabel>
-          <FormControl>
-            <Input 
-              placeholder="Placeholder text"
-              className={fieldState.error ? "border-destructive focus:border-destructive" : ""}
-              {...field} 
-            />
-          </FormControl>
-          {/* NO error message div - visual feedback only */}
-        </FormItem>
-      )}
-    />
-  </form>
-</Form>
-```
-
-### Error Styling Rules
-- **Border styling**: Use `border-destructive focus:border-destructive` for error states
-- **Label styling**: Use `text-destructive` for error labels  
-- **NO error text**: Do not render error message text to prevent layout shifts
-- **Visual feedback only**: Errors indicated through red borders and labels only
-- **Relative positioning**: Use `className="relative"` on FormItem for proper styling
-
-### Form Component Types
-```javascript
-// Input field
-<Input 
-  className={fieldState.error ? "border-destructive focus:border-destructive" : ""}
-  {...field} 
-/>
-
-// Select field  
-<Select onValueChange={field.onChange} defaultValue={field.value}>
-  <FormControl>
-    <SelectTrigger className={fieldState.error ? "border-destructive focus:border-destructive" : ""}>
-      <SelectValue placeholder="Select option" />
-    </SelectTrigger>
-  </FormControl>
-  <SelectContent>
-    <SelectItem value="option1">Option 1</SelectItem>
-  </SelectContent>
-</Select>
-
-// Textarea field
-<Textarea
-  className={fieldState.error ? "border-destructive focus:border-destructive" : ""}
-  {...field}
-/>
-
-// Date picker button
-<Button
-  variant="outline" 
-  className={cn(
-    "justify-start text-left font-normal",
-    !field.value && "text-muted-foreground",
-    fieldState.error && "border-destructive focus:border-destructive"
-  )}
->
-  {/* Date picker content */}
-</Button>
-```
-
-### Form Best Practices
-- Use `form.watch('fieldName')` for reactive field values
-- Implement cross-field validation with schema-level `.refine()`
-- Always destructure `{ field, fieldState }` in render function
-- Use theme-consistent `destructive` color classes
-- Maintain clean, layout-stable error indication
+### Code Formatting
+- **Use 2-space indentation** for all file types
+- **Use dayjs** for date formatting (unless ShadCN calendar requires date-fns)
+- **Use Tailwind CSS** exclusively for styling
+- **Place utility libraries** in root `lib` directory with `@/lib/x` imports

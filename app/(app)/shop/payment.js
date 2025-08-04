@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { Input } from "@/components/ui/input"
 
 import { useGlobals } from "@/lib/globals"
 import { useCard } from './useCard'
@@ -15,6 +16,8 @@ import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2 } from "lucide-r
 import { toast } from 'sonner'
 
 import CustomerConnect from './customerConnect'
+import DiscountPinDialog from '@/components/pin-dialog-discount'
+import { hasPermission } from '@/lib/permissions'
 // import { User } from "lucide-react";
 
 const keypad = ['1','2','3','4','5','6','7','8','9','.','0','AC'];
@@ -54,6 +57,9 @@ export default function Page() {
   const [discounts, setDiscounts] = useState([])
   const [loadingDiscounts, setLoadingDiscounts] = useState(false)
   const [discountExpanded, setDiscountExpanded] = useState(false)
+  const [customDiscountInput, setCustomDiscountInput] = useState('')
+  const [showDiscountPinDialog, setShowDiscountPinDialog] = useState(false)
+  const [pendingDiscountAmount, setPendingDiscountAmount] = useState('')
 
   useEffect(() => {
     console.log(cart)
@@ -248,6 +254,55 @@ export default function Page() {
     });
   }, []);
 
+  // Handle custom discount application
+  const applyCustomDiscount = (amount) => {
+    const discountAmount = parseFloat(amount);
+    if (isNaN(discountAmount) || discountAmount <= 0) return;
+    
+    // Check if discount amount exceeds cart total
+    const cartTotal = cart.subtotal + cart.tax;
+    if (discountAmount > cartTotal) {
+      toast.error(`Discount amount ($${discountAmount.toFixed(2)}) cannot exceed cart total ($${cartTotal.toFixed(2)})`);
+      return;
+    }
+    
+    // Check if current user has permission for custom discounts
+    if (!hasPermission(employee?.role, 'discount:custom')) {
+      // Store the pending discount amount and show pin dialog
+      setPendingDiscountAmount(amount);
+      setShowDiscountPinDialog(true);
+      return;
+    }
+    
+    // User has permission, apply discount directly
+    executeCustomDiscount(discountAmount);
+  };
+
+  // Execute the actual discount application (separated for reuse after PIN verification)
+  const executeCustomDiscount = (discountAmount) => {
+    // Remove any existing discount first
+    if (cart.discount || cart.discountAmount > 0) {
+      removeDiscount();
+    }
+    
+    // Apply custom discount amount directly to cart
+    setCart(draft => {
+      draft.discountAmount = discountAmount;
+      draft.discount = null; // No discount object for custom discounts
+      draft.total = Math.max(0, draft.subtotal + draft.tax - discountAmount);
+    });
+    
+    setCustomDiscountInput('');
+    toast.success(`Applied custom discount of $${discountAmount.toFixed(2)}`);
+  };
+
+  // Handle successful PIN verification for custom discount
+  const handleDiscountPinSuccess = (data) => {
+    const discountAmount = parseFloat(pendingDiscountAmount);
+    executeCustomDiscount(discountAmount);
+    setPendingDiscountAmount('');
+  };
+
   // Handle keypad input for cash received
   const handleKeypadInput = async (key) => {
     setCashInput(prev => {
@@ -284,16 +339,23 @@ export default function Page() {
               <span className="text-right">${displayCart.subtotal.toFixed(2)}</span>
             </div>
             {/* Only show discount row if there's an applied discount with actual discount amount */}
-            {displayCart.discount && displayCart.discountAmount > 0 && (
+            {displayCart.discountAmount > 0 && (
               <div 
-                className="flex justify-between cursor-pointer hover:bg-muted/50 px-2 -py-1 rounded -mx-2"
-                onClick={() => setDiscountExpanded(!discountExpanded)}
+                className={`flex justify-between px-2 -py-1 rounded -mx-2 ${
+                  displayCart.discount ? 'cursor-pointer hover:bg-muted/50' : ''
+                }`}
+                onClick={displayCart.discount ? () => setDiscountExpanded(!discountExpanded) : undefined}
               >
                 <div className="flex items-center gap-1">
                   <span>
-                    {`${displayCart.discount.name} (${displayCart.discount.type === 'percent' ? `${displayCart.discount.value}%` : `$${displayCart.discount.value}`})`}
+                    {displayCart.discount 
+                      ? `${displayCart.discount.name} (${displayCart.discount.type === 'percent' ? `${displayCart.discount.value}%` : `$${displayCart.discount.value}`})`
+                      : 'Custom Discount'
+                    }
                   </span>
-                  {discountExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                  {displayCart.discount && (
+                    <>{discountExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}</>
+                  )}
                 </div>
                 <span className="text-right">
                   -${displayCart.discountAmount.toFixed(2)}
@@ -301,8 +363,8 @@ export default function Page() {
               </div>
             )}
             
-                          {/* Expanded discount details */}
-              {discountExpanded && displayCart.discountAmount > 0 && (
+                          {/* Expanded discount details - only for regular discounts */}
+              {discountExpanded && displayCart.discount && displayCart.discountAmount > 0 && (
                 <div className="space-y-1- text-sm-  -pl-3 mt-2-">
                   {displayCart.products
                     .filter(product => product.amount?.discount > 0)
@@ -346,11 +408,11 @@ export default function Page() {
             <Separator orientation="vertical" className="h-[1px] bg-muted my-2" />
 
             {/* Discount Code Selection */}
-            <div className="flex flex-row gap-2 mb-4">
+            <div className="flex flex-row gap-2">
               <div className="">Discount</div>
               <div className="flex-1" />
               
-              {cart.discount && cart.discountAmount > 0 ? (
+              {cart.discountAmount > 0 ? (
                 // Show applied discount with remove button
                 <div className="flex items-center gap-1">
                   <Trash2 
@@ -358,7 +420,7 @@ export default function Page() {
                     onClick={() => removeDiscount()}
                   />
                   <div className="text-sm">
-                    {cart.discount.name}
+                    {cart.discount ? cart.discount.name : 'Custom Discount'}
                   </div>
                 </div>
               ) : (
@@ -392,6 +454,39 @@ export default function Page() {
               )}
             </div>
 
+            {/* Custom Discount Input */}
+            {cart.discountAmount === 0 && (
+              <div className="flex flex-row gap-4 items-center mt-2">
+                <div className="">Custom Discount</div>
+                <div className="flex-1" />
+                <div className="flex gap-2 items-center">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max={cart.subtotal + cart.tax}
+                    value={customDiscountInput}
+                    onChange={(e) => setCustomDiscountInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        applyCustomDiscount(customDiscountInput);
+                      }
+                    }}
+                    placeholder="0.00"
+                    className="w-26"
+                    disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                  />
+                  <Button
+                    onClick={() => applyCustomDiscount(customDiscountInput)}
+                    disabled={!customDiscountInput || parseFloat(customDiscountInput) <= 0 || paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                    className="px-2"
+                  >
+                    Apply
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <Separator orientation="vertical" className="h-[1px] bg-muted my-2" />
 
             <div className="mb-2">Customers</div>
@@ -407,9 +502,24 @@ export default function Page() {
                         <div className="whitespace-nowrap self-start">{cIdx + 1}. {price.name}</div>
                         <div className="flex justify-end w-full text-right">
                           {c.customer ? (
-                            <div className="flex flex-col">
-                              <div>{c.customer.name}</div>
-                              <div className="text-xs">{c.customer.phone}, {c.customer.email}</div>
+                            <div className="flex items-center gap-1">
+                              <div className="flex flex-col">
+                                <div>{c.customer.name}</div>
+                                <div className="text-xs">{c.customer.phone}, {c.customer.email}</div>
+                              </div>
+                              <Button
+                                size="sm" 
+                                variant="ghost"
+                                disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                                onClick={() => {
+                                  setCart(draft => {
+                                    draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = null;
+                                  });
+                                }}
+                                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                              >
+                                <Trash2 size={14} />
+                              </Button>
                             </div>
                             // <div>{c.customer.name}, {c.customer.phone}, {c.customer.email}</div>
                           ) : (
@@ -439,7 +549,22 @@ export default function Page() {
             {!requiresWaiver &&
               <div>
                 {cart.customer ? (
-                  <div>{cart.customer.name}, {cart.customer.phone}</div>
+                  <div className="flex items-center gap-1">
+                    <div className="text-sm">{cart.customer.name}, {cart.customer.phone}</div>
+                    <Button
+                      size="sm" 
+                      variant="ghost"
+                      disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                      onClick={() => {
+                        setCart(draft => {
+                          draft.customer = null;
+                        });
+                      }}
+                      className="size-4 cursor-pointer hover:text-destructive"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
                 ) : (
                   <Button
                     size="sm" variant="outline"
@@ -689,6 +814,13 @@ export default function Page() {
         connectCustomerFn={connectCustomerFn}
         requiresWaiver={requiresWaiver}
         open={showCustomerConnect} onOpenChange={setShowCustomerConnect} 
+      />
+
+      <DiscountPinDialog
+        open={showDiscountPinDialog}
+        onOpenChange={setShowDiscountPinDialog}
+        onSuccess={handleDiscountPinSuccess}
+        permission="discount:custom"
       />
 
     </div>
