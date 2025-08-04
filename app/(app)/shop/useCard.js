@@ -126,12 +126,100 @@ export function useCard({ cart }) {
     try {
       setPaymentStatus('creating')
       
-      const res = await fetch('/api/payments/intent', {
+      // Check if cart contains membership products
+      const hasMemberships = cart.products.some(product => product.type === 'membership');
+      
+      let endpoint = '/api/payments/intent';
+      let payload = { cart, customer: cart.customer };
+      
+      // Use subscription endpoint for membership products
+      if (hasMemberships) {
+        endpoint = '/api/payments/subscription';
+        payload = { cart }; // Subscription endpoint extracts customers from products
+      }
+      
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cart }),
+        body: JSON.stringify(payload),
       });
       const intent = await res.json();
+      
+      // Check for API errors
+      if (!res.ok || intent.error) {
+        console.error('❌ Payment creation failed:', intent.error)
+        setPaymentStatus('failed')
+        throw new Error(intent.error || 'Failed to create payment')
+      }
+      
+      // Handle membership first period charge (terminal payment + manual subscriptions)
+      if (intent.isFirstPeriodCharge) {
+        console.log('🔄 Processing membership first period charge:', intent.paymentIntentId)
+        paymentIntentId.current = intent.paymentIntentId
+        transactionId.current = intent.transactionId
+        clientSecret.current = intent.clientSecret
+        
+        console.log('💰 Payment intent created for membership first period:', intent.paymentIntentId)
+        
+        // Only set simulator configuration for simulated readers
+        const connectedReader = await terminalInstance.getConnectedReader();
+        if (connectedReader && connectedReader.device_type === 'simulated_wpe') {
+          console.log('🧪 Setting simulator configuration for test card')
+          terminalInstance.setSimulatorConfiguration({testCardNumber: '4242424242424242'});
+        } else {
+          console.log('💳 Using physical terminal - no simulator configuration needed')
+        }
+        
+        setPaymentStatus('collecting')
+        console.log('💳 Starting payment collection for membership first period...')
+        
+        const collectResult = await terminalInstance.collectPaymentMethod(intent.clientSecret);
+        
+        if (collectResult.error) {
+          console.error('❌ Payment collection failed:', collectResult.error)
+          setPaymentStatus('failed')
+          throw new Error(collectResult.error.message || 'Payment collection failed')
+        }
+        
+        console.log('✅ Payment method collected successfully for membership')
+        setPaymentStatus('processing')
+        console.log('⚙️ Processing membership first period payment...')
+        
+        const processResult = await terminalInstance.processPayment(collectResult.paymentIntent);
+        
+        if (processResult.error) {
+          console.error('❌ Payment processing failed:', processResult.error)
+          setPaymentStatus('failed')
+          throw new Error(processResult.error.message || 'Payment processing failed')
+        }
+        
+        console.log('✅ Membership first period payment processed successfully')
+        
+        // Now create manual subscription records for future billing
+        const subscriptionRes = await fetch('/api/payments/subscription/create-manual', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            cart,
+            paymentIntentId: intent.paymentIntentId,
+            transactionId: intent.transactionId
+          }),
+        });
+        
+        const subscriptionResult = await subscriptionRes.json();
+        
+        if (!subscriptionRes.ok || subscriptionResult.error) {
+          console.error('❌ Manual subscription creation failed:', subscriptionResult.error)
+          setPaymentStatus('failed')
+          throw new Error(subscriptionResult.error || 'Failed to create manual subscriptions')
+        }
+        
+        console.log('✅ Manual subscriptions created successfully:', subscriptionResult.subscriptions)
+        setPaymentStatus('succeeded')
+        return
+      }
+      
+      // Handle regular payment intent
       paymentIntentId.current = intent.id
       transactionId.current = intent.transactionId
       clientSecret.current = intent.clientSecret

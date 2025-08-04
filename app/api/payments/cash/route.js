@@ -11,6 +11,15 @@ export async function POST(req, { params }) {
 
   console.log(cart)
 
+  // Check if cart contains membership products (not allowed for cash payments)
+  const hasMemberships = cart.products.some(product => product.type === 'membership');
+  
+  if (hasMemberships) {
+    return NextResponse.json({
+      error: 'Membership products must be paid by card for subscription setup'
+    }, { status: 400 });
+  }
+
   // Create the cash transaction
   const transaction = await createCashTransaction({ cart, employee, received, change });
 

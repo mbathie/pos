@@ -8,9 +8,6 @@ export function useProduct(setProducts) {
   }, [setProducts]);
 
   const updateProductKey = ({ pIdx, key, value }) => {
-    console.log(pIdx)
-    console.log(key)
-    console.log(value)
 
     setProducts(draft => {
       const product = draft[pIdx];

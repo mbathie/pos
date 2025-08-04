@@ -11,6 +11,8 @@ export async function POST(req, { params }) {
 
   const { product } = await req.json();
   const { slug } = await params;
+  
+  console.log('Received product:', product);
 
 
   const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(slug);

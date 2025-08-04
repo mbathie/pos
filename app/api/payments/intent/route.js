@@ -12,7 +12,7 @@ export async function POST(req, { params }) {
   const { employee } = await getEmployee()
   const org = employee.org
 
-  // Calculate totals for Stripe payment intent
+  // Regular one-time payment flow (memberships handled by separate subscription endpoint)
   const totals = calcCartTotals(cart.products);
   const amountInCents = Math.round(totals.total * 100);
   
@@ -32,5 +32,5 @@ export async function POST(req, { params }) {
     clientSecret: paymentIntent.client_secret,
     id: paymentIntent.id,
     transactionId: transaction._id
-  }, { status: 200 });  
+  }, { status: 200 });
 }

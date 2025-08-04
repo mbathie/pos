@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+// import { Badge } from "@/components/ui/badge"
 import { CreditCard, Banknote, CheckCircle, XCircle, Clock, ChevronRight } from "lucide-react";
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -73,7 +73,7 @@ export default function TransactionsTable({
       case 'pending':
         return <Clock className="size-4 text-yellow-500" />;
       default:
-        return <Clock className="size-4 text-gray-500" />;
+        return <Clock className="size-4 text-primary" />;
     }
   };
 

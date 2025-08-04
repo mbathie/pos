@@ -4,13 +4,14 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, User, Mail, Phone, IdCard, Calendar, MapPin, Receipt } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt } from "lucide-react";
 import TransactionsTable from '@/components/transactions-table';
 import dayjs from 'dayjs';
 
 export default function CustomerDetailPage({ params }) {
   const router = useRouter();
   const [customer, setCustomer] = useState(null);
+  const [memberships, setMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [customerId, setCustomerId] = useState(null);
 
@@ -26,6 +27,7 @@ export default function CustomerDetailPage({ params }) {
   useEffect(() => {
     if (customerId) {
       fetchCustomer();
+      fetchMemberships();
     }
   }, [customerId]);
 
@@ -49,6 +51,20 @@ export default function CustomerDetailPage({ params }) {
     }
   };
 
+  const fetchMemberships = async () => {
+    try {
+      const response = await fetch(`/api/memberships?customerId=${customerId}`);
+      if (response.ok) {
+        const membershipData = await response.json();
+        setMemberships(membershipData.memberships || []);
+      } else {
+        console.error('Failed to fetch memberships');
+      }
+    } catch (error) {
+      console.error('Error fetching memberships:', error);
+    }
+  };
+
   const getInitials = (name) => {
     if (!name) return 'UN';
     return name
@@ -66,6 +82,27 @@ export default function CustomerDetailPage({ params }) {
       return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
     }
     return phone;
+  };
+
+  const getStatusBadgeVariant = (status) => {
+    switch (status) {
+      case 'active':
+        return 'default';
+      case 'cancelled':
+        return 'destructive';
+      case 'expired':
+        return 'secondary';
+      case 'suspended':
+        return 'outline';
+      default:
+        return 'secondary';
+    }
+  };
+
+  const formatBillingPeriod = (variation, unit) => {
+    if (variation === "1" && unit === "month") return "Monthly";
+    if (variation === "1" && unit === "year") return "Yearly";
+    return `${variation} ${unit}${parseInt(variation) > 1 ? 's' : ''}`;
   };
 
   if (loading) {
@@ -157,47 +194,54 @@ export default function CustomerDetailPage({ params }) {
           </CardContent>
         </Card>
 
-        {/* Contact Information */}
+        {/* Membership Status */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Phone className="size-5" />
-              Contact Information
+              <CreditCard className="size-5" />
+              Membership Status
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                <Mail className="size-4" />
-                Email
-              </label>
-              <p className="text-sm">{customer.email || 'Not provided'}</p>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                <Phone className="size-4" />
-                Phone
-              </label>
-              <p className="text-sm">{formatPhone(customer.phone)}</p>
-            </div>
-            
-            {customer.address && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                  <MapPin className="size-4" />
-                  Address
-                </label>
-                <div className="text-sm space-y-1">
-                  {customer.address.address1 && <p>{customer.address.address1}</p>}
-                  {(customer.address.city || customer.address.state || customer.address.postcode) && (
-                    <p>
-                      {[customer.address.city, customer.address.state, customer.address.postcode]
-                        .filter(Boolean)
-                        .join(', ')}
-                    </p>
-                  )}
-                </div>
+            {memberships.length > 0 ? (
+              <div className="space-y-3">
+                {memberships.map((membership, index) => (
+                  <div key={membership._id || index} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-sm">{membership.product?.name || 'Unknown Product'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {membership.priceName} • {formatBillingPeriod(membership.variation, membership.unit)}
+                        </p>
+                      </div>
+                      <Badge variant={getStatusBadgeVariant(membership.status)} className="capitalize">
+                        {membership.status}
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Started</label>
+                        <p className="text-sm">{dayjs(membership.subscriptionStartDate).format('DD/MM/YYYY')}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Next Billing</label>
+                        <p className="text-sm">{dayjs(membership.nextBillingDate).format('DD/MM/YYYY')}</p>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">Amount</label>
+                      <p className="text-sm font-medium">${membership.amount}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <CreditCard className="size-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No active memberships</p>
+                <p className="text-xs text-muted-foreground">Customer has no current membership subscriptions</p>
               </div>
             )}
           </CardContent>
@@ -247,26 +291,47 @@ export default function CustomerDetailPage({ params }) {
           </CardContent>
         </Card>
 
-        {/* System Information */}
+        {/* Contact Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <IdCard className="size-5" />
-              System Information
+              <Phone className="size-5" />
+              Contact Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-muted-foreground">Customer ID</label>
-              <p className="text-sm font-mono">{customer._id}</p>
+              <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                <Mail className="size-4" />
+                Email
+              </label>
+              <p className="text-sm">{customer.email || 'Not provided'}</p>
             </div>
             
-            {customer.assigned !== undefined && (
+            <div>
+              <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                <Phone className="size-4" />
+                Phone
+              </label>
+              <p className="text-sm">{formatPhone(customer.phone)}</p>
+            </div>
+            
+            {customer.address && (
               <div>
-                <label className="text-sm font-medium text-muted-foreground">Assignment Status</label>
-                <p className="text-sm">
-                  {customer.assigned ? 'Assigned to session' : 'Available for assignment'}
-                </p>
+                <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <MapPin className="size-4" />
+                  Address
+                </label>
+                <div className="text-sm space-y-1">
+                  {customer.address.address1 && <p>{customer.address.address1}</p>}
+                  {(customer.address.city || customer.address.state || customer.address.postcode) && (
+                    <p>
+                      {[customer.address.city, customer.address.state, customer.address.postcode]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </p>
+                  )}
+                </div>
               </div>
             )}
           </CardContent>

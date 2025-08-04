@@ -53,7 +53,7 @@ export default function TransactionDetailsPage() {
       case 'pending':
         return <Clock className="size-4 text-yellow-500" />;
       default:
-        return <Clock className="size-4 text-gray-500" />;
+        return <Clock className="size-4 text-primary" />;
     }
   };
 
@@ -74,6 +74,25 @@ export default function TransactionDetailsPage() {
       .split(' ')
       .map(word => word.charAt(0).toUpperCase())
       .join('');
+  };
+
+  const getStatusDisplayText = (status) => {
+    switch (status) {
+      case 'succeeded':
+        return 'Completed';
+      case 'subscription_active':
+        return 'Active';
+      case 'first_period_paid':
+        return 'Setup Complete';
+      case 'failed':
+        return 'Failed';
+      case 'pending':
+        return 'Pending';
+      case 'processing':
+        return 'Processing';
+      default:
+        return status;
+    }
   };
 
   // Group products by type
@@ -303,6 +322,86 @@ export default function TransactionDetailsPage() {
     </Card>
   );
 
+  const MembershipProductsCard = ({ products }) => (
+    <Card>
+      <CardHeader>
+        <CardTitle>Membership Subscriptions</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Membership</TableHead>
+              <TableHead>Billing Period</TableHead>
+              <TableHead>Subscribers</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Amount</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {products.map((product, index) => (
+              <TableRow key={index}>
+                <TableCell className="font-medium align-top">{product.name}</TableCell>
+                <TableCell className="align-top">
+                  <div className="space-y-1">
+                    {product.item ? (
+                      // Use cart item data for billing period
+                      <div className="text-sm">
+                        {product.item.variation === "1" && product.item.unit === "month" ? "Monthly" :
+                         product.item.variation === "1" && product.item.unit === "year" ? "Yearly" :
+                         `${product.item.variation} ${product.item.unit}${parseInt(product.item.variation) > 1 ? 's' : ''}`}
+                      </div>
+                    ) : (
+                      // Fallback: find variation with customers (qty > 0)
+                      product.variations?.filter(variation => 
+                        variation.prices?.some(price => 
+                          price.customers?.some(customer => customer.customer)
+                        )
+                      ).map((variation, vIndex) => (
+                        <div key={vIndex} className="text-sm">
+                          {variation.name === "1" && variation.unit === "month" ? "Monthly" :
+                           variation.name === "1" && variation.unit === "year" ? "Yearly" :
+                           `${variation.name} ${variation.unit}${parseInt(variation.name) > 1 ? 's' : ''}`}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="align-top">
+                  <div className="space-y-1">
+                    {product.variations?.map((variation, vIndex) => 
+                      variation.prices?.map((price, pIndex) => (
+                        <div key={`${vIndex}-${pIndex}`} className="text-sm">
+                          {price.customers?.map((customer, cIndex) => (
+                            customer.customer && (
+                              <div key={cIndex}>
+                                {customer.customer.name} ({price.name})
+                              </div>
+                            )
+                          ))}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="align-top">
+                  <Badge variant="outline" className="text-xs">
+                    {transaction.status === 'subscription_active' ? 'Active' : 
+                     transaction.status === 'first_period_paid' ? 'Setup Complete' : 
+                     'Processing'}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right align-top">
+                  {formatCurrency(product.amount?.subtotal)}
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+
   if (loading) {
     return (
       <div className="mx-4 mt-4">
@@ -362,10 +461,10 @@ export default function TransactionDetailsPage() {
               <div className="flex items-center gap-2">
                 {getStatusIcon(transaction.status)}
                 <Badge 
-                  variant={transaction.status === 'succeeded' ? 'default' : 
+                  variant={transaction.status === 'succeeded' || transaction.status === 'subscription_active' ? 'default' : 
                          transaction.status === 'failed' ? 'destructive' : 'secondary'}
                 >
-                  {transaction.status}
+                  {getStatusDisplayText(transaction.status)}
                 </Badge>
               </div>
             </div>
@@ -431,6 +530,10 @@ export default function TransactionDetailsPage() {
 
       {productGroups.casual && (
         <CasualProductsCard products={productGroups.casual} />
+      )}
+
+      {productGroups.membership && (
+        <MembershipProductsCard products={productGroups.membership} />
       )}
     </div>
   );

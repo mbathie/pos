@@ -60,10 +60,40 @@ export default function Page() {
   const [customDiscountInput, setCustomDiscountInput] = useState('')
   const [showDiscountPinDialog, setShowDiscountPinDialog] = useState(false)
   const [pendingDiscountAmount, setPendingDiscountAmount] = useState('')
+  
+  // Check if cart contains membership products
+  const hasMembershipProducts = cart.products.some(product => product.type === 'membership')
+  
+  // Check if customer is required and connected for memberships
+  const membershipNeedsCustomer = hasMembershipProducts && cart.products.some(p => 
+    p.type === 'membership' && p.variations?.some(v => 
+      v.prices?.some(pr => 
+        pr.customers?.some(c => !c.customer?._id)
+      )
+    )
+  )
+
+  // Auto-switch to card tab if membership products are present
+  useEffect(() => {
+    if (hasMembershipProducts && tab === 'cash') {
+      setTab('card')
+    }
+  }, [hasMembershipProducts, tab])
 
   useEffect(() => {
     console.log(cart)
   },[cart])
+
+  // Update receive amount when card payment succeeds
+  useEffect(() => {
+    if (cardPaymentStatus === 'succeeded' && tab === 'card' && cartSnapshot) {
+      const amountPaid = cartSnapshot.total.toFixed(2);
+      setChangeInfo({
+        received: amountPaid,
+        change: "0.00"
+      });
+    }
+  }, [cardPaymentStatus, tab, cartSnapshot])
 
   // Simple terminal initialization like the working version
   useEffect(() => {
@@ -238,7 +268,7 @@ export default function Page() {
   useEffect(() => {
     setCart(draft => {
       draft.products.forEach((p) => {
-        if (['class', 'course', 'casual'].includes(p.type)) {
+        if (['class', 'course', 'casual', 'membership'].includes(p.type)) {
           p.variations?.forEach((v) => {
             v.prices?.forEach((pr) => {
               const qty = pr.qty ?? 0;
@@ -317,7 +347,10 @@ export default function Page() {
         updated = prev + key;
       }
 
-      calcChange({ input: updated }).then(setChangeInfo);
+      // Only update changeInfo for cash payments, not card payments
+      if (tab === 'cash') {
+        calcChange({ input: updated }).then(setChangeInfo);
+      }
       return updated;
     });
   };
@@ -412,15 +445,27 @@ export default function Page() {
               <div className="">Discount</div>
               <div className="flex-1" />
               
-              {cart.discountAmount > 0 ? (
-                // Show applied discount with remove button
+              {(cart.discountAmount > 0 || (cartSnapshot?.discountAmount > 0 && (paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'))) ? (
+                // Show applied discount with remove button (disabled after payment)
                 <div className="flex items-center gap-1">
                   <Trash2 
-                    className="size-4 cursor-pointer hover:text-destructive" 
-                    onClick={() => removeDiscount()}
+                    className={`size-4 ${
+                      paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
+                        ? 'text-muted-foreground cursor-not-allowed opacity-50' 
+                        : 'cursor-pointer hover:text-destructive'
+                    }`}
+                    onClick={() => {
+                      if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
+                        removeDiscount();
+                      }
+                    }}
                   />
                   <div className="text-sm">
-                    {cart.discount ? cart.discount.name : 'Custom Discount'}
+                    {/* Show discount from snapshot if payment succeeded, otherwise from current cart */}
+                    {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') 
+                      ? (cartSnapshot?.discount ? cartSnapshot.discount.name : 'Custom Discount')
+                      : (cart.discount ? cart.discount.name : 'Custom Discount')
+                    }
                   </div>
                 </div>
               ) : (
@@ -437,7 +482,7 @@ export default function Page() {
                       }
                     }
                   }}
-                  disabled={loadingDiscounts || paymentStatus === 'succeeded'}
+                  disabled={loadingDiscounts || paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={loadingDiscounts ? "Loading..." : "Select a discount code"} />
@@ -455,7 +500,7 @@ export default function Page() {
             </div>
 
             {/* Custom Discount Input */}
-            {cart.discountAmount === 0 && (
+            {cart.discountAmount === 0 && !(cartSnapshot?.discountAmount > 0 && (paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded')) && (
               <div className="flex flex-row gap-4 items-center mt-2">
                 <div className="">Custom Discount</div>
                 <div className="flex-1" />
@@ -591,9 +636,29 @@ export default function Page() {
 
       <Tabs value={tab} onValueChange={setTab} className="w-3/4">
         <TabsList>
-          <TabsTrigger value="card" onClick={() => setCashInput(0.00)} disabled={paymentStatus === 'succeeded'}>Card</TabsTrigger>
-          <TabsTrigger value="cash" disabled={paymentStatus === 'succeeded'}>Cash</TabsTrigger>
+          <TabsTrigger value="card" onClick={() => setCashInput(0.00)} disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}>Card</TabsTrigger>
+          <TabsTrigger 
+            value="cash" 
+            disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' || hasMembershipProducts}
+            className={hasMembershipProducts ? 'opacity-50' : ''}
+          >
+            Cash
+          </TabsTrigger>
         </TabsList>
+        
+        {/* Membership products notice */}
+        {hasMembershipProducts && (
+          <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded mb-2">
+            ⚠️ Membership products require card payment for subscription setup
+          </div>
+        )}
+        
+        {/* Customer required for memberships */}
+        {membershipNeedsCustomer && (
+          <div className="text-sm text-red-600 bg-red-50 p-2 rounded mb-2">
+            🚨 Customer connection required for membership subscriptions. Please connect a customer below.
+          </div>
+        )}
         <TabsContent value="card">
           <Card>
             <CardContent className='h-88 flex flex-col gap-2-'>
@@ -628,7 +693,7 @@ export default function Page() {
               {/* Payment Buttons */}
               <div className="flex flex-col gap-2">
                 <Button
-                  disabled={terminalStatus !== 'connected' || paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' || isCollectingPayment || cart.products.length === 0}
+                  disabled={terminalStatus !== 'connected' || paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' || isCollectingPayment || cart.products.length === 0 || membershipNeedsCustomer}
                   onClick={async () => {
                     try {
                       setIsCollectingPayment(true)

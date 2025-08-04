@@ -121,7 +121,7 @@ const ProductSchema = new mongoose.Schema({
   locations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Location' }],
   folder: { type: mongoose.Schema.Types.ObjectId, ref: 'Folder' },
   accounting: { type: mongoose.Schema.Types.ObjectId, ref: 'Accounting' },
-  type: { type: String, enum: ['class', 'course','casual'] },
+  type: { type: String, enum: ['class', 'course', 'casual', 'membership'] },
   duration: { name: Number, unit: String },
   capacity: Number,
   bump: { type: Boolean, default: false },
@@ -324,6 +324,68 @@ DiscountSchema.index({ org: 1 });
 
 const Discount = mongoose.models.Discount || mongoose.model('Discount', DiscountSchema);
 
+// ==== Membership ====
+const MembershipSchema = new mongoose.Schema({
+  // Core References
+  customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
+  transaction: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction', required: true },
+  product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+  org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
+  location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', required: true },
+  
+  // Subscription Details
+  variation: String, // e.g., "1"
+  unit: String, // e.g., "month", "year"
+  priceId: mongoose.Schema.Types.ObjectId, // Reference to specific price within product variations
+  priceName: String, // e.g., "Youth", "Adult"
+  amount: Number, // Subscription amount per billing cycle
+  
+  // Stripe Integration
+  stripeCustomerId: String,
+  stripeSubscriptionId: String,
+  stripeProductId: String,
+  stripePriceId: String,
+  
+  // Subscription Lifecycle
+  subscriptionStartDate: { type: Date, required: true },
+  nextBillingDate: { type: Date, required: true },
+  subscriptionEndDate: Date, // Optional - for fixed-term memberships
+  
+  // Status Management
+  status: { 
+    type: String, 
+    enum: ['active', 'cancelled', 'expired', 'suspended', 'pending'], 
+    default: 'active' 
+  },
+  
+  // Billing History Reference
+  billingMethod: { type: String, enum: ['terminal_manual', 'stripe_auto'], default: 'terminal_manual' },
+  lastBillingDate: Date,
+  
+  // Metadata
+  notes: String,
+  cancellationReason: String,
+  cancellationDate: Date,
+}, { timestamps: true, strict: false });
+
+// Indexes for efficient queries
+MembershipSchema.index({ customer: 1 });
+MembershipSchema.index({ transaction: 1 });
+MembershipSchema.index({ product: 1 });
+MembershipSchema.index({ org: 1 });
+MembershipSchema.index({ location: 1 });
+MembershipSchema.index({ status: 1 });
+MembershipSchema.index({ nextBillingDate: 1 });
+MembershipSchema.index({ stripeSubscriptionId: 1 });
+MembershipSchema.index({ subscriptionStartDate: 1 });
+
+// Compound indexes for common queries
+MembershipSchema.index({ customer: 1, status: 1 });
+MembershipSchema.index({ org: 1, status: 1 });
+MembershipSchema.index({ status: 1, nextBillingDate: 1 });
+
+const Membership = mongoose.models.Membership || mongoose.model('Membership', MembershipSchema);
+
 // ==== Updated Exports ====
 module.exports = {
   Org,
@@ -340,8 +402,9 @@ module.exports = {
   Order,
   Accounting,
   Discount,
+  Membership,
 };
 
 export {
-  Org, Location, Terminal, Employee, Customer, Category, Folder, Accounting, Product, Discount, Transaction, Schedule, Casual, Order
+  Org, Location, Terminal, Employee, Customer, Category, Folder, Accounting, Product, Discount, Transaction, Schedule, Casual, Order, Membership
 }
