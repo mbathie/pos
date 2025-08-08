@@ -53,11 +53,7 @@ DONE - set a pin if no pin is set for new employees
 DONE - terminal integration (using real terminal)
 DONE - checkout process for subscriptions
 DONE  - backend Membership table for memberships
-DONE - ability to send manual receipts via email if no customer connected
-DONE - waiver builder page
-DONE - checkin page
-  - hook up checkin page functionality
-DONE - Email out QR code for classes and courses & memberships
+- Email out QR code for classes and courses & memberships
   - ability scan the QR to checkin at the front entry with a dedicated device - should confirm they have checked in.
   - dedicated page to see people checking in - list view, with status/ etc
 DONE - custom discounts - should be able to assign arbitrary discount amounts or percentages at checkout time (at MANAGER level only)
