@@ -98,10 +98,20 @@ export default function Page() {
   // Simple terminal initialization like the working version
   useEffect(() => {
     const init = async () => {
-      await discoverReaders();
-      setTimeout(async () => {
-        await connectReader();
-      }, 2000)
+      try {
+        await discoverReaders();
+        setTimeout(async () => {
+          try {
+            await connectReader();
+          } catch (error) {
+            console.error('Terminal connection error:', error);
+            toast.error('Failed to connect to payment terminal. Please check the terminal and try again.');
+          }
+        }, 2000)
+      } catch (error) {
+        console.error('Terminal discovery error:', error);
+        toast.error('Failed to discover payment terminal. Please check the terminal and try again.');
+      }
     };
 
     init();
@@ -548,25 +558,22 @@ export default function Page() {
                         <div className="flex justify-end w-full text-right">
                           {c.customer ? (
                             <div className="flex items-center gap-1">
-                              <div className="flex flex-col">
-                                <div>{c.customer.name}</div>
-                                <div className="text-xs">{c.customer.phone}, {c.customer.email}</div>
-                              </div>
-                              <Button
-                                size="sm" 
-                                variant="ghost"
-                                disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                              <Trash2 
+                                className={`size-4 ${
+                                  paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
+                                    ? 'text-muted-foreground cursor-not-allowed opacity-50' 
+                                    : 'cursor-pointer hover:text-destructive'
+                                }`}
                                 onClick={() => {
-                                  setCart(draft => {
-                                    draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = null;
-                                  });
+                                  if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
+                                    setCart(draft => {
+                                      draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = null;
+                                    });
+                                  }
                                 }}
-                                className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                              >
-                                <Trash2 size={14} />
-                              </Button>
+                              />
+                              <div>{c.customer.name}</div>
                             </div>
-                            // <div>{c.customer.name}, {c.customer.phone}, {c.customer.email}</div>
                           ) : (
                             <Button
                               size="sm" variant="outline"
@@ -592,23 +599,26 @@ export default function Page() {
             </div>
             }
             {!requiresWaiver &&
-              <div>
+              <div className="flex items-start gap-4">
+                <div className="whitespace-nowrap self-start">Customer</div>
+                <div className="flex justify-end w-full text-right">
                 {cart.customer ? (
                   <div className="flex items-center gap-1">
-                    <div className="text-sm">{cart.customer.name}, {cart.customer.phone}</div>
-                    <Button
-                      size="sm" 
-                      variant="ghost"
-                      disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                    <Trash2 
+                      className={`size-4 ${
+                        paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
+                          ? 'text-muted-foreground cursor-not-allowed opacity-50' 
+                          : 'cursor-pointer hover:text-destructive'
+                      }`}
                       onClick={() => {
-                        setCart(draft => {
-                          draft.customer = null;
-                        });
+                        if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
+                          setCart(draft => {
+                            draft.customer = null;
+                          });
+                        }
                       }}
-                      className="size-4 cursor-pointer hover:text-destructive"
-                    >
-                      <Trash2 size={14} />
-                    </Button>
+                    />
+                    <div>{cart.customer.name}</div>
                   </div>
                 ) : (
                   <Button
@@ -626,6 +636,7 @@ export default function Page() {
                     Connect Customer
                   </Button>
                 )}
+                </div>
               </div>
             }
 
@@ -634,24 +645,43 @@ export default function Page() {
         </CardContent>
       </Card>
 
-      <Tabs value={tab} onValueChange={setTab} className="w-3/4">
+      <Tabs value={tab} onValueChange={(newTab) => {
+        if (newTab === 'cash' && hasMembershipProducts) {
+          toast.warning('Membership products require card payment for subscription setup');
+          return;
+        }
+        setTab(newTab);
+      }} className="w-3/4">
         <TabsList>
-          <TabsTrigger value="card" onClick={() => setCashInput(0.00)} disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}>Card</TabsTrigger>
           <TabsTrigger 
-            value="cash" 
-            disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' || hasMembershipProducts}
-            className={hasMembershipProducts ? 'opacity-50' : ''}
+            value="card" 
+            onClick={() => setCashInput(0.00)} 
+            disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
           >
-            Cash
+            Card
           </TabsTrigger>
+          <div 
+            className="relative"
+            onClick={() => {
+              if (hasMembershipProducts && !(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded')) {
+                toast.warning('Membership products require card payment for subscription setup');
+              }
+            }}
+          >
+            <TabsTrigger 
+              value="cash" 
+              disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' || hasMembershipProducts}
+              className={hasMembershipProducts ? 'opacity-50 cursor-not-allowed' : ''}
+              onClick={() => setCashInput(0.00)}
+            >
+              Cash
+            </TabsTrigger>
+            {hasMembershipProducts && !(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') && (
+              <div className="absolute inset-0 cursor-not-allowed" />
+            )}
+          </div>
         </TabsList>
         
-        {/* Membership products notice */}
-        {hasMembershipProducts && (
-          <div className="text-sm text-amber-600 bg-amber-50 p-2 rounded mb-2">
-            ⚠️ Membership products require card payment for subscription setup
-          </div>
-        )}
         
         {/* Customer required for memberships */}
         {membershipNeedsCustomer && (
@@ -693,8 +723,37 @@ export default function Page() {
               {/* Payment Buttons */}
               <div className="flex flex-col gap-2">
                 <Button
-                  disabled={terminalStatus !== 'connected' || paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' || isCollectingPayment || cart.products.length === 0 || membershipNeedsCustomer}
+                  disabled={
+                    // Only disable if not disconnected AND one of these conditions is true
+                    terminalStatus !== 'disconnected' && (
+                      terminalStatus !== 'connected' || 
+                      paymentStatus === 'succeeded' || 
+                      cardPaymentStatus === 'succeeded' || 
+                      isCollectingPayment || 
+                      cart.products.length === 0 || 
+                      membershipNeedsCustomer
+                    )
+                  }
                   onClick={async () => {
+                    // If terminal is disconnected, retry connection
+                    if (terminalStatus === 'disconnected') {
+                      try {
+                        await discoverReaders();
+                        setTimeout(async () => {
+                          try {
+                            await connectReader();
+                          } catch (error) {
+                            console.error('Terminal reconnection error:', error);
+                            toast.error('Failed to reconnect to payment terminal');
+                          }
+                        }, 1000);
+                      } catch (error) {
+                        console.error('Terminal rediscovery error:', error);
+                        toast.error('Failed to find payment terminal');
+                      }
+                      return;
+                    }
+                    
                     try {
                       setIsCollectingPayment(true)
                       const pi = await collectPayment();
@@ -722,7 +781,7 @@ export default function Page() {
                        isCollectingPayment ? 'Starting...' : 'Collect Payment') : 
                       terminalStatus === 'connecting' ? 'Connecting...' :
                       terminalStatus === 'discovering' ? 'Discovering...' :
-                      'Terminal Not Ready'
+                      'Retry Connection'
                   }
                 </Button>
 

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "MongoDB": {
+      "command": "./.claude/start-mongodb-mcp.sh",
+      "args": []
+    }
+  }
+}

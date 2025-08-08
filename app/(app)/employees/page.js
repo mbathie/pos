@@ -48,6 +48,7 @@ import { useEffect, useState } from "react"
 import dayjs from "dayjs"
 import relativeTime from "dayjs/plugin/relativeTime"
 import { checkApiResponse } from "@/lib/client-auth"
+import permissionsConfig from "@/lib/permissions.json"
 dayjs.extend(relativeTime)
 
 export default function Page () {
@@ -252,10 +253,13 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
   const [ isValid, setIsValid ] = useState(false)
   const [ isLoading, setIsLoading ] = useState(false)
 
+  // Get available roles from permissions config
+  const availableRoles = Object.keys(permissionsConfig.roles);
+
   const employeeSchema = z.object({
     email: z.string().email(),
     name: z.string().min(1, "Name is required"),
-    role: z.enum(["ADMIN", "STAFF"]), // Only include available roles
+    role: z.enum(availableRoles), // Use roles from permissions file
     location: z.object({
       id: z.string().min(1, "Location must be selected"),
     }),
@@ -409,10 +413,11 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
             <SelectContent>
               <SelectGroup>
                 <SelectLabel>Roles</SelectLabel>
-                <SelectItem value="ADMIN">Admin</SelectItem>
-                {/* <SelectItem value="MANAGER">Manager</SelectItem> */}
-                <SelectItem value="STAFF">Staff</SelectItem>
-                {/* <SelectItem value="TERMINAL">Terminal</SelectItem> */}
+                {availableRoles.map((role) => (
+                  <SelectItem key={role} value={role}>
+                    {role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()}
+                  </SelectItem>
+                ))}
               </SelectGroup>
             </SelectContent>
           </Select>

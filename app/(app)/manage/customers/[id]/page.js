@@ -128,7 +128,7 @@ export default function CustomerDetailPage({ params }) {
   return (
     <div className="mx-4 h-[calc(100vh-65px)] flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-4 flex-shrink-0">
+      <div className="flex items-start gap-4 mb-4 flex-shrink-0">
         <Button
           variant="ghost"
           size="sm"
@@ -139,22 +139,17 @@ export default function CustomerDetailPage({ params }) {
           Back
         </Button>
         
-        {/* <div className="flex items-center gap-3">
-          <div className="size-12 rounded-full bg-primary/10 text-primary flex items-center justify-center text-lg font-medium">
-            {getInitials(customer.name)}
+        <div>
+          <div className="text-lg font-bold">{customer.name || 'Unnamed Customer'}</div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Member since {dayjs(customer.createdAt).format('MMMM YYYY')}</span>
+            {customer.waiver?.agree && (
+              <Badge variant="outline" className="text-xs">
+                Waiver Signed
+              </Badge>
+            )}
           </div>
-          <div>
-            <h1 className="text-2xl font-bold">{customer.name || 'Unnamed Customer'}</h1>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span>Member since {dayjs(customer.createdAt).format('MMMM YYYY')}</span>
-              {customer.waiver?.agree && (
-                <Badge variant="outline" className="text-xs">
-                  Waiver Signed
-                </Badge>
-              )}
-            </div>
-          </div>
-        </div> */}
+        </div>
       </div>
 
       {/* Customer Information */}
@@ -168,27 +163,47 @@ export default function CustomerDetailPage({ params }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Name</label>
-                <p className="text-sm">{customer.name || 'Not provided'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Member ID</label>
-                <p className="text-sm font-mono">{customer.memberId || 'Not assigned'}</p>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Gender</label>
-                <p className="text-sm capitalize">{customer.gender || 'Not specified'}</p>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Date of Birth</label>
-                <p className="text-sm">
-                  {customer.dob ? dayjs(customer.dob).format('DD/MM/YYYY') : 'Not provided'}
-                </p>
+            <div className="flex gap-4">
+              {/* Left side: Photo */}
+              {customer.photo ? (
+                <img 
+                  src={customer.photo} 
+                  alt={customer.name} 
+                  className="size-24 rounded-lg object-cover flex-shrink-0"
+                />
+              ) : (
+                <div className="size-24 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-2xl font-medium flex-shrink-0">
+                  {getInitials(customer.name)}
+                </div>
+              )}
+              
+              {/* Right side: Grid of fields */}
+              <div className="flex-grow">
+                <div className="grid grid-cols-3 gap-4">
+                  {/* Row 1 */}
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Member ID</label>
+                    <p className="text-sm font-mono">{customer.memberId || 'Not assigned'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Name</label>
+                    <p className="text-sm">{customer.name || 'Not provided'}</p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Date of Birth</label>
+                    <p className="text-sm">
+                      {customer.dob ? dayjs(customer.dob).format('DD/MM/YYYY') : 'Not provided'}
+                    </p>
+                  </div>
+                  
+                  {/* Row 2 - Gender aligned under Member ID column */}
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Gender</label>
+                    <p className="text-sm capitalize">{customer.gender || 'Not specified'}</p>
+                  </div>
+                  <div></div>
+                  <div></div>
+                </div>
               </div>
             </div>
           </CardContent>

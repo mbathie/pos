@@ -51,14 +51,13 @@ DONE - roles for staff, admins, bump screens, terminals
 DONE  - ADMIN, MANAGER, STAFF, TERMINAL
 DONE - set a pin if no pin is set for new employees
 DONE - terminal integration (using real terminal)
-- checkout process for subscriptions
+DONE - checkout process for subscriptions
 DONE  - backend Membership table for memberships
 - Email out QR code for classes and courses & memberships
   - ability scan the QR to checkin at the front entry with a dedicated device - should confirm they have checked in.
   - dedicated page to see people checking in - list view, with status/ etc
 DONE - custom discounts - should be able to assign arbitrary discount amounts or percentages at checkout time (at MANAGER level only)
 DONE - Customer list view page
-- basic accounting reporing
 - online orders for classes/courses/memberships
   - also abiltiy to view / edit profile
 - refunds
@@ -72,11 +71,12 @@ DONE  - list view of all items, should be able to edit product name/price also
 DONE  - notifications when stock (par) is low - alert / bell icon down the bottom left
 DONE  - ability to filter for items below or at par, or cloase to par
 
-- waiver text builder
-- waiver update handler
+DONE - waiver text builder
+DONE - waiver update handler
 
 NICE TO HAVES
 -----------------------
+  - basic accounting reporing
   - stock items need to have a customer assigned to them, i.e. pair of shoes for warrenty.
   - export CSV of purchases (for marketing purposes)
   - ability to edit orders, after its complete - i.e. they wanted a chololate shake instead of vanilla

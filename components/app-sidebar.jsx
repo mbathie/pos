@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, MapPinCheckInside, Users, CircleDollarSign, Landmark, Settings, Calendar, QrCode, ChefHat, Receipt, Percent, Terminal, UserCheck, Tag } from "lucide-react";
+import { MapPin, MapPinCheckInside, Users, CircleDollarSign, Landmark, Settings, Calendar, QrCode, ChefHat, Receipt, Percent, Terminal, UserCheck, Tag, ScanLine } from "lucide-react";
 import { NavMenu } from "@/components/nav-menu";
 import { NavUser } from "@/components/nav-user";
 import { LocationSwitcher } from "@/components/location-switcher";
@@ -36,6 +36,7 @@ export function AppSidebar(props) {
   // Full menu items - only used after employee data is available
   const getAllMenuItems = () => [
     { title: "Sale", url: "/shop", icon: CircleDollarSign },
+    { title: "Check In", url: "/checkin", icon: ScanLine },
     { title: "Bump", url: "/manage/orders", icon: ChefHat },
     { 
       title: "Schedules", icon: Calendar,

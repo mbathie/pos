@@ -4,6 +4,10 @@
       "permissions": ["*"],
       "description": "Full access to all features"
     },
+    "MANAGER": {
+      "permissions": ["*"],
+      "description": "Management access including setup features"
+    },
     "STAFF": {
       "permissions": [
         "/shop",
@@ -11,6 +15,7 @@
         "/shop/retail/payment",
         "/shop/casual",
         "/shop/classes",
+        "/checkin",
         "/manage/orders",
         "/manage/casual",
         "/manage/classes",
@@ -19,27 +24,11 @@
       ],
       "description": "Limited access to sales and basic operations"
     },
-    "MANAGER": {
+    "CHECKIN": {
       "permissions": [
-        "/shop",
-        "/shop/retail",
-        "/shop/retail/payment",
-        "/shop/casual",
-        "/shop/classes",
-        "/manage/orders",
-        "/manage/casual",
-        "/manage/classes",
-        "/manage/transactions",
-        "/manage/locations",
-        "/manage/terminals",
-        "/manage/discounts",
-        "/manage/customers",
-        "/employees",
-        "group:setup",
-        "lowstock:check",
-        "discount:custom"
+        "/checkin"
       ],
-      "description": "Management access including setup features"
+      "description": "Limited access to check-in functionality only"
     }
   }
 } 

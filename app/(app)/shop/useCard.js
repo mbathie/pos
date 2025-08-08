@@ -40,85 +40,103 @@ export function useCard({ cart }) {
   };
 
   const discoverReaders = async () => {
-    setTerminalStatus('discovering')
-    const terminal = await initTerminal();
+    try {
+      setTerminalStatus('discovering')
+      const terminal = await initTerminal();
 
-    // First try to discover physical readers
-    console.log('🔍 Looking for physical readers...')
-    let config = { simulated: false };
-    let result = await terminal.discoverReaders(config);
+      // First try to discover physical readers
+      console.log('🔍 Looking for physical readers...')
+      let config = { simulated: false };
+      let result = await terminal.discoverReaders(config);
 
-    if (result.error) {
-      console.error('Failed to discover physical readers:', result.error);
-    } else if (result.discoveredReaders.length > 0) {
-      console.log('📡 Found physical readers:', result.discoveredReaders.length)
-      discoveredReaders.current = result.discoveredReaders;
-      console.log('Discovered Physical Readers:', result.discoveredReaders.map(r => ({
-        id: r.id,
-        label: r.label,
-        device_type: r.device_type,
-        status: r.status
-      })));
-      setTerminalStatus('disconnected') // Ready to connect
+      if (result.error) {
+        console.log('Failed to discover physical readers:', result.error);
+      } else if (result.discoveredReaders.length > 0) {
+        console.log('📡 Found physical readers:', result.discoveredReaders.length)
+        discoveredReaders.current = result.discoveredReaders;
+        console.log('Discovered Physical Readers:', result.discoveredReaders.map(r => ({
+          id: r.id,
+          label: r.label,
+          device_type: r.device_type,
+          status: r.status
+        })));
+        setTerminalStatus('disconnected') // Ready to connect
+        return;
+      }
+
+      // If no physical readers found, fall back to simulated
+      console.log('📱 No physical readers found, trying simulated...')
+      config = { simulated: true };
+      result = await terminal.discoverReaders(config);
+
+      if (result.error) {
+        console.log('Failed to discover simulated readers:', result.error);
+        setTerminalStatus('disconnected')
+      } else if (result.discoveredReaders.length === 0) {
+        console.log('No available readers (physical or simulated).');
+        setTerminalStatus('disconnected')
+      } else {
+        discoveredReaders.current = result.discoveredReaders;
+        console.log('📡 Discovered Simulated Readers:', result.discoveredReaders.map(r => ({
+          id: r.id,
+          label: r.label,
+          device_type: r.device_type,
+          status: r.status
+        })));
+        setTerminalStatus('disconnected') // Ready to connect
+      }
+    } catch (error) {
+      console.log('Terminal discovery error:', error.message || 'Unknown error');
+      setTerminalStatus('disconnected')
+      // Don't throw the error, handle it gracefully
       return;
-    }
-
-    // If no physical readers found, fall back to simulated
-    console.log('📱 No physical readers found, trying simulated...')
-    config = { simulated: true };
-    result = await terminal.discoverReaders(config);
-
-    if (result.error) {
-      console.error('Failed to discover simulated readers:', result.error);
-      setTerminalStatus('disconnected')
-    } else if (result.discoveredReaders.length === 0) {
-      console.log('No available readers (physical or simulated).');
-      setTerminalStatus('disconnected')
-    } else {
-      discoveredReaders.current = result.discoveredReaders;
-      console.log('📡 Discovered Simulated Readers:', result.discoveredReaders.map(r => ({
-        id: r.id,
-        label: r.label,
-        device_type: r.device_type,
-        status: r.status
-      })));
-      setTerminalStatus('disconnected') // Ready to connect
     }
   };
 
   const connectReader = async () => {
-    if (!terminalInstance || discoveredReaders.current.length === 0) {
-      console.error('Terminal not initialized or no readers discovered.');
-      return;
-    }
+    try {
+      if (!terminalInstance || discoveredReaders.current.length === 0) {
+        console.log('Terminal not initialized or no readers discovered.');
+        setTerminalStatus('disconnected')
+        return;
+      }
 
-    const connected = await terminalInstance.getConnectedReader();
-    console.log(connecting)
-    if (connected) {
-      console.log('Already connected to a reader.');
-      setTerminalStatus('connected')
-      return;
-    }
+      const connected = await terminalInstance.getConnectedReader();
+      console.log(connecting)
+      if (connected) {
+        console.log('Already connected to a reader.');
+        setTerminalStatus('connected')
+        return;
+      }
 
-    if (connecting) {
-      console.log('Already Connecting')
-      return
-    }
+      if (connecting) {
+        console.log('Already Connecting')
+        return
+      }
 
-    connecting = true
-    setTerminalStatus('connecting')
+      connecting = true
+      setTerminalStatus('connecting')
 
-    const selectedReader = discoveredReaders.current[0];
-    const result = await terminalInstance.connectReader(selectedReader);
+      const selectedReader = discoveredReaders.current[0];
+      const result = await terminalInstance.connectReader(selectedReader);
 
-    if (result.error) {
-      console.error('Failed to connect:', result.error);
+      if (result.error) {
+        console.log('Terminal connection failed:', result.error);
+        connecting = false
+        setTerminalStatus('disconnected')
+        // Don't throw the error, just return gracefully
+        return;
+      } else {
+        console.log('Connected to reader:', result.reader.label);
+        connecting = false
+        setTerminalStatus('connected')
+      }
+    } catch (error) {
+      console.log('Terminal connection error:', error.message || 'Unknown error');
       connecting = false
       setTerminalStatus('disconnected')
-    } else {
-      console.log('Connected to reader:', result.reader.label);
-      connecting = false
-      setTerminalStatus('connected')
+      // Don't throw the error, handle it gracefully
+      return;
     }
   };
 

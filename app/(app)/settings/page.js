@@ -104,6 +104,22 @@ export default function Page() {
             <Separator className='border-t border-muted col-span-2' />
 
             <div>
+              <div>Waiver Content</div>
+              <TypographyMuted>
+                Customize the legal waiver text that customers must agree to when signing up for classes or activities.
+              </TypographyMuted>
+            </div>
+            <div>
+              <Link href="/settings/waiver">
+                <Button>
+                  Edit Waiver
+                </Button>
+              </Link>
+            </div>
+
+            <Separator className='border-t border-muted col-span-2' />
+
+            <div>
               <div>Waiver Signup Page</div>
               <TypographyMuted>
                 For new customers wanting to join, this is the URL to direct them to. You can also print the QR place it at a convenient location

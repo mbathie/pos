@@ -241,9 +241,17 @@ export default function CustomersPage() {
                         >
                           <TableCell className="align-top w-1/4">
                             <div className="flex items-center gap-3">
-                              <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
-                                {getInitials(customer.name)}
-                              </div>
+                              {customer.photo ? (
+                                <img 
+                                  src={customer.photo} 
+                                  alt={customer.name} 
+                                  className="size-8 rounded-full object-cover"
+                                />
+                              ) : (
+                                <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
+                                  {getInitials(customer.name)}
+                                </div>
+                              )}
                               <div className="flex flex-col">
                                 <div className="font-medium">
                                   {customer.name || 'Unnamed Customer'}
