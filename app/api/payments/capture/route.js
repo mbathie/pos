@@ -24,7 +24,8 @@ export async function POST(req) {
     const updatedTransaction = await Transaction.findByIdAndUpdate(transactionId, {
       'stripe.paymentIntent': paymentIntent,
       status: paymentIntent.status
-    }, { new: true });
+    }, { new: true })
+      .populate('customer', 'name email phone memberId');
 
     // Handle post-transaction success operations if payment succeeded
     if (paymentIntent.status === 'succeeded' && updatedTransaction?.cart) {

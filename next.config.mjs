@@ -5,6 +5,16 @@ const nextConfig = {
   images: {
     domains: ['static.thenounproject.com'],
   },
+  experimental: {
+    serverComponentsExternalPackages: ['mongoose', 'bcrypt']
+  },
+  webpack: (config) => {
+    config.experiments = {
+      ...config.experiments,
+      topLevelAwait: true,
+    };
+    return config;
+  }
 };
 
 export default nextConfig;

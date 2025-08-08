@@ -3,7 +3,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 import { connectDB } from "@/lib/mongoose";
 import { getEmployee } from "@/lib/auth";
 import { Transaction, Customer, Product } from "@/models";
-import { createMembershipRecord } from '@/lib/payments/success';
+import { createMembershipRecord, handleTransactionSuccess } from '@/lib/payments/success';
 import mongoose from 'mongoose';
 
 /**
@@ -250,10 +250,20 @@ export async function POST(req, { params }) {
     }
 
     // Update the transaction with subscription details
-    await Transaction.findByIdAndUpdate(transactionId, {
+    const updatedTransaction = await Transaction.findByIdAndUpdate(transactionId, {
       'stripe.subscriptions': subscriptions,
       status: 'subscription_active'
-    });
+    }, { new: true })
+      .populate('customer', 'name email phone memberId');
+
+    // Handle post-transaction success operations (including sending receipts)
+    if (updatedTransaction && updatedTransaction.cart) {
+      await handleTransactionSuccess({ 
+        transaction: updatedTransaction, 
+        cart: updatedTransaction.cart, 
+        employee 
+      });
+    }
 
     return NextResponse.json({
       success: true,
