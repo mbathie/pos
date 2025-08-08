@@ -272,29 +272,29 @@ export default function MembershipsPage() {
               <Table className="table-fixed w-full">
                 <TableHeader className="sticky top-0 z-10 bg-background">
                   <TableRow>
-                    <SortableHeader field="customer.name" className="rounded-tl-lg w-1/4">
+                    <SortableHeader field="customer.name" className="rounded-tl-lg w-[30%]">
                       <User className="size-4 mr-1" />
                       Member
                     </SortableHeader>
-                    <SortableHeader field="product.name" className="w-1/6">
+                    <SortableHeader field="product.name" className="w-[20%]">
                       <CreditCard className="size-4 mr-1" />
                       Membership
                     </SortableHeader>
-                    <SortableHeader field="amount" className="w-1/8">
+                    <SortableHeader field="amount" className="w-[10%]">
                       <DollarSign className="size-4 mr-1" />
                       Value
                     </SortableHeader>
-                    <SortableHeader field="nextBillingDate" className="w-1/6">
+                    <SortableHeader field="nextBillingDate" className="w-[15%]">
                       <Calendar className="size-4 mr-1" />
                       Next Billing
                     </SortableHeader>
-                    <SortableHeader field="subscriptionStartDate" className="w-1/6">
+                    <SortableHeader field="subscriptionStartDate" className="w-[15%]">
                       Started
                     </SortableHeader>
-                    <TableHead className="bg-muted w-1/8">
+                    <TableHead className="bg-muted w-[10%]">
                       Status
                     </TableHead>
-                    <TableHead className="bg-muted rounded-tr-lg w-16">
+                    <TableHead className="bg-muted rounded-tr-lg w-[4%]">
                       
                     </TableHead>
                   </TableRow>
@@ -317,23 +317,26 @@ export default function MembershipsPage() {
                           className="hover:bg-muted/50 cursor-pointer"
                           onClick={() => router.push(`/manage/customers/${membership.customer?._id}`)}
                         >
-                          <TableCell className="align-top w-1/4">
+                          <TableCell className="align-top w-[30%]">
                             <div className="flex items-center gap-3">
-                              <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
+                              <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium flex-shrink-0">
                                 {getInitials(membership.customer?.name)}
                               </div>
-                              <div className="flex flex-col">
-                                <div className="font-medium">
+                              <div className="flex flex-col min-w-0">
+                                <div className="font-medium truncate">
                                   {membership.customer?.name || 'Unknown'}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
                                   {membership.customer?.email || '-'}
                                 </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {formatPhone(membership.customer?.phone) || '-'}
+                                </div>
                               </div>
                             </div>
                           </TableCell>
                           
-                          <TableCell className="align-top w-1/6">
+                          <TableCell className="align-top w-[20%]">
                             <div className="flex flex-col">
                               <div className="text-sm font-medium">
                                 {membership.product?.name || membership.transaction?.cart?.products?.[0]?.name || 'Membership'}

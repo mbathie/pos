@@ -263,7 +263,7 @@ export default function CustomersPage() {
                                   {customer.name || 'Unnamed Customer'}
                                 </div>
                                 {customer.waiver?.agree && (
-                                  <Badge variant="outline" className="text-xs w-fit">
+                                  <Badge variant="outline" className="text-xs w-fit text-primary border-primary">
                                     <Check className="size-3"/> Waiver
                                   </Badge>
                                 )}
