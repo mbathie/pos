@@ -144,7 +144,7 @@ export default function CustomerDetailPage({ params }) {
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Member since {dayjs(customer.createdAt).format('MMMM YYYY')}</span>
             {customer.waiver?.agree && (
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs text-green-600 border-green-600">
                 Waiver Signed
               </Badge>
             )}
