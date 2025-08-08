@@ -336,18 +336,33 @@ export default function MembershipsPage() {
                           <TableCell className="align-top w-1/6">
                             <div className="flex flex-col">
                               <div className="text-sm font-medium">
-                                {membership.product?.name || 'Membership'}
+                                {membership.product?.name || membership.transaction?.cart?.products?.[0]?.name || 'Membership'}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {membership.priceName ? `${membership.priceName} • ` : ''}
-                                {membership.unit === 'month' ? 'Monthly' : membership.unit === 'year' ? 'Annually' : membership.unit}
+                                {/* Get price name and unit from transaction cart */}
+                                {(() => {
+                                  const item = membership.transaction?.cart?.products?.[0]?.item;
+                                  const priceName = item?.price?.name || membership.priceName;
+                                  const unit = item?.unit || membership.unit;
+                                  return (
+                                    <>
+                                      {priceName ? `${priceName} • ` : ''}
+                                      {unit === 'month' ? 'Monthly' : unit === 'year' ? 'Annually' : unit}
+                                    </>
+                                  );
+                                })()}
                               </div>
                             </div>
                           </TableCell>
                           
                           <TableCell className="w-1/8 align-top">
                             <div className="text-sm font-medium text-left ml-1">
-                              {formatCurrency(membership.amount)}
+                              {/* Get amount from transaction cart */}
+                              {formatCurrency(
+                                membership.transaction?.cart?.products?.[0]?.item?.price?.value || 
+                                membership.transaction?.cart?.products?.[0]?.amount?.subtotal ||
+                                membership.amount
+                              )}
                             </div>
                           </TableCell>
                           

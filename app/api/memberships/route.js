@@ -30,7 +30,7 @@ export async function GET(request) {
     const memberships = await Membership.find(query)
       .populate('customer', 'name email phone')
       .populate('product', 'name desc type')
-      .populate('transaction', '_id createdAt')
+      .populate('transaction') // Populate full transaction to get cart data
       .populate('org', 'name')
       .populate('location', 'name')
       .sort({ createdAt: -1 })
