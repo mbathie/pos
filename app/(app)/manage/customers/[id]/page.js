@@ -144,7 +144,7 @@ export default function CustomerDetailPage({ params }) {
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span>Member since {dayjs(customer.createdAt).format('MMMM YYYY')}</span>
             {customer.waiver?.agree && (
-              <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+              <Badge variant="outline" className="text-xs text-primary border-primary">
                 Waiver Signed
               </Badge>
             )}
@@ -288,7 +288,7 @@ export default function CustomerDetailPage({ params }) {
                 <div className="flex items-center gap-2 mt-1">
                   {customer.waiver.agree ? (
                     <>
-                      <Badge variant="outline" className="text-green-600 border-green-600">
+                      <Badge variant="outline" className="text-primary border-primary">
                         Signed
                       </Badge>
                       <span className="text-xs text-muted-foreground">
@@ -296,7 +296,7 @@ export default function CustomerDetailPage({ params }) {
                       </span>
                     </>
                   ) : (
-                    <Badge variant="outline" className="text-red-600 border-red-600">
+                    <Badge variant="outline" className="text-destructive border-destructive">
                       Not Signed
                     </Badge>
                   )}
