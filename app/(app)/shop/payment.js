@@ -122,13 +122,15 @@ export default function Page() {
   useEffect(() => {
     if (!hasInitialSnapshot.current && cart.products.length > 0) {
       console.log('📸 Taking initial cart snapshot on page load')
+      // Deep copy products to preserve all nested customer data
+      const productsCopy = JSON.parse(JSON.stringify(cart.products));
       setCartSnapshot({
         total: cart.total,
         subtotal: cart.subtotal,
         tax: cart.tax,
         discount: cart.discount,
         discountAmount: cart.discountAmount,
-        products: [...cart.products], // Deep copy for customer info
+        products: productsCopy, // Deep copy to preserve nested customer objects
         customer: cart.customer // Include the customer in snapshot
       })
       hasInitialSnapshot.current = true
@@ -172,9 +174,11 @@ export default function Page() {
   const updateSnapshotCustomers = () => {
     if (hasInitialSnapshot.current && cartSnapshot) {
       console.log('📸 Updating cart snapshot due to customer change')
+      // Deep copy products to preserve all nested customer data
+      const productsCopy = JSON.parse(JSON.stringify(cart.products));
       setCartSnapshot(prev => ({
         ...prev,
-        products: [...cart.products], // Update products with current customer data
+        products: productsCopy, // Deep copy to preserve nested customer objects
         customer: cart.customer // Update main customer
       }))
     }
