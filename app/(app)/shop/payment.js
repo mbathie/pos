@@ -151,6 +151,7 @@ export default function Page() {
     }
   }, [cart.discount, cart.discountAmount, cart.total, cart.subtotal, cart.tax])
 
+
   // Watch for discount feedback and show toasts
   useEffect(() => {
     const feedback = getLastDiscountFeedback()
@@ -166,6 +167,18 @@ export default function Page() {
       clearDiscountFeedback()
     }
   }, [cart.discount, getLastDiscountFeedback, clearDiscountFeedback])
+
+  // Function to update snapshot with current customer data
+  const updateSnapshotCustomers = () => {
+    if (hasInitialSnapshot.current && cartSnapshot) {
+      console.log('📸 Updating cart snapshot due to customer change')
+      setCartSnapshot(prev => ({
+        ...prev,
+        products: [...cart.products], // Update products with current customer data
+        customer: cart.customer // Update main customer
+      }))
+    }
+  }
 
   // Always use snapshot for display (updated when discounts change or on page load)
   const displayCart = cartSnapshot || cart
@@ -571,6 +584,8 @@ export default function Page() {
                                     setCart(draft => {
                                       draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = null;
                                     });
+                                    // Update snapshot after removing customer
+                                    setTimeout(updateSnapshotCustomers, 50);
                                   }
                                 }}
                               />
@@ -585,6 +600,8 @@ export default function Page() {
                                   setCart(draft => {
                                     draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = _c;
                                   });
+                                  // Update snapshot after connecting customer
+                                  setTimeout(updateSnapshotCustomers, 50);
                                 });
                                 setShowCustomerConnect(true);
                               }}
@@ -617,6 +634,8 @@ export default function Page() {
                           setCart(draft => {
                             draft.customer = null;
                           });
+                          // Update snapshot after removing customer
+                          setTimeout(updateSnapshotCustomers, 50);
                         }
                       }}
                     />
@@ -631,6 +650,8 @@ export default function Page() {
                         setCart(draft => {
                           draft.customer = _c;
                         });
+                        // Update snapshot after connecting customer
+                        setTimeout(updateSnapshotCustomers, 50);
                       });
                       setShowCustomerConnect(true);
                     }}
