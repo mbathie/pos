@@ -101,6 +101,8 @@ export function NavUser({
                 onClick={async () => {
                   resetBreadcrumb()
                   resetCart()
+                  // Clear localStorage (used by lib/globals.js)
+                  localStorage.removeItem('pos')
                   await fetch("/api/auth/logout", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
