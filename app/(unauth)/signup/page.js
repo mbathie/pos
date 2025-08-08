@@ -160,12 +160,13 @@ export default function SignUpPage() {
           </div>
         </div>
       </div>
-      <div className="bg-muted relative hidden lg:block">
+      <div className="relative hidden lg:block">
         <img
-          src="/placeholder.svg"
-          alt="Image"
-          className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
+          src="https://images.unsplash.com/photo-1564769662533-4f00a87b4056?q=80&w=2070"
+          alt="Woman bouldering in climbing gym"
+          className="absolute inset-0 h-full w-full object-cover"
         />
+        <div className="absolute inset-0 bg-black/20" />
       </div>
     </div>
   );
