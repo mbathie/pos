@@ -131,7 +131,7 @@ export default function Page() {
         discount: cart.discount,
         discountAmount: cart.discountAmount,
         products: productsCopy, // Deep copy to preserve nested customer objects
-        customer: cart.customer // Include the customer in snapshot
+        customer: cart.customer ? JSON.parse(JSON.stringify(cart.customer)) : null // Deep copy customer too
       })
       hasInitialSnapshot.current = true
     }
@@ -179,10 +179,46 @@ export default function Page() {
       setCartSnapshot(prev => ({
         ...prev,
         products: productsCopy, // Deep copy to preserve nested customer objects
-        customer: cart.customer // Update main customer
+        customer: cart.customer ? JSON.parse(JSON.stringify(cart.customer)) : null // Deep copy customer too
       }))
     }
   }
+  
+  // Watch for customer changes in cart and update snapshot
+  useEffect(() => {
+    if (hasInitialSnapshot.current && cartSnapshot && cart.products.length > 0) {
+      // Check if any customers have changed
+      let hasCustomerChange = false;
+      
+      cart.products.forEach((product, pIdx) => {
+        product.variations?.forEach((variation, vIdx) => {
+          variation.prices?.forEach((price, prIdx) => {
+            price.customers?.forEach((customer, cIdx) => {
+              const snapshotCustomer = cartSnapshot.products?.[pIdx]?.variations?.[vIdx]?.prices?.[prIdx]?.customers?.[cIdx]?.customer;
+              if (customer.customer?._id !== snapshotCustomer?._id) {
+                hasCustomerChange = true;
+              }
+            });
+          });
+        });
+      });
+      
+      // Also check main customer
+      if (cart.customer?._id !== cartSnapshot.customer?._id) {
+        hasCustomerChange = true;
+      }
+      
+      if (hasCustomerChange && paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
+        console.log('📸 Auto-updating snapshot due to customer change detected')
+        const productsCopy = JSON.parse(JSON.stringify(cart.products));
+        setCartSnapshot(prev => ({
+          ...prev,
+          products: productsCopy,
+          customer: cart.customer ? JSON.parse(JSON.stringify(cart.customer)) : null
+        }))
+      }
+    }
+  }, [cart.products, cart.customer, cartSnapshot, paymentStatus, cardPaymentStatus]) // Watch for changes
 
   // Always use snapshot for display (updated when discounts change or on page load)
   const displayCart = cartSnapshot || cart
@@ -604,8 +640,8 @@ export default function Page() {
                                   setCart(draft => {
                                     draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = _c;
                                   });
-                                  // Update snapshot after connecting customer
-                                  setTimeout(updateSnapshotCustomers, 50);
+                                  // Update snapshot after connecting customer with longer delay
+                                  setTimeout(updateSnapshotCustomers, 100);
                                 });
                                 setShowCustomerConnect(true);
                               }}
