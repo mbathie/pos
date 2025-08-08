@@ -127,7 +127,8 @@ export default function Page() {
         tax: cart.tax,
         discount: cart.discount,
         discountAmount: cart.discountAmount,
-        products: [...cart.products] // Deep copy for customer info
+        products: [...cart.products], // Deep copy for customer info
+        customer: cart.customer // Include the customer in snapshot
       })
       hasInitialSnapshot.current = true
     }
@@ -549,7 +550,7 @@ export default function Page() {
             {/* CUSTOMERS */}
             {requiresWaiver &&
             <div className="flex flex-col gap-1">
-              {cart.products.map((p, pIdx) =>
+              {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' ? cartSnapshot?.products : cart.products)?.map((p, pIdx) =>
                 p.variations?.map((v, vIdx) =>
                   v.prices?.map((price, priceIdx) =>
                     price.customers?.map((c, cIdx) => (
@@ -602,7 +603,7 @@ export default function Page() {
               <div className="flex items-start gap-4">
                 <div className="whitespace-nowrap self-start">Customer</div>
                 <div className="flex justify-end w-full text-right">
-                {cart.customer ? (
+                {((paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') ? cartSnapshot?.customer : cart.customer) ? (
                   <div className="flex items-center gap-1">
                     <Trash2 
                       className={`size-4 ${
@@ -618,7 +619,7 @@ export default function Page() {
                         }
                       }}
                     />
-                    <div>{cart.customer.name}</div>
+                    <div>{(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') ? cartSnapshot?.customer?.name : cart.customer.name}</div>
                   </div>
                 ) : (
                   <Button
