@@ -364,6 +364,7 @@ export function useCard({ cart }) {
     capturePayment,
     cancelPayment,
     terminalStatus,
-    paymentStatus
+    paymentStatus,
+    transactionId: transactionId.current
   };
 }

@@ -12,7 +12,7 @@ import { useGlobals } from "@/lib/globals"
 import { useCard } from './useCard'
 import { useCash } from "./useCash";
 import { Separator } from "@radix-ui/react-separator";
-import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail } from "lucide-react";
 import { toast } from 'sonner'
 
 import CustomerConnect from './customerConnect'
@@ -36,13 +36,15 @@ export default function Page() {
     capturePayment,
     cancelPayment,
     terminalStatus,
-    paymentStatus: cardPaymentStatus
+    paymentStatus: cardPaymentStatus,
+    transactionId: cardTransactionId
   } = useCard({cart})
   const { calcChange, receiveCash } = useCash({cart})
 
   const [changeInfo, setChangeInfo] = useState({ received: "0.00", change: "0.00" });
 
   const [ paymentIntentId, setPaymentIntentId ] = useState(0)
+  const [ transactionId, setTransactionId ] = useState(null)
   const [ paymentStatus, setPaymentStatus ] = useState("")
   const [ isCollectingPayment, setIsCollectingPayment ] = useState(false)
   const [ isProcessingCash, setIsProcessingCash ] = useState(false)
@@ -61,6 +63,10 @@ export default function Page() {
   const [customDiscountInput, setCustomDiscountInput] = useState('')
   const [showDiscountPinDialog, setShowDiscountPinDialog] = useState(false)
   const [pendingDiscountAmount, setPendingDiscountAmount] = useState('')
+  
+  // Email receipt state
+  const [receiptEmail, setReceiptEmail] = useState('')
+  const [sendingReceipt, setSendingReceipt] = useState(false)
   
   // Check if cart contains membership products
   const hasMembershipProducts = cart.products.some(product => product.type === 'membership')
@@ -93,8 +99,12 @@ export default function Page() {
         received: amountPaid,
         change: "0.00"
       });
+      // Store card transaction ID
+      if (cardTransactionId) {
+        setTransactionId(cardTransactionId);
+      }
     }
-  }, [cardPaymentStatus, tab, cartSnapshot])
+  }, [cardPaymentStatus, tab, cartSnapshot, cardTransactionId])
 
   // Simple terminal initialization like the working version
   useEffect(() => {
@@ -397,6 +407,46 @@ export default function Page() {
     executeCustomDiscount(discountAmount);
     setPendingDiscountAmount('');
   };
+
+  // Handle sending receipt via email
+  const handleSendReceipt = async () => {
+    if (!receiptEmail || !receiptEmail.includes('@')) {
+      toast.error('Please enter a valid email address')
+      return
+    }
+
+    if (!transactionId) {
+      toast.error('Transaction ID not found. Please try again.')
+      return
+    }
+
+    setSendingReceipt(true)
+    
+    try {
+      const response = await fetch('/api/send-receipt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: receiptEmail,
+          transactionId: transactionId
+        })
+      })
+
+      const result = await response.json()
+      
+      if (response.ok) {
+        toast.success(`Receipt sent to ${receiptEmail}`)
+        setReceiptEmail('') // Clear the email field
+      } else {
+        toast.error(result.error || 'Failed to send receipt')
+      }
+    } catch (error) {
+      console.error('Error sending receipt:', error)
+      toast.error('Failed to send receipt')
+    } finally {
+      setSendingReceipt(false)
+    }
+  }
 
   // Handle keypad input for cash received
   const handleKeypadInput = async (key) => {
@@ -702,6 +752,43 @@ export default function Page() {
                 </div>
               </div>
             }
+            
+            {/* Email Receipt Section - Show when payment succeeds and no customer email */}
+            {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') && 
+             !((cartSnapshot?.customer || cart.customer)?.email) &&
+             !requiresWaiver && (
+              <div className="mt-4 space-y-2">
+                <Separator orientation="vertical" className="h-[1px] bg-muted" />
+                <div className="flex items-center gap-2">
+                  <Mail className="size-4 text-muted-foreground" />
+                  <span className="text-sm">Email Receipt</span>
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    placeholder="customer@example.com"
+                    value={receiptEmail}
+                    onChange={(e) => setReceiptEmail(e.target.value)}
+                    className="flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !sendingReceipt) {
+                        handleSendReceipt()
+                      }
+                    }}
+                  />
+                  <Button
+                    onClick={handleSendReceipt}
+                    disabled={sendingReceipt || !receiptEmail}
+                  >
+                    {sendingReceipt ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      'Send'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
 
           </div>
 
@@ -970,6 +1057,11 @@ export default function Page() {
                         const tx = await receiveCash({ input: cashInput });
                         // console.log(cart)
                         setPaymentStatus(tx.transaction.status);
+                        
+                        // Store transaction ID for receipt sending
+                        if (tx.transaction && tx.transaction._id) {
+                          setTransactionId(tx.transaction._id);
+                        }
                         
                         // Mark that we have a successful payment (PIN will be removed on navigation)
                         if (tx.transaction.status === 'succeeded') {
