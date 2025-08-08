@@ -1,30 +1,16 @@
-import Image from "next/image";
-import Link from 'next/link'
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
-import {
-  NavigationMenu,
-  NavigationMenuContent,
-  NavigationMenuIndicator,
-  NavigationMenuItem,
-  NavigationMenuLink,
-  NavigationMenuList,
-  NavigationMenuTrigger,
-  NavigationMenuViewport,
-  navigationMenuTriggerStyle
-} from "@/components/ui/navigation-menu"
-import { AppSidebar } from "@/components/app-sidebar"
+import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 
-export default function Home({children}) {
-  return (
-    <div>
-
-      <SidebarProvider>
-        <AppSidebar />
-        <main>
-          <SidebarTrigger/>
-          {children}
-        </main>
-      </SidebarProvider>
-    </div>
-  )
+export default async function Home() {
+  // Check if user has a token cookie
+  const cookieStore = await cookies()
+  const token = cookieStore.get('token')
+  
+  // If no token, redirect to login
+  if (!token) {
+    redirect('/login')
+  }
+  
+  // If authenticated, redirect to shop (or render homepage content)
+  redirect('/shop')
 }
