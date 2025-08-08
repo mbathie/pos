@@ -142,7 +142,12 @@ export default function CheckInPage() {
         <div className="absolute inset-0 bg-black/20" />
         <div className="relative z-10 flex items-center p-12 text-white">
           <div>
-            <h2 className="text-4xl font-bold mb-2">{org?.name || 'Cultcha'}</h2>
+            <AnimatedTitle 
+              className="text-4xl font-bold mb-2 inline-block text-white"
+              highlightClassName="bg-gradient-to-r from-white/30 via-white/40 to-white/30"
+            >
+              {org?.name || 'Cultcha'}
+            </AnimatedTitle>
             <p className="text-lg opacity-90">Your journey to fitness starts here</p>
           </div>
         </div>
@@ -155,8 +160,6 @@ export default function CheckInPage() {
             <AnimatedTitle 
               className="text-2xl font-bold tracking-tight inline-block"
               highlightClassName="bg-gradient-to-r from-emerald-400/40 via-emerald-500/50 to-emerald-400/40"
-              repeatDelay={4000}
-              animationDuration={1200}
             >
               {org?.name || 'Cultcha'} Check In
             </AnimatedTitle>
