@@ -23,11 +23,13 @@
 ## Authentication Tokens for Testing
 When testing the website locally, you can use the following authentication token:
 ```
-token: eyJhbGciOiJIUzI1NiJ9.eyJzZWxlY3RlZExvY2F0aW9uSWQiOiI2MTJmYTgyZS1iMTUzLTE2M2ItYmJmZS05OWJlNGQxNjhlMWMiLCJvcmdJZCI6IjYxMmZhODJlLWIxNTMtMTYzYi1iYmZlLTk5YmU0ZDE2OGUxYyIsImVtcGxveWVlSWQiOiI2MTJmYTgyZS1iMTUzLTE2M2ItYmJmZS05OWJlNGQxNjhlMWMiLCJyb2xlIjoiT1dORVIiLCJpYXQiOjE3MjMwODk0ODF9.eyJzZWxlY3RlZExvY2F0aW9uSWQiOiI2MTJmYTgyZS1iMTUzLTE2M2ItYmJmZS05OWJlNGQxNjhlMWMiLCJvcmdJZCI6IjYxMmZhODJlLWIxNTMtMTYzYi1iYmZlLTk5YmU0ZDE2OGUxYyIsImVtcGxveWVlSWQiOiI2MTJmYTgyZS1iMTUzLTE2M2ItYmJmZS05OWJlNGQxNjhlMWMiLCJyb2xlIjoiT1dORVIiLCJpYXQiOjE3MjMwODk0ODF9.29mNgo0TIsV2MmQ2M2wOTAyYjlllwiZXhwljoxNzg2MDExMzMzZIrQ
+token: eyJhbGciOiJIUzI1NiJ9.eyJzZWxlY3RlZExvY2F0aW9uSWQiOiI2ODY0ODY5MGVjZjEyZDMwMjA5MDJiOWUiLCJlbWFpbCI6Im1iYXRoaWVAZ21haWwuY29tIiwiZW1wbG95ZWVJZCI6IjY4NjQ4NjkwZWNmMTJkMzAyMDkwMmJhMCIsIm9yZ0lkIjoiNjg2NDg2OTBlY2YxMmQzMDIwOTAyYjliIiwiZXhwIjoxNzg2MDExMzY2fQ.Rxwtiosv9PY29k2Spl0gfuwK-PNemOfVIqw-WO-vbfM
 ```
 
 This token includes:
-- Role: OWNER (full permissions)
-- Employee: MB (MBMB)
-- Location: Main HQ
+- Email: mbathie@gmail.com
+- Employee ID: 68648690ecf12d30209020ba0
+- Organization ID: 68648690ecf12d30209020b9b
+- Location ID: 68648690ecf12d30209020b9e
+- Expiry: 1786011366 (unix timestamp)
 - Can be stored in browser localStorage/cookies for authenticated API requests
