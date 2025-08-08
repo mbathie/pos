@@ -45,6 +45,7 @@ export default function Page() {
   const [ paymentIntentId, setPaymentIntentId ] = useState(0)
   const [ paymentStatus, setPaymentStatus ] = useState("")
   const [ isCollectingPayment, setIsCollectingPayment ] = useState(false)
+  const [ isProcessingCash, setIsProcessingCash ] = useState(false)
   const [ cartSnapshot, setCartSnapshot ] = useState(null)
   const hasInitialSnapshot = useRef(false)
 
@@ -881,6 +882,7 @@ export default function Page() {
                     size="icon"
                     className="size-16 active:bg-lime-400"
                     onClick={() => handleKeypadInput(key)}
+                    disabled={isProcessingCash || paymentStatus === 'succeeded'}
                   >
                     {key}
                   </Button>
@@ -892,6 +894,7 @@ export default function Page() {
                       cart.products.length === 0 ||
                       parseFloat(changeInfo.received) < cart.total ||
                       paymentStatus === 'succeeded' ||
+                      isProcessingCash ||
                       cart.products.some(p =>
                         p.variations?.some(v =>
                           v.prices?.some(pr =>
@@ -901,19 +904,37 @@ export default function Page() {
                       )
                     }
                     onClick={async () => {
-                      const tx = await receiveCash({ input: cashInput });
-                      // console.log(cart)
-                      setPaymentStatus(tx.transaction.status);
-                      
-                      // Mark that we have a successful payment (PIN will be removed on navigation)
-                      if (tx.transaction.status === 'succeeded') {
-                        hasSuccessfulPayment.current = true
+                      setIsProcessingCash(true);
+                      try {
+                        const tx = await receiveCash({ input: cashInput });
+                        // console.log(cart)
+                        setPaymentStatus(tx.transaction.status);
+                        
+                        // Mark that we have a successful payment (PIN will be removed on navigation)
+                        if (tx.transaction.status === 'succeeded') {
+                          hasSuccessfulPayment.current = true;
+                          toast.success('Payment processed successfully!');
+                        }
+                        
+                        resetCart();
+                      } catch (error) {
+                        console.error('Cash payment failed:', error);
+                        toast.error(`Payment failed: ${error.message}`);
+                      } finally {
+                        setIsProcessingCash(false);
                       }
-                      
-                      resetCart();
                     }}
                   >
-                    Accept
+                    {isProcessingCash ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin mr-2" />
+                        Processing...
+                      </>
+                    ) : paymentStatus === 'succeeded' ? (
+                      'Payment Complete'
+                    ) : (
+                      'Accept'
+                    )}
                   </Button>
                                      <Button
                      variant="outline"
