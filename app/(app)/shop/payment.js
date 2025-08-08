@@ -435,7 +435,7 @@ export default function Page() {
       const result = await response.json()
       
       if (response.ok) {
-        toast.success(`Receipt sent to ${receiptEmail}`)
+        toast.success(`Receipt is being sent to ${receiptEmail}`)
         setReceiptEmail('') // Clear the email field
       } else {
         toast.error(result.error || 'Failed to send receipt')

@@ -54,29 +54,28 @@ export async function POST(req) {
       );
     }
 
-    // Send the receipt email
-    const result = await sendTransactionReceipt({
+    // Send the receipt email in the background (non-blocking)
+    sendTransactionReceipt({
       transaction,
       recipientEmail: email,
       org: transaction.org
+    }).then(result => {
+      if (result.success) {
+        console.log(`📧 Receipt sent to ${email} for transaction ${transactionId}`);
+        console.log(`   Preview URL: ${result.previewUrl}`);
+      } else {
+        console.error(`❌ Failed to send receipt to ${email}:`, result.error);
+      }
+    }).catch(error => {
+      console.error(`❌ Background email send failed for ${email}:`, error);
     });
 
-    if (result.success) {
-      console.log(`📧 Receipt sent to ${email} for transaction ${transactionId}`);
-      console.log(`   Preview URL: ${result.previewUrl}`);
-      
-      return NextResponse.json({
-        success: true,
-        message: `Receipt sent to ${email}`,
-        previewUrl: result.previewUrl
-      });
-    } else {
-      console.error(`❌ Failed to send receipt to ${email}:`, result.error);
-      return NextResponse.json(
-        { error: result.error || "Failed to send receipt" },
-        { status: 500 }
-      );
-    }
+    // Return success immediately (email will be sent in background)
+    return NextResponse.json({
+      success: true,
+      message: `Receipt is being sent to ${email}`,
+      queued: true
+    });
   } catch (error) {
     console.error("Error sending receipt:", error);
     return NextResponse.json(
