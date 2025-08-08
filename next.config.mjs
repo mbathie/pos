@@ -3,7 +3,7 @@ const nextConfig = {
   "devIndicators": false,
   "reactStrictMode": false,
   images: {
-    domains: ['static.thenounproject.com'],
+    domains: ['static.thenounproject.com', 'images.unsplash.com'],
   },
   experimental: {
     serverComponentsExternalPackages: ['mongoose', 'bcrypt']

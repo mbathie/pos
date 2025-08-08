@@ -5,6 +5,8 @@
 - Use shadcn/ui v4 as the preferred resource for all components unless explicitly specified otherwise
 - Check available shadcn components, blocks, and demos before creating custom components
 - Maintain consistency with shadcn design patterns throughout the project
+- **Always use Next.js Image component** (`next/image`) instead of standard HTML `<img>` tags for optimized image loading and performance
+- Configure required image domains in `next.config.mjs` under `images.domains`
 
 ## Database Guidelines
 - **Check MongoDB database** when needed for:

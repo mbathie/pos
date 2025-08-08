@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -133,10 +134,13 @@ export default function CheckInPage() {
     <div className="h-[calc(100vh-4rem)] flex">
       {/* Left side - Image (hidden on mobile) */}
       <div className="hidden lg:flex lg:w-1/2 relative m-4 rounded-lg overflow-hidden">
-        <img 
+        <Image
           src="https://images.unsplash.com/photo-1564769662533-4f00a87b4056?q=80&w=2070"
           alt="Woman bouldering in climbing gym"
-          className="absolute inset-0 h-full w-full object-cover"
+          fill
+          className="object-cover"
+          priority
+          sizes="50vw"
         />
         <div className="absolute inset-0 bg-black/20" />
         <div className="relative z-10 flex items-center p-12 text-white">
