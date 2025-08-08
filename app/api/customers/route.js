@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongoose"
 import { getEmployee } from "@/lib/auth"
-import { Customer } from "@/models"
+import { Customer, Membership } from "@/models"
 // import { generateCustomerId } from "@/lib/customers";
 
 export async function POST(req) {
@@ -99,8 +99,28 @@ export async function GET(req) {
       Customer.countDocuments(baseQuery)
     ]);
 
+    // Fetch active memberships for these customers
+    const customerIds = customers.map(c => c._id);
+    const activeMemberships = await Membership.find({
+      customer: { $in: customerIds },
+      status: 'active'
+    }).populate('product', 'name');
+
+    // Create a map of customer ID to membership
+    const membershipMap = {};
+    activeMemberships.forEach(membership => {
+      membershipMap[membership.customer.toString()] = membership;
+    });
+
+    // Add membership data to customers
+    const customersWithMembership = customers.map(customer => {
+      const customerObj = customer.toObject();
+      customerObj.membership = membershipMap[customer._id.toString()] || null;
+      return customerObj;
+    });
+
     return NextResponse.json({
-      customers,
+      customers: customersWithMembership,
       total,
       page,
       totalPages: Math.ceil(total / limit),

@@ -20,7 +20,8 @@
         "/manage/casual",
         "/manage/classes",
         "/manage/transactions",
-        "/manage/customers"
+        "/manage/customers",
+        "/manage/memberships"
       ],
       "description": "Limited access to sales and basic operations"
     },

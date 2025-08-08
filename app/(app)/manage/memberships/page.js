@@ -15,7 +15,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { Search, ChevronsUpDown, ChevronRight, User, Mail, Phone, IdCard, Check, CreditCard } from "lucide-react";
+import { Search, ChevronsUpDown, ChevronRight, User, Mail, Phone, IdCard, CreditCard, Calendar, DollarSign } from "lucide-react";
+import { TypographyLarge } from '@/components/ui/typography';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -23,53 +24,70 @@ dayjs.extend(relativeTime);
 
 const ITEMS_PER_PAGE = 25;
 
-export default function CustomersPage() {
+export default function MembershipsPage() {
   const router = useRouter();
-  const [customers, setCustomers] = useState([]);
-  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [memberships, setMemberships] = useState([]);
+  const [totalMemberships, setTotalMemberships] = useState(0);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState('active'); // Default to active memberships
   const [sort, setSort] = useState({
-    field: 'createdAt',
-    direction: 'desc', // 'asc' or 'desc'
+    field: 'nextBillingDate',
+    direction: 'asc', // Show next to bill first
   });
 
-  // Fetch customers when search, page, or sort changes
+  // Fetch memberships when search, page, status, or sort changes
   useEffect(() => {
     const delayedSearch = setTimeout(() => {
-      fetchCustomers();
+      fetchMemberships();
     }, searchQuery ? 300 : 0); // Debounce search by 300ms
 
     return () => clearTimeout(delayedSearch);
-  }, [searchQuery, currentPage, sort]);
+  }, [searchQuery, currentPage, statusFilter, sort]);
 
-  const fetchCustomers = async () => {
+  const fetchMemberships = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
       if (searchQuery.trim()) {
-        params.append('search', searchQuery.trim());
+        // For now, we'll need to implement search on the backend
+        // params.append('search', searchQuery.trim());
+      }
+      if (statusFilter) {
+        params.append('status', statusFilter);
       }
       params.append('page', currentPage.toString());
       params.append('limit', ITEMS_PER_PAGE.toString());
-      params.append('sortField', sort.field);
-      params.append('sortDirection', sort.direction);
+      // Note: We'll need to update the API to support sorting
+      // params.append('sortField', sort.field);
+      // params.append('sortDirection', sort.direction);
 
-      const response = await fetch(`/api/customers?${params}`);
+      const response = await fetch(`/api/memberships?${params}`);
       if (response.ok) {
         const data = await response.json();
-        setCustomers(data.customers || []);
-        setTotalCustomers(data.total || 0);
+        // Filter on client side for search until backend supports it
+        let filteredMemberships = data.memberships || [];
+        if (searchQuery.trim()) {
+          const query = searchQuery.toLowerCase();
+          filteredMemberships = filteredMemberships.filter(membership => 
+            membership.customer?.name?.toLowerCase().includes(query) ||
+            membership.customer?.email?.toLowerCase().includes(query) ||
+            membership.customer?.phone?.includes(query) ||
+            membership.product?.name?.toLowerCase().includes(query)
+          );
+        }
+        setMemberships(filteredMemberships);
+        setTotalMemberships(data.pagination?.total || 0);
       } else {
-        console.error('Failed to fetch customers');
-        setCustomers([]);
-        setTotalCustomers(0);
+        console.error('Failed to fetch memberships');
+        setMemberships([]);
+        setTotalMemberships(0);
       }
     } catch (error) {
-      console.error('Error fetching customers:', error);
-      setCustomers([]);
-      setTotalCustomers(0);
+      console.error('Error fetching memberships:', error);
+      setMemberships([]);
+      setTotalMemberships(0);
     } finally {
       setLoading(false);
     }
@@ -112,10 +130,32 @@ export default function CustomersPage() {
     return phone;
   };
 
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount); // Amount is already in dollars
+  };
+
+  const getStatusBadgeVariant = (status) => {
+    switch (status) {
+      case 'active':
+        return 'default';
+      case 'canceled':
+        return 'secondary';
+      case 'past_due':
+        return 'destructive';
+      case 'trialing':
+        return 'outline';
+      default:
+        return 'secondary';
+    }
+  };
+
   // Calculate pagination
-  const totalPages = Math.ceil(totalCustomers / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil(totalMemberships / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE + 1;
-  const endIndex = Math.min(currentPage * ITEMS_PER_PAGE, totalCustomers);
+  const endIndex = Math.min(currentPage * ITEMS_PER_PAGE, totalMemberships);
 
   // Generate page numbers for pagination
   const getPageNumbers = () => {
@@ -151,20 +191,55 @@ export default function CustomersPage() {
   );
 
   return (
-    <div className="mx-4 h-[calc(100vh-65px)] flex flex-col">
+    <div className="px-4 h-[calc(100vh-65px)] flex flex-col">
+      <TypographyLarge>Memberships</TypographyLarge>
       
-      {/* Search and Stats */}
+      {/* Search, Filters and Stats */}
       <div className="flex gap-2 items-center mb-4 flex-shrink-0">
         <div className="flex-1 max-w-md">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground size-4" />
             <Input
-              placeholder="Search by name, email, phone, or member ID..."
+              placeholder="Search by name, email, phone, or membership..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-8"
             />
           </div>
+        </div>
+        
+        {/* Status Filter Buttons */}
+        <div className="flex gap-2">
+          <Button 
+            variant={statusFilter === 'active' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setStatusFilter('active');
+              setCurrentPage(1);
+            }}
+          >
+            Active
+          </Button>
+          <Button 
+            variant={statusFilter === 'canceled' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setStatusFilter('canceled');
+              setCurrentPage(1);
+            }}
+          >
+            Canceled
+          </Button>
+          <Button 
+            variant={statusFilter === '' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              setStatusFilter('');
+              setCurrentPage(1);
+            }}
+          >
+            All
+          </Button>
         </div>
         
         {searchQuery && (
@@ -175,9 +250,9 @@ export default function CustomersPage() {
 
         <div className="flex items-center gap-2 ml-auto">
           <Badge variant="secondary" className="text-sm">
-            {loading ? 'Loading...' : `${totalCustomers} customer${totalCustomers !== 1 ? 's' : ''}`}
+            {loading ? 'Loading...' : `${totalMemberships} membership${totalMemberships !== 1 ? 's' : ''}`}
           </Badge>
-          {totalCustomers > 0 && !loading && (
+          {totalMemberships > 0 && !loading && (
             <span className="text-sm text-muted-foreground">
               Showing {startIndex}-{endIndex}
             </span>
@@ -188,41 +263,38 @@ export default function CustomersPage() {
       {/* Table Card */}
       <Card className="p-0 m-0 flex-1 flex flex-col overflow-hidden">
         <CardContent className="p-0 m-0 flex-1 flex flex-col overflow-hidden">
-          {loading && customers.length === 0 ? (
+          {loading && memberships.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground flex-1 flex items-center justify-center">
-              Loading customers...
+              Loading memberships...
             </div>
           ) : (
             <div className="flex-1 min-h-0 relative">
               <Table className="table-fixed w-full">
                 <TableHeader className="sticky top-0 z-10 bg-background">
                   <TableRow>
-                    <SortableHeader field="name" className="rounded-tl-lg w-[22%]">
+                    <SortableHeader field="customer.name" className="rounded-tl-lg w-1/4">
                       <User className="size-4 mr-1" />
-                      Name
+                      Member
                     </SortableHeader>
-                    <SortableHeader field="email" className="w-[18%]">
-                      <Mail className="size-4 mr-1" />
-                      Email
+                    <SortableHeader field="product.name" className="w-1/6">
+                      <CreditCard className="size-4 mr-1" />
+                      Membership
                     </SortableHeader>
-                    <SortableHeader field="phone" className="w-[14%]">
-                      <Phone className="size-4 mr-1" />
-                      Phone
+                    <SortableHeader field="amount" className="w-1/8">
+                      <DollarSign className="size-4 mr-1" />
+                      Value
                     </SortableHeader>
-                    <SortableHeader field="memberId" className="w-[12%]">
-                      <IdCard className="size-4 mr-1" />
-                      Member ID
+                    <SortableHeader field="nextBillingDate" className="w-1/6">
+                      <Calendar className="size-4 mr-1" />
+                      Next Billing
                     </SortableHeader>
-                    <TableHead className="bg-muted w-[14%]">
-                      <div className="flex items-center gap-1">
-                        <CreditCard className="size-4 mr-1" />
-                        Member Since
-                      </div>
+                    <SortableHeader field="subscriptionStartDate" className="w-1/6">
+                      Started
+                    </SortableHeader>
+                    <TableHead className="bg-muted w-1/8">
+                      Status
                     </TableHead>
-                    <SortableHeader field="createdAt" className="w-[16%]">
-                      Joined
-                    </SortableHeader>
-                    <TableHead className="bg-muted rounded-tr-lg w-[4%]">
+                    <TableHead className="bg-muted rounded-tr-lg w-16">
                       
                     </TableHead>
                   </TableRow>
@@ -232,90 +304,87 @@ export default function CustomersPage() {
               <div className="absolute inset-0 top-12 overflow-y-auto">
                 <Table className="table-fixed w-full">
                   <TableBody>
-                    {customers.length === 0 ? (
+                    {memberships.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                          {searchQuery ? 'No customers found matching your search.' : 'No customers found.'}
+                          {searchQuery ? 'No memberships found matching your search.' : 'No memberships found.'}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      customers.map((customer) => (
+                      memberships.map((membership) => (
                         <TableRow 
-                          key={customer._id} 
+                          key={membership._id} 
                           className="hover:bg-muted/50 cursor-pointer"
-                          onClick={() => router.push(`/manage/customers/${customer._id}`)}
+                          onClick={() => router.push(`/manage/customers/${membership.customer?._id}`)}
                         >
-                          <TableCell className="align-top w-[22%]">
+                          <TableCell className="align-top w-1/4">
                             <div className="flex items-center gap-3">
-                              {customer.photo ? (
-                                <img 
-                                  src={customer.photo} 
-                                  alt={customer.name} 
-                                  className="size-8 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
-                                  {getInitials(customer.name)}
-                                </div>
-                              )}
+                              <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
+                                {getInitials(membership.customer?.name)}
+                              </div>
                               <div className="flex flex-col">
                                 <div className="font-medium">
-                                  {customer.name || 'Unnamed Customer'}
+                                  {membership.customer?.name || 'Unknown'}
                                 </div>
-                                {customer.waiver?.agree && (
-                                  <Badge variant="outline" className="text-xs w-fit">
-                                    <Check className="size-3"/> Waiver
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell className="align-top w-[18%]">
-                            <div className="text-sm">
-                              {customer.email || '-'}
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell className="w-[14%] align-top">
-                            <div className="text-sm">
-                              {formatPhone(customer.phone) || '-'}
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell className="align-top w-[12%]">
-                            <div className="text-sm font-mono">
-                              {customer.memberId || '-'}
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell className="w-[14%] align-top">
-                            {customer.membership ? (
-                              <div className="flex flex-col">
-                                <Badge variant="default" className="text-xs w-fit">
-                                  {customer.membership.priceName || customer.membership.product?.name}
-                                </Badge>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  {dayjs(customer.membership.subscriptionStartDate).format('MM/YY')}
+                                <div className="text-xs text-muted-foreground">
+                                  {membership.customer?.email || '-'}
                                 </div>
                               </div>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">-</span>
-                            )}
+                            </div>
                           </TableCell>
                           
-                          <TableCell className="w-[16%]">
-                            <div className="flex flex-col text-sm">
-                              <div>
-                                {dayjs(customer.createdAt).format('DD/MM/YYYY')}
+                          <TableCell className="align-top w-1/6">
+                            <div className="flex flex-col">
+                              <div className="text-sm font-medium">
+                                {membership.product?.name || 'Membership'}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {dayjs(customer.createdAt).fromNow()}
+                                {membership.priceName ? `${membership.priceName} • ` : ''}
+                                {membership.unit === 'month' ? 'Monthly' : membership.unit === 'year' ? 'Annually' : membership.unit}
                               </div>
                             </div>
                           </TableCell>
                           
-                          <TableCell className="w-[4%]">
+                          <TableCell className="w-1/8 align-top">
+                            <div className="text-sm font-medium text-left ml-1">
+                              {formatCurrency(membership.amount)}
+                            </div>
+                          </TableCell>
+                          
+                          <TableCell className="align-top w-1/6">
+                            <div className="flex flex-col text-sm">
+                              <div>
+                                {membership.nextBillingDate 
+                                  ? dayjs(membership.nextBillingDate).format('DD/MM/YYYY')
+                                  : '-'
+                                }
+                              </div>
+                              {membership.nextBillingDate && (
+                                <div className="text-xs text-muted-foreground">
+                                  {dayjs(membership.nextBillingDate).fromNow()}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          
+                          <TableCell className="w-1/6">
+                            <div className="flex flex-col text-sm">
+                              <div>
+                                {dayjs(membership.subscriptionStartDate).format('DD/MM/YYYY')}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {dayjs(membership.subscriptionStartDate).fromNow()}
+                              </div>
+                            </div>
+                          </TableCell>
+                          
+                          <TableCell className="w-1/8">
+                            <Badge variant={getStatusBadgeVariant(membership.status)}>
+                              {membership.status}
+                            </Badge>
+                          </TableCell>
+                          
+                          <TableCell className="w-16">
                             <ChevronRight className="size-4 text-muted-foreground" />
                           </TableCell>
                         </TableRow>
