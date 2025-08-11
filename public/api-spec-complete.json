@@ -1,0 +1,2507 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "POS System API",
+    "description": "Complete API documentation for the Point of Sale system including authentication, products, customers, transactions, schedules, check-ins, and more.",
+    "version": "2.0.0",
+    "contact": {
+      "name": "API Support",
+      "email": "support@possystem.com"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/api",
+      "description": "Development server"
+    },
+    {
+      "url": "https://yourdomain.com/api",
+      "description": "Production server"
+    }
+  ],
+  "security": [
+    {
+      "cookieAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User authentication and authorization endpoints"
+    },
+    {
+      "name": "Customers",
+      "description": "Customer management endpoints"
+    },
+    {
+      "name": "Products",
+      "description": "Product management endpoints"
+    },
+    {
+      "name": "Transactions",
+      "description": "Transaction and payment processing"
+    },
+    {
+      "name": "Schedules",
+      "description": "Class and course scheduling"
+    },
+    {
+      "name": "Check-ins",
+      "description": "Customer check-in management"
+    },
+    {
+      "name": "Memberships",
+      "description": "Membership management"
+    },
+    {
+      "name": "Discounts",
+      "description": "Discount code management"
+    },
+    {
+      "name": "Terminals",
+      "description": "Payment terminal management"
+    },
+    {
+      "name": "Orders",
+      "description": "Order management"
+    },
+    {
+      "name": "Employees",
+      "description": "Employee management"
+    },
+    {
+      "name": "Locations",
+      "description": "Location management"
+    },
+    {
+      "name": "Organization",
+      "description": "Organization settings"
+    },
+    {
+      "name": "Accounting",
+      "description": "Accounting codes and settings"
+    },
+    {
+      "name": "Payments",
+      "description": "Payment processing and Stripe integration"
+    }
+  ],
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "User login",
+        "description": "Authenticate a user with email and password",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "user@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "example": "securepassword123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Login successful"
+                    },
+                    "employee": {
+                      "$ref": "#/components/schemas/Employee"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "summary": "User logout",
+        "description": "Logout the current user and clear session",
+        "tags": ["Authentication"],
+        "responses": {
+          "200": {
+            "description": "Logout successful"
+          }
+        }
+      }
+    },
+    "/auth/signup": {
+      "post": {
+        "summary": "User registration",
+        "description": "Register a new user account",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "password", "orgName"],
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "example": "John Doe"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "example": "john@example.com"
+                  },
+                  "password": {
+                    "type": "string",
+                    "format": "password",
+                    "minLength": 6
+                  },
+                  "orgName": {
+                    "type": "string",
+                    "example": "My Business"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully"
+          },
+          "400": {
+            "description": "Invalid input data"
+          }
+        }
+      }
+    },
+    "/auth/pin": {
+      "post": {
+        "summary": "Authenticate with PIN",
+        "description": "Authenticate an employee using their 4-digit PIN",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["pin"],
+                "properties": {
+                  "pin": {
+                    "type": "string",
+                    "pattern": "^[0-9]{4}$",
+                    "example": "1234"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PIN authentication successful"
+          },
+          "401": {
+            "description": "Invalid PIN"
+          }
+        }
+      }
+    },
+    "/auth/pincheck": {
+      "post": {
+        "summary": "Verify PIN for permission",
+        "description": "Check if a PIN belongs to a user with specific permission",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["pin", "permission"],
+                "properties": {
+                  "pin": {
+                    "type": "string",
+                    "pattern": "^[0-9]{4}$"
+                  },
+                  "permission": {
+                    "type": "string",
+                    "example": "discount:custom"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PIN verified and permission granted"
+          },
+          "403": {
+            "description": "Invalid PIN or insufficient permissions"
+          }
+        }
+      }
+    },
+    "/customers": {
+      "get": {
+        "summary": "List all customers",
+        "description": "Retrieve a paginated list of customers",
+        "tags": ["Customers"],
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by name, email, or phone"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of customers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "customers": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Customer"
+                      }
+                    },
+                    "totalPages": {
+                      "type": "integer"
+                    },
+                    "currentPage": {
+                      "type": "integer"
+                    },
+                    "totalCount": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create customer",
+        "description": "Create a new customer",
+        "tags": ["Customers"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Customer created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/customers/{id}": {
+      "get": {
+        "summary": "Get customer by ID",
+        "tags": ["Customers"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Customer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Customer not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update customer",
+        "tags": ["Customers"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Customer updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete customer",
+        "tags": ["Customers"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Customer deleted"
+          }
+        }
+      }
+    },
+    "/customers/search": {
+      "get": {
+        "summary": "Search customers",
+        "description": "Search customers by name, email, phone, or member ID",
+        "tags": ["Customers"],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results"
+          }
+        }
+      }
+    },
+    "/products": {
+      "get": {
+        "summary": "List all products",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "name": "type",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["class", "course", "casual", "membership", "shop"]
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of products"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create product",
+        "tags": ["Products"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Product created"
+          }
+        }
+      }
+    },
+    "/products/{id}": {
+      "get": {
+        "summary": "Get product by ID",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product details"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update product",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete product",
+        "tags": ["Products"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product deleted"
+          }
+        }
+      }
+    },
+    "/transactions": {
+      "get": {
+        "summary": "List transactions",
+        "tags": ["Transactions"],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["succeeded", "failed", "pending"]
+            }
+          },
+          {
+            "name": "paymentMethod",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["card", "cash"]
+            }
+          },
+          {
+            "name": "hours",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "description": "Number of hours to look back"
+            }
+          },
+          {
+            "name": "customerId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of transactions"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create transaction",
+        "tags": ["Transactions"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Transaction created"
+          }
+        }
+      }
+    },
+    "/transactions/{id}": {
+      "get": {
+        "summary": "Get transaction by ID",
+        "tags": ["Transactions"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Transaction details"
+          }
+        }
+      }
+    },
+    "/schedules": {
+      "get": {
+        "summary": "List schedules",
+        "tags": ["Schedules"],
+        "parameters": [
+          {
+            "name": "product",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of schedules"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create schedule",
+        "tags": ["Schedules"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScheduleInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Schedule created"
+          }
+        }
+      }
+    },
+    "/schedules/{id}": {
+      "get": {
+        "summary": "Get schedule by ID",
+        "tags": ["Schedules"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedule details"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update schedule",
+        "tags": ["Schedules"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedule updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete schedule",
+        "tags": ["Schedules"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Schedule deleted"
+          }
+        }
+      }
+    },
+    "/schedules/{id}/classes/{classId}/customers/{customerId}": {
+      "put": {
+        "summary": "Update customer status in class",
+        "description": "Update a customer's status in a scheduled class (confirmed, checked in, cancelled)",
+        "tags": ["Schedules"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "classId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "customerId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["confirmed", "checkin", "cancel"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Status updated"
+          }
+        }
+      }
+    },
+    "/checkin/qr": {
+      "post": {
+        "summary": "QR code check-in",
+        "description": "Process a check-in using a QR code containing customer ID",
+        "tags": ["Check-ins"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["customerId"],
+                "properties": {
+                  "customerId": {
+                    "type": "string",
+                    "description": "Customer ID from QR code"
+                  },
+                  "test": {
+                    "type": "boolean",
+                    "description": "Test mode flag"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Check-in successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean"
+                    },
+                    "customer": {
+                      "$ref": "#/components/schemas/Customer"
+                    },
+                    "product": {
+                      "type": "object"
+                    },
+                    "classTime": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "status": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Customer not found or no class in time window"
+          }
+        }
+      }
+    },
+    "/checkins": {
+      "get": {
+        "summary": "List check-ins",
+        "description": "Retrieve paginated list of check-ins with filtering",
+        "tags": ["Check-ins"],
+        "parameters": [
+          {
+            "name": "dateFilter",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["today", "week", "month", "all"],
+              "default": "today"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 100
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "description": "Search by customer name, email, phone, or product"
+          },
+          {
+            "name": "method",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["qr-code", "manual", "staff"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of check-ins",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "checkins": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Checkin"
+                      }
+                    },
+                    "stats": {
+                      "type": "object",
+                      "properties": {
+                        "totalToday": {
+                          "type": "integer"
+                        },
+                        "qrCode": {
+                          "type": "integer"
+                        },
+                        "manual": {
+                          "type": "integer"
+                        },
+                        "classCheckins": {
+                          "type": "integer"
+                        },
+                        "membershipCheckins": {
+                          "type": "integer"
+                        }
+                      }
+                    },
+                    "totalCount": {
+                      "type": "integer"
+                    },
+                    "totalPages": {
+                      "type": "integer"
+                    },
+                    "currentPage": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete check-in",
+        "description": "Delete a check-in record (admin only)",
+        "tags": ["Check-ins"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Check-in deleted"
+          },
+          "401": {
+            "description": "Unauthorized - admin access required"
+          }
+        }
+      }
+    },
+    "/memberships": {
+      "get": {
+        "summary": "List memberships",
+        "tags": ["Memberships"],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["active", "cancelled", "expired"]
+            }
+          },
+          {
+            "name": "customerId",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of memberships"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create membership",
+        "tags": ["Memberships"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MembershipInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Membership created"
+          }
+        }
+      }
+    },
+    "/memberships/{id}": {
+      "get": {
+        "summary": "Get membership by ID",
+        "tags": ["Memberships"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Membership details"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update membership",
+        "tags": ["Memberships"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Membership updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Cancel membership",
+        "tags": ["Memberships"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Membership cancelled"
+          }
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "summary": "List orders",
+        "tags": ["Orders"],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": ["placed", "completed", "cancelled"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of orders"
+          }
+        }
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "summary": "Get order by ID",
+        "tags": ["Orders"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order details"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update order status",
+        "tags": ["Orders"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": ["placed", "completed", "cancelled"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order updated"
+          }
+        }
+      }
+    },
+    "/employees": {
+      "get": {
+        "summary": "List employees",
+        "tags": ["Employees"],
+        "responses": {
+          "200": {
+            "description": "List of employees"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create employee",
+        "tags": ["Employees"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmployeeInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Employee created"
+          }
+        }
+      }
+    },
+    "/employees/{id}": {
+      "get": {
+        "summary": "Get employee by ID",
+        "tags": ["Employees"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Employee details"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update employee",
+        "tags": ["Employees"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Employee updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete employee",
+        "tags": ["Employees"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Employee deleted"
+          }
+        }
+      }
+    },
+    "/locations": {
+      "get": {
+        "summary": "List locations",
+        "tags": ["Locations"],
+        "responses": {
+          "200": {
+            "description": "List of locations"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create location",
+        "tags": ["Locations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Location created"
+          }
+        }
+      }
+    },
+    "/locations/{id}": {
+      "get": {
+        "summary": "Get location by ID",
+        "tags": ["Locations"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Location details"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update location",
+        "tags": ["Locations"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Location updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete location",
+        "tags": ["Locations"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Location deleted"
+          }
+        }
+      }
+    },
+    "/org": {
+      "get": {
+        "summary": "Get organization details",
+        "tags": ["Organization"],
+        "responses": {
+          "200": {
+            "description": "Organization details",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Organization"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Update organization",
+        "tags": ["Organization"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrganizationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Organization updated"
+          }
+        }
+      }
+    },
+    "/accounting": {
+      "get": {
+        "summary": "List accounting codes",
+        "tags": ["Accounting"],
+        "responses": {
+          "200": {
+            "description": "List of accounting codes"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create accounting code",
+        "tags": ["Accounting"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountingInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Accounting code created"
+          }
+        }
+      }
+    },
+    "/accounting/{id}": {
+      "get": {
+        "summary": "Get accounting code by ID",
+        "tags": ["Accounting"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Accounting code details"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update accounting code",
+        "tags": ["Accounting"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Accounting code updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete accounting code",
+        "tags": ["Accounting"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Accounting code deleted"
+          }
+        }
+      }
+    },
+    "/discounts": {
+      "get": {
+        "summary": "List discount codes",
+        "tags": ["Discounts"],
+        "parameters": [
+          {
+            "name": "current",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            },
+            "description": "Only show current/active discounts"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of discount codes"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create discount code",
+        "tags": ["Discounts"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DiscountInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Discount created"
+          }
+        }
+      }
+    },
+    "/discounts/{id}": {
+      "get": {
+        "summary": "Get discount by ID",
+        "tags": ["Discounts"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discount details"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update discount",
+        "tags": ["Discounts"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discount updated"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete discount",
+        "tags": ["Discounts"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Discount deleted"
+          }
+        }
+      }
+    },
+    "/terminals": {
+      "get": {
+        "summary": "List payment terminals",
+        "tags": ["Terminals"],
+        "responses": {
+          "200": {
+            "description": "List of terminals"
+          }
+        }
+      },
+      "post": {
+        "summary": "Register terminal",
+        "tags": ["Terminals"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TerminalInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Terminal registered"
+          }
+        }
+      }
+    },
+    "/terminals/{id}": {
+      "get": {
+        "summary": "Get terminal by ID",
+        "tags": ["Terminals"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Terminal details"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Unregister terminal",
+        "tags": ["Terminals"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Terminal unregistered"
+          }
+        }
+      }
+    },
+    "/terminals/{id}/link": {
+      "post": {
+        "summary": "Link terminal to browser",
+        "tags": ["Terminals"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "browserId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Terminal linked"
+          }
+        }
+      }
+    },
+    "/terminals/available": {
+      "get": {
+        "summary": "Get available terminal",
+        "description": "Get the terminal linked to current browser session",
+        "tags": ["Terminals"],
+        "responses": {
+          "200": {
+            "description": "Available terminal"
+          }
+        }
+      }
+    },
+    "/payments/intent": {
+      "post": {
+        "summary": "Create payment intent",
+        "description": "Create a Stripe payment intent for card payments",
+        "tags": ["Payments"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["amount"],
+                "properties": {
+                  "amount": {
+                    "type": "number",
+                    "description": "Amount in dollars"
+                  },
+                  "customerId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment intent created"
+          }
+        }
+      }
+    },
+    "/payments/capture": {
+      "post": {
+        "summary": "Capture payment",
+        "description": "Capture a payment from a terminal",
+        "tags": ["Payments"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["paymentIntentId"],
+                "properties": {
+                  "paymentIntentId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment captured"
+          }
+        }
+      }
+    },
+    "/payments/cancel": {
+      "post": {
+        "summary": "Cancel payment",
+        "tags": ["Payments"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["paymentIntentId"],
+                "properties": {
+                  "paymentIntentId": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment cancelled"
+          }
+        }
+      }
+    },
+    "/payments/cash": {
+      "post": {
+        "summary": "Process cash payment",
+        "tags": ["Payments"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["amount", "cart"],
+                "properties": {
+                  "amount": {
+                    "type": "number"
+                  },
+                  "cart": {
+                    "type": "object"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Cash payment processed"
+          }
+        }
+      }
+    },
+    "/payments/subscription": {
+      "post": {
+        "summary": "Create subscription",
+        "description": "Create a Stripe subscription for membership products",
+        "tags": ["Payments"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["cart"],
+                "properties": {
+                  "cart": {
+                    "type": "object",
+                    "description": "Cart containing membership products"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Subscription created"
+          }
+        }
+      }
+    },
+    "/casual": {
+      "get": {
+        "summary": "List casual entries",
+        "tags": ["Schedules"],
+        "responses": {
+          "200": {
+            "description": "List of casual entries"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create casual entry",
+        "tags": ["Schedules"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "customerId": {
+                    "type": "string"
+                  },
+                  "productId": {
+                    "type": "string"
+                  },
+                  "start": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Casual entry created"
+          }
+        }
+      }
+    },
+    "/casual/{id}": {
+      "put": {
+        "summary": "Update casual entry",
+        "description": "Check out from casual entry",
+        "tags": ["Schedules"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "end": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Casual entry updated"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "auth-token"
+      }
+    },
+    "schemas": {
+      "Customer": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "memberId": {
+            "type": "integer",
+            "description": "6-digit unique member ID"
+          },
+          "photo": {
+            "type": "string",
+            "description": "URL to customer photo"
+          },
+          "dob": {
+            "type": "string",
+            "format": "date"
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["male", "female", "other"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CustomerInput": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "photo": {
+            "type": "string"
+          },
+          "dob": {
+            "type": "string",
+            "format": "date"
+          },
+          "gender": {
+            "type": "string",
+            "enum": ["male", "female", "other"]
+          }
+        }
+      },
+      "Product": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["class", "course", "casual", "membership", "shop"]
+          },
+          "category": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "integer"
+          },
+          "variations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "modifierGroups": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "thumbnail": {
+            "type": "string"
+          }
+        }
+      },
+      "ProductInput": {
+        "type": "object",
+        "required": ["name", "type"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["class", "course", "casual", "membership", "shop"]
+          },
+          "category": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "integer"
+          },
+          "variations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "Transaction": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "total": {
+            "type": "number"
+          },
+          "subtotal": {
+            "type": "number"
+          },
+          "tax": {
+            "type": "number"
+          },
+          "discountAmount": {
+            "type": "number"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": ["card", "cash"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["succeeded", "failed", "pending", "cancelled"]
+          },
+          "customer": {
+            "type": "string"
+          },
+          "cart": {
+            "type": "object"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TransactionInput": {
+        "type": "object",
+        "required": ["cart", "paymentMethod"],
+        "properties": {
+          "cart": {
+            "type": "object"
+          },
+          "paymentMethod": {
+            "type": "string",
+            "enum": ["card", "cash"]
+          },
+          "customerId": {
+            "type": "string"
+          }
+        }
+      },
+      "Schedule": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "product": {
+            "type": "string"
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "location": {
+                  "type": "string"
+                },
+                "classes": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "datetime": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "available": {
+                        "type": "integer"
+                      },
+                      "customers": {
+                        "type": "array",
+                        "items": {
+                          "type": "object"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ScheduleInput": {
+        "type": "object",
+        "required": ["product"],
+        "properties": {
+          "product": {
+            "type": "string"
+          },
+          "locations": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "Checkin": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "customer": {
+            "type": "string"
+          },
+          "product": {
+            "type": "string"
+          },
+          "schedule": {
+            "type": "string"
+          },
+          "class": {
+            "type": "object",
+            "properties": {
+              "datetime": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "location": {
+                "type": "string"
+              }
+            }
+          },
+          "status": {
+            "type": "string",
+            "enum": ["checked-in", "late", "early", "no-show"]
+          },
+          "method": {
+            "type": "string",
+            "enum": ["qr-code", "manual", "staff"]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Membership": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "customer": {
+            "type": "string"
+          },
+          "product": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["active", "cancelled", "expired", "suspended", "pending"]
+          },
+          "subscriptionStartDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "nextBillingDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "billingMethod": {
+            "type": "string",
+            "enum": ["terminal_manual", "stripe_auto"]
+          }
+        }
+      },
+      "MembershipInput": {
+        "type": "object",
+        "required": ["customer", "product"],
+        "properties": {
+          "customer": {
+            "type": "string"
+          },
+          "product": {
+            "type": "string"
+          },
+          "variation": {
+            "type": "string"
+          },
+          "priceId": {
+            "type": "string"
+          }
+        }
+      },
+      "Discount": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["percent", "amount"]
+          },
+          "expiry": {
+            "type": "string",
+            "format": "date"
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "DiscountInput": {
+        "type": "object",
+        "required": ["name", "value", "type"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "value": {
+            "type": "number"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["percent", "amount"]
+          },
+          "expiry": {
+            "type": "string",
+            "format": "date"
+          },
+          "products": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "Terminal": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "stripeTerminalId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["online", "offline", "unknown"]
+          },
+          "location": {
+            "type": "string"
+          },
+          "lastSeen": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TerminalInput": {
+        "type": "object",
+        "required": ["label", "location"],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "registrationCode": {
+            "type": "string"
+          }
+        }
+      },
+      "Employee": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["ADMIN", "MANAGER", "STAFF", "TERMINAL"]
+          },
+          "pin": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          }
+        }
+      },
+      "EmployeeInput": {
+        "type": "object",
+        "required": ["name", "email", "role"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["ADMIN", "MANAGER", "STAFF", "TERMINAL"]
+          },
+          "pin": {
+            "type": "string",
+            "pattern": "^[0-9]{4}$"
+          },
+          "location": {
+            "type": "string"
+          }
+        }
+      },
+      "Location": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "object"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "hours": {
+            "type": "object"
+          }
+        }
+      },
+      "LocationInput": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "object"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "hours": {
+            "type": "object"
+          }
+        }
+      },
+      "Organization": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          },
+          "logo": {
+            "type": "string"
+          }
+        }
+      },
+      "OrganizationInput": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string"
+          },
+          "website": {
+            "type": "string"
+          },
+          "logo": {
+            "type": "string"
+          }
+        }
+      },
+      "AccountingInput": {
+        "type": "object",
+        "required": ["name", "code"],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "tax": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

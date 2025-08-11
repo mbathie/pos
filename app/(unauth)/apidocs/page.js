@@ -22,7 +22,7 @@ export default function ApiDocs() {
       if (window.SwaggerUIBundle && !window.swaggerUIInitialized) {
         window.swaggerUIInitialized = true
         window.SwaggerUIBundle({
-          url: '/api-spec.json',
+          url: '/api-spec-complete.json',
           dom_id: '#swagger-ui',
           presets: [
             window.SwaggerUIBundle.presets.apis,
