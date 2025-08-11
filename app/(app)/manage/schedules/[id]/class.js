@@ -216,6 +216,7 @@ function ManageCustomer({ schedule, customer, classId, scheduleId, setSchedule }
         variant={customer.status === "checked in" ? undefined : "secondary"}
         size="icon"
         onClick={() => handleUpdateStatus(customer.status === "checked in" ? "cancel" : "checkin")}
+        disabled={customer.status === "checked in"}
       >
         <Check className='size-4' />
       </Button>
@@ -224,6 +225,7 @@ function ManageCustomer({ schedule, customer, classId, scheduleId, setSchedule }
         <DropdownMenuContent>
           <DropdownMenuLabel>Set Status</DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => handleUpdateStatus("confirmed")}>Confirmed</DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleUpdateStatus("checkin")}>Checkin</DropdownMenuItem>
           <DropdownMenuItem onClick={() => handleUpdateStatus("cancel")}>Cancel</DropdownMenuItem>
         </DropdownMenuContent>

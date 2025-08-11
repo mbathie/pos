@@ -386,7 +386,10 @@ MembershipSchema.index({ status: 1, nextBillingDate: 1 });
 
 const Membership = mongoose.models.Membership || mongoose.model('Membership', MembershipSchema);
 
+// Import Checkin model
+import Checkin from './Checkin';
+
 // ==== Updated Exports ====
 export {
-  Org, Location, Terminal, Employee, Customer, Category, Folder, Accounting, Product, Discount, Transaction, Schedule, Casual, Order, Membership
+  Org, Location, Terminal, Employee, Customer, Category, Folder, Accounting, Product, Discount, Transaction, Schedule, Casual, Order, Membership, Checkin
 }

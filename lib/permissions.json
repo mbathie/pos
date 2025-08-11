@@ -21,7 +21,9 @@
         "/manage/classes",
         "/manage/transactions",
         "/manage/customers",
-        "/manage/memberships"
+        "/manage/memberships",
+        "/manage/checkins",
+        "/manage/accounting"
       ],
       "description": "Limited access to sales and basic operations"
     },

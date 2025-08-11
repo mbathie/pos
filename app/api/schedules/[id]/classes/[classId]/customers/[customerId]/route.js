@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongoose"
 import { getEmployee } from "@/lib/auth"
-import { Schedule } from "@/models"
+import { Schedule, Checkin, Membership } from "@/models"
 import { setClassAvailability } from '@/lib/schedule'
 
 export async function PUT(req, { params }) {
@@ -18,7 +18,7 @@ export async function PUT(req, { params }) {
   const classObjectId = new mongoose.Types.ObjectId(classId);
   const customerObjectId = new mongoose.Types.ObjectId(customerId);
 
-  const statusMap = {'cancel': 'cancelled', 'checkin': 'checked in'};
+  const statusMap = {'cancel': 'cancelled', 'checkin': 'checked in', 'confirmed': 'confirmed'};
   const newStatus = statusMap[status];
   
   if (!newStatus) {
@@ -94,6 +94,84 @@ export async function PUT(req, { params }) {
 
   if (result.modifiedCount === 0) {
     return NextResponse.json({ error: "Update failed - no documents modified" }, { status: 404 });
+  }
+
+  // Create Checkins record when checking in (just like QR code does)
+  if (newStatus === 'checked in') {
+    console.log('Creating Checkins record for manual check-in');
+    
+    // Get the schedule with populated product to get product ID
+    const fullSchedule = await Schedule.findById(scheduleId).populate('product');
+    
+    // Check for recent duplicate check-in (within last 10 seconds) to prevent double-clicks
+    const now = new Date();
+    const tenSecondsAgo = new Date(now.getTime() - 10 * 1000);
+    const recentClassCheckin = await Checkin.findOne({
+      customer: targetCustomer.customer,
+      product: fullSchedule.product._id,
+      schedule: scheduleId,
+      createdAt: { $gte: tenSecondsAgo }
+    });
+    
+    if (recentClassCheckin) {
+      console.log('Duplicate class check-in detected within 10 seconds, skipping');
+    } else {
+      // Create a CLASS check-in record
+      const classCheckinRecord = new Checkin({
+        customer: targetCustomer.customer,
+        product: fullSchedule.product._id,
+        schedule: scheduleId,
+        class: {
+          datetime: targetClass.datetime,
+          location: schedule.locations[targetLocationIndex].location
+        },
+        status: 'checked-in',
+        method: 'manual', // Different method to distinguish from QR code
+        org: orgId
+      });
+      
+      await classCheckinRecord.save();
+      console.log('Class check-in record created:', classCheckinRecord._id);
+    }
+    
+    // Also check for active membership and create SEPARATE record (like QR does)
+    const activeMembership = await Membership.findOne({
+      customer: targetCustomer.customer,
+      org: orgId,
+      status: 'active'
+    }).populate('product');
+    
+    if (activeMembership) {
+      console.log('Active membership found:', activeMembership.product?.name);
+      
+      // Check for recent duplicate membership check-in (within last 10 seconds)
+      const recentMembershipCheckin = await Checkin.findOne({
+        customer: targetCustomer.customer,
+        product: activeMembership.product._id,
+        createdAt: { $gte: tenSecondsAgo }
+      });
+      
+      if (recentMembershipCheckin) {
+        console.log('Duplicate membership check-in detected within 10 seconds, skipping');
+      } else {
+        // Create a SEPARATE membership check-in record
+        const membershipCheckinRecord = new Checkin({
+          customer: targetCustomer.customer,
+          product: activeMembership.product._id,
+          // Don't include schedule - this is a membership-only check-in
+          class: {
+            datetime: now, // Use CURRENT time for membership check-in
+            location: schedule.locations[targetLocationIndex].location
+          },
+          status: 'checked-in',
+          method: 'manual',
+          org: orgId
+        });
+        
+        await membershipCheckinRecord.save();
+        console.log('Membership check-in record created:', membershipCheckinRecord._id);
+      }
+    }
   }
 
   await setClassAvailability({scheduleId, classObjectId, orgId});

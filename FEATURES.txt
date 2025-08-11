@@ -1,3 +1,6 @@
+- Mobile app for customers
+
+
 DONE - folders for shop items
 DONE - bg colours for shop items, icons / images
 DONE - customer management
@@ -8,9 +11,6 @@ DONE - backend Schedule table for classes courses
 DONE - backend Orders table for shop items
 DONE - ability to add multiple prices for classes/courses within a price.
 DONE - waivers
-
-MUST HAVES
------------------------
 DONE - Setting for a product/category to go to bump screen or not
 DONE - Name field (not email/phone) required during checkout (only if bump screen item)
 DONE - classes and courses - dedicated checkin button
@@ -53,21 +53,21 @@ DONE - set a pin if no pin is set for new employees
 DONE - terminal integration (using real terminal)
 DONE - checkout process for subscriptions
 DONE  - backend Membership table for memberships
-- Email out QR code for classes and courses & memberships
-  - ability scan the QR to checkin at the front entry with a dedicated device - should confirm they have checked in.
-  - dedicated page to see people checking in - list view, with status/ etc
+DONE - ability to send manual receipts via email if no customer connected
+DONE - waiver builder page
+DONE - checkin page
+DONE  - hook up checkin page functionality
+DONE - Email out QR code for classes and courses & memberships
+DONE  - ability scan the QR to checkin at the front entry with a dedicated device - should confirm they have checked in.
+DONE  - dedicated page to see people checking in - list view, with status/ etc
 DONE - custom discounts - should be able to assign arbitrary discount amounts or percentages at checkout time (at MANAGER level only)
 DONE - Customer list view page
-- online orders for classes/courses/memberships
-  - also abiltiy to view / edit profile
-- refunds
 DONE - 4 digit PIN numbers - enforce some basic rules, i.e. not 1234, 1111, etc.
 
 DONE - Par/qty screen
 DONE  - par = min quantity before warning, i.e. to place another order with the supplier
 DONE  - qty = click update qty - add/subttact or overrise total qty of stock (required for launch)
 DONE  - list view of all items, should be able to edit product name/price also
-  - tag system - new feature too add generic tags per product
 DONE  - notifications when stock (par) is low - alert / bell icon down the bottom left
 DONE  - ability to filter for items below or at par, or cloase to par
 
@@ -76,6 +76,7 @@ DONE - waiver update handler
 
 NICE TO HAVES
 -----------------------
+  - tag system - new feature too add generic tags per product
   - basic accounting reporing
   - stock items need to have a customer assigned to them, i.e. pair of shoes for warrenty.
   - export CSV of purchases (for marketing purposes)
@@ -96,26 +97,3 @@ NICE TO HAVES
 
 
 
-PAR QTY system
-----------------
-- idea is to integrate an ability to track qty and par of individual stock items for category.menu='shop' items
-- on the /products/shop page, need 2 new fields below accounting code called Qty and Par (integers). They define the total qty of this item in stock and par represents at what level remaining of the stock to issue a warning at (we'll handle how display the warning later - not at this stage). We can store these values in the Products table
-- need a new /manage/products page similar to the /manage/transactions page which lists all products from all categories, with filters
-  up the top of the page to filter by category, and a search box to filter by product name, and clear filter button.
-  columns should be product name, category name, accounting code, folder (only relevant for shop items), send to bump (bool)
-
-
-ROLES system
-===================
-- 
-
-
-
-
-
-Whenever anyone clicks on a /shop/* page it should throw a shared component modal using https://ui.shadcn.com/docs/components/dialog
-which prompts the user for their employee pin number.
-- need a new API route which allows to lookup an employee of the same Org (based on current session) based on the pin number entered
-- If its the same employee thats already logged in, great, update the global variable (employee) in lib/globals.js and set employee.pinAuth: timestamp
-- If its not the same user then we need to re-authenticate the user similar to how the API route does it when you switch locations (/api/auth/location) except
-what it does it switch the authenticated user (and cookie token) to match that of the employee who's pin matches. It should then set employee.pinAuth: timestamp variable also
