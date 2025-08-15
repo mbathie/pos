@@ -2,95 +2,86 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useGlobals } from '@/lib/globals'
-import PinDialog from '@/components/pin-dialog'
-import { Loader2 } from 'lucide-react'
+import SimplePinDialog from '@/components/simple-pin-dialog'
 
 export default function ShopLayout({ children }) {
-  const [showPinDialog, setShowPinDialog] = useState(false)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [isChecking, setIsChecking] = useState(true)
+  const [needsPin, setNeedsPin] = useState(false)
+  const [loading, setLoading] = useState(true)
   const { employee } = useGlobals()
   const router = useRouter()
 
   useEffect(() => {
-    // Check if user is logged in
+    checkPinRequirement()
+  }, [employee])
+
+  const checkPinRequirement = async () => {
+    // No employee? Redirect to login
     if (!employee?._id) {
       router.push('/login')
       return
     }
 
-    // Check if PIN authentication is required
-    const pinAuth = employee.pinAuth
-    const now = new Date()
-    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000)
+    try {
+      // Check PIN status from server
+      const response = await fetch('/api/auth/pin/check')
+      const data = await response.json()
+      
+      console.log('PIN check result:', data)
+      
+      if (!response.ok) {
+        console.error('PIN check failed:', data.error)
+        router.push('/login')
+        return
+      }
 
-    console.log('Shop layout auth check:', { 
-      hasEmployee: !!employee?._id,
-      hasPinAuth: !!pinAuth,
-      pinAuthExpired: pinAuth ? new Date(pinAuth) < fiveMinutesAgo : 'no pinAuth',
-      employeePin: employee?.pin
-    })
-
-    // If no pinAuth or it's older than 5 minutes, require PIN
-    if (!pinAuth || new Date(pinAuth) < fiveMinutesAgo) {
-      setShowPinDialog(true)
-      setIsAuthenticated(false)
-    } else {
-      setIsAuthenticated(true)
+      // Determine if we need PIN entry
+      if (!data.hasPinSet || data.needsPinEntry) {
+        setNeedsPin(true)
+      } else {
+        setNeedsPin(false)
+      }
+    } catch (error) {
+      console.error('Error checking PIN:', error)
+      router.push('/dashboard')
+    } finally {
+      setLoading(false)
     }
-    setIsChecking(false)
-  }, [employee, router])
+  }
 
-  const handlePinSuccess = (data) => {
-    console.log('PIN success callback:', { data, pinAuth: data?.pinAuth })
-    setShowPinDialog(false)
-    setIsAuthenticated(true)
-    console.log('PIN authenticated successfully:', data.sameEmployee ? 'same employee' : 'employee switched')
+  const handlePinSuccess = () => {
+    console.log('PIN successfully entered/set')
+    setNeedsPin(false)
+    // Refresh the check to update state
+    checkPinRequirement()
   }
 
   const handlePinCancel = () => {
-    // Redirect back to dashboard if user cancels PIN entry
     router.push('/dashboard')
   }
 
-  // Show loading state while checking auth
-  if (isChecking) {
+  // Loading state
+  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
+        </div>
       </div>
     )
   }
 
-  // Show PIN dialog if needed
-  if (!isAuthenticated && showPinDialog) {
+  // Need PIN entry/setup
+  if (needsPin) {
     return (
-      <>
-        <div className="min-h-screen bg-background">
-          <PinDialog
-            open={showPinDialog}
-            onOpenChange={(open) => {
-              if (!open) {
-                handlePinCancel()
-              }
-              setShowPinDialog(open)
-            }}
-            onSuccess={handlePinSuccess}
-          />
-        </div>
-      </>
+      <SimplePinDialog
+        open={true}
+        onSuccess={handlePinSuccess}
+        onCancel={handlePinCancel}
+      />
     )
   }
 
-  // Show content if authenticated
-  if (isAuthenticated) {
-    return children
-  }
-
-  // Fallback loading state
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-    </div>
-  )
-} 
+  // All good, show the shop
+  return children
+}
