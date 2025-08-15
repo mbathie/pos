@@ -57,6 +57,7 @@ export async function POST(req) {
           name: currentEmployee.name,
           email: currentEmployee.email,
           role: currentEmployee.role,
+          pin: pinNumber,
           hasPinSet: true
         }
       })
