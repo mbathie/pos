@@ -7,6 +7,7 @@ import PinDialog from '@/components/pin-dialog'
 export default function ShopLayout({ children }) {
   const [showPinDialog, setShowPinDialog] = useState(false)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isChecking, setIsChecking] = useState(true)
   const { employee } = useGlobals()
   const router = useRouter()
 
@@ -29,9 +30,11 @@ export default function ShopLayout({ children }) {
     } else {
       setIsAuthenticated(true)
     }
+    setIsChecking(false)
   }, [employee, router])
 
   const handlePinSuccess = (data) => {
+    setShowPinDialog(false)
     setIsAuthenticated(true)
     console.log('PIN authenticated successfully:', data.sameEmployee ? 'same employee' : 'employee switched')
   }
@@ -41,8 +44,13 @@ export default function ShopLayout({ children }) {
     router.push('/dashboard')
   }
 
-  // Don't render anything if not authenticated
-  if (!isAuthenticated) {
+  // Show loading state while checking auth
+  if (isChecking) {
+    return null
+  }
+
+  // Show PIN dialog if needed
+  if (!isAuthenticated && showPinDialog) {
     return (
       <PinDialog
         open={showPinDialog}
@@ -57,5 +65,11 @@ export default function ShopLayout({ children }) {
     )
   }
 
-  return children
+  // Show content if authenticated
+  if (isAuthenticated) {
+    return children
+  }
+
+  // Fallback - should not reach here
+  return null
 } 
