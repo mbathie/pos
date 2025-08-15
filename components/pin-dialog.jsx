@@ -85,10 +85,11 @@ export default function PinDialog({ open, onOpenChange, onSuccess }) {
         pinAuth: data.pinAuth
       })
 
-      router.push('/shop')
-
+      // Clear form
       setPin('')
       setConfirmPin('')
+      
+      // Call success callback and close dialog
       onSuccess?.(data)
       onOpenChange(false)
     } catch (err) {
@@ -176,7 +177,10 @@ export default function PinDialog({ open, onOpenChange, onSuccess }) {
               />
             )}
           </div>
-          <div className="flex flex-col items-center gap-2 bg--500">
+          {error && (
+            <p className="text-xs text-destructive text-center">{error}</p>
+          )}
+          <div className="flex flex-col items-center gap-2">
             <div>
             <Button
               type="button"
