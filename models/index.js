@@ -61,6 +61,7 @@ const EmployeeSchema = new mongoose.Schema({
   email: { type: String, unique: true },
   hash: String,
   pin: Number,
+  lastPin: Date, // Last time PIN was entered (for 5-minute timeout)
   locked: Date,
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org' },
   location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },

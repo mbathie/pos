@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongoose"
 import { getEmployee } from "@/lib/auth"
-import { cookies } from "next/headers"
+import { Employee } from "@/models"
 
 // Verify an existing PIN
 export async function POST(req) {
@@ -32,19 +32,16 @@ export async function POST(req) {
       return NextResponse.json({ error: "Incorrect PIN" }, { status: 401 })
     }
 
-    console.log('PIN verified successfully:', {
-      employeeId: employee._id
-    })
-
-    // Update PIN authentication time in cookie
-    const cookieStore = await cookies()
+    // Update lastPin timestamp in database
     const now = new Date()
-    cookieStore.set('pinAuth', now.toISOString(), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 24 // 24 hours
+    await Employee.findByIdAndUpdate(
+      employee._id,
+      { lastPin: now }
+    )
+
+    console.log('PIN verified successfully:', {
+      employeeId: employee._id,
+      lastPin: now.toISOString()
     })
 
     return NextResponse.json({
