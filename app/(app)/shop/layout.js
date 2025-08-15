@@ -24,6 +24,13 @@ export default function ShopLayout({ children }) {
     const now = new Date()
     const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000)
 
+    console.log('Shop layout auth check:', { 
+      hasEmployee: !!employee?._id,
+      hasPinAuth: !!pinAuth,
+      pinAuthExpired: pinAuth ? new Date(pinAuth) < fiveMinutesAgo : 'no pinAuth',
+      employeePin: employee?.pin
+    })
+
     // If no pinAuth or it's older than 5 minutes, require PIN
     if (!pinAuth || new Date(pinAuth) < fiveMinutesAgo) {
       setShowPinDialog(true)
@@ -35,6 +42,7 @@ export default function ShopLayout({ children }) {
   }, [employee, router])
 
   const handlePinSuccess = (data) => {
+    console.log('PIN success callback:', { data, pinAuth: data?.pinAuth })
     setShowPinDialog(false)
     setIsAuthenticated(true)
     console.log('PIN authenticated successfully:', data.sameEmployee ? 'same employee' : 'employee switched')

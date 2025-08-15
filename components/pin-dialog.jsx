@@ -79,11 +79,16 @@ export default function PinDialog({ open, onOpenChange, onSuccess }) {
       if (!response.ok)
         throw new Error(data.error || 'Invalid PIN')
 
+      console.log('PIN response:', { mode, success: data.success, hasPinSet: data.employee?.hasPinSet })
+
       // Update global employee state with pinAuth timestamp
-      setEmployee({
+      // Include the current employee data to preserve all fields
+      setEmployee(prev => ({
+        ...prev,
         ...data.employee,
-        pinAuth: data.pinAuth
-      })
+        pinAuth: data.pinAuth,
+        pin: mode === 'set' ? parseInt(pin, 10) : prev?.pin
+      }))
 
       // Clear form
       setPin('')
