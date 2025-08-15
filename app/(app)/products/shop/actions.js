@@ -109,6 +109,7 @@ export function actions({category, setProducts}) {
         dirty: true,
         modCats: newModCats,
         name: '',
+        type: 'shop',
         new: true,
         _id: generateObjectId()
       });

@@ -104,7 +104,7 @@ export default function PinDialogEntry({ open, onOpenChange, onSuccess }) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2 text-sm">
             <Input
-              type="text"
+              type="password"
               inputMode="numeric"
               pattern="[0-9]*"
               placeholder="PIN"

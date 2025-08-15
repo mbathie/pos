@@ -29,6 +29,7 @@ export default function Page() {
   const router = useRouter();
   const pathname = usePathname();
   const hasSuccessfulPayment = useRef(false);
+  const [stripeEnabled, setStripeEnabled] = useState(null);
   const { 
     discoverReaders, 
     connectReader, 
@@ -106,27 +107,45 @@ export default function Page() {
     }
   }, [cardPaymentStatus, tab, cartSnapshot, cardTransactionId])
 
-  // Simple terminal initialization like the working version
+  // Check if Stripe is configured
   useEffect(() => {
-    const init = async () => {
+    const checkStripeStatus = async () => {
       try {
-        await discoverReaders();
-        setTimeout(async () => {
-          try {
-            await connectReader();
-          } catch (error) {
-            console.error('Terminal connection error:', error);
-            toast.error('Failed to connect to payment terminal. Please check the terminal and try again.');
-          }
-        }, 2000)
+        const res = await fetch('/api/payments');
+        const data = await res.json();
+        setStripeEnabled(data.charges_enabled || false);
       } catch (error) {
-        console.error('Terminal discovery error:', error);
-        toast.error('Failed to discover payment terminal. Please check the terminal and try again.');
+        console.error('Error checking Stripe status:', error);
+        setStripeEnabled(false);
       }
     };
-
-    init();
+    checkStripeStatus();
   }, []);
+
+  // Simple terminal initialization like the working version
+  useEffect(() => {
+    // Only initialize terminal if Stripe is enabled
+    if (stripeEnabled) {
+      const init = async () => {
+        try {
+          await discoverReaders();
+          setTimeout(async () => {
+            try {
+              await connectReader();
+            } catch (error) {
+              console.error('Terminal connection error:', error);
+              toast.error('Failed to connect to payment terminal. Please check the terminal and try again.');
+            }
+          }, 2000)
+        } catch (error) {
+          console.error('Terminal discovery error:', error);
+          toast.error('Failed to discover payment terminal. Please check the terminal and try again.');
+        }
+      };
+
+      init();
+    }
+  }, [stripeEnabled]);
 
   // Take initial snapshot of cart on page load (only once)
   useEffect(() => {
@@ -843,34 +862,49 @@ export default function Page() {
           <Card>
             <CardContent className='h-88 flex flex-col gap-2-'>
 
-              {/* Simple Terminal Status */}
-              <div className="flex items-center justify-between py-2">
-                <span className="text-sm text-muted-foreground">Terminal Status</span>
-                <div className="flex items-center gap-2">
-                  {terminalStatus === 'connected' && (
-                    <>
-                      <Wifi className="size-4 text-green-600" />
-                      <span className="text-xs text-green-600">Ready</span>
-                    </>
-                  )}
-                  {terminalStatus === 'disconnected' && (
-                    <>
-                      <WifiOff className="size-4 text-destructive" />
-                      <span className="text-xs text-destructive">Disconnected</span>
-                    </>
-                  )}
-                  {(terminalStatus === 'discovering' || terminalStatus === 'connecting') && (
-                    <>
-                      <Loader2 className="size-4 animate-spin text-yellow-500" />
-                      <span className="text-xs text-yellow-500">
-                        {terminalStatus === 'discovering' ? 'Discovering...' : 'Connecting...'}
-                      </span>
-                    </>
-                  )}
+              {/* Terminal Status or Setup Button */}
+              {stripeEnabled === false ? (
+                <div className="flex flex-col gap-2 py-4">
+                  <div className="text-sm text-muted-foreground text-center mb-2">
+                    Stripe payments not configured
+                  </div>
+                  <Button
+                    onClick={() => router.push('/settings')}
+                    className="w-full"
+                  >
+                    Setup Stripe Payments
+                  </Button>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-center justify-between py-2">
+                  <span className="text-sm text-muted-foreground">Terminal Status</span>
+                  <div className="flex items-center gap-2">
+                    {terminalStatus === 'connected' && (
+                      <>
+                        <Wifi className="size-4 text-green-600" />
+                        <span className="text-xs text-green-600">Ready</span>
+                      </>
+                    )}
+                    {terminalStatus === 'disconnected' && (
+                      <>
+                        <WifiOff className="size-4 text-destructive" />
+                        <span className="text-xs text-destructive">Disconnected</span>
+                      </>
+                    )}
+                    {(terminalStatus === 'discovering' || terminalStatus === 'connecting') && (
+                      <>
+                        <Loader2 className="size-4 animate-spin text-yellow-500" />
+                        <span className="text-xs text-yellow-500">
+                          {terminalStatus === 'discovering' ? 'Discovering...' : 'Connecting...'}
+                        </span>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
 
-              {/* Payment Buttons */}
+              {/* Payment Buttons - Only show if Stripe is enabled */}
+              {stripeEnabled && (
               <div className="flex flex-col gap-2">
                 <Button
                   disabled={
@@ -970,9 +1004,10 @@ export default function Page() {
                   </Button>
                 )}
               </div>
+              )}
 
-              {/* Capture Payment button - only show in dev mode */}
-              {process.env.NEXT_PUBLIC_IS_DEV === 'true' && (
+              {/* Capture Payment button - only show in dev mode and if Stripe is enabled */}
+              {process.env.NEXT_PUBLIC_IS_DEV === 'true' && stripeEnabled && (
                 <Button
                   disabled={!paymentIntentId || paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
                   onClick={async () => {

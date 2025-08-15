@@ -34,6 +34,14 @@ export default function ShopLayout({ children }) {
     return (
       <PinDialogSet
         open={true}
+        onSuccess={() => {
+          setNeedsPinSet(false)
+          window.location.reload() // Reload to refresh auth state
+        }}
+        onCancel={() => {
+          // Can't cancel PIN setup - it's required
+          // You could optionally redirect to login or show an error
+        }}
       />
     )
   }

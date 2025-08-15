@@ -124,7 +124,7 @@ export default function SimplePinSet({ open, onSuccess, onCancel }) {
 
           <div className="space-y-2">
             <Input
-              type="text"
+              type="password"
               inputMode="numeric"
               pattern="[0-9]*"
               placeholder={mode === 'set' ? 'Enter 4-digit PIN' : 'PIN'}
@@ -142,7 +142,7 @@ export default function SimplePinSet({ open, onSuccess, onCancel }) {
 
             {mode === 'set' && (
               <Input
-                type="text"
+                type="password"
                 inputMode="numeric"
                 pattern="[0-9]*"
                 placeholder="Confirm PIN"
