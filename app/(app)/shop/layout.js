@@ -1,90 +1,51 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { useGlobals } from '@/lib/globals'
-import SimplePinDialog from '@/components/simple-pin-dialog'
+// import { useRouter } from 'next/navigation'
+// import { useGlobals } from '@/lib/globals'
+import PinDialogSet from '@/components/pin-dialog-set'
+import PinDialogEntry from '@/components/pin-dialog-entry'
 
 export default function ShopLayout({ children }) {
-  const [needsPin, setNeedsPin] = useState(false)
+  const [needsPinSet, setNeedsPinSet] = useState(false)   
+  const [needsPinEntry, setNeedsPinEntry] = useState(false)
   // const [loading, setLoading] = useState(true)
-  const { employee } = useGlobals()
-  const router = useRouter()
+  // const { employee } = useGlobals()
+  // const router = useRouter()
 
   useEffect(() => {
     checkPinRequirement()
   }, [])
 
   const checkPinRequirement = async () => {
-    const response = await fetch('/api/auth/pin/check')
+    console.log('Checking PIN requirement')
+    const response = await fetch('/api/auth/pin/status')
     const data = await response.json()
     console.log('PIN check result:', data)
 
     if (!data.hasPinSet)
-      setNeedsPin(true)
+      setNeedsPinSet(true)
+    if (data.needsPinEntry)
+      setNeedsPinEntry(true)
 
-    // No employee? Redirect to login
-    // if (!employee?._id) {
-    //   router.push('/login')
-    //   return
-    // }
-
-    // try {
-    //   // Check PIN status from server
-    //   const response = await fetch('/api/auth/pin/check')
-    //   const data = await response.json()
-      
-    //   console.log('PIN check result:', data)
-      
-    //   if (!response.ok) {
-    //     console.error('PIN check failed:', data.error)
-    //     router.push('/login')
-    //     return
-    //   }
-
-    //   // Determine if we need PIN entry
-    //   if (!data.hasPinSet || data.needsPinEntry) {
-    //     setNeedsPin(true)
-    //   } else {
-    //     setNeedsPin(false)
-    //   }
-    // } catch (error) {
-    //   console.error('Error checking PIN:', error)
-    //   router.push('/shop')
-    // } finally {
-    //   setLoading(false)
-    // }
   }
-
-  const handlePinSuccess = () => {
-    console.log('PIN successfully entered/set')
-    setNeedsPin(false)
-    // Refresh the check to update state
-    checkPinRequirement()
-  }
-
-  const handlePinCancel = () => {
-    router.push('/shop')
-  }
-
-  // Loading state
-  // if (loading) {
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center">
-  //       <div className="text-center">
-  //         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-  //         <p className="mt-2 text-sm text-muted-foreground">Loading...</p>
-  //       </div>
-  //     </div>
-  //   )
-  // }
 
   // Need PIN entry/setup
-  if (needsPin) {
+  if (needsPinSet) {
     return (
-      <SimplePinDialog
+      <PinDialogSet
         open={true}
-        onSuccess={handlePinSuccess}
-        onCancel={handlePinCancel}
+      />
+    )
+  }
+  else if (needsPinEntry) {
+    return (
+      <PinDialogEntry
+        open={true}
+        onOpenChange={() => setNeedsPinEntry(false)}
+        onSuccess={() => {
+          setNeedsPinEntry(false)
+          // window.location.reload() // Reload to refresh the shop
+        }}
       />
     )
   }

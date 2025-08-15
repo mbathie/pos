@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server"
+import { SignJWT } from "jose"
+import { cookies } from "next/headers"
 import { connectDB } from "@/lib/mongoose"
 import { getEmployee } from "@/lib/auth"
 import { Employee } from "@/models"
+
+const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET)
 
 // Verify an existing PIN
 export async function POST(req) {
@@ -22,31 +26,99 @@ export async function POST(req) {
 
     const pinNumber = parseInt(pin, 10)
 
-    // Check if the PIN matches
-    if (employee.pin !== pinNumber) {
-      console.log('PIN verification failed:', {
+    // First, check if the PIN matches the current employee
+    if (employee.pin === pinNumber) {
+      // Update lastPin timestamp in database
+      const now = new Date()
+      await Employee.findByIdAndUpdate(
+        employee._id,
+        { lastPin: now }
+      )
+
+      console.log('PIN verified successfully for current employee:', {
         employeeId: employee._id,
-        provided: pinNumber,
-        expected: employee.pin
+        lastPin: now.toISOString()
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: 'PIN verified',
+        employee: {
+          _id: employee._id,
+          name: employee.name,
+          email: employee.email
+        }
+      })
+    }
+
+    // If PIN doesn't match current employee, look for another employee in the same org
+    const otherEmployee = await Employee.findOne({
+      org: employee.org._id,
+      pin: pinNumber,
+      $or: [
+        { locked: null },
+        { locked: { $exists: false } }
+      ]
+    }).populate('org').populate('location').lean()
+
+    if (!otherEmployee) {
+      console.log('PIN verification failed - no matching employee found:', {
+        currentEmployeeId: employee._id,
+        orgId: employee.org._id,
+        provided: pinNumber
       })
       return NextResponse.json({ error: "Incorrect PIN" }, { status: 401 })
     }
 
-    // Update lastPin timestamp in database
+    // Found another employee with matching PIN - re-authenticate as that employee
+    console.log('Switching to different employee with matching PIN:', {
+      fromEmployeeId: employee._id,
+      toEmployeeId: otherEmployee._id,
+      orgId: employee.org._id
+    })
+
+    // Create new JWT token for the other employee (same logic as login)
+    const token = await new SignJWT({
+      selectedLocationId: otherEmployee.location._id.toString(),
+      email: otherEmployee.email,
+      employeeId: otherEmployee._id.toString(),
+      orgId: otherEmployee.org._id.toString(),
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setExpirationTime("1y")
+      .sign(SECRET_KEY)
+
+    const cookieStore = await cookies()
+
+    // Set the new token cookie
+    cookieStore.set("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/'
+    })
+
+    // Update lastPin timestamp for the employee we're switching to
     const now = new Date()
     await Employee.findByIdAndUpdate(
-      employee._id,
+      otherEmployee._id,
       { lastPin: now }
     )
 
-    console.log('PIN verified successfully:', {
-      employeeId: employee._id,
+    console.log('Successfully re-authenticated as different employee:', {
+      employeeId: otherEmployee._id,
       lastPin: now.toISOString()
     })
 
     return NextResponse.json({
       success: true,
-      message: 'PIN verified'
+      message: 'PIN verified - switched employee',
+      employee: {
+        _id: otherEmployee._id,
+        name: otherEmployee.name,
+        email: otherEmployee.email
+      },
+      switched: true
     })
 
   } catch (error) {

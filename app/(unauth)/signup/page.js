@@ -48,9 +48,9 @@ export default function SignUpPage() {
       console.log(data)
       // Only set pinAuth if employee has a PIN configured
       const employeeData = { ...data.employee };
-      if (data.employee.pin != null) {
-        employeeData.pinAuth = new Date();
-      }
+      // if (data.employee.pin != null) {
+      //   employeeData.pinAuth = new Date();
+      // }
       
       setEmployee(employeeData)
       setLocation(data.employee.location)

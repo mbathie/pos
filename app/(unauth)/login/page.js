@@ -53,9 +53,9 @@ export default function LoginPage() {
       const data = await userRes.json();
       // Only set pinAuth if employee has a PIN configured
       const employeeData = { ...data.employee };
-      if (data.employee.pin != null) {
-        employeeData.pinAuth = new Date();
-      }
+      // if (data.employee.pin != null) {
+      //   employeeData.pinAuth = new Date();
+      // }
       
       setEmployee(employeeData)
       setLocation(data.employee.location)

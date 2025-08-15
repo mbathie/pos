@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { AlertCircle } from 'lucide-react'
 
-export default function SimplePinDialog({ open, onSuccess, onCancel }) {
+export default function SimplePinSet({ open, onSuccess, onCancel }) {
   const [mode, setMode] = useState('loading') // 'loading', 'set', 'verify'
   const [pin, setPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
