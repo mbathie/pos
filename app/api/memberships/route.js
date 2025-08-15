@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { Membership } from '@/models'
 import { connectDB } from '@/lib/mongoose'
+import { getEmployee } from '@/lib/auth'
 
 export async function GET(request) {
   try {
+    // Authenticate the request
+    const { employee } = await getEmployee()
+    if (!employee) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     await connectDB()
     
     const { searchParams } = new URL(request.url)
@@ -12,8 +22,10 @@ export async function GET(request) {
     const page = parseInt(searchParams.get('page')) || 1
     const limit = parseInt(searchParams.get('limit')) || 50
     
-    // Build query
-    let query = {}
+    // Build query - ensure we only get memberships for the employee's org
+    let query = {
+      org: employee.org._id
+    }
     
     if (customerId) {
       query.customer = customerId
@@ -63,11 +75,25 @@ export async function GET(request) {
 // For creating new memberships (if needed later)
 export async function POST(request) {
   try {
+    // Authenticate the request
+    const { employee } = await getEmployee()
+    if (!employee) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     await connectDB()
     
     const membershipData = await request.json()
     
-    const membership = await Membership.create(membershipData)
+    // Ensure the membership is for the employee's org
+    const membership = await Membership.create({
+      ...membershipData,
+      org: employee.org._id,
+      location: employee.location?._id || membershipData.location
+    })
     
     // Populate references for response
     const populatedMembership = await Membership.findById(membership._id)

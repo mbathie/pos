@@ -150,6 +150,10 @@ const CustomerSchema = new mongoose.Schema({
   name: String,
   email: String,
   phone: String,
+  hash: String, // Password hash for customer login
+  locked: Date, // Account lock status
+  resetPasswordToken: String, // Password reset token (hashed)
+  resetPasswordExpiry: Date, // Token expiry time
   dob: Date,
   gender: String,
   orgs: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Org' }],

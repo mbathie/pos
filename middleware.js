@@ -33,13 +33,28 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // Allow all /api/auth/* and /api/unauth/* routes through
+  // Allow customer pages without employee authentication (they may have their own auth)
+  if (pathname.startsWith("/c/")) {
+    return NextResponse.next();
+  }
+
+  // Allow all /api/auth/*, /api/unauth/*, and /api/c/* routes through (customer endpoints)
   if (
     pathname.startsWith("/api/auth/") ||
     pathname === "/api/auth" ||
     pathname.startsWith("/api/unauth/") ||
-    pathname === "/api/unauth"
+    pathname === "/api/unauth" ||
+    pathname.startsWith("/api/c/") ||
+    pathname === "/api/c"
   ) {
+    // Add CORS headers for customer API endpoints
+    if (pathname.startsWith("/api/c/")) {
+      const response = NextResponse.next();
+      response.headers.set('Access-Control-Allow-Origin', '*');
+      response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+      response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+      return response;
+    }
     return NextResponse.next();
   }
 
@@ -71,6 +86,7 @@ export const config = {
     "/api/:path*",
     "/login",
     "/signup",
-    "/employee/:path*"
+    "/employee/:path*",
+    "/c/:path*"
   ],
 };

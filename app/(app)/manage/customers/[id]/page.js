@@ -53,7 +53,7 @@ export default function CustomerDetailPage({ params }) {
 
   const fetchMemberships = async () => {
     try {
-      const response = await fetch(`/api/memberships?customerId=${customerId}`);
+      const response = await fetch(`/api/customers/${customerId}/memberships`);
       if (response.ok) {
         const membershipData = await response.json();
         setMemberships(membershipData.memberships || []);

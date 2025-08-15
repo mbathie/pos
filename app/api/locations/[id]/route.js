@@ -6,11 +6,13 @@ import { Location } from "@/models"
 export async function GET(req, { params }) {
   await connectDB()
 
-  if (!Types.ObjectId.isValid(params.id)) {
+  const { id } = await params
+
+  if (!Types.ObjectId.isValid(id)) {
     return NextResponse.json({ error: 'Invalid location ID' }, { status: 400 })
   }
 
-  const location = await Location.findById(params.id).select('-orgId').lean()
+  const location = await Location.findById(id).select('-orgId').lean()
 
   if (!location) {
     return NextResponse.json({ error: 'Location not found' }, { status: 404 })
