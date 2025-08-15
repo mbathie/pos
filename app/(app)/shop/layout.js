@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useGlobals } from '@/lib/globals'
 import PinDialog from '@/components/pin-dialog'
+import { Loader2 } from 'lucide-react'
 
 export default function ShopLayout({ children }) {
   const [showPinDialog, setShowPinDialog] = useState(false)
@@ -46,22 +47,30 @@ export default function ShopLayout({ children }) {
 
   // Show loading state while checking auth
   if (isChecking) {
-    return null
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    )
   }
 
   // Show PIN dialog if needed
   if (!isAuthenticated && showPinDialog) {
     return (
-      <PinDialog
-        open={showPinDialog}
-        onOpenChange={(open) => {
-          if (!open) {
-            handlePinCancel()
-          }
-          setShowPinDialog(open)
-        }}
-        onSuccess={handlePinSuccess}
-      />
+      <>
+        <div className="min-h-screen bg-background">
+          <PinDialog
+            open={showPinDialog}
+            onOpenChange={(open) => {
+              if (!open) {
+                handlePinCancel()
+              }
+              setShowPinDialog(open)
+            }}
+            onSuccess={handlePinSuccess}
+          />
+        </div>
+      </>
     )
   }
 
@@ -70,6 +79,10 @@ export default function ShopLayout({ children }) {
     return children
   }
 
-  // Fallback - should not reach here
-  return null
+  // Fallback loading state
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+    </div>
+  )
 } 
