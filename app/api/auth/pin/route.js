@@ -160,6 +160,13 @@ export async function GET() {
 
     const hasPinSet = currentEmployee.pin != null
 
+    console.log('PIN GET check:', {
+      hasPinSet,
+      pinValue: currentEmployee.pin,
+      employeeId: currentEmployee._id,
+      NODE_ENV: process.env.NODE_ENV
+    })
+
     return NextResponse.json({
       hasPinSet,
       employee: {
