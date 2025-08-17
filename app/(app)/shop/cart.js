@@ -12,8 +12,8 @@ export default function Cart({}) {
     return
 
   return (
-    <div className="flex flex-col overflow-y-auto p-4 text-sm w-[380px] bg-muted rounded-tl-lg">
-      <div className="space-y-1 w-full *:even:bg-accent">
+    <div className="flex flex-col p-4 text-sm w-[380px] bg-muted rounded-tl-lg h-[calc(100vh-65px)]">
+      <div className="space-y-1 w-full flex-1 overflow-y-auto">
         {cart?.products?.map((p, pIdx) => {
 
           // for shop product item
@@ -177,7 +177,7 @@ export default function Cart({}) {
       
 
 
-      <div className='flex flex-col mt-6 mt-auto text-sm'>
+      <div className='flex flex-col mt-6 flex-shrink-0 text-sm'>
         <div className='flex flex-col text-sm'>
           <div className='flex'>
             <div className=''>Subtotal</div>
