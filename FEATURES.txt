@@ -1,3 +1,4 @@
+- apply a custome discount - update to use new api endpoints
 - Look into when signing up as an adult on behalf of a child, the transaction
   should be tied to the adult
   needs to be a transaction account (person paying) and for children, still needs separate accounts
