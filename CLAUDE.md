@@ -12,6 +12,12 @@
 - These endpoints use `getEmployee()` for authentication (cookie-based auth)
 - Example: `/api/customers/[id]/memberships`, `/api/employees`, `/api/products`
 
+#### Folders API
+- `GET /api/folders?search=` - Get all folders (pass empty search) or search folders
+- `POST /api/folders` - Create new folder with `{ name, color }`
+- `PUT /api/folders/[id]` - Update folder with `{ name, color }`
+- `DELETE /api/folders/[id]` - Delete a folder
+
 ## Database Connection
 - Always use `import { connectDB } from '@/lib/mongoose'` for database connections
 - Call `await connectDB()` at the beginning of API routes
