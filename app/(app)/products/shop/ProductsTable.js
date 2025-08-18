@@ -1,18 +1,12 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Tag, Ellipsis, Loader2, CheckCircle, Save, ChevronRight, Check } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tag, ChevronRight, Check } from 'lucide-react';
 import colors from 'tailwindcss/colors';
 
 export default function ProductsTable({ 
   products, 
-  onProductClick,
-  setToDelete,
-  setDeleteOpen,
-  isDirty,
-  saving
+  onProductClick
 }) {
   return (
     <div className="rounded-lg overflow-hidden border">
@@ -69,28 +63,8 @@ export default function ProductsTable({
               )}
             </TableCell>
             
-            <TableCell onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant='ghost' size="sm">
-                      <Ellipsis className='size-4' />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align='end'>
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setToDelete({ pIdx, product: p });
-                        setDeleteOpen(true);
-                      }}
-                    >
-                      Delete Product
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                {/* <ChevronRight className="h-4 w-4 text-muted-foreground" /> */}
-              </div>
+            <TableCell>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </TableCell>
           </TableRow>
         ))}

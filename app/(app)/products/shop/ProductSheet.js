@@ -25,11 +25,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Tag, Plus, Ellipsis, Info, Loader2, CheckCircle, Save, GripVertical } from 'lucide-react';
+import { Tag, Plus, Ellipsis, Info, Loader2, CheckCircle, Save, GripVertical, Trash2 } from 'lucide-react';
 import { FolderSelect } from './folder-select';
 import AccountingSelect from './accounting-select';
 import colors from 'tailwindcss/colors';
 import { actions } from './actions';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 // Sortable Mod Component
 function SortableMod({ mod, enabled, onClick, children }) {
@@ -93,23 +94,8 @@ export default function ProductSheet({
   setDeleteOpen,
   setToDelete
 }) {
-  const product = products?.find(p => p._id === selectedProductId);
-  const pIdx = products?.findIndex(p => p._id === selectedProductId);
-  
-  if (!product || pIdx === -1) return null;
-  
-  // Destructure the actions we need
-  const {
-    updateProduct,
-    updateVariation,
-    addVariation,
-    updateModCat,
-    updateMod,
-    saveMod,
-    addMod,
-    setFolder,
-    saveProduct
-  } = actions({category, setProducts});
+  // All hooks must be called before any conditional returns
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   
   // Drag and drop sensors
   const sensors = useSensors(
@@ -118,7 +104,26 @@ export default function ProductSheet({
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-
+  
+  // Destructure the actions we need
+  const {
+    updateProduct,
+    updateVariation,
+    addVariation,
+    deleteVariation,
+    updateModCat,
+    updateMod,
+    saveMod,
+    addMod,
+    setFolder,
+    saveProduct,
+    deleteProduct
+  } = actions({category, setProducts});
+  
+  // Find product and index after all hooks
+  const product = products?.find(p => p._id === selectedProductId);
+  const pIdx = products?.findIndex(p => p._id === selectedProductId);
+  
   // Handle drag end for mods
   const handleModDragEnd = (event, pIdx, mcIdx) => {
     const { active, over } = event;
@@ -137,10 +142,13 @@ export default function ProductSheet({
     }
   };
   
+  // Conditional return must come after all hooks
+  if (!product || pIdx === -1) return null;
+  
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[75vw] sm:max-w-[75vw] overflow-y-auto p-4">
-        <SheetHeader>
+        <SheetHeader className='m-0 p-0 mt-4'>
           <SheetTitle className="flex items-center gap-4">
             <div onClick={() => {
               setIconDialogOpen(true);
@@ -148,12 +156,12 @@ export default function ProductSheet({
               setIconDialogQuery(product.name);
             }}>
               {!product?.thumbnail ? (
-                <Button className="bg-white rounded-lg w-16 h-16">
+                <Button className="bg-white rounded-lg size-16">
                   <Tag className="!w-8 !h-8" />
                 </Button>
               ) : (
-                <Button className="rounded-lg -p-1 w-16 h-16">
-                  <img className='rounded-lg w-16 h-16' src={product.thumbnail} alt="Thumbnail" />
+                <Button className="rounded-lg -p-1 size-16">
+                  <img className='rounded-lg size-16' src={product.thumbnail} alt="Thumbnail" />
                 </Button>
               )}
             </div>
@@ -204,7 +212,7 @@ export default function ProductSheet({
           </SheetTitle>
         </SheetHeader>
         
-        <div className="flex flex-col space-y-6 mt-6">
+        <div className="flex flex-col space-y-6 mt-4">
           <div className="flex flex-col gap-2">
             <Label>Product Name</Label>
             <Input
@@ -346,33 +354,24 @@ export default function ProductSheet({
                     className="w-24"
                     onChange={(e) => updateVariation({pIdx, vIdx: i, key: "amount", value: e.target.value})}
                   />
-                  {v.id > 0 && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <Ellipsis className="size-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setDeleteOpen(true);
-                            setToDelete({ product, productIdx: pIdx, variationIdx: i });
-                          }}
-                        >
-                          Delete Variation
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                  <Button
+                    className="cursor-pointer"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      deleteVariation({ pIdx, vIdx: i });
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
+              {/* Add + button below variations, left-aligned */}
               <div className="flex gap-2 items-center">
-                <div className="w-24" />
-                <div className="w-24" />
                 <Button
                   size="icon" 
                   variant="outline"
+                  className="cursor-pointer"
                   onClick={() => addVariation({pIdx})}
                 >
                   <Plus className="h-4 w-4" />
@@ -469,8 +468,43 @@ export default function ProductSheet({
           </div>
             ))}
           </div>
+          
+          {/* Delete Product Button */}
+          <div className="pt-4-">
+            <Button
+              variant="destructive"
+              className="w-full cursor-pointer"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Product
+            </Button>
+          </div>
         </div>
       </SheetContent>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogTitle>Delete Product</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete "{product?.name}"? This action cannot be undone.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                await deleteProduct({ pIdx, product });
+                onOpenChange(false); // Close the sheet
+                setDeleteDialogOpen(false);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sheet>
   );
 }

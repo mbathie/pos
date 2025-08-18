@@ -520,10 +520,6 @@ export default function Page() {
                       setSelectedProductId(product._id || idx);
                       setSheetOpen(true);
                     }}
-                    setToDelete={setToDelete}
-                    setDeleteOpen={setDeleteOpen}
-                    isDirty={isDirty}
-                    saving={saving}
                   />
                   
                   {/* Product Details Sheet */}
