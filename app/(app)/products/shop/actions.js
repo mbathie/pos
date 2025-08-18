@@ -127,18 +127,42 @@ export function actions({category, setProducts}) {
   }
 
   const saveProduct = async ({product, pIdx}) => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${category._id}/products`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ product }),
-    });
-
-    if (res.ok) {
-      const savedProduct = await res.json();
-      setProducts(draft => {
-        draft[pIdx] = savedProduct.product;
+    // If product has an _id, it's an update, otherwise it's a create
+    if (product._id) {
+      // Update existing product
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${product._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product }),
       });
-      return savedProduct.product
+
+      if (res.ok) {
+        const data = await res.json();
+        const updatedProduct = data.product || data; // Handle both { product: ... } and direct product
+        setProducts(draft => {
+          // Find the index again in case it changed
+          const currentIdx = draft.findIndex(p => p._id === updatedProduct._id);
+          if (currentIdx !== -1) {
+            draft[currentIdx] = updatedProduct;
+          }
+        });
+        return updatedProduct;
+      }
+    } else {
+      // Create new product
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${category._id}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product }),
+      });
+
+      if (res.ok) {
+        const savedProduct = await res.json();
+        setProducts(draft => {
+          draft[pIdx] = savedProduct.product;
+        });
+        return savedProduct.product;
+      }
     }
   }
 

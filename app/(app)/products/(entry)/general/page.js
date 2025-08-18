@@ -1,7 +1,7 @@
 'use client'
 
 import Products from '../Products'
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useImmer } from 'use-immer';
 
 export default function Page() {
@@ -31,7 +31,7 @@ export default function Page() {
         setProducts={setProducts}
         units={units}
         type="general"
-        title="General entry products"
+        title="General Entry Products"
         categoryName={categoryName}
       />
     </div>

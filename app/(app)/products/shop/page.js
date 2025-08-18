@@ -1,30 +1,33 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useImmer } from 'use-immer';
 
-import * as Tabs from '@radix-ui/react-tabs';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogDescription } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Separator } from '@radix-ui/react-separator'
 import { Button } from '@/components/ui/button'
-import { Tag, ChevronsUpDown, Plus, Ellipsis, Info, Trash } from 'lucide-react'
+import { Tag, Plus, Ellipsis, EllipsisVertical, Info, Trash, Loader2, CheckCircle, Save } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 
 import { actions } from './actions'
-import { useUI } from '../useUI';
 import Delete from '../Delete'
+import ProductsTable from './ProductsTable'
+import ProductSheet from './ProductSheet'
 import { FolderSelect } from './folder-select'
 import IconSelect  from '@/components/icon-select'
 import AccountingSelect from './accounting-select'
 import colors from 'tailwindcss/colors';
+import { useAutoSave } from '../useAutoSave';
 
 export default function Page() {
   const [categories, setCategories] = useState([]);
@@ -36,36 +39,36 @@ export default function Page() {
 
   const [ addItem, setAddItem ] = useState({})
   const [ addItemOpen, setAddItemOpen ] = useState(false)
+  
+  // Category dialog state
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   // Icon dialog state
   const [iconDialogOpen, setIconDialogOpen] = useState(false);
   const [iconDialogProductIdx, setIconDialogProductIdx] = useState(null);
   const [iconDialogQuery, setIconDialogQuery] = useState('');
+  
+  // Sheet state for product details
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState(null);
 
   const { 
     addVariation, updateVariation, 
     updateProduct, saveProduct, addProduct, deleteProduct,
     deleteVariation, addModCat, deleteCategory,
     addMod, updateMod, saveMod, updateModCat, setFolder } = actions({category, setProducts})
-  const contentRefs = useRef({});
-  const { productsUI, toggleExpanded, toggleAll } = useUI({products, contentRefs});
 
-  const originalProducts = useRef({});
-  const [isDirty, setIsDirty] = useState({});
-  useEffect(() => {
-    console.log(products)
-    const updatedIsDirty = { ...isDirty };
-    
-    products.forEach((p) => {
-      originalProducts.current[p._id] = originalProducts.current[p._id] || JSON.parse(JSON.stringify(p));
-    });
+  // Wrapper function for auto-save that matches the expected signature
+  const autoSaveProduct = async (product) => {
+    const pIdx = products.findIndex(p => p._id === product._id);
+    if (pIdx !== -1) {
+      return await saveProduct({ product, pIdx });
+    }
+  };
 
-    products.forEach((p) => {
-      const isProductChanged = JSON.stringify(p) !== JSON.stringify(originalProducts.current[p._id]);
-      updatedIsDirty[p._id] = isProductChanged || !p._id
-    });
-    setIsDirty(updatedIsDirty);
-  }, [products]);
+  // Use the auto-save hook
+  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(products, autoSaveProduct, 3000);
 
   const handleDelete = async () => {
     if (toDelete.variationIdx !== undefined) {
@@ -86,17 +89,21 @@ export default function Page() {
       const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/categories?menu=shop');
       const c = await res.json();
       setCategories(c.categories);
+      
+      // Default select the first category if available
+      if (c.categories && c.categories.length > 0) {
+        setCategory(c.categories[0]);
+        getCategoryProducts(c.categories[0]);
+      }
     }
     fetchCategories();
   }, []);
 
-  // Add this new useEffect to log category changes
-  useEffect(() => {
-    console.log("Current category:", category);
-  }, [category]);
 
   const saveCategory = async () => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${category.name}`, {
+    if (!newCategoryName.trim()) return;
+    
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${newCategoryName}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ menu: 'shop' }),
@@ -104,13 +111,12 @@ export default function Page() {
     const data = await res.json();
     console.log("Category saved response:", data);
     if (data.category && data.category._id) {
-      // Create a new category object without the 'new' property
       const updatedCategory = { ...data.category };
-      delete updatedCategory.new;
-      console.log("Updated category object:", updatedCategory);
       setCategory(updatedCategory);
       setCategories([updatedCategory, ...categories]);
       getCategoryProducts(updatedCategory);
+      setCategoryDialogOpen(false);
+      setNewCategoryName('');
     }
   }
 
@@ -122,6 +128,39 @@ export default function Page() {
 
   return (
     <>
+      {/* Category Dialog */}
+      <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Category</DialogTitle>
+            <DialogDescription>
+              Enter a name for the new product category
+            </DialogDescription>
+          </DialogHeader>
+          <Input 
+            placeholder="e.g., Coffees, Pastries, Sandwiches" 
+            value={newCategoryName} 
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                saveCategory();
+              }
+            }}
+          />
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => {
+              setCategoryDialogOpen(false);
+              setNewCategoryName('');
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={saveCategory} disabled={!newCategoryName.trim()}>
+              Create Category
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* FOR ADDING SOMETHING */}
       <Dialog
         open={addItemOpen} onOpenChange={setAddItemOpen}
@@ -178,55 +217,37 @@ export default function Page() {
         </AlertDialogPortal>
       </AlertDialog>
 
-      <Card className="mx-4">
-        <CardHeader>
-          <CardTitle className="flex text-lg">
+      <div className="p-4">
+        <div className="mb-4">
+          <h1 className="text-lg font-semibold">
             Retail Shop Products
-          </CardTitle>
-        </CardHeader>
-        <Tabs.Root className="flex w-full" defaultValue={category.name || "tab1"}>
-          <Tabs.List className="flex flex-col min-w-56 text-sm *:font-semibold">
-            <Card 
-              className="ml-4">
-              <CardHeader>
-                <div className="flex space-x-4">
-                  <CardTitle className="flex space-x-1 items-center -mt-4">
-                    Categories
-                  </CardTitle>
-                  <Button
-                    size="icon"
-                    onClick={() => {
-                      setCategory({ new: true, name: '' })
-                      setProducts([])
-                    }}
-                    variant="outline"
-                    className="relative text-xs -top-2 right-0"
-                  >
-                    <Plus />
-                  </Button>
-                </div>
-              </CardHeader>
-              <Separator className="h-[1px] -mt-5 bg-muted" />
-              <CardContent className="text-sm flex flex-col p-0 -top-6 relative">
-                {category.new && (
-                  <Tabs.Trigger
-                    className="text-left p-4 pl-6 data-[state=active]:bg-muted"
-                    value="new"
-                  >
-                    <Input
-                      placeholder="Coffees"
-                      value={category.name || ''}
-                      onChange={(e) =>
-                        setCategory({ ...category, name: e.target.value })
-                      }
-                    />
-                  </Tabs.Trigger>
-                )}
-                {categories.map((c) => (
-                  <Tabs.Trigger
-                    key={c._id}
-                    className="text-left p-4 pl-6 data-[state=active]:bg-muted"
-                    value={c.name}
+          </h1>
+        </div>
+        <div className="flex gap-4">
+          {/* Categories Sidebar */}
+          <div className="flex flex-col min-w-56">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-medium text-muted-foreground">
+                Categories
+              </h2>
+              <Button
+                size="icon"
+                onClick={() => setCategoryDialogOpen(true)}
+                className="h-8 w-8"
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex flex-col">
+              {categories.map((c) => (
+                <div
+                  key={c._id}
+                  className={`group flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors ${
+                    category._id === c._id ? 'bg-muted' : 'hover:bg-muted/50'
+                  }`}
+                >
+                  <div
+                    className="flex-1 text-sm"
                     onClick={() => {
                       setCategory(c);
                       setProduct({ new: false });
@@ -234,58 +255,71 @@ export default function Page() {
                     }}
                   >
                     {c.name}
-                  </Tabs.Trigger>
-                ))}
-              </CardContent>
-            </Card>
-          </Tabs.List>
-          <div className="px-4 w-full">
-            <div className="px-4 w-full">
-              <div className="flex pb-4 items-center">
-                <div className="ml-1 text-lg font-semibold">
-                  {category?.name ? category.name : ''}
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <EllipsisVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        onClick={() => {
+                          setToDelete({ category: c });
+                          setDeleteOpen(true);
+                        }}
+                      >
+                        Delete Category
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-                <Button
-                  variant="destructive"
-                  className="ml-4"
-                  size="sm"
-                  onClick={() => {
-                    setToDelete({ category: category });
-                    setDeleteOpen(true);
-                  }}
-                >
-                  <Trash className="size-4" />
-                </Button>
-                {category._id && (
-                  <div className="ml-auto flex space-x-2">
+              ))}
+            </div>
+          </div>
+          
+          {/* Products Content */}
+          <div className="flex-1">
+              <div className="flex pb-4 items-center">
+                <div className="flex items-center gap-4">
+                  <div className="text-lg- font-semibold">
+                    {category?.name ? category.name : ''}
+                  </div>
+                  {category._id && (
                     <Button
-                      className="ml-auto"
                       size="sm"
                       onClick={() => addProduct()}
                     >
                       New Product
                     </Button>
-
-                    <Button
-                      variant="outline"
-                      className="ml-auto"
-                      size="sm"
-                      onClick={() => toggleAll()}
-                    >
-                      <ChevronsUpDown className="mx-auto size-4" />
-                    </Button>
-
+                  )}
+                </div>
+                
+                {/* Overall save status */}
+                {category._id && products.length > 0 && (
+                  <div className="ml-auto">
+                    {isAnySaving ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                        <span>Saving changes...</span>
+                      </div>
+                    ) : hasAnyUnsaved ? (
+                      <div className="flex items-center gap-2 text-sm text-orange-500">
+                        <Save className="h-3 w-3 animate-pulse" />
+                        <span>Unsaved changes</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-sm text-green-500">
+                        <CheckCircle className="h-3 w-3" />
+                        <span>All changes saved</span>
+                      </div>
+                    )}
                   </div>
-                )}
-                {category.new && category.name && (
-                  <Button
-                    className="ml-auto"
-                    onClick={() => {
-                      saveCategory();
-                    }}
-                  >
-                    Save
-                  </Button>
                 )}
               </div>
 
@@ -298,18 +332,44 @@ export default function Page() {
                   className="flex flex-col space-y-4 w-full"
                 > */}
 
-                  <div className='flex flex-col gap-4'>
-                  {products?.map((p, pIdx) => 
+                  {/* Products Table */}
+                  <ProductsTable
+                    products={products}
+                    onProductClick={(product, idx) => {
+                      setSelectedProductId(product._id || idx);
+                      setSheetOpen(true);
+                    }}
+                    setToDelete={setToDelete}
+                    setDeleteOpen={setDeleteOpen}
+                    isDirty={isDirty}
+                    saving={saving}
+                  />
+                  
+                  {/* Product Details Sheet */}
+                  <ProductSheet
+                    open={sheetOpen}
+                    onOpenChange={setSheetOpen}
+                    products={products}
+                    selectedProductId={selectedProductId}
+                    category={category}
+                    setProducts={setProducts}
+                    isDirty={isDirty}
+                    saving={saving}
+                    markAsSaved={markAsSaved}
+                    setIconDialogOpen={setIconDialogOpen}
+                    setIconDialogProductIdx={setIconDialogProductIdx}
+                    setIconDialogQuery={setIconDialogQuery}
+                    setAddItem={setAddItem}
+                    setAddItemOpen={setAddItemOpen}
+                    setDeleteOpen={setDeleteOpen}
+                    setToDelete={setToDelete}
+                  />
+                  
+                  {/* Old card view - removing this */}
+                  {false && products?.map((p, pIdx) => 
                     (
                       <Card
-                        // key={pIdx}
                         key={p._id}
-                        ref={(el) => (contentRefs.current[p._id] = el)}
-                        className='overflow-hidden transition-all duration-300 ease-in-out'
-                        style={{
-                          maxHeight: productsUI[p._id]?.expanded ? `${productsUI[p._id]?.height}px` : '105px',
-                        }}
-              
                       >
                         <CardHeader>
                           <CardTitle className="flex w-full items-center space-x-4">
@@ -351,26 +411,48 @@ export default function Page() {
                               </DropdownMenuContent>
                             </DropdownMenu>
 
-                            {isDirty[p._id] && (
+                            {/* Auto-save indicator */}
+                            {p._id && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="flex items-center ml-auto">
+                                      {saving[p._id] ? (
+                                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                      ) : isDirty[p._id] ? (
+                                        <Save className="h-4 w-4 text-orange-500 animate-pulse" />
+                                      ) : (
+                                        <CheckCircle className="h-4 w-4 text-green-500" />
+                                      )}
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      {saving[p._id] ? 'Saving...' : 
+                                       isDirty[p._id] ? 'Unsaved changes (auto-saves in 3s)' : 
+                                       'All changes saved'}
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            
+                            {/* Manual save for new products */}
+                            {!p._id && (
                               <Button
                                 size="sm"
-                                className="animate-pulse"
+                                className="ml-auto"
                                 onClick={async () => {
                                   const updated = await saveProduct({product: p, pIdx})
-                                  originalProducts.current[p._id] = JSON.parse(JSON.stringify(updated));
-                                  setIsDirty((prev) => ({ ...prev, [p._id]: false }));                  
+                                  if (updated) {
+                                    markAsSaved(updated._id, updated);
+                                  }
                                 }}
                               >
                                 Save
                               </Button>
                             )}
 
-                            <Button
-                              className="ml-auto"
-                              onClick={() => toggleExpanded(p._id)}
-                              variant="ghost">
-                              <ChevronsUpDown className="size-4" />
-                            </Button>
 
                           </CardTitle>
                         </CardHeader>
@@ -679,13 +761,9 @@ export default function Page() {
                       </Card>
                     ),
                   )}
-                  </div>
-                {/* </Tabs.Content>
-              ))} */}
-            </div>
           </div>
-        </Tabs.Root>
-      </Card>
+        </div>
+      </div>
 
       <Delete
         open={deleteOpen}

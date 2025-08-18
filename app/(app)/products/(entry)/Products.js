@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from "@/components/ui/textarea"
@@ -17,6 +17,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { useProduct } from './useProduct';
+import { useAutoSave } from '../useAutoSave';
 
 export default function Page({products, setProducts, units, title, categoryName, type}) {
   
@@ -30,72 +31,8 @@ export default function Page({products, setProducts, units, title, categoryName,
   const [iconDialogProductIdx, setIconDialogProductIdx] = useState(null);
   const [iconDialogQuery, setIconDialogQuery] = useState('');
 
-  const originalProducts = useRef({});
-  const [isDirty, setIsDirty] = useState({});
-  
-  // Auto-save state
-  const [saving, setSaving] = useState({});
-  const autoSaveTimers = useRef({});
-  useEffect(() => {
-    const updatedIsDirty = { ...isDirty };
-    
-    // Populate the originalProducts hash with _id as the key
-    products.forEach((p) => {
-      originalProducts.current[p._id] = originalProducts.current[p._id] || JSON.parse(JSON.stringify(p));
-    });
-
-    products.forEach((p) => {
-      const isProductChanged = JSON.stringify(p) !== JSON.stringify(originalProducts.current[p._id]);
-      updatedIsDirty[p._id] = isProductChanged || !p._id
-    });
-    setIsDirty(updatedIsDirty);
-  }, [products]);
-
-  // Auto-save effect for each dirty product
-  useEffect(() => {
-    products.forEach((product, pIdx) => {
-      const productId = product._id;
-      
-      // Skip if product is new (no ID yet) or not dirty
-      if (!productId || !isDirty[productId]) {
-        // Clear any existing timer for this product
-        if (autoSaveTimers.current[productId]) {
-          clearTimeout(autoSaveTimers.current[productId]);
-          delete autoSaveTimers.current[productId];
-        }
-        return;
-      }
-
-      // Clear existing timer if any
-      if (autoSaveTimers.current[productId]) {
-        clearTimeout(autoSaveTimers.current[productId]);
-      }
-
-      // Set new auto-save timer for 5 seconds
-      autoSaveTimers.current[productId] = setTimeout(async () => {
-        setSaving(prev => ({ ...prev, [productId]: true }));
-        
-        try {
-          const updated = await updateProduct(product);
-          originalProducts.current[productId] = JSON.parse(JSON.stringify(updated));
-          setIsDirty(prev => ({ ...prev, [productId]: false }));
-        } catch (error) {
-          console.error('Auto-save error:', error);
-        } finally {
-          setSaving(prev => ({ ...prev, [productId]: false }));
-        }
-      }, 3000); // 3 seconds
-    });
-
-    // Cleanup timers on unmount
-    return () => {
-      Object.values(autoSaveTimers.current).forEach(timer => clearTimeout(timer));
-    };
-  }, [products, isDirty]);
-
-  // Check if any product is being saved or has unsaved changes
-  const isAnySaving = Object.values(saving).some(s => s);
-  const hasAnyUnsaved = Object.values(isDirty).some(d => d);
+  // Use the auto-save hook
+  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(products, updateProduct, 3000);
 
   return (
     <div className='flex flex-col space-y-4'>
@@ -192,8 +129,7 @@ export default function Page({products, setProducts, units, title, categoryName,
                       setProducts(draft => {
                         draft[pIdx] = createdProduct;
                       });
-                      originalProducts.current[createdProduct._id] = JSON.parse(JSON.stringify(createdProduct));
-                      setIsDirty((prev) => ({ ...prev, [createdProduct._id]: false }));
+                      markAsSaved(createdProduct._id, createdProduct);
                     }}
                   >
                     Save
