@@ -26,7 +26,8 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Tag, Plus, Ellipsis, Info, Loader2, CheckCircle, Save, GripVertical, Trash2 } from 'lucide-react';
-import { FolderSelect } from './folder-select';
+import { FolderSelect } from './FolderSelect';
+import { FolderManagementSheet } from './FolderManagementSheet';
 import AccountingSelect from './accounting-select';
 import colors from 'tailwindcss/colors';
 import { actions } from './actions';
@@ -96,6 +97,8 @@ export default function ProductSheet({
 }) {
   // All hooks must be called before any conditional returns
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [folderSheetOpen, setFolderSheetOpen] = React.useState(false);
+  const [folderRefreshTrigger, setFolderRefreshTrigger] = React.useState(0);
   
   // Drag and drop sensors
   const sensors = useSensors(
@@ -259,15 +262,13 @@ export default function ProductSheet({
 
           <div className="flex flex-col gap-2">
             <Label>Folder</Label>
-            <div className='flex'>
-              <FolderSelect pIdx={pIdx} product={product} setFolder={setFolder}/>
-              {product.folder?.color && (
-                <div
-                  style={{ backgroundColor: colors?.[product.folder.color.split('-')[0]]?.[product.folder.color.split('-')[1]] }}
-                  className="size-9 rounded-md border ml-2"
-                />
-              )}
-            </div>
+            <FolderSelect 
+              pIdx={pIdx} 
+              product={product} 
+              setFolder={setFolder}
+              onManageFolders={() => setFolderSheetOpen(true)}
+              refreshTrigger={folderRefreshTrigger}
+            />
           </div>
 
           <div className="flex flex-col gap-2">
@@ -505,6 +506,21 @@ export default function ProductSheet({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Folder Management Sheet */}
+      <FolderManagementSheet
+        open={folderSheetOpen}
+        onOpenChange={setFolderSheetOpen}
+        initialFolder={product?.folder}
+        onFolderUpdated={(folder) => {
+          // Update the current product's folder with the newly created/updated folder
+          if (product && folder) {
+            setFolder({folder, pIdx});
+          }
+          // Trigger refresh of the folder list in FolderSelect
+          setFolderRefreshTrigger(prev => prev + 1);
+        }}
+      />
     </Sheet>
   );
 }

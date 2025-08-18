@@ -40,7 +40,7 @@ import { actions } from './actions'
 import Delete from '../Delete'
 import ProductsTable from './ProductsTable'
 import ProductSheet from './ProductSheet'
-import { FolderSelect } from './folder-select'
+import { FolderSelect } from './FolderSelect'
 import IconSelect  from '@/components/icon-select'
 import AccountingSelect from './accounting-select'
 import colors from 'tailwindcss/colors';

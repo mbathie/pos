@@ -48,13 +48,17 @@ export default function ProductsTable({
             </TableCell>
             
             <TableCell>
-              {p.folder?.color && (
-                <div
-                  style={{ backgroundColor: colors?.[p.folder.color.split('-')[0]]?.[p.folder.color.split('-')[1]] }}
-                  className="w-6 h-6 rounded-md border"
-                  title={p.folder?.name}
-                />
-              )}
+              <div className="flex items-center gap-2">
+                {p.folder?.color && (
+                  <div
+                    style={{ backgroundColor: colors?.[p.folder.color.split('-')[0]]?.[p.folder.color.split('-')[1]] }}
+                    className="w-6 h-6 rounded-md border flex-shrink-0"
+                  />
+                )}
+                {p.folder?.name && (
+                  <span className="text-sm">{p.folder.name}</span>
+                )}
+              </div>
             </TableCell>
             
             <TableCell>

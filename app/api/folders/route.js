@@ -27,9 +27,16 @@ export async function GET(req) {
 
   const { employee } = await getEmployee()
 
-  if (!search)
-    return NextResponse.json({ error: "Missing search parameter" }, { status: 400 })
+  // If no search parameter or empty string, return all folders
+  if (!search || search === '') {
+    const folders = await Folder.find({
+      org: employee.org._id
+    }).sort({ name: 1 }) // Sort alphabetically
 
+    return NextResponse.json(folders)
+  }
+
+  // Otherwise, search for folders
   const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // escape special chars
   const regex = new RegExp(escaped, "i") // case-insensitive
   const folders = await Folder.find({
@@ -37,7 +44,7 @@ export async function GET(req) {
     $or: [
       { name: { $regex: regex } }
     ]
-  })
+  }).sort({ name: 1 })
 
   console.log(folders)
 
