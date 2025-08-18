@@ -423,7 +423,7 @@ export default function Page() {
               <Button
                 size="icon"
                 onClick={() => setCategoryDialogOpen(true)}
-                className="h-8 w-8"
+                className="h-8 w-8 cursor-pointer"
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -474,6 +474,7 @@ export default function Page() {
                   {category._id && (
                     <Button
                       size="sm"
+                      className="cursor-pointer"
                       onClick={() => addProduct()}
                     >
                       New Product
@@ -519,6 +520,14 @@ export default function Page() {
                     onProductClick={(product, idx) => {
                       setSelectedProductId(product._id || idx);
                       setSheetOpen(true);
+                    }
+                    onProductsReorder={(reorderedProducts) => {
+                      setProducts(reorderedProducts);
+                      // Mark products as updated for auto-save
+                      reorderedProducts.forEach((p, idx) => {
+                        p.order = idx;
+                        p.updated = true;
+                      });
                     }}
                   />
                   

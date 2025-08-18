@@ -34,7 +34,7 @@ export async function GET(request) {
       .populate('category', 'name')
       .populate('folder', 'name color')
       .populate('accounting', 'name code')
-      .sort({ name: 1 })
+      .sort({ order: 1, name: 1 }) // Sort by order first, then by name
       .lean();
 
     return NextResponse.json({ 
