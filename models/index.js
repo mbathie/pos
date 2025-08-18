@@ -81,6 +81,7 @@ const CategorySchema = new mongoose.Schema({
   menu: String,
   products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   deleted: { type: Boolean, default: false },
+  order: { type: Number, default: 0 },
 }, { timestamps: true });
 
 // Index for org reference

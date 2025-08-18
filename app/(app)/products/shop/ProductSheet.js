@@ -1,4 +1,22 @@
 import React, { useContext } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,11 +25,55 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Tag, Plus, Ellipsis, Info, Loader2, CheckCircle, Save } from 'lucide-react';
+import { Tag, Plus, Ellipsis, Info, Loader2, CheckCircle, Save, GripVertical } from 'lucide-react';
 import { FolderSelect } from './folder-select';
 import AccountingSelect from './accounting-select';
 import colors from 'tailwindcss/colors';
 import { actions } from './actions';
+
+// Sortable Mod Component
+function SortableMod({ mod, enabled, onClick, children }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: mod._id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    cursor: isDragging ? 'grabbing' : 'grab',
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="inline-flex"
+    >
+      <Button
+        className='cursor-pointer relative'
+        onClick={onClick}
+        variant={enabled ? "default" : "outline"}
+      >
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing"
+        >
+          <GripVertical className={`${enabled ? '' : 'text-muted-foreground' } h-3 w-3`} />
+        </div>
+        <span className="ml-3">
+          {children}
+        </span>
+      </Button>
+    </div>
+  );
+}
 
 export default function ProductSheet({ 
   open, 
@@ -49,6 +111,32 @@ export default function ProductSheet({
     saveProduct
   } = actions({category, setProducts});
   
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end for mods
+  const handleModDragEnd = (event, pIdx, mcIdx) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      setProducts(draft => {
+        const modCat = draft[pIdx]?.modCats?.[mcIdx];
+        if (!modCat) return;
+        
+        const oldIndex = modCat.mods.findIndex((m) => m._id === active.id);
+        const newIndex = modCat.mods.findIndex((m) => m._id === over.id);
+        
+        modCat.mods = arrayMove(modCat.mods, oldIndex, newIndex);
+        draft[pIdx].updated = true;
+      });
+    }
+  };
+  
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-[75vw] sm:max-w-[75vw] overflow-y-auto p-4">
@@ -84,7 +172,7 @@ export default function ProductSheet({
                       ) : isDirty[product._id] ? (
                         <Save className="h-5 w-5 text-orange-500 animate-pulse" />
                       ) : (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
+                        <CheckCircle className="h-5 w-5 text-primary" />
                       )}
                     </div>
                   </TooltipTrigger>
@@ -239,63 +327,63 @@ export default function ProductSheet({
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <Label className="text-base">Variations</Label>
-              <Button
-                size="icon" 
-                variant="outline"
-                onClick={() => addVariation({pIdx})}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
+            <Label>Variations</Label>
             
-            {product?.variations?.length > 0 && (
-              <div className="space-y-2">
-                {product.variations.map((v, i) => (
-                  <div key={`${product._id}-${i}`} className="flex gap-2 items-center">
-                    <Input
-                      type="text" 
-                      placeholder="SM" 
-                      value={v.name || ''} 
-                      className="w-24"
-                      onChange={(e) => updateVariation({pIdx, vIdx: i, key: "name", value: e.target.value})}
-                    />
-                    <Input
-                      type="text" 
-                      placeholder="5.50" 
-                      value={v.amount || ''}
-                      className="w-24"
-                      onChange={(e) => updateVariation({pIdx, vIdx: i, key: "amount", value: e.target.value})}
-                    />
-                    {v.id > 0 && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <Ellipsis className="size-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setDeleteOpen(true);
-                              setToDelete({ product, productIdx: pIdx, variationIdx: i });
-                            }}
-                          >
-                            Delete Variation
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
-                  </div>
-                ))}
+            <div className="space-y-2">
+              {product?.variations?.map((v, i) => (
+                <div key={`${product._id}-${i}`} className="flex gap-2 items-center">
+                  <Input
+                    type="text" 
+                    placeholder="SM" 
+                    value={v.name || ''} 
+                    className="w-24"
+                    onChange={(e) => updateVariation({pIdx, vIdx: i, key: "name", value: e.target.value})}
+                  />
+                  <Input
+                    type="text" 
+                    placeholder="5.50" 
+                    value={v.amount || ''}
+                    className="w-24"
+                    onChange={(e) => updateVariation({pIdx, vIdx: i, key: "amount", value: e.target.value})}
+                  />
+                  {v.id > 0 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <Ellipsis className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setDeleteOpen(true);
+                            setToDelete({ product, productIdx: pIdx, variationIdx: i });
+                          }}
+                        >
+                          Delete Variation
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              ))}
+              <div className="flex gap-2 items-center">
+                <div className="w-24" />
+                <div className="w-24" />
+                <Button
+                  size="icon" 
+                  variant="outline"
+                  onClick={() => addVariation({pIdx})}
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
               </div>
-            )}
+            </div>
           </div>
 
           <div className="space-y-4">
             <div className='flex items-center gap-2'>
-              <Label className='text-base'>Mod Groups</Label>
+              <Label>Mod Groups</Label>
               <Button
                 className="text-xs"
                 variant="outline"
@@ -312,7 +400,7 @@ export default function ProductSheet({
             {product.modCats?.map((mp, mcIdx) => (
               <div key={mcIdx} className="space-y-2">
                 <div className="flex items-center gap-4">
-                  <Label className="font-medium">{mp.name}</Label>
+                  <Label className="">{mp.name}</Label>
                   <div className="flex items-center gap-2">
                     <Label className="text-sm">Allow Multiple</Label>
                     <Switch
@@ -322,19 +410,29 @@ export default function ProductSheet({
                   </div>
                 </div>
                 
-                <div className='flex flex-wrap gap-2'>
-                  {mp?.mods?.map((m, mIdx) => (
-                    <React.Fragment key={mIdx}>
-                      {!m.new && (
-                        <Button
-                          onClick={() => updateMod({ pIdx, mcIdx, mIdx, key: "enabled", value: !m.enabled })}
-                          variant={m.enabled ? "default" : "outline"}
-                        >
-                          {m.name} {!isNaN(m?.amount) && `$${Number(m.amount).toFixed(2)}`}
-                        </Button>
-                      )}
-                      {m.new && (
-                        <div className='flex'>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={(event) => handleModDragEnd(event, pIdx, mcIdx)}
+                >
+                  <SortableContext
+                    items={mp.mods.filter(m => !m.new).map(m => m._id)}
+                    strategy={horizontalListSortingStrategy}
+                  >
+                    <div className='flex flex-wrap gap-2'>
+                      {mp?.mods?.map((m, mIdx) => (
+                        <React.Fragment key={m._id || mIdx}>
+                          {!m.new && (
+                            <SortableMod
+                              mod={m}
+                              enabled={m.enabled}
+                              onClick={() => updateMod({ pIdx, mcIdx, mIdx, key: "enabled", value: !m.enabled })}
+                            >
+                              {m.name} {!isNaN(m?.amount) && `$${Number(m.amount).toFixed(2)}`}
+                            </SortableMod>
+                          )}
+                          {m.new && (
+                            <div className='flex'>
                           <Input
                             value={m.name || ""} 
                             placeholder="Soy" 
@@ -366,7 +464,9 @@ export default function ProductSheet({
                     </Button>
                   )}
                 </div>
-              </div>
+              </SortableContext>
+            </DndContext>
+          </div>
             ))}
           </div>
         </div>

@@ -28,7 +28,7 @@ export async function GET(req) {
     query.menu = menu;
   }
 
-  const categories = await Category.find(query);
+  const categories = await Category.find(query).sort({ order: 1, createdAt: 1 });
 
   // If includeProducts is requested, fetch products for each category
   if (includeProducts === 'true') {

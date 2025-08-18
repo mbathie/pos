@@ -53,6 +53,37 @@ export async function GET(req, { params }) {
   return NextResponse.json({ category });
 }
 
+export async function PUT(req, { params }) {
+  await connectDB();
+  const { employee } = await getEmployee();
+  const org = employee.org;
+
+  const { slug } = await params;
+  const body = await req.json();
+  const updateData = {};
+  
+  // Only update fields that are provided
+  if (body.order !== undefined) updateData.order = body.order;
+  if (body.name !== undefined) updateData.name = body.name;
+
+  if (!slug) {
+    return NextResponse.json({ error: "Missing category ID" }, { status: 400 });
+  }
+
+  // Find and update category
+  const category = await Category.findOneAndUpdate(
+    { _id: slug, org: org._id },
+    updateData,
+    { new: true }
+  );
+
+  if (!category) {
+    return NextResponse.json({ error: "Category not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({ category });
+}
+
 export async function DELETE(req, { params }) {
   await connectDB();
   const { employee } = await getEmployee();

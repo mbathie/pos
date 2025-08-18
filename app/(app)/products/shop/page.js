@@ -2,7 +2,24 @@
 
 import React, { useState, useEffect } from 'react';
 import { useImmer } from 'use-immer';
-
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -13,7 +30,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogOverlay,
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Separator } from '@radix-ui/react-separator'
 import { Button } from '@/components/ui/button'
-import { Tag, Plus, Ellipsis, EllipsisVertical, Info, Trash, Loader2, CheckCircle, Save } from 'lucide-react'
+import { Tag, Plus, Ellipsis, EllipsisVertical, Info, Trash, Loader2, CheckCircle, Save, GripVertical, Edit2, Trash2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from "@/components/ui/textarea"
@@ -29,6 +46,70 @@ import AccountingSelect from './accounting-select'
 import colors from 'tailwindcss/colors';
 import { useAutoSave } from '../useAutoSave';
 
+// Sortable Category Component
+function SortableCategory({ category, isActive, onSelect, onEdit, onDelete, children }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: category._id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`group flex items-center justify-between p-2 rounded-md cursor-pointer transition-colors ${
+        isActive ? 'bg-muted' : 'hover:bg-muted/50'
+      } ${isDragging ? 'z-50' : ''}`}
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="flex items-center justify-center w-6 cursor-grab active:cursor-grabbing"
+      >
+        <GripVertical className="h-4 w-4 text-muted-foreground" />
+      </div>
+      <div
+        className="flex-1 text-sm mx-2"
+        onClick={onSelect}
+      >
+        {category.name}
+      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            className="size-6 opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <EllipsisVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={onEdit}>
+            <Edit2 className="size-4 mr-1" />
+            Edit Category
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={onDelete} className="text-destructive">
+            <Trash2 className="size-4 mr-1" />
+            Delete Category
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+}
+
 export default function Page() {
   const [categories, setCategories] = useState([]);
   const [category, setCategory] = useState({});
@@ -43,6 +124,9 @@ export default function Page() {
   // Category dialog state
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editCategoryDialogOpen, setEditCategoryDialogOpen] = useState(false);
+  const [editCategoryName, setEditCategoryName] = useState('');
 
   // Icon dialog state
   const [iconDialogOpen, setIconDialogOpen] = useState(false);
@@ -69,6 +153,51 @@ export default function Page() {
 
   // Use the auto-save hook
   const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(products, autoSaveProduct, 3000);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end for categories
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      const oldIndex = categories.findIndex((c) => c._id === active.id);
+      const newIndex = categories.findIndex((c) => c._id === over.id);
+      
+      const reorderedCategories = arrayMove(categories, oldIndex, newIndex);
+      
+      // Update local state immediately for smooth UX
+      setCategories(reorderedCategories);
+      
+      // Assign order values based on new positions
+      const orderedCategories = reorderedCategories.map((cat, index) => ({
+        ...cat,
+        order: index + 1
+      }));
+      
+      // Update each category's order in the backend
+      try {
+        await Promise.all(
+          orderedCategories.map(cat =>
+            fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${cat._id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ order: cat.order }),
+            })
+          )
+        );
+      } catch (error) {
+        console.error('Error updating category order:', error);
+        // Optionally revert the order on error
+      }
+    }
+  };
 
   const handleDelete = async () => {
     if (toDelete.variationIdx !== undefined) {
@@ -120,6 +249,33 @@ export default function Page() {
     }
   }
 
+  const updateCategory = async () => {
+    if (!editCategoryName.trim() || !editingCategory) return;
+    
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${editingCategory._id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: editCategoryName }),
+    });
+    const data = await res.json();
+    
+    if (data.category) {
+      // Update the category in the list
+      setCategories(categories.map(c => 
+        c._id === editingCategory._id ? { ...c, name: editCategoryName } : c
+      ));
+      
+      // Update the current category if it's the one being edited
+      if (category._id === editingCategory._id) {
+        setCategory({ ...category, name: editCategoryName });
+      }
+      
+      setEditCategoryDialogOpen(false);
+      setEditingCategory(null);
+      setEditCategoryName('');
+    }
+  }
+
   const getCategoryProducts = async (c) => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${c._id}/products`);
     const _products = await res.json()
@@ -128,7 +284,7 @@ export default function Page() {
 
   return (
     <>
-      {/* Category Dialog */}
+      {/* Create Category Dialog */}
       <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -156,6 +312,40 @@ export default function Page() {
             </Button>
             <Button onClick={saveCategory} disabled={!newCategoryName.trim()}>
               Create Category
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Category Dialog */}
+      <Dialog open={editCategoryDialogOpen} onOpenChange={setEditCategoryDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+            <DialogDescription>
+              Update the category name
+            </DialogDescription>
+          </DialogHeader>
+          <Input 
+            placeholder="Category name" 
+            value={editCategoryName} 
+            onChange={(e) => setEditCategoryName(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter') {
+                updateCategory();
+              }
+            }}
+          />
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => {
+              setEditCategoryDialogOpen(false);
+              setEditingCategory(null);
+              setEditCategoryName('');
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={updateCategory} disabled={!editCategoryName.trim()}>
+              Update Category
             </Button>
           </div>
         </DialogContent>
@@ -219,7 +409,7 @@ export default function Page() {
 
       <div className="p-4">
         <div className="mb-4">
-          <h1 className="text-lg font-semibold">
+          <h1 className="font-semibold">
             Retail Shop Products
           </h1>
         </div>
@@ -227,7 +417,7 @@ export default function Page() {
           {/* Categories Sidebar */}
           <div className="flex flex-col min-w-56">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-medium text-muted-foreground">
+              <h2 className="text-sm font-medium">
                 Categories
               </h2>
               <Button
@@ -238,49 +428,40 @@ export default function Page() {
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            <div className="flex flex-col">
-              {categories.map((c) => (
-                <div
-                  key={c._id}
-                  className={`group flex items-center justify-between p-3 rounded-md cursor-pointer transition-colors ${
-                    category._id === c._id ? 'bg-muted' : 'hover:bg-muted/50'
-                  }`}
-                >
-                  <div
-                    className="flex-1 text-sm"
-                    onClick={() => {
-                      setCategory(c);
-                      setProduct({ new: false });
-                      getCategoryProducts(c);
-                    }}
-                  >
-                    {c.name}
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <EllipsisVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem
-                        onClick={() => {
-                          setToDelete({ category: c });
-                          setDeleteOpen(true);
-                        }}
-                      >
-                        Delete Category
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={categories.map(c => c._id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="flex flex-col gap-1">
+                  {categories.map((c) => (
+                    <SortableCategory
+                      key={c._id}
+                      category={c}
+                      isActive={category._id === c._id}
+                      onSelect={() => {
+                        setCategory(c);
+                        setProduct({ new: false });
+                        getCategoryProducts(c);
+                      }}
+                      onEdit={() => {
+                        setEditingCategory(c);
+                        setEditCategoryName(c.name);
+                        setEditCategoryDialogOpen(true);
+                      }}
+                      onDelete={() => {
+                        setToDelete({ category: c });
+                        setDeleteOpen(true);
+                      }}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           </div>
           
           {/* Products Content */}
@@ -314,7 +495,7 @@ export default function Page() {
                         <span>Unsaved changes</span>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 text-sm text-green-500">
+                      <div className="flex items-center gap-2 text-sm text-primary">
                         <CheckCircle className="h-3 w-3" />
                         <span>All changes saved</span>
                       </div>
