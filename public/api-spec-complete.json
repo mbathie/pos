@@ -38,6 +38,10 @@
       "description": "Product management endpoints"
     },
     {
+      "name": "Folders",
+      "description": "Product folder management for organization"
+    },
+    {
       "name": "Transactions",
       "description": "Transaction and payment processing"
     },
@@ -1915,6 +1919,150 @@
           }
         }
       }
+    },
+    "/folders": {
+      "get": {
+        "summary": "List or search folders",
+        "tags": ["Folders"],
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "description": "Search term for folder names (leave empty to get all folders)",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of folders",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Folder"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new folder",
+        "tags": ["Folders"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FolderInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Folder created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "folder": {
+                      "$ref": "#/components/schemas/Folder"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/folders/{id}": {
+      "put": {
+        "summary": "Update a folder",
+        "tags": ["Folders"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Folder ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FolderInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Folder updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "folder": {
+                      "$ref": "#/components/schemas/Folder"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Folder not found or unauthorized"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete a folder",
+        "tags": ["Folders"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Folder ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Folder deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Folder not found or unauthorized"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -2053,6 +2201,50 @@
             "items": {
               "type": "object"
             }
+          }
+        }
+      },
+      "Folder": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "description": "Unique folder ID"
+          },
+          "name": {
+            "type": "string",
+            "description": "Folder name"
+          },
+          "color": {
+            "type": "string",
+            "description": "Tailwind color code (e.g., 'emerald-400')"
+          },
+          "org": {
+            "type": "string",
+            "description": "Organization ID"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "FolderInput": {
+        "type": "object",
+        "required": ["name", "color"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Folder name",
+            "minLength": 3
+          },
+          "color": {
+            "type": "string",
+            "description": "Tailwind color code (e.g., 'emerald-400')"
           }
         }
       },
