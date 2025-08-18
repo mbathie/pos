@@ -522,11 +522,16 @@ export default function Page() {
                       setSheetOpen(true);
                     }}
                     onProductsReorder={(reorderedProducts) => {
-                      setProducts(reorderedProducts);
-                      // Mark products as updated for auto-save
-                      reorderedProducts.forEach((p, idx) => {
-                        p.order = idx;
-                        p.updated = true;
+                      setProducts(draft => {
+                        // Replace the entire array with reordered products
+                        draft.length = 0;
+                        reorderedProducts.forEach((p, idx) => {
+                          draft.push({
+                            ...p,
+                            order: idx,
+                            updated: true
+                          });
+                        });
                       });
                     }}
                   />
