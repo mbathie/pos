@@ -18,6 +18,11 @@ export function FolderSelect({ product, pIdx, setFolder, onManageFolders, refres
     fetchFolders();
   }, [refreshTrigger]); // Re-fetch when refreshTrigger changes
 
+  useEffect(() => {
+    // Update selected folder when product's folder changes (e.g., when deleted)
+    setSelectedFolder(product?.folder?._id || '');
+  }, [product?.folder?._id]);
+
   const fetchFolders = async () => {
     try {
       // API requires a search parameter, use empty string to get all

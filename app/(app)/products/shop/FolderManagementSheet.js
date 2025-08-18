@@ -15,12 +15,13 @@ import {
 import Colors from '@/components/colors';
 import colors from 'tailwindcss/colors';
 
-export function FolderManagementSheet({ open, onOpenChange, onFolderUpdated, initialFolder }) {
+export function FolderManagementSheet({ open, onOpenChange, onFolderUpdated, onFolderDeleted, initialFolder }) {
   const [folders, setFolders] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [folderName, setFolderName] = useState('');
   const [folderColor, setFolderColor] = useState('emerald-400');
   const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -40,6 +41,7 @@ export function FolderManagementSheet({ open, onOpenChange, onFolderUpdated, ini
       setFolderName(selectedFolder.name);
       setFolderColor(selectedFolder.color || 'emerald-400');
       setIsCreatingNew(false);
+      setShowDeleteConfirm(false); // Reset delete confirmation when selecting different folder
     }
   }, [selectedFolder]);
 
@@ -72,6 +74,7 @@ export function FolderManagementSheet({ open, onOpenChange, onFolderUpdated, ini
     const res = await fetch(url, {
       method: isUpdate ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ 
         name: folderName, 
         color: folderColor 
@@ -81,9 +84,9 @@ export function FolderManagementSheet({ open, onOpenChange, onFolderUpdated, ini
     const data = await res.json();
 
     if (res.ok) {
-      // Call the callback with the updated/created folder
+      // Call the callback with the updated/created folder and whether it was a new folder
       if (onFolderUpdated) {
-        onFolderUpdated(data.folder);
+        onFolderUpdated(data.folder, !isUpdate); // Pass true if it was a new folder
       }
       // Reset form
       setSelectedFolder(null);
@@ -100,22 +103,40 @@ export function FolderManagementSheet({ open, onOpenChange, onFolderUpdated, ini
   const handleDeleteFolder = async () => {
     if (!selectedFolder) return;
 
+    if (!showDeleteConfirm) {
+      setShowDeleteConfirm(true);
+      return;
+    }
+
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders/${selectedFolder._id}`, {
       method: 'DELETE',
+      credentials: 'include',
     });
 
     if (res.ok) {
+      // Notify parent that folder was deleted
+      if (onFolderDeleted) {
+        onFolderDeleted(selectedFolder._id);
+      }
       await fetchFolders();
       setSelectedFolder(null);
       setFolderName('');
       setFolderColor('emerald-400');
       setIsCreatingNew(false);
+      setShowDeleteConfirm(false);
+      // Close the sheet after successful deletion
+      onOpenChange(false);
     }
   };
 
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={(isOpen) => {
+      if (!isOpen) {
+        setShowDeleteConfirm(false); // Reset delete confirmation when closing
+      }
+      onOpenChange(isOpen);
+    }}>
       <SheetContent className="w-[500px] sm:max-w-[500px]">
         <SheetHeader className='p-4'>
           <SheetTitle>Manage Folders</SheetTitle>
@@ -213,19 +234,30 @@ export function FolderManagementSheet({ open, onOpenChange, onFolderUpdated, ini
           )}
         </div>
         
-        <SheetFooter className="p-4 pt-0">
+        <SheetFooter className="p-4 pt-0 flex-col sm:flex-row gap-2">
+          <div className="flex gap-2 flex-1">
+            <Button
+              className="cursor-pointer"
+              onClick={handleSaveFolder}
+              disabled={(!selectedFolder && !isCreatingNew) || (folderName.trim().length < 3)}
+            >
+              Save changes
+            </Button>
+            <Button
+              className="cursor-pointer"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+          </div>
           <Button
-            onClick={handleSaveFolder}
-            disabled={(!selectedFolder && !isCreatingNew) || (folderName.trim().length < 3)}
-          >
-            Save changes
-          </Button>
-          <Button
-            variant="destructive"
+            className="cursor-pointer"
+            variant={showDeleteConfirm ? "destructive" : "outline"}
             onClick={handleDeleteFolder}
             disabled={!selectedFolder || isCreatingNew}
           >
-            Delete Folder
+            {showDeleteConfirm ? "Are you sure?" : "Delete Folder"}
           </Button>
         </SheetFooter>
       </SheetContent>

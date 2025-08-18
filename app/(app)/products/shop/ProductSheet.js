@@ -471,13 +471,13 @@ export default function ProductSheet({
           </div>
           
           {/* Delete Product Button */}
-          <div className="pt-4-">
+          <div className="w-54">
             <Button
               variant="destructive"
               className="w-full cursor-pointer"
               onClick={() => setDeleteDialogOpen(true)}
             >
-              <Trash2 className="h-4 w-4 mr-2" />
+              <Trash2 className="h-4 w-4 mr-1" />
               Delete Product
             </Button>
           </div>
@@ -512,10 +512,18 @@ export default function ProductSheet({
         open={folderSheetOpen}
         onOpenChange={setFolderSheetOpen}
         initialFolder={product?.folder}
-        onFolderUpdated={(folder) => {
-          // Update the current product's folder with the newly created/updated folder
+        onFolderUpdated={(folder, isNew) => {
+          // If it's a new folder or updating existing, set it as the product's folder
           if (product && folder) {
             setFolder({folder, pIdx});
+          }
+          // Trigger refresh of the folder list in FolderSelect
+          setFolderRefreshTrigger(prev => prev + 1);
+        }}
+        onFolderDeleted={(deletedFolderId) => {
+          // If the deleted folder was the one selected for this product, clear it
+          if (product?.folder?._id === deletedFolderId) {
+            updateProduct({pIdx, key: "folder", value: null});
           }
           // Trigger refresh of the folder list in FolderSelect
           setFolderRefreshTrigger(prev => prev + 1);

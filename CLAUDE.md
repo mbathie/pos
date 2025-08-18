@@ -57,3 +57,6 @@
 - Start dev server: `npm run dev --turbopack`
 - Build: `npm run build`
 - Lint: `npm run lint`
+
+## UI/UX Conventions
+- All Button components should include `className='cursor-pointer'` to ensure consistent cursor behavior
