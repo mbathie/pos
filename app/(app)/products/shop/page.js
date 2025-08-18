@@ -520,7 +520,7 @@ export default function Page() {
                     onProductClick={(product, idx) => {
                       setSelectedProductId(product._id || idx);
                       setSheetOpen(true);
-                    }
+                    }}
                     onProductsReorder={(reorderedProducts) => {
                       setProducts(reorderedProducts);
                       // Mark products as updated for auto-save
