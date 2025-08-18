@@ -122,7 +122,7 @@ const ProductSchema = new mongoose.Schema({
   locations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Location' }],
   folder: { type: mongoose.Schema.Types.ObjectId, ref: 'Folder' },
   accounting: { type: mongoose.Schema.Types.ObjectId, ref: 'Accounting' },
-  type: { type: String, enum: ['class', 'course', 'casual', 'membership'] },
+  type: { type: String, enum: ['class', 'course', 'general', 'membership', 'shop'] },
   duration: { name: Number, unit: String },
   capacity: Number,
   bump: { type: Boolean, default: false },
@@ -246,8 +246,8 @@ ScheduleSchema.index({ org: 1, product: 1 });
 
 const Schedule = mongoose.models.Schedule || mongoose.model('Schedule', ScheduleSchema);
 
-// ==== Casual ====
-const CasualSchema = new mongoose.Schema({
+// ==== General ====
+const GeneralSchema = new mongoose.Schema({
   start: { type: Date, required: true },
   end: { type: Date },
   hours: { type: Number },
@@ -259,12 +259,12 @@ const CasualSchema = new mongoose.Schema({
 }, { timestamps: true, strict: false });
 
 // Indexes for org, product, customer, location
-CasualSchema.index({ org: 1 });
-CasualSchema.index({ product: 1 });
-CasualSchema.index({ customer: 1 });
-CasualSchema.index({ location: 1 });
+GeneralSchema.index({ org: 1 });
+GeneralSchema.index({ product: 1 });
+GeneralSchema.index({ customer: 1 });
+GeneralSchema.index({ location: 1 });
 
-const Casual = mongoose.models.Casual || mongoose.model('Casual', CasualSchema);
+const General = mongoose.models.General || mongoose.model('General', GeneralSchema);
 
 // ==== Order ====
 const OrderSchema = new mongoose.Schema({
@@ -396,5 +396,5 @@ import Checkin from './Checkin';
 
 // ==== Updated Exports ====
 export {
-  Org, Location, Terminal, Employee, Customer, Category, Folder, Accounting, Product, Discount, Transaction, Schedule, Casual, Order, Membership, Checkin
+  Org, Location, Terminal, Employee, Customer, Category, Folder, Accounting, Product, Discount, Transaction, Schedule, General, Order, Membership, Checkin
 }

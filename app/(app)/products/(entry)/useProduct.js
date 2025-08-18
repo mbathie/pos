@@ -50,14 +50,19 @@ export function useProduct(setProducts) {
     // Prevent adding a new product if name is empty or if createProduct is being used
     if (!name) return;
 
-    setProducts(prev => [
-      {
-        name,
-        type,
-        variations: [],
-      },
-      ...prev
-    ]);
+    const newProduct = {
+      name,
+      type,
+    };
+
+    // Initialize with prices array for general products, variations for others
+    if (type === 'general') {
+      newProduct.prices = [];
+    } else {
+      newProduct.variations = [];
+    }
+
+    setProducts(prev => [newProduct, ...prev]);
   }, [setProducts]);
 
   const createProduct = async (categoryName, product) => {

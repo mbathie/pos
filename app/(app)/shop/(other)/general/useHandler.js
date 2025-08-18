@@ -1,9 +1,9 @@
 export function useHandler({setProduct}) {
 
-  const setQty = async ({ vIdx, pIdx, type }) => {
+  const setQty = async ({ pIdx, type }) => {
     setProduct(draft => {
-      const variation = draft.variations?.[vIdx];
-      const price = variation?.prices?.[pIdx];
+      // For general products, prices are at the root level
+      const price = draft.prices?.[pIdx];
       if (!price) return;
 
       if (type === '+') {

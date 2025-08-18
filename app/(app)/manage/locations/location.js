@@ -59,7 +59,7 @@ export default function LocationForm({ initialData, onSubmit, submitLabel = 'Sav
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label htmlFor="city">City</Label>
+            <Label htmlFor="city">Suburb / Locality</Label>
             <Input
               id="city"
               value={location.city}

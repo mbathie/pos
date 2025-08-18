@@ -116,7 +116,7 @@ export default function Cart({}) {
             </div>
           )
 
-          else if (p.type=='casual') return (
+          else if (p.type=='general') return (
             <div key={p._id} className="flex flex-col space-y-1-">
               <div className="flex">
                 <div>{p.name}</div>
@@ -130,14 +130,11 @@ export default function Cart({}) {
                   <Trash2 className="size-4" />
                 </div>
               </div>
-              {p.variations?.map((v, vIdx) => (
-                <div key={vIdx}>
-                  {v.prices?.map((price, i) => (
-                    <div key={i} className="flex">
-                      <div>{price.qty}x {price.name}</div>
-                      <div className="ml-auto">${parseFloat(price.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    </div>
-                  ))}
+              {/* Display prices directly for general products */}
+              {p.prices?.map((price, i) => (
+                <div key={i} className="flex">
+                  <div>{price.qty}x {price.name || 'Standard'}</div>
+                  <div className="ml-auto">${parseFloat(price.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
               ))}
             </div>

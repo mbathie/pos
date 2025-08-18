@@ -1,20 +1,13 @@
 'use client'
 
-import './waiver.css'
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { TypographyLarge, TypographyMuted } from '@/components/ui/typography'
-import { ArrowLeft, Save, Loader2, Bold, Italic, Underline as UnderlineIcon, List, ListOrdered, AlignLeft, AlignCenter, AlignRight, Heading4, Heading5, Heading6, CheckCircle, Type, IndentIncrease, IndentDecrease } from 'lucide-react'
+import { ArrowLeft, Save, Loader2, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
-import { useEditor, EditorContent } from '@tiptap/react'
-import StarterKit from '@tiptap/starter-kit'
-import TextAlign from '@tiptap/extension-text-align'
-import UnderlineExtension from '@tiptap/extension-underline'
-import Paragraph from '@tiptap/extension-paragraph'
-import Heading from '@tiptap/extension-heading'
-import { Toggle } from '@/components/ui/toggle'
+import WysiwygEditor from '@/components/wysiwyg-editor'
 
 export default function WaiverSettingsPage() {
   const [content, setContent] = useState('')
@@ -23,75 +16,7 @@ export default function WaiverSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState(Date.now())
 
-  const editor = useEditor({
-    extensions: [
-      StarterKit.configure({
-        paragraph: false,
-        heading: false,
-        bulletList: {
-          keepMarks: true,
-          keepAttributes: false,
-        },
-        orderedList: {
-          keepMarks: true,
-          keepAttributes: false,
-        },
-      }),
-      Paragraph.extend({
-        addAttributes() {
-          return {
-            style: {
-              default: null,
-              parseHTML: element => element.getAttribute('style'),
-              renderHTML: attributes => {
-                if (!attributes.style) {
-                  return {}
-                }
-                return {
-                  style: attributes.style,
-                }
-              },
-            },
-          }
-        },
-      }),
-      Heading.extend({
-        addAttributes() {
-          return {
-            ...this.parent?.(),
-            style: {
-              default: null,
-              parseHTML: element => element.getAttribute('style'),
-              renderHTML: attributes => {
-                if (!attributes.style) {
-                  return {}
-                }
-                return {
-                  style: attributes.style,
-                }
-              },
-            },
-          }
-        },
-      }).configure({
-        levels: [4, 5, 6]
-      }),
-      TextAlign.configure({
-        types: ['heading', 'paragraph']
-      }),
-      UnderlineExtension
-    ],
-    content: '',
-    editorProps: {
-      attributes: {
-        class: 'focus:outline-none'
-      }
-    },
-    onUpdate: ({ editor }) => {
-      setContent(editor.getHTML())
-    },
-    immediatelyRender: false // Fix SSR hydration issue
-  })
+  // Content state is managed here and passed to the WYSIWYG editor
 
   // Load existing waiver content
   useEffect(() => {
@@ -104,17 +29,11 @@ export default function WaiverSettingsPage() {
           const loadedContent = data.content || getDefaultWaiverContent()
           setContent(loadedContent)
           setOriginalContent(loadedContent)
-          if (editor) {
-            editor.commands.setContent(loadedContent)
-          }
         } else {
           // Set default content if no waiver exists
           const defaultContent = getDefaultWaiverContent()
           setContent(defaultContent)
           setOriginalContent(defaultContent)
-          if (editor) {
-            editor.commands.setContent(defaultContent)
-          }
         }
       } catch (error) {
         console.error('Error fetching waiver content:', error)
@@ -123,18 +42,13 @@ export default function WaiverSettingsPage() {
         const defaultContent = getDefaultWaiverContent()
         setContent(defaultContent)
         setOriginalContent(defaultContent)
-        if (editor) {
-          editor.commands.setContent(defaultContent)
-        }
       } finally {
         setLoading(false)
       }
     }
 
-    if (editor) {
-      fetchWaiverContent()
-    }
-  }, [editor])
+    fetchWaiverContent()
+  }, [])
 
   const getDefaultWaiverContent = () => {
     return `
@@ -188,9 +102,6 @@ export default function WaiverSettingsPage() {
     return () => clearTimeout(autoSaveTimer)
   }, [content, hasChanges])
 
-  if (!editor) {
-    return null
-  }
 
   return (
     <div className="px-4 flex flex-col gap-4 mb-4">
@@ -215,187 +126,28 @@ export default function WaiverSettingsPage() {
           {loading ? (
             <div className="h-96 bg-muted animate-pulse rounded-md" />
           ) : (
-            <>
-              {/* Editor with toolbar at top */}
-              <div className="border rounded-lg relative">
-                {/* Top toolbar with formatting controls and save buttons */}
-                <div className="sticky top-0 z-10 border-b bg-muted p-2 flex justify-between items-center rounded-t-md">
-                  {/* Left side - formatting controls */}
-                  <div className="flex flex-wrap gap-1">
-                    <div className="flex gap-1 pr-2 border-r">
-                      <Toggle
-                        size="sm"
-                        pressed={editor.isActive('paragraph')}
-                        onPressedChange={() => editor.chain().focus().setParagraph().run()}
-                      >
-                        <Type className="h-4 w-4" />
-                      </Toggle>
-                      <Toggle
-                        size="sm"
-                        pressed={editor.isActive('heading', { level: 4 })}
-                        onPressedChange={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
-                      >
-                        <Heading4 className="h-4 w-4" />
-                      </Toggle>
-                      <Toggle
-                        size="sm"
-                        pressed={editor.isActive('heading', { level: 5 })}
-                        onPressedChange={() => editor.chain().focus().toggleHeading({ level: 5 }).run()}
-                      >
-                        <Heading5 className="h-4 w-4" />
-                      </Toggle>
-                      <Toggle
-                        size="sm"
-                        pressed={editor.isActive('heading', { level: 6 })}
-                        onPressedChange={() => editor.chain().focus().toggleHeading({ level: 6 }).run()}
-                      >
-                        <Heading6 className="h-4 w-4" />
-                      </Toggle>
-                    </div>
-
-                    <div className="flex gap-1 pr-2 border-r">
-                      <Toggle
-                        size="sm"
-                        pressed={editor.isActive('bold')}
-                        onPressedChange={() => editor.chain().focus().toggleBold().run()}
-                      >
-                        <Bold className="h-4 w-4" />
-                      </Toggle>
-                      <Toggle
-                        size="sm"
-                        pressed={editor.isActive('italic')}
-                        onPressedChange={() => editor.chain().focus().toggleItalic().run()}
-                      >
-                        <Italic className="h-4 w-4" />
-                      </Toggle>
-                      <Toggle
-                        size="sm"
-                        pressed={editor.isActive('underline')}
-                        onPressedChange={() => editor.chain().focus().toggleUnderline().run()}
-                      >
-                        <UnderlineIcon className="h-4 w-4" />
-                      </Toggle>
-                    </div>
-
-                    <div className="flex gap-1 pr-2 border-r">
-                      <Toggle
-                        size="sm"
-                        pressed={editor.isActive('bulletList')}
-                        onPressedChange={() => editor.chain().focus().toggleBulletList().run()}
-                      >
-                        <List className="h-4 w-4" />
-                      </Toggle>
-                      <Toggle
-                        size="sm"
-                        pressed={editor.isActive('orderedList')}
-                        onPressedChange={() => editor.chain().focus().toggleOrderedList().run()}
-                      >
-                        <ListOrdered className="h-4 w-4" />
-                      </Toggle>
-                    </div>
-
-                    <div className="flex gap-1 pr-2 border-r">
-                      <Toggle
-                        size="sm"
-                        pressed={editor.isActive({ textAlign: 'left' })}
-                        onPressedChange={() => editor.chain().focus().setTextAlign('left').run()}
-                      >
-                        <AlignLeft className="h-4 w-4" />
-                      </Toggle>
-                      <Toggle
-                        size="sm"
-                        pressed={editor.isActive({ textAlign: 'center' })}
-                        onPressedChange={() => editor.chain().focus().setTextAlign('center').run()}
-                      >
-                        <AlignCenter className="h-4 w-4" />
-                      </Toggle>
-                      <Toggle
-                        size="sm"
-                        pressed={editor.isActive({ textAlign: 'right' })}
-                        onPressedChange={() => editor.chain().focus().setTextAlign('right').run()}
-                      >
-                        <AlignRight className="h-4 w-4" />
-                      </Toggle>
-                    </div>
-
-                    <div className="flex gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 px-1.5"
-                        onClick={() => {
-                          // For lists, use liftListItem
-                          if (editor.can().liftListItem('listItem')) {
-                            editor.chain().focus().liftListItem('listItem').run()
-                          } else {
-                            // For paragraphs and headings, decrease margin
-                            const { selection } = editor.state
-                            const node = selection.$from.parent
-                            const nodeType = node.type.name
-                            
-                            if (nodeType === 'paragraph' || nodeType === 'heading') {
-                              const attrs = editor.getAttributes(nodeType)
-                              const currentIndent = parseInt(attrs.style?.match(/margin-left:\s*(\d+)/)?.[1] || 0)
-                              if (currentIndent > 0) {
-                                const newIndent = Math.max(0, currentIndent - 40)
-                                editor.chain().focus().updateAttributes(nodeType, {
-                                  style: `margin-left: ${newIndent}px`
-                                }).run()
-                              }
-                            }
-                          }
-                        }}
-                      >
-                        <IndentDecrease className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 px-1.5"
-                        onClick={() => {
-                          // For lists, use sinkListItem
-                          if (editor.can().sinkListItem('listItem')) {
-                            editor.chain().focus().sinkListItem('listItem').run()
-                          } else {
-                            // For paragraphs and headings, increase margin
-                            const { selection } = editor.state
-                            const node = selection.$from.parent
-                            const nodeType = node.type.name
-                            
-                            if (nodeType === 'paragraph' || nodeType === 'heading') {
-                              const attrs = editor.getAttributes(nodeType)
-                              const currentIndent = parseInt(attrs.style?.match(/margin-left:\s*(\d+)/)?.[1] || 0)
-                              const newIndent = currentIndent + 40
-                              editor.chain().focus().updateAttributes(nodeType, {
-                                style: `margin-left: ${newIndent}px`
-                              }).run()
-                            }
-                          }
-                        }}
-                      >
-                        <IndentIncrease className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  {/* Right side - save status icon */}
-                  <div className="flex items-center mr-2">
-                    {saving ? (
-                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    ) : hasChanges ? (
-                      <Save className="h-5 w-5 text-destructive" />
-                    ) : (
-                      <CheckCircle className="h-5 w-5 text-primary" />
-                    )}
-                  </div>
-                </div>
-                
-                {/* Editor content area */}
-                <div className="min-h-[400px] p-4">
-                  <EditorContent editor={editor} className="max-w-none focus:outline-none [&_.ProseMirror]:focus:outline-none [&_.ProseMirror]:outline-none" />
-                </div>
+            <div className="relative">
+              {/* Save status indicator */}
+              <div className="absolute top-2 right-2 z-10">
+                {saving ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                ) : hasChanges ? (
+                  <Save className="h-5 w-5 text-destructive" />
+                ) : (
+                  <CheckCircle className="h-5 w-5 text-primary" />
+                )}
               </div>
-            </>
+              
+              {/* WYSIWYG Editor */}
+              <WysiwygEditor
+                content={content}
+                onChange={setContent}
+                placeholder="Enter waiver content..."
+                minHeight="400px"
+                showToolbar={true}
+                toolbarPosition="top"
+              />
+            </div>
           )}
         </CardContent>
       </Card>

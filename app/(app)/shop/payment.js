@@ -362,7 +362,7 @@ export default function Page() {
   useEffect(() => {
     setCart(draft => {
       draft.products.forEach((p) => {
-        if (['class', 'course', 'casual', 'membership'].includes(p.type)) {
+        if (['class', 'course', 'general', 'membership'].includes(p.type)) {
           p.variations?.forEach((v) => {
             v.prices?.forEach((pr) => {
               const qty = pr.qty ?? 0;

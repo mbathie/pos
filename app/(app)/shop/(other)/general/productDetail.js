@@ -7,7 +7,7 @@ import { ChevronRight, Minus, Plus, Folder, Check } from "lucide-react"
 // import { Checkbox } from "@/components/ui/checkbox"
 import { useGlobals } from '@/lib/globals'
 import { useState, useEffect } from 'react'
-import { calcCartValueCasual } from '@/lib/product'
+import { calcCartValueGeneral } from '@/lib/product'
 
 export default function ProductDetail({ open, setOpen, product, setQty }) {
   if (!product) return null;
@@ -19,7 +19,7 @@ export default function ProductDetail({ open, setOpen, product, setQty }) {
   useEffect(() => {
     async function fetch() {
       if (product) {
-        const t = await calcCartValueCasual({ product });
+        const t = await calcCartValueGeneral({ product });
         setTotal(t.amount.subtotal);
       }
     }
@@ -46,58 +46,46 @@ export default function ProductDetail({ open, setOpen, product, setQty }) {
         </SheetHeader>
 
         <div className='flex flex-col mx-4 gap-2'>
-          {/* <div className='text-sm'>Variations</div> */}
+          <div className='text-sm font-medium mb-2'>Select Options</div>
 
-          <div className='flex flex-col gap-4 text-sm'>
+          <div className='flex flex-col gap-3 text-sm'>
             
-            {product.variations.map((v, vIdx) => {
+            {product.prices?.map((price, pIdx) => {
               return (
-                <div key={v.name+v.unit} className='flex flex-col gap-2'>
-                  {v.name} {v.unit}
+                <div key={price.name + price.value} className='flex gap-2 items-center'>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQty({ type: '-', pIdx })}
+                    disabled={!price.qty}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQty({ type: '+', pIdx })}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
 
-                  {v.prices.map((p, pIdx) => {
-                    return (
-                      <div key={p.name+p.value}>
-                        <div className='flex gap-2 items-center'>
-                          {/* <Checkbox
-                            checked={p.selected}
-                            onClick={() => onSelectPrice({ vIdx, pIdx })}
-                          /> */}
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setQty({ type: '-', vIdx, pIdx })}
-                            disabled={!p.qty}
-                          >
-                            <Minus />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setQty({ type: '+', vIdx, pIdx })}
-                          >
-                            <Plus />
-                          </Button>
-
-
-                          {p.name}
-                          <div className='flex-1' />
-                          <div className='flex gap-2'>
-                            <div>{p.qty || 0}x </div>
-                            <div>${parseFloat(p.value).toFixed(2)}</div>
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
+                  <span className="font-medium">{price.name || 'Standard'}</span>
+                  <div className='flex-1' />
+                  <div className='flex gap-2 items-center'>
+                    <span className="text-muted-foreground">{price.qty || 0}x</span>
+                    <span className="font-semibold">${parseFloat(price.value).toFixed(2)}</span>
+                  </div>
                 </div>
               )
             })}
 
+            {(!product.prices || product.prices.length === 0) && (
+              <div className="text-muted-foreground text-center py-4">
+                No prices available for this product
+              </div>
+            )}
 
           </div>
-
 
         </div>
 
@@ -114,12 +102,10 @@ export default function ProductDetail({ open, setOpen, product, setQty }) {
               type="submit" 
               disabled={!total}
               onClick={async () => {
-                const _product = await calcCartValueCasual({product})
+                const _product = await calcCartValueGeneral({product})
 
-                _product.variations = _product.variations?.map(v => ({
-                  ...v,
-                  prices: v.prices?.filter(price => (price.qty ?? 0) > 0) || []
-                }))
+                // Filter out prices with no quantity
+                _product.prices = _product.prices?.filter(price => (price.qty ?? 0) > 0) || []
 
                 await addToCart(_product)
               }}

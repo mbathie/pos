@@ -6,7 +6,7 @@ import { useGlobals } from '@/lib/globals'
 
 export default function Page() {
   const router = useRouter()
-  const { pushBreadcrumb } = useGlobals()
+  const { pushBreadcrumb, setLocations } = useGlobals()
   
   useEffect(() => {
     pushBreadcrumb({ name: "Create Location", href: "/locations/create" })
@@ -16,23 +16,33 @@ export default function Page() {
     name: '', phone: '',
     address1: '', city: '', state: '', postcode: '',
     storeHours: [
-      { d: 0, open: '', close: '' },
-      { d: 1, open: '', close: '' },
-      { d: 2, open: '', close: '' },
-      { d: 3, open: '', close: '' },
-      { d: 4, open: '', close: '' },
-      { d: 5, open: '', close: '' },
-      { d: 6, open: '', close: '' }
+      { d: 1, open: '', close: '' },  // Monday
+      { d: 2, open: '', close: '' },  // Tuesday
+      { d: 3, open: '', close: '' },  // Wednesday
+      { d: 4, open: '', close: '' },  // Thursday
+      { d: 5, open: '', close: '' },  // Friday
+      { d: 6, open: '', close: '' },  // Saturday
+      { d: 0, open: '', close: '' }   // Sunday
     ]
   })
 
   const handleSubmit = async (location) => {
-    await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/locations`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/locations`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(location)
     })
-            router.push('/manage/locations')
+    
+    if (res.ok) {
+      // Refresh the global locations list
+      const locationsRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/locations`)
+      if (locationsRes.ok) {
+        const allLocations = await locationsRes.json()
+        setLocations(allLocations)
+      }
+    }
+    
+    router.push('/manage/locations')
   }
 
   if (!location) return <div className="p-4">Loading...</div>

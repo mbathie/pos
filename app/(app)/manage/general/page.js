@@ -8,7 +8,7 @@ import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, Tabl
 import { Badge } from "@/components/ui/badge"
 
 export default function Page() {
-  const [casuals, setCasuals] = useState([]);
+  const [generals, setGenerals] = useState([]);
 
   const [now, setNow] = useState(dayjs());
 
@@ -18,13 +18,13 @@ export default function Page() {
   }, []);
 
   useEffect(() => {
-    const fetchCasuals = async () => {
-      const res = await fetch('/api/casuals');
+    const fetchGenerals = async () => {
+      const res = await fetch('/api/generals');
       const data = await res.json();
       console.log(data)
-      setCasuals(data);
+      setGenerals(data);
     };
-    fetchCasuals();
+    fetchGenerals();
   }, []);
 
   const getStatusLabel = (entry, now) => {
@@ -46,13 +46,13 @@ export default function Page() {
   return (
     <div className='flex flex-col px-4'>
       <div className="flex">
-        <div className='font-semibold mb-2'>Casual Entries</div>
+        <div className='font-semibold mb-2'>General Entries</div>
       </div>
 
       <Card className='p-0'>
         <CardContent className='p-0'>
           <Table>
-            {/* <TableCaption>Casual Entries</TableCaption> */}
+            {/* <TableCaption>General Entries</TableCaption> */}
             <TableHeader>
               <TableRow>
                 <TableHead>Member</TableHead>
@@ -63,7 +63,7 @@ export default function Page() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {casuals.map((entry) => (
+              {generals.map((entry) => (
                 <TableRow key={entry._id}>
                   <TableCell className="align-top flex flex-col">
                     <div>{entry.customer?.name}</div>

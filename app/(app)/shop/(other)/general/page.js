@@ -18,7 +18,7 @@ export default function Page() {
 
   useEffect(() => {
     async function fetch() {
-      const cat = await getCategory({name: 'casual'})
+      const cat = await getCategory({name: 'general'})
       const _products = await getProducts({category: cat.category})
       setProducts(_products.products)
       setCategory(cat.category)
@@ -35,11 +35,16 @@ export default function Page() {
           category={category}
           onClick={(p) => {
             console.log(p)
-            // Initialize product for cart with proper separation of stock vs cart quantities
+            // Initialize product for cart with prices structure for general products
             const cartProduct = {
               ...p,
               stockQty: p.qty, // Preserve original stock quantity
-              qty: 0 // Initialize cart quantity to 0
+              qty: 0, // Initialize cart quantity to 0
+              // Ensure prices have qty property initialized
+              prices: p.prices?.map(price => ({
+                ...price,
+                qty: price.qty || 0
+              })) || []
             }
             setProduct(cartProduct);
             setSheetOpen(true);

@@ -265,10 +265,10 @@ export default function TransactionDetailsPage() {
     </Card>
   );
 
-  const CasualProductsCard = ({ products }) => (
+  const GeneralProductsCard = ({ products }) => (
     <Card>
       <CardHeader>
-        <CardTitle>Casual Entries</CardTitle>
+        <CardTitle>General Entries</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
@@ -528,8 +528,8 @@ export default function TransactionDetailsPage() {
         <CourseProductsCard products={productGroups.course} />
       )}
 
-      {productGroups.casual && (
-        <CasualProductsCard products={productGroups.casual} />
+      {productGroups.general && (
+        <GeneralProductsCard products={productGroups.general} />
       )}
 
       {productGroups.membership && (

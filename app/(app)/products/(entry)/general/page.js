@@ -6,7 +6,7 @@ import { useImmer } from 'use-immer';
 
 export default function Page() {
   const [products, setProducts] = useImmer([]);
-  const categoryName = "casual";
+  const categoryName = "general";
 
   const getProducts = async () => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${categoryName}/products`);
@@ -30,8 +30,8 @@ export default function Page() {
         products={products}
         setProducts={setProducts}
         units={units}
-        type="casual"
-        title="Casual entry products"
+        type="general"
+        title="General entry products"
         categoryName={categoryName}
       />
     </div>

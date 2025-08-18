@@ -114,7 +114,7 @@ export default function SimplePinSet({ open, onSuccess, onCancel }) {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-4" autoComplete="off">
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
@@ -124,7 +124,7 @@ export default function SimplePinSet({ open, onSuccess, onCancel }) {
 
           <div className="space-y-2">
             <Input
-              type="password"
+              type="text"
               inputMode="numeric"
               pattern="[0-9]*"
               placeholder={mode === 'set' ? 'Enter 4-digit PIN' : 'PIN'}
@@ -136,13 +136,21 @@ export default function SimplePinSet({ open, onSuccess, onCancel }) {
               }}
               maxLength={4}
               className="text-center text-2xl tracking-widest"
+              style={{ WebkitTextSecurity: 'disc' }}
+              autoComplete="one-time-code"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
+              data-lpignore="true"
+              data-form-type="other"
+              name={`pin-${Date.now()}`}
               autoFocus
               disabled={loading}
             />
 
             {mode === 'set' && (
               <Input
-                type="password"
+                type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
                 placeholder="Confirm PIN"
@@ -154,6 +162,14 @@ export default function SimplePinSet({ open, onSuccess, onCancel }) {
                 }}
                 maxLength={4}
                 className="text-center text-2xl tracking-widest"
+                style={{ WebkitTextSecurity: 'disc' }}
+                autoComplete="one-time-code"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                data-lpignore="true"
+                data-form-type="other"
+                name={`confirm-pin-${Date.now()}`}
                 disabled={loading}
               />
             )}

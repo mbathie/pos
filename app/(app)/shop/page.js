@@ -41,12 +41,12 @@ export default function Page() {
 
   const shopItems = [
     { 
-      title: "Casual Entry", 
+      title: "General Entry", 
       icon: Ticket, 
-      href: "/shop/casual", 
-      setupHref: "/products/casual",
-      type: "casual",
-      breadcrumb: { href: "/shop/casual", name: "Casual Entry" } 
+      href: "/shop/general", 
+      setupHref: "/products/general",
+      type: "general",
+      breadcrumb: { href: "/shop/general", name: "General Entry" } 
     },
     { 
       title: "Classes & Courses", 

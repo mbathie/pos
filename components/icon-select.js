@@ -21,7 +21,8 @@ export default function IconSelect({
   // const [isOpen, setIsOpen] = useState(false)
 
   const [selectedImage, setSelectedImage] = useState(null);
-  const [crop, setCrop] = useState({ unit: '%', width: 50, x: 25, y: 25 });
+  const [crop, setCrop] = useState(null);
+  const [completedCrop, setCompletedCrop] = useState(null);
   const imgRef = useRef(null);
 
   useEffect(() => {
@@ -97,7 +98,7 @@ export default function IconSelect({
             </TabsContent>
 
             <TabsContent value="image" className="h-full overflow-auto">
-              <div className="p-4 text-muted-foreground flex flex-col items-center">
+              <div className="p-4 text-muted-foreground flex flex-col items-center gap-4">
                 {!selectedImage && (
                   <label
                     htmlFor="image-upload"
@@ -134,28 +135,68 @@ export default function IconSelect({
                 )}
 
                 {selectedImage && (
-                  <>
+                  <div className="flex flex-col gap-4 w-full items-center">
                     <ReactCrop
                       crop={crop}
                       onChange={(c) => setCrop(c)}
+                      onComplete={(c, percentCrop) => setCompletedCrop(percentCrop)}
                       aspect={1}
+                      className="max-h-[350px]"
                     >
                       <img
                         ref={imgRef}
                         src={selectedImage}
+                        className="max-w-full h-auto"
+                        style={{ maxHeight: '350px', width: 'auto', display: 'block' }}
                         onLoad={(e) => {
                           const { width, height } = e.currentTarget;
-                          setCrop({
-                            unit: '%',
-                            width: 50,
-                            aspect: 1,
-                            x: 25,
-                            y: 25,
-                          });
+                          // Calculate the maximum square that fits in the image
+                          const minDimension = Math.min(width, height);
+                          const maxSquarePercent = (minDimension / Math.max(width, height)) * 100;
+                          
+                          // Center the square crop
+                          let initialCrop;
+                          
+                          if (width > height) {
+                            // Landscape image - center horizontally
+                            const xOffset = (100 - maxSquarePercent) / 2;
+                            initialCrop = {
+                              unit: '%',
+                              width: maxSquarePercent,
+                              height: 100,
+                              x: xOffset,
+                              y: 0,
+                              aspect: 1,
+                            };
+                          } else if (height > width) {
+                            // Portrait image - center vertically
+                            const yOffset = (100 - maxSquarePercent) / 2;
+                            initialCrop = {
+                              unit: '%',
+                              width: 100,
+                              height: maxSquarePercent,
+                              x: 0,
+                              y: yOffset,
+                              aspect: 1,
+                            };
+                          } else {
+                            // Square image - use full image
+                            initialCrop = {
+                              unit: '%',
+                              width: 100,
+                              height: 100,
+                              x: 0,
+                              y: 0,
+                              aspect: 1,
+                            };
+                          }
+                          
+                          setCrop(initialCrop);
+                          setCompletedCrop(initialCrop);
                         }}
-                      />
+                        />
                     </ReactCrop>
-                    <div className="flex gap-2 mt-4">
+                    <div className="flex gap-2">
                       <Button
                         variant="outline"
                         onClick={() => setSelectedImage(null)}
@@ -164,26 +205,32 @@ export default function IconSelect({
                       </Button>
                       <Button
                         onClick={() => {
-                          if (!imgRef.current) return;
-                          const canvas = document.createElement('canvas');
+                          if (!imgRef.current || !completedCrop) return;
+                          
                           const image = imgRef.current;
-                          const scaleX = image.naturalWidth / image.width;
-                          const scaleY = image.naturalHeight / image.height;
-                          canvas.width = crop.width;
-                          canvas.height = crop.height;
+                          const canvas = document.createElement('canvas');
+                          canvas.width = 200;
+                          canvas.height = 200;
+                          
                           const ctx = canvas.getContext('2d');
+                          
+                          // The completed crop is in percentages
+                          const scaleX = image.naturalWidth / 100;
+                          const scaleY = image.naturalHeight / 100;
+                          
                           ctx.drawImage(
                             image,
-                            crop.x * scaleX,
-                            crop.y * scaleY,
-                            crop.width * scaleX,
-                            crop.height * scaleY,
+                            completedCrop.x * scaleX,
+                            completedCrop.y * scaleY,
+                            completedCrop.width * scaleX,
+                            completedCrop.height * scaleY,
                             0,
                             0,
-                            crop.width,
-                            crop.height
+                            200,
+                            200
                           );
-                          const base64Image = canvas.toDataURL('image/jpeg');
+                          
+                          const base64Image = canvas.toDataURL('image/jpeg', 0.9);
                           updateProduct({ pIdx, key: 'thumbnail', value: base64Image });
                           setOpen(false);
                         }}
@@ -191,7 +238,7 @@ export default function IconSelect({
                         Set Thumbnail
                       </Button>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             </TabsContent>

@@ -29,7 +29,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
   return (
 
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent className="sm:max-w-[500px] flex flex-col h-full">
+      <SheetContent className="sm:max-w-[700px] flex flex-col h-full">
         <SheetHeader className="shrink-0">
           <SheetTitle>
             <div className='flex items-center space-x-1'>
@@ -58,7 +58,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
                       key={vIdx} className='text-sm flex space-x-2 items-center w-full cursor-pointer hover:bg-muted/50 py-1 rounded-md'
                       onClick={() => selectVariation({setProduct, vIdx})}
                     >
-                      <Checkbox checked={v.selected} className='size-6' />
+                      <Checkbox checked={v.selected} className='size-9' />
                       <div>{v.name}</div>
                       <div className='ml-auto'>${parseFloat(v.amount).toFixed(2)}</div>
                     </div>
@@ -84,7 +84,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
                               key={m._id} className='gap-2 flex items-center flex-row cursor-pointer hover:bg-muted/50 p-2 pl-0 rounded-md'
                               onClick={() => selectMod({setProduct, mcIdx, mIdx, mName: m.name})}
                             >
-                              <Checkbox checked={m.selected} className='size-6' />
+                              <Checkbox checked={m.selected} className='size-9' />
                               <div>{m.name}</div>
                               {m.amount > 0 && <div className='ml-1'>${parseFloat(m.amount).toFixed(2)}</div>}
                             </div>

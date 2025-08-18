@@ -42,19 +42,19 @@ export function AppSidebar(props) {
     { 
       title: "Schedules", icon: Calendar,
       items: [
-        { title: "Casual Entry", url: "/manage/casual" },
+        { title: "General Entry", url: "/manage/general" },
         { title: "Class & Courses", url: "/manage/classes" },
       ]
     },
     { title: "Check-ins", url: "/manage/checkins", icon: CheckCircle },
     { title: "Customers", url: "/manage/customers", icon: UserCheck },
-    { title: "Waiver", url: `${process.env.NEXT_PUBLIC_DOMAIN}/org/${employee?.org?._id || 'default'}/waiver`, icon: QrCode },
+    // { title: "Waiver", url: `${process.env.NEXT_PUBLIC_DOMAIN}/org/${employee?.org?._id || 'default'}/waiver`, icon: QrCode },
     { title: "Transactions", url: "/manage/transactions", icon: Receipt },
     { groupLabel: "Setup", permission: "group:setup"},
     { 
       title: "Products", icon: Tag,
       items: [
-        { title: "Casual Entry", url: "/products/casual" },
+        { title: "General Entry", url: "/products/general" },
         { title: "Classes", url: "/products/classes" },
         { title: "Membership", url: "/products/memberships" },
         { title: "Shop", url: "/products/shop" },

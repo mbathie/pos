@@ -101,17 +101,25 @@ export default function PinDialogEntry({ open, onOpenChange, onSuccess }) {
             Please enter your 4-digit employee PIN to access the shop
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
           <div className="space-y-2 text-sm">
             <Input
-              type="password"
+              type="text"
               inputMode="numeric"
               pattern="[0-9]*"
               placeholder="PIN"
               value={pin}
               onChange={handlePinChange}
-              className={`w-52 mx-auto text-center tracking-widest ${error ? 'border-destructive focus:border-destructive' : ''}`}
+              className={`w-52 mx-auto text-center tracking-[0.5em] font-mono ${error ? 'border-destructive focus:border-destructive' : ''}`}
+              style={{ WebkitTextSecurity: 'disc' }}
               maxLength={4}
+              autoComplete="one-time-code"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
+              data-lpignore="true"
+              data-form-type="other"
+              name={`pin-${Date.now()}`}
               autoFocus
             />
           </div>

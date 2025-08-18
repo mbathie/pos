@@ -42,7 +42,7 @@ export default function Page() {
             <CardTitle className="text-lg">Store Locations</CardTitle>
             <CardDescription>Manage your business locations</CardDescription>
           </div>
-          <Link href="/locations/create">
+          <Link href="/manage/locations/create">
             <Button size="sm">
               <Plus className="size-4"/> Add Location
             </Button>

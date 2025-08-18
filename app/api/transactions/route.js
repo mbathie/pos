@@ -8,6 +8,7 @@ export async function GET(request) {
   
   try {
     const { employee } = await getEmployee();
+    console.log(employee)
     if (!employee) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -18,7 +19,10 @@ export async function GET(request) {
     const paymentMethod = searchParams.get('paymentMethod');
     const customerId = searchParams.get('customerId');
 
-    let query = { org: employee.org._id };
+    let query = { 
+      org: employee.org._id,
+      location: employee.selectedLocationId 
+    };
 
     // Filter by status
     if (status && status !== 'all') {
@@ -47,8 +51,6 @@ export async function GET(request) {
       .populate('customer', 'name phone')
       .sort({ createdAt: -1 })
       .lean();
-
-    console.log(transactions);
 
     return NextResponse.json(transactions);
 

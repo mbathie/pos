@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useGlobals } from '@/lib/globals'
 
 import { TypographyLarge, TypographyMuted } from '@/components/ui/typography'
 import { Card, CardContent } from '@/components/ui/card'
@@ -20,6 +21,7 @@ import {
 
 export default function Page() {
   const router = useRouter()
+  const { employee } = useGlobals()
   const [loading, setLoading] = useState(false)
 
   const [ chargesEnabled, setChargesEnabled ] = useState(false)
@@ -32,7 +34,7 @@ export default function Page() {
   const [ completedCrop, setCompletedCrop ] = useState(null)
   const [ uploadingLogo, setUploadingLogo ] = useState(false)
   const imgRef = useRef(null)
-  const fileInputRef = useRef(null) 
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     const fetchStripeAccount = async () => {
@@ -279,11 +281,11 @@ export default function Page() {
             </div>
             <div className='flex gap-2 flex-row'>
               <div className="rounded-lg overflow-hidden w-[148px] h-[148px]">
-                <QRCode value={`${process.env.NEXT_PUBLIC_DOMAIN}/org/${org._id}/waiver`} size={128} />
+                <QRCode value={`${process.env.NEXT_PUBLIC_DOMAIN}/org/${employee?.org?._id}/waiver`} size={128} />
               </div>
               <div className='flex flex-col gap-2'>
                 <div>
-                  <Link target="_blank" href={`${process.env.NEXT_PUBLIC_DOMAIN}/org/${org._id}/waiver`}>
+                  <Link target="_blank" href={`${process.env.NEXT_PUBLIC_DOMAIN}/org/${employee?.org?._id}/waiver`}>
                     <Button className='w-38 flex justify-start'>
                       <LinkIcon className="size-4" />
                       Waiver Link
