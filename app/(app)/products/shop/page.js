@@ -227,16 +227,7 @@ export default function Page() {
       }
     }
     
-    async function fetchFolders() {
-      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/folders?search=');
-      const data = await res.json();
-      if (Array.isArray(data)) {
-        setFolders(data);
-      }
-    }
-    
     fetchCategories();
-    fetchFolders();
   }, []);
 
 
@@ -291,6 +282,20 @@ export default function Page() {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${c._id}/products`);
     const _products = await res.json()
     setProducts(_products.products)
+    
+    // Also fetch folders for this category
+    fetchFolders(c._id);
+  };
+  
+  const fetchFolders = async (categoryId) => {
+    const url = categoryId 
+      ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders?category=${categoryId}`
+      : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders?search=`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (Array.isArray(data)) {
+      setFolders(data);
+    }
   };
 
   return (
@@ -476,28 +481,30 @@ export default function Page() {
           </div>
           
           {/* Folders Column */}
-          <div className="flex flex-col w-48 border-x px-2 h-full">
-            <div className="mb-4">
-              <h2 className="text-sm font-medium">
-                Folders
-              </h2>
-            </div>
-            <div className="flex-1 overflow-y-auto min-h-0">
-              <div className="flex flex-col gap-1">
-                {folders.map((folder) => (
-                  <div 
-                    key={folder._id}
-                    className="flex items-center gap-2 p-2 rounded hover:bg-muted/50 cursor-pointer transition-colors"
-                  >
-                    <div
-                      style={{ 
-                        backgroundColor: colors?.[folder.color?.split('-')[0]]?.[folder.color?.split('-')[1]] 
-                      }}
-                      className="w-5 h-5 rounded-sm border flex-shrink-0"
-                    />
-                    <span className="text-sm truncate">{folder.name}</span>
-                  </div>
-                ))}
+          <div className="flex flex-col w-16 border-x h-full">
+            <div className="flex-1 overflow-y-auto min-h-0 py-2">
+              <div className="flex flex-col items-center gap-2">
+                <TooltipProvider>
+                  {folders.map((folder) => (
+                    <Tooltip key={folder._id}>
+                      <TooltipTrigger asChild>
+                        <div 
+                          className="cursor-pointer hover:scale-110 transition-transform"
+                        >
+                          <div
+                            style={{ 
+                              backgroundColor: colors?.[folder.color?.split('-')[0]]?.[folder.color?.split('-')[1]] 
+                            }}
+                            className="w-10 h-10 rounded-md border-2 border-border"
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right">
+                        <p>{folder.name}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </TooltipProvider>
               </div>
             </div>
           </div>

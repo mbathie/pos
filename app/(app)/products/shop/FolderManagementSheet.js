@@ -15,7 +15,7 @@ import {
 import Colors from '@/components/colors';
 import colors from 'tailwindcss/colors';
 
-export function FolderManagementSheet({ open, onOpenChange, onFolderUpdated, onFolderDeleted, initialFolder }) {
+export function FolderManagementSheet({ open, onOpenChange, onFolderUpdated, onFolderDeleted, initialFolder, category }) {
   const [folders, setFolders] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [folderName, setFolderName] = useState('');
@@ -47,8 +47,11 @@ export function FolderManagementSheet({ open, onOpenChange, onFolderUpdated, onF
 
   const fetchFolders = async () => {
     try {
-      // Get all folders
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders?search=`);
+      // Get folders for current category
+      const url = category?._id 
+        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders?category=${category._id}`
+        : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders?search=`;
+      const res = await fetch(url);
       const data = await res.json();
       if (res.ok && Array.isArray(data)) {
         setFolders(data);
@@ -77,7 +80,8 @@ export function FolderManagementSheet({ open, onOpenChange, onFolderUpdated, onF
       credentials: 'include',
       body: JSON.stringify({ 
         name: folderName, 
-        color: folderColor 
+        color: folderColor,
+        category: category?._id 
       }),
     });
 

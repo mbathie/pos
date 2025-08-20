@@ -268,6 +268,7 @@ export default function ProductSheet({
               setFolder={setFolder}
               onManageFolders={() => setFolderSheetOpen(true)}
               refreshTrigger={folderRefreshTrigger}
+              category={category}
             />
           </div>
 
@@ -512,6 +513,7 @@ export default function ProductSheet({
         open={folderSheetOpen}
         onOpenChange={setFolderSheetOpen}
         initialFolder={product?.folder}
+        category={category}
         onFolderUpdated={(folder, isNew) => {
           // If it's a new folder or updating existing, set it as the product's folder
           if (product && folder) {

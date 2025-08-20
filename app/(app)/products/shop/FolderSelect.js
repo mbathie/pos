@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import colors from 'tailwindcss/colors';
 
-export function FolderSelect({ product, pIdx, setFolder, onManageFolders, refreshTrigger }) {
+export function FolderSelect({ product, pIdx, setFolder, onManageFolders, refreshTrigger, category }) {
   const [folders, setFolders] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(product?.folder?._id || '');
 
@@ -25,8 +25,11 @@ export function FolderSelect({ product, pIdx, setFolder, onManageFolders, refres
 
   const fetchFolders = async () => {
     try {
-      // API requires a search parameter, use empty string to get all
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders?search=`);
+      // Get folders for current category
+      const url = category?._id 
+        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders?category=${category._id}`
+        : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders?search=`;
+      const res = await fetch(url);
       const data = await res.json();
       if (res.ok && Array.isArray(data)) {
         setFolders(data);

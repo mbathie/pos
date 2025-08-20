@@ -8,10 +8,13 @@ export async function POST(req, { params }) {
 
   const { employee } = await getEmployee();
 
-  const { name, color } = await req.json();
+  const { name, color, category } = await req.json();
 
   const folder = await Folder.create({
-    name, color, org: employee.org._id,
+    name, 
+    color, 
+    category,
+    org: employee.org._id,
   });
 
   console.log(folder)
@@ -24,27 +27,30 @@ export async function GET(req) {
 
   const { searchParams } = new URL(req.url)
   const search = searchParams.get("search")
+  const categoryId = searchParams.get("category")
 
   const { employee } = await getEmployee()
 
-  // If no search parameter or empty string, return all folders
-  if (!search || search === '') {
-    const folders = await Folder.find({
-      org: employee.org._id
-    }).sort({ name: 1 }) // Sort alphabetically
+  // Build query
+  let query = { org: employee.org._id }
+  
+  // Add category filter if provided
+  if (categoryId) {
+    query.category = categoryId
+  }
 
+  // If no search parameter or empty string, return filtered folders
+  if (!search || search === '') {
+    const folders = await Folder.find(query).sort({ name: 1 }) // Sort alphabetically
     return NextResponse.json(folders)
   }
 
-  // Otherwise, search for folders
+  // Otherwise, search for folders with filters
   const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') // escape special chars
   const regex = new RegExp(escaped, "i") // case-insensitive
-  const folders = await Folder.find({
-    org: employee.org._id,
-    $or: [
-      { name: { $regex: regex } }
-    ]
-  }).sort({ name: 1 })
+  query.$or = [{ name: { $regex: regex } }]
+  
+  const folders = await Folder.find(query).sort({ name: 1 })
 
   console.log(folders)
 
