@@ -112,6 +112,7 @@ function SortableCategory({ category, isActive, onSelect, onEdit, onDelete, chil
 
 export default function Page() {
   const [categories, setCategories] = useState([]);
+  const [folders, setFolders] = useState([]);
   const [category, setCategory] = useState({});
   const [product, setProduct] = useState({});
   const [products, setProducts] = useImmer([]);
@@ -225,7 +226,17 @@ export default function Page() {
         getCategoryProducts(c.categories[0]);
       }
     }
+    
+    async function fetchFolders() {
+      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/folders?search=');
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setFolders(data);
+      }
+    }
+    
     fetchCategories();
+    fetchFolders();
   }, []);
 
 
@@ -407,13 +418,13 @@ export default function Page() {
         </AlertDialogPortal>
       </AlertDialog>
 
-      <div className="p-4">
+      <div className="p-4 h-screen flex flex-col">
         <div className="mb-4">
           <h1 className="font-semibold">
             Retail Shop Products
           </h1>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-1 overflow-hidden">
           {/* Categories Sidebar */}
           <div className="flex flex-col min-w-56">
             <div className="flex items-center justify-between mb-4">
@@ -462,6 +473,33 @@ export default function Page() {
                 </div>
               </SortableContext>
             </DndContext>
+          </div>
+          
+          {/* Folders Column */}
+          <div className="flex flex-col w-48 border-x px-2 h-full">
+            <div className="mb-4">
+              <h2 className="text-sm font-medium">
+                Folders
+              </h2>
+            </div>
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <div className="flex flex-col gap-1">
+                {folders.map((folder) => (
+                  <div 
+                    key={folder._id}
+                    className="flex items-center gap-2 p-2 rounded hover:bg-muted/50 cursor-pointer transition-colors"
+                  >
+                    <div
+                      style={{ 
+                        backgroundColor: colors?.[folder.color?.split('-')[0]]?.[folder.color?.split('-')[1]] 
+                      }}
+                      className="w-5 h-5 rounded-sm border flex-shrink-0"
+                    />
+                    <span className="text-sm truncate">{folder.name}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
           
           {/* Products Content */}
