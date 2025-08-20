@@ -31,7 +31,7 @@ export async function GET(request) {
 
     // Fetch products with populated references
     const products = await Product.find(query)
-      .populate('category', 'name')
+      .populate('category', 'name thumbnail')
       .populate('folder', 'name color')
       .populate('accounting', 'name code')
       .sort({ order: 1, name: 1 }) // Sort by order first, then by name

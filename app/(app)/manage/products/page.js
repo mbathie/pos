@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, X, ChevronsUpDown, Edit, Warehouse } from 'lucide-react';
+import { Search, X, ChevronsUpDown, Edit, Warehouse, Image, Tag } from 'lucide-react';
 import colors from 'tailwindcss/colors';
 import AccountingSelect from '@/app/(app)/products/shop/accounting-select';
 
@@ -441,10 +441,36 @@ export default function ManageProductsPage() {
                     ) : (
                       filteredProducts.map((product) => (
                         <TableRow key={product._id} className="hover:bg-muted/50">
-                          <TableCell className="font-medium align-top w-1/5">{product.name}</TableCell>
+                          <TableCell className="font-medium align-top w-1/5">
+                            <div className="flex items-center gap-2">
+                              {product.thumbnail ? (
+                                <img 
+                                  src={product.thumbnail} 
+                                  alt={product.name} 
+                                  className="w-8 h-8 rounded object-cover flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                                  <Tag className="w-4 h-4 text-muted-foreground" />
+                                </div>
+                              )}
+                              {product.name}
+                            </div>
+                          </TableCell>
                           <TableCell className="align-top w-1/8">
                             {product.category ? (
-                              <span className="text-sm">{product.category.name}</span>
+                              <div className="flex items-center gap-2">
+                                {product.category.thumbnail ? (
+                                  <img 
+                                    src={product.category.thumbnail} 
+                                    alt={product.category.name} 
+                                    className="w-5 h-5 rounded object-cover"
+                                  />
+                                ) : (
+                                  <Image className="w-5 h-5 text-muted-foreground" />
+                                )}
+                                <span className="text-sm">{product.category.name}</span>
+                              </div>
                             ) : (
                               <span>-</span>
                             )}
@@ -538,7 +564,22 @@ export default function ManageProductsPage() {
       }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit Product</DialogTitle>
+            <DialogTitle>
+              <div className="flex items-center gap-2">
+                {editDialog.product?.thumbnail ? (
+                  <img 
+                    src={editDialog.product.thumbnail} 
+                    alt={editDialog.product.name} 
+                    className="w-8 h-8 rounded object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
+                    <Tag className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                )}
+                Edit Product
+              </div>
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
