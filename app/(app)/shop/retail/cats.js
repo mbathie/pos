@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react'
 // import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import Image from 'next/image'
 import { Button } from '@/components/ui/button'
-import { ChevronRight, Minus, Plus, Folder } from "lucide-react"
+import { ChevronRight, Minus, Plus, Folder, Image as ImageIcon } from "lucide-react"
 import { useHandler } from './useHandler'
 import { useImmer } from 'use-immer'
 import { useGlobals } from '@/lib/globals'
@@ -11,6 +11,7 @@ import { useGlobals } from '@/lib/globals'
 import colors from 'tailwindcss/colors';
 import ProductDetail from './productDetail'
 import { useRouter } from 'next/navigation';
+import { SvgIcon } from '@/components/ui/svg-icon';
 
 export default function Page({handleSetCat, selected}) {
   const [categories, setCategories] = useState([])
@@ -34,9 +35,18 @@ export default function Page({handleSetCat, selected}) {
             onClick={async () => {
               await handleSetCat(c)
             }}
-            className="hover:text-black w-full cursor-pointer h-12 rounded-none border-t-0 border-x-0 last:border-b-0"
+            className="hover:text-black w-full cursor-pointer h-12 rounded-none border-t-0 border-x-0 last:border-b-0 justify-start gap-2"
           >
-            {c.name}
+            {c.thumbnail ? (
+              <SvgIcon
+                src={c.thumbnail}
+                alt={c.name}
+                className="size-6 flex-shrink-0 rounded-xs"
+              />
+            ) : (
+              <ImageIcon className="size-6 flex-shrink-0" />
+            )}
+            <span>{c.name}</span>
           </Button>
         </div>
       ))}

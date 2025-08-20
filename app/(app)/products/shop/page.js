@@ -2,24 +2,25 @@
 
 import React, { useState, useEffect } from 'react';
 import { useImmer } from 'use-immer';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import {
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+// Drag and drop imports - NO LONGER USED with new menu
+// import {
+//   DndContext,
+//   closestCenter,
+//   KeyboardSensor,
+//   PointerSensor,
+//   useSensor,
+//   useSensors,
+// } from '@dnd-kit/core';
+// import {
+//   arrayMove,
+//   SortableContext,
+//   sortableKeyboardCoordinates,
+//   verticalListSortingStrategy,
+// } from '@dnd-kit/sortable';
+// import {
+//   useSortable,
+// } from '@dnd-kit/sortable';
+// import { CSS } from '@dnd-kit/utilities';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -30,7 +31,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogOverlay,
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Separator } from '@radix-ui/react-separator'
 import { Button } from '@/components/ui/button'
-import { Image, Plus, Ellipsis, EllipsisVertical, Info, Trash, Loader2, CheckCircle, Save, GripVertical, Edit2, Trash2, PanelLeft, ChevronRight, ChevronLeft  } from 'lucide-react'
+import { Image, Plus, Ellipsis, EllipsisVertical, Info, Trash, Loader2, CheckCircle, Save, GripVertical, Edit2, Trash2, PanelLeft, ChevronRight, ChevronLeft, MoreVertical, Folder as FolderIcon } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from "@/components/ui/textarea"
@@ -42,13 +43,15 @@ import ProductsTable from './ProductsTable'
 import ProductSheet from './ProductSheet'
 import { FolderSelect } from './FolderSelect'
 import { FolderManagementSheet } from './FolderManagementSheet'
-import IconSelect  from '@/components/icon-select'
-import CategoryIconSelect from '@/components/category-icon-select'
+import IconSelect from '@/components/icon-select'
 import AccountingSelect from './accounting-select'
 import colors from 'tailwindcss/colors';
 import { useAutoSave } from '../useAutoSave';
+import { CategoryFolderMenu } from './CategoryFolderMenu';
+import { SvgIcon } from '@/components/ui/svg-icon';
 
-// Sortable Category Component
+// Sortable Category Component - NO LONGER USED (replaced by CategoryFolderMenu)
+// Keeping for reference only
 function SortableCategory({ category, isActive, onSelect, onEdit, onEditIcon, onDelete, expanded }) {
   const {
     attributes,
@@ -65,98 +68,9 @@ function SortableCategory({ category, isActive, onSelect, onEdit, onEditIcon, on
     opacity: isDragging ? 0.5 : 1,
   };
 
-  if (!expanded) {
-    // Collapsed view - just icon
-    return (
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <div
-              ref={setNodeRef}
-              style={style}
-              className={`flex items-center justify-center size-10 rounded-lg cursor-pointer ${
-                isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-accent/50'
-              } ${!category.thumbnail && !isActive ? 'bg-muted/20' : ''}`}
-              onClick={onSelect}
-            >
-              {category.thumbnail ? (
-                <img 
-                  src={category.thumbnail} 
-                  alt={category.name} 
-                  className="invert size-6 rounded-lg object-cover text-foreground"
-                />
-              ) : (
-                <Image className="stroke-1 size-6 rounded-lg text-foreground" />
-              )}
-            </div>
-          </TooltipTrigger>
-          <TooltipContent side="right">
-            <p>{category.name}</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    );
-  }
 
-  // Expanded view - icon + name + controls
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`group flex items-center justify-between h-10 rounded-lg cursor-pointer transition-colors mx-2 ${
-        isActive ? 'bg-primary text-primary-foreground' : 'hover:bg-accent/50'
-      } ${isDragging ? 'z-50' : ''} ${!category.thumbnail && !isActive ? 'bg-muted/20' : ''}`}
-    >
-      <div
-        {...attributes}
-        {...listeners}
-        className="flex items-center justify-center w-6 cursor-grab active:cursor-grabbing"
-      >
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
-      </div>
-      <div
-        className="flex-1 flex items-center gap-2 text-sm mx-2"
-        onClick={onSelect}
-      >
-        {category.thumbnail ? (
-          <img 
-            src={category.thumbnail} 
-            alt={category.name} 
-            className={`w-6 h-6 rounded object-cover ${isActive ? 'invert' : 'invert opacity-60'}`}
-          />
-        ) : (
-          <Image className={`w-6 h-6 ${isActive ? 'text-primary-foreground' : 'text-foreground'}`} />
-        )}
-        <span>{category.name}</span>
-      </div>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="icon"
-            className="size-6 opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <EllipsisVertical className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={onEditIcon}>
-            <Image className="size-4 mr-1" />
-            Edit Icon
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={onEdit}>
-            <Edit2 className="size-4 mr-1" />
-            Edit Category
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={onDelete} className="text-destructive">
-            <Trash2 className="size-4 mr-1" />
-            Delete Category
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
-  );
+
+
 }
 
 export default function Page() {
@@ -169,7 +83,7 @@ export default function Page() {
   const [allProducts, setAllProducts] = useImmer([]);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [toDelete, setToDelete] = useState({});
-  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
+  // const [categoriesExpanded, setCategoriesExpanded] = useState(false); // No longer needed
 
   const [ addItem, setAddItem ] = useState({})
   const [ addItemOpen, setAddItemOpen ] = useState(false)
@@ -217,50 +131,19 @@ export default function Page() {
   // Use the auto-save hook
   const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(products, autoSaveProduct, 3000);
 
-  // Drag and drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  // Drag and drop sensors - NO LONGER USED
+  // const sensors = useSensors(
+  //   useSensor(PointerSensor),
+  //   useSensor(KeyboardSensor, {
+  //     coordinateGetter: sortableKeyboardCoordinates,
+  //   })
+  // );
 
-  // Handle drag end for categories
-  const handleDragEnd = async (event) => {
-    const { active, over } = event;
-
-    if (active.id !== over.id) {
-      const oldIndex = categories.findIndex((c) => c._id === active.id);
-      const newIndex = categories.findIndex((c) => c._id === over.id);
-      
-      const reorderedCategories = arrayMove(categories, oldIndex, newIndex);
-      
-      // Update local state immediately for smooth UX
-      setCategories(reorderedCategories);
-      
-      // Assign order values based on new positions
-      const orderedCategories = reorderedCategories.map((cat, index) => ({
-        ...cat,
-        order: index + 1
-      }));
-      
-      // Update each category's order in the backend
-      try {
-        await Promise.all(
-          orderedCategories.map(cat =>
-            fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${cat._id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ order: cat.order }),
-            })
-          )
-        );
-      } catch (error) {
-        console.error('Error updating category order:', error);
-        // Optionally revert the order on error
-      }
-    }
-  };
+  // Handle drag end for categories - NO LONGER USED
+  // const handleDragEnd = async (event) => {
+  //   const { active, over } = event;
+  //   ...
+  // };
 
   const handleDelete = async () => {
     if (toDelete.variationIdx !== undefined) {
@@ -282,8 +165,11 @@ export default function Page() {
       const c = await res.json();
       setCategories(c.categories);
       
-      // Default select the first category if available
+      // Fetch all folders for all categories
       if (c.categories && c.categories.length > 0) {
+        fetchAllFolders();
+        
+        // Default select the first category
         setCategory(c.categories[0]);
         getCategoryProducts(c.categories[0]);
       }
@@ -353,9 +239,6 @@ export default function Page() {
     setAllProducts(_products.products);
     setProducts(_products.products);
     setSelectedFolder(null);
-    
-    // Also fetch folders for this category
-    fetchFolders(c._id);
   };
   
   const fetchFolders = async (categoryId) => {
@@ -365,6 +248,17 @@ export default function Page() {
     const res = await fetch(url);
     const data = await res.json();
     if (Array.isArray(data)) {
+      setFolders(data);
+    }
+  };
+  
+  const fetchAllFolders = async () => {
+    // Fetch all folders regardless of category to show chevrons
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders`);
+    const data = await res.json();
+    if (data.folders && Array.isArray(data.folders)) {
+      setFolders(data.folders);
+    } else if (Array.isArray(data)) {
       setFolders(data);
     }
   };
@@ -405,7 +299,7 @@ export default function Page() {
                 {newCategoryThumbnail ? (
                   <img src={newCategoryThumbnail} alt="Icon" className="w-full h-full rounded-lg object-cover" />
                 ) : (
-                  <Image className="size-8 text-black" />
+                  <Image className="size-8" />
                 )}
               </Button>
               <Input 
@@ -547,196 +441,57 @@ export default function Page() {
         </AlertDialogPortal>
       </AlertDialog>
 
-      <div className="p-2 pr-4 pb-0 h-full flex flex-col">
-        {/* Top header row with panel control */}
-        <div className="ml-2 mb-2">Manage Shop Products</div>
-        <div className="flex gap-4- mb-2">
-          <div className={`transition-all duration-200 ${
-            categoriesExpanded ? 'min-w-56' : 'w-16-'
-          }`}>
-            <div className="ml-2 justify-start flex justify-center">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setCategoriesExpanded(!categoriesExpanded)}
-                      className="size-10"
-                    >
-                      <ChevronLeft className={`size-4 transition-transform ${
-                        categoriesExpanded ? '' : 'rotate-180'
-                      }`} />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">
-                    <p>{categoriesExpanded ? 'Collapse' : 'Expand'} categories</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-          </div>
-        </div>
+      <div className="p-2 pl-0 pr-4 pb-0 h-full flex flex-col">
+        {/* Top header row */}
+        <div className="p-4 pt-0">Manage Shop Products</div>
         
         {/* Main content area */}
         <div className="flex gap-4- flex-1 overflow-hidden">
-          {/* Categories Sidebar */}
-          <div className={`flex flex-col transition-all duration-200 ${
-            categoriesExpanded ? 'min-w-56' : 'w-16-'
-          } border-r`}>
-            {/* Categories content */}
-            <div className="flex-1 overflow-y-auto min-h-0">
-              <div className={`flex ${
-                categoriesExpanded ? 'justify-start px-2' : 'justify-center'
-              } mb-2`}>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => setCategoryDialogOpen(true)}
-                        className="w-10 h-10 cursor-pointer"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      <p>Add new category</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
+          {/* Categories and Folders Menu */}
+          <div className="flex flex-col w-64 rounded-tr-lg h-full bg-accent/30">
+            <div className="p-2 flex items-center">
+              <div className="text-xs text-muted-foreground font-semibold ml-2">Categories</div>
+              <div className="flex-1" />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCategoryDialogOpen(true)}
+                className="rounded-lg mr-1"
               >
-                <SortableContext
-                  items={categories.map(c => c._id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  <div className={`flex flex-col gap-2 ${
-                    categoriesExpanded ? 'px-0' : 'items-center px-2'
-                  }`}>
-                    {categories.map((c) => (
-                      <SortableCategory
-                        key={c._id}
-                        category={c}
-                        isActive={category._id === c._id}
-                        expanded={categoriesExpanded}
-                        onSelect={() => {
-                          setCategory(c);
-                          setProduct({ new: false });
-                          getCategoryProducts(c);
-                        }}
-                        onEdit={() => {
-                          setEditingCategory(c);
-                          setEditCategoryName(c.name);
-                          setEditCategoryThumbnail(c.thumbnail || '');
-                          setEditCategoryDialogOpen(true);
-                        }}
-                        onEditIcon={() => {
-                          setEditingCategory(c);
-                          setEditCategoryName(c.name);
-                          setEditCategoryThumbnail(c.thumbnail || '');
-                          setCategoryIconMode('edit');
-                          setCategoryIconDialogOpen(true);
-                        }}
-                        onDelete={() => {
-                          setToDelete({ category: c });
-                          setDeleteOpen(true);
-                        }}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
+                <Plus className="ml-auto" />
+              </Button>
             </div>
-          </div>
-          
-          {/* Folders Column */}
-          <div className="flex flex-col w-16 border-r h-full">
-            <div className="flex-1 overflow-y-auto min-h-0 py-2-">
-              <div className="flex flex-col items-center gap-2">
-                <TooltipProvider>
-                  {/* Add new folder button */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="w-10 h-10 cursor-pointer"
-                        onClick={() => setFolderSheetOpen(true)}
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      <p>Add new folder</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  {/* Show all button */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className={`size-10 ${selectedFolder === null ? 'ring-2 ring-white' : ''} cursor-pointer`}
-                        onClick={() => {
-                          setSelectedFolder(null);
-                          setProducts(allProducts);
-                        }}
-                      >
-                        <span className="">All</span>
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      <p>Show all products</p>
-                    </TooltipContent>
-                  </Tooltip>
-                  
-                  {folders.map((folder) => {
-                    // Get initials from folder name
-                    const initials = folder.name
-                      .split(' ')
-                      .map(word => word[0])
-                      .join('')
-                      .toUpperCase()
-                      .slice(0, 2);
+            <div className="flex-1 overflow-y-auto min-h-0 px-2">
+              <CategoryFolderMenu
+                categories={categories}
+                folders={folders}
+                selectedCategory={category}
+                selectedFolder={selectedFolder}
+                onCategorySelect={(cat) => {
+                  setCategory(cat);
+                  setSelectedFolder(null);
+                  getCategoryProducts(cat);
+                }}
+                onFolderSelect={async (folder, cat) => {
+                  setSelectedFolder(folder);
+                  if (category._id !== cat._id) {
+                    // Switching to a different category
+                    setCategory(cat);
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${cat._id}/products`);
+                    const data = await res.json();
+                    const categoryProducts = data.products || [];
+                    setAllProducts(categoryProducts);
                     
-                    return (
-                      <Tooltip key={folder._id}>
-                        <TooltipTrigger asChild>
-                          <div 
-                            className={`cursor-pointer transition-all ${
-                              selectedFolder?._id === folder._id 
-                                ? 'scale-110- ring-2 ring-white rounded-md' 
-                                : 'hover:scale-110'
-                            }`}
-                            onClick={() => handleFolderClick(folder)}
-                          >
-                            <div
-                              style={{ 
-                                backgroundColor: colors?.[folder.color?.split('-')[0]]?.[folder.color?.split('-')[1]] 
-                              }}
-                              className="size-10 rounded-md border-2 border-border flex items-center justify-center"
-                            >
-                              <span className="text-xs font-semibold text-white/90">
-                                {initials}
-                              </span>
-                            </div>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">
-                          <p>{folder.name}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  })}
-                </TooltipProvider>
-              </div>
+                    // Filter by the selected folder
+                    const filtered = categoryProducts.filter(p => p.folder?._id === folder._id);
+                    setProducts(filtered);
+                  } else {
+                    // Same category, just filter by folder
+                    const filtered = allProducts.filter(p => p.folder?._id === folder._id);
+                    setProducts(filtered);
+                  }
+                }}
+              />
             </div>
           </div>
           
@@ -746,20 +501,82 @@ export default function Page() {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     {category?.name && (
-                      <div className="flex items-center gap-2">
-                        {category.thumbnail ? (
-                          <img 
-                            src={category.thumbnail} 
-                            alt={category.name} 
-                            className="w-6 h-6 rounded object-cover invert"
-                          />
-                        ) : (
-                          <Image className="w-6 h-6 text-foreground" />
-                        )}
-                        <div>
-                          {category.name}
+                      <>
+                        <div className="flex items-center gap-2">
+                          {category.thumbnail ? (
+                            <SvgIcon
+                              src={category.thumbnail}
+                              alt={category.name}
+                              className="size-5"
+                            />
+                          ) : (
+                            <Image className="w-6 h-6 text-foreground" />
+                          )}
+                          <div>
+                            {category.name}
+                          </div>
                         </div>
-                      </div>
+                        
+                        {/* Category actions menu */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                            >
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start">
+                            <DropdownMenuItem onClick={() => {
+                              setCategory(category);
+                              setFolderSheetOpen(true);
+                            }}>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Folder
+                            </DropdownMenuItem>
+                            {folders.length > 0 && (
+                              <DropdownMenuItem onClick={() => {
+                                setCategory(category);
+                                setFolderSheetOpen(true);
+                              }}>
+                                <FolderIcon className="h-4 w-4 mr-2" />
+                                Manage Folders
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onClick={() => {
+                              setEditingCategory(category);
+                              setEditCategoryName(category.name);
+                              setEditCategoryThumbnail(category.thumbnail || '');
+                              setCategoryIconMode('edit');
+                              setCategoryIconDialogOpen(true);
+                            }}>
+                              <Image className="h-4 w-4 mr-2" />
+                              Edit Icon
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setEditingCategory(category);
+                              setEditCategoryName(category.name);
+                              setEditCategoryThumbnail(category.thumbnail || '');
+                              setEditCategoryDialogOpen(true);
+                            }}>
+                              <Edit2 className="h-4 w-4 mr-2" />
+                              Edit Category
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                setToDelete({ category: category });
+                                setDeleteOpen(true);
+                              }}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </>
                     )}
                     {selectedFolder && (
                       <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted">
@@ -905,7 +722,7 @@ export default function Page() {
         category={category}
         onFolderUpdated={(folder, isNew) => {
           // Refresh the folders list
-          fetchFolders(category._id);
+          fetchAllFolders();
           setFolderRefreshTrigger(prev => prev + 1);
         }}
         onFolderDeleted={(deletedFolderId) => {
@@ -915,16 +732,17 @@ export default function Page() {
             setProducts(allProducts);
           }
           // Refresh the folders list
-          fetchFolders(category._id);
+          fetchAllFolders();
           setFolderRefreshTrigger(prev => prev + 1);
         }}
       />
       
       {/* Category Icon Select Dialog */}
-      <CategoryIconSelect
+      <IconSelect
         open={categoryIconDialogOpen}
         setOpen={setCategoryIconDialogOpen}
         query={categoryIconMode === 'create' ? newCategoryName : editCategoryName}
+        title="Select Category Icon"
         onIconSelected={async (thumbnail) => {
           if (categoryIconMode === 'create') {
             setNewCategoryThumbnail(thumbnail);

@@ -279,6 +279,10 @@ export default function ManageProductsPage() {
           aValue = a.folder?.name?.toLowerCase() || '';
           bValue = b.folder?.name?.toLowerCase() || '';
           break;
+        case 'menu':
+          aValue = a.category?.menu?.toLowerCase() || '';
+          bValue = b.category?.menu?.toLowerCase() || '';
+          break;
         case 'bump':
           aValue = a.bump === true ? 1 : 0;
           bValue = b.bump === true ? 1 : 0;
@@ -386,7 +390,16 @@ export default function ManageProductsPage() {
                       </div>
                     </TableHead>
                     <TableHead 
-                      className="cursor-pointer bg-muted hover:bg-muted/80 w-1/6"
+                      className="cursor-pointer bg-muted hover:bg-muted/80 w-1/8"
+                      onClick={() => handleSort('menu')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Menu
+                        <ChevronsUpDown className="size-4" />
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer bg-muted hover:bg-muted/80 w-1/8"
                       onClick={() => handleSort('folder')}
                     >
                       <div className="flex items-center gap-1">
@@ -421,7 +434,7 @@ export default function ManageProductsPage() {
                         <ChevronsUpDown className="size-4" />
                       </div>
                     </TableHead>
-                    <TableHead className="bg-muted rounded-tr-lg w-20">
+                    <TableHead className="bg-muted rounded-tr-lg w-18">
                       
                     </TableHead>
                   </TableRow>
@@ -433,7 +446,7 @@ export default function ManageProductsPage() {
                   <TableBody>
                     {filteredProducts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                           {hasActiveFilters ? 'No products match your filters.' : 
                            allProducts.length === 0 ? 'No products found.' : 'No products match your filters.'}
                         </TableCell>
@@ -464,15 +477,15 @@ export default function ManageProductsPage() {
                                   <img 
                                     src={product.category.thumbnail} 
                                     alt={product.category.name} 
-                                    className="w-5 h-5 rounded object-cover"
+                                    className="w-5 h-5 rounded object-cover invert"
                                   />
                                 ) : (
-                                  <Image className="w-5 h-5 text-muted-foreground" />
+                                  <Image className="w-5 h-5 text-muted-foreground/0" />
                                 )}
                                 <span className="text-sm">{product.category.name}</span>
                               </div>
                             ) : (
-                              <span>-</span>
+                              <span></span>
                             )}
                           </TableCell>
                           <TableCell className="align-top w-1/6">
@@ -482,10 +495,17 @@ export default function ManageProductsPage() {
                                 <span className="text-xs text-muted-foreground">({product.accounting.code})</span>
                               </div>
                             ) : (
-                              <span>-</span>
+                              <span></span>
                             )}
                           </TableCell>
-                          <TableCell className="align-top w-1/6">
+                          <TableCell className="align-top w-1/8">
+                            {product.category?.menu ? (
+                              <>{product.category.menu}</>
+                            ) : (
+                              <span></span>
+                            )}
+                          </TableCell>
+                          <TableCell className="align-top w-1/8">
                             {product.folder ? (
                               <div className="flex items-center gap-2">
                                 <div 
@@ -497,7 +517,7 @@ export default function ManageProductsPage() {
                                 </Badge>
                               </div>
                             ) : (
-                              <span>-</span>
+                              <span></span>
                             )}
                           </TableCell>
                           <TableCell className="align-top w-16">
@@ -525,13 +545,13 @@ export default function ManageProductsPage() {
                               }}
                             />
                           </TableCell>
-                          <TableCell className="align-top w-20">
-                            <div className="flex gap-1">
+                          <TableCell className="align-top w-18">
+                            <div className="flex gap-2 pl-2">
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => openReceiveDialog(product)}
-                                className="cursor-pointer h-8 w-8 p-0"
+                                className="cursor-pointer size-4 p-0"
                                 title="Receive Stock"
                               >
                                 <Warehouse className="size-4" />
@@ -540,7 +560,7 @@ export default function ManageProductsPage() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => openEditDialog(product)}
-                                className="cursor-pointer h-8 w-8 p-0"
+                                className="cursor-pointer size-4 p-0"
                                 title="Edit Product"
                               >
                                 <Edit className="size-4" />
