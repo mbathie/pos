@@ -39,6 +39,7 @@ export default function Page() {
 
   const handleSetCat = async (c) => {
     setCategory(c);
+    setFolder(null); // Reset the selected folder when changing categories
     const p = await getProducts({ category: c });
 
     const foldersMap = {};

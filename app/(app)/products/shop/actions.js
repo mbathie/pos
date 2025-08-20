@@ -62,7 +62,7 @@ function syncModAcrossProducts(draft, pIdx, modCatName, modName, modAmount) {
   });
 }
 
-export function actions({category, setProducts}) {
+export function actions({category, setProducts, setAllProducts}) {
 
   const setFolder = ({ pIdx, folder }) => {
     // console.log(folder)
@@ -100,20 +100,53 @@ export function actions({category, setProducts}) {
     }
   };
 
-  const addProduct = () => {
+  const addProduct = (selectedFolder = null) => {
+    const newProductId = generateObjectId();
+    
     setProducts(draft => {
       const newModCats = buildModCatsFromProducts(draft);
-      // console.log(newModCats)
-
-      draft.unshift({
+      
+      const newProduct = {
         dirty: true,
         modCats: newModCats,
         name: '',
         type: 'shop',
         new: true,
-        _id: generateObjectId()
-      });
+        _id: newProductId
+      };
+      
+      // If a folder is selected, set it as the default for the new product
+      if (selectedFolder) {
+        newProduct.folder = selectedFolder;
+      }
+      
+      draft.unshift(newProduct);
     });
+    
+    return newProductId;
+    
+    // Also update allProducts if it exists
+    if (setAllProducts) {
+      setAllProducts(draft => {
+        const newModCats = buildModCatsFromProducts(draft);
+        
+        const newProduct = {
+          dirty: true,
+          modCats: newModCats,
+          name: '',
+          type: 'shop',
+          new: true,
+          _id: newProductId
+        };
+        
+        // If a folder is selected, set it as the default for the new product
+        if (selectedFolder) {
+          newProduct.folder = selectedFolder;
+        }
+        
+        draft.unshift(newProduct);
+      });
+    }
   };
 
   const updateProduct = ({ pIdx, key, value }) => {
@@ -127,8 +160,23 @@ export function actions({category, setProducts}) {
   }
 
   const saveProduct = async ({product, pIdx}) => {
-    // If product has an _id, it's an update, otherwise it's a create
-    if (product._id) {
+    // Check if it's a new product that needs to be created
+    if (product.new) {
+      // Create new product
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${category._id}/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product }),
+      });
+
+      if (res.ok) {
+        const savedProduct = await res.json();
+        setProducts(draft => {
+          draft[pIdx] = savedProduct.product;
+        });
+        return savedProduct.product;
+      }
+    } else if (product._id) {
       // Update existing product
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${product._id}`, {
         method: 'PUT',
@@ -147,21 +195,6 @@ export function actions({category, setProducts}) {
           }
         });
         return updatedProduct;
-      }
-    } else {
-      // Create new product
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${category._id}/products`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product }),
-      });
-
-      if (res.ok) {
-        const savedProduct = await res.json();
-        setProducts(draft => {
-          draft[pIdx] = savedProduct.product;
-        });
-        return savedProduct.product;
       }
     }
   }

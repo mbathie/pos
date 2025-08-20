@@ -14,7 +14,7 @@ export async function POST(req, { params }) {
   const { slug } = await params;
 
   const body = await req.json();
-  const { menu } = body;
+  const { menu, thumbnail } = body;
 
   const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
 
@@ -22,7 +22,12 @@ export async function POST(req, { params }) {
     ? { _id: slug, org }
     : { name: slug, org };
 
-  const update = isValidObjectId ? {} : { name: slug, org: employee.orgId, ...(menu && { menu }) };
+  const update = isValidObjectId ? {} : { 
+    name: slug, 
+    org: employee.orgId, 
+    ...(menu && { menu }),
+    ...(thumbnail && { thumbnail })
+  };
 
   const category = await Category.findOneAndUpdate(
     query,
@@ -65,6 +70,7 @@ export async function PUT(req, { params }) {
   // Only update fields that are provided
   if (body.order !== undefined) updateData.order = body.order;
   if (body.name !== undefined) updateData.name = body.name;
+  if (body.thumbnail !== undefined) updateData.thumbnail = body.thumbnail;
 
   if (!slug) {
     return NextResponse.json({ error: "Missing category ID" }, { status: 400 });

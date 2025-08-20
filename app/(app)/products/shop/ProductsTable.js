@@ -74,17 +74,25 @@ function SortableRow({ product, pIdx, onProductClick }) {
       </TableCell>
       
       <TableCell>
-        <div className="flex items-center gap-2">
-          {product.folder?.color && (
+        {product.folder && (
+          <div className="flex items-center gap-2">
             <div
-              style={{ backgroundColor: colors?.[product.folder.color.split('-')[0]]?.[product.folder.color.split('-')[1]] }}
-              className="w-6 h-6 rounded-md border flex-shrink-0"
-            />
-          )}
-          {product.folder?.name && (
-            <span className="text-sm">{product.folder.name}</span>
-          )}
-        </div>
+              style={{ 
+                backgroundColor: colors?.[product.folder.color?.split('-')[0]]?.[product.folder.color?.split('-')[1]] 
+              }}
+              className="size-10 rounded-md border flex items-center justify-center flex-shrink-0"
+            >
+              <span className="text-xs font-semibold text-white/90">
+                {product.folder.name
+                  .split(' ')
+                  .map(word => word[0])
+                  .join('')
+                  .toUpperCase()
+                  .slice(0, 2)}
+              </span>
+            </div>
+          </div>
+        )}
       </TableCell>
       
       <TableCell>
@@ -142,12 +150,6 @@ export default function ProductsTable({
     let aVal = a[sort.field];
     let bVal = b[sort.field];
     
-    // Handle nested properties
-    if (sort.field === 'folder') {
-      aVal = a.folder?.name || '';
-      bVal = b.folder?.name || '';
-    }
-    
     // Handle null/undefined values
     if (aVal == null) aVal = '';
     if (bVal == null) bVal = '';
@@ -189,9 +191,7 @@ export default function ProductsTable({
               <SortableHeader field="name" className="text-foreground">
                 Name
               </SortableHeader>
-              <SortableHeader field="folder" className="text-foreground">
-                Folder
-              </SortableHeader>
+              <TableHead className="w-16 text-foreground">Folder</TableHead>
               <SortableHeader field="bump" className="w-32 text-foreground">
                 Bump
               </SortableHeader>
@@ -201,7 +201,7 @@ export default function ProductsTable({
           <TableBody>
             {!sortedProducts || sortedProducts.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
                   No products found. Click "New Product" to add one.
                 </TableCell>
               </TableRow>
