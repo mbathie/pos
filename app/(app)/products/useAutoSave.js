@@ -19,12 +19,18 @@ export function useAutoSave(products, updateProduct, delay = 3000) {
     
     // Populate the originalProducts hash with _id as the key
     products.forEach((p) => {
-      originalProducts.current[p._id] = originalProducts.current[p._id] || JSON.parse(JSON.stringify(p));
+      if (p && p._id) {
+        originalProducts.current[p._id] = originalProducts.current[p._id] || JSON.parse(JSON.stringify(p));
+      }
     });
 
     products.forEach((p) => {
+      if (!p || !p._id) {
+        // New products without ID are always considered dirty
+        return;
+      }
       const isProductChanged = JSON.stringify(p) !== JSON.stringify(originalProducts.current[p._id]);
-      updatedIsDirty[p._id] = isProductChanged || !p._id;
+      updatedIsDirty[p._id] = isProductChanged;
     });
     setIsDirty(updatedIsDirty);
   }, [products]);
@@ -55,8 +61,10 @@ export function useAutoSave(products, updateProduct, delay = 3000) {
         
         try {
           const updated = await updateProduct(product);
-          originalProducts.current[productId] = JSON.parse(JSON.stringify(updated));
-          setIsDirty(prev => ({ ...prev, [productId]: false }));
+          if (updated) {
+            originalProducts.current[productId] = JSON.parse(JSON.stringify(updated));
+            setIsDirty(prev => ({ ...prev, [productId]: false }));
+          }
         } catch (error) {
           console.error('Auto-save error:', error);
         } finally {
@@ -77,8 +85,10 @@ export function useAutoSave(products, updateProduct, delay = 3000) {
 
   // Function to manually mark a product as saved (useful after manual save)
   const markAsSaved = (productId, updatedProduct) => {
-    originalProducts.current[productId] = JSON.parse(JSON.stringify(updatedProduct));
-    setIsDirty(prev => ({ ...prev, [productId]: false }));
+    if (productId && updatedProduct) {
+      originalProducts.current[productId] = JSON.parse(JSON.stringify(updatedProduct));
+      setIsDirty(prev => ({ ...prev, [productId]: false }));
+    }
   };
 
   return {

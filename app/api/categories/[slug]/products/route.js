@@ -14,6 +14,10 @@ export async function POST(req, { params }) {
   
   console.log('Received product:', product);
 
+  // Check if product is undefined or null
+  if (!product) {
+    return NextResponse.json({ error: 'Product data is required' }, { status: 400 });
+  }
 
   const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
 

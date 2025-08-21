@@ -5,13 +5,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tag, Ellipsis, Info, Loader2, CheckCircle, Save } from 'lucide-react'
+import { Tag, Ellipsis, Loader2, CheckCircle, Save } from 'lucide-react'
 import Variations from './Variations'
 import GeneralPricing from './GeneralPricing'
 import Delete from '../Delete'
 import AddProduct from './AddProduct'
 import IconSelect from '@/components/icon-select'
-import WysiwygEditor from '@/components/wysiwyg-editor'
+import ProductInstructions from '@/components/product-instructions'
 import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -19,7 +19,7 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { useProduct } from './useProduct';
 import { useAutoSave } from '../useAutoSave';
 
-export default function Page({products, setProducts, units, title, categoryName, type}) {
+export default function Page({products, setProducts, units, title, description, categoryName, type}) {
   
   const { updateProduct, updateProductKey, addProduct, createProduct } = useProduct(setProducts);
 
@@ -37,7 +37,10 @@ export default function Page({products, setProducts, units, title, categoryName,
   return (
     <div className='flex flex-col space-y-4'>
       <div className="flex items-center">
-        <div className='font-semibold mb-2'>{title}</div>
+        <div className='mb-2'>
+          <div className='font-semibold'>{title}</div>
+          {description && <div className='text-sm text-muted-foreground'>{description}</div>}
+        </div>
         
         {/* Overall save status */}
         <div className="ml-4 mb-2">
@@ -158,7 +161,8 @@ export default function Page({products, setProducts, units, title, categoryName,
             </CardTitle>
           </CardHeader>
 
-          <div className='px-6 pb-2'>
+          <div className='px-6 pb-2 space-y-2'>
+            <Label>Name</Label>
             <Input
               value={p.name} 
               onChange={(e) => {
@@ -169,7 +173,8 @@ export default function Page({products, setProducts, units, title, categoryName,
             />
           </div>
 
-          <div className="px-6 pb-2">
+          <div className="px-6 pb-2 space-y-2">
+            <Label>Description</Label>
             <Textarea
               type="text"
               rows={4}
@@ -183,41 +188,13 @@ export default function Page({products, setProducts, units, title, categoryName,
             />
           </div>
 
-          <div className="px-6 space-y-2">
-            <div className="flex items-center gap-2">
-              <Label>Instructions</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Info className="h-4 w-4 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>These instructions will appear in the customer's confirmation email</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <WysiwygEditor
-              content={p.instructions || ''}
+          <div className="px-6">
+            <ProductInstructions
+              value={p.instructions}
               onChange={(content) => {
                 setProducts(draft => {
                   draft[pIdx].instructions = content;
                 })
-              }}
-              placeholder="Enter product instructions or usage guidelines..."
-              minHeight="200px"
-              showToolbar={true}
-              toolbarPosition="top"
-              toolbarOptions={{
-                headings: false,
-                bold: true,
-                italic: true,
-                underline: true,
-                bulletList: true,
-                orderedList: true,
-                alignment: false,
-                indent: false,
-                link: true
               }}
             />
           </div>

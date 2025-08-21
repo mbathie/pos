@@ -32,6 +32,7 @@ export default function Page() {
         units={units}
         type="general"
         title="General Entry Products"
+        description="General admission products for untimed events"
         categoryName={categoryName}
       />
     </div>

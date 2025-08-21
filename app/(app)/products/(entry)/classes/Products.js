@@ -1,19 +1,20 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Label } from '@/components/ui/label'
-import { Tag, ChevronsUpDown, Plus, Info, Trash } from 'lucide-react'
+import { Tag, ChevronsUpDown, Plus, Info, Trash, Loader2, CheckCircle, Save } from 'lucide-react'
 import { useUI } from '../../useUI';
 import { useProduct } from './useProduct';
+import { useAutoSave } from '../../useAutoSave';
 
-import { getLastClassDate } from '@/lib/classes'
 import { Checkbox } from "@/components/ui/checkbox"
 import IconSelect from '@/components/icon-select'
+import ProductInstructions from '@/components/product-instructions'
 import { Textarea } from '@/components/ui/textarea'
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -24,37 +25,51 @@ import { cn } from "@/lib/utils"
 export default function Page({products, setProducts, categoryName, type}) {
   const contentRefs = useRef({});
   const { productsUI, toggleExpanded, toggleAll } = useUI({products, contentRefs});
-  const { updateProduct, updateProductKey, updateVariation, addVariation, saveProduct, addTime, updateTime, addProduct, addPrice, updatePrice, deletePrice } = useProduct({setProducts, categoryName});
+  const { updateProduct, updateProductKey, saveProduct, addProduct } = useProduct({setProducts, categoryName});
 
   const [iconDialogOpen, setIconDialogOpen] = useState(false);
   const [iconDialogProductIdx, setIconDialogProductIdx] = useState(null);
   const [iconDialogQuery, setIconDialogQuery] = useState('');
 
-  const originalProducts = useRef({});
-  const [isDirty, setIsDirty] = useState({});
-  useEffect(() => {
-    const updatedIsDirty = { ...isDirty };
-    
-    // Populate the originalProducts hash with _id as the key
-    products.forEach((p) => {
-      originalProducts.current[p._id] = originalProducts.current[p._id] || JSON.parse(JSON.stringify(p));
-    });
+  // Wrapper function for auto-save that provides the correct parameters
+  const autoSaveProduct = useCallback(async (product) => {
+    const productIdx = products.findIndex(p => p._id === product._id);
+    if (productIdx !== -1) {
+      return await saveProduct({ product, productIdx });
+    }
+  }, [products, saveProduct]);
 
-    products.forEach((p) => {
-      console.log(p)
-      const isProductChanged = JSON.stringify(p) !== JSON.stringify(originalProducts.current[p._id]);
-      updatedIsDirty[p._id] = isProductChanged || !p._id
-    });
-    setIsDirty(updatedIsDirty);
-  }, [products]);
+  // Use the auto-save hook
+  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(products, autoSaveProduct, 3000);
 
   return (
     <div className='flex flex-col space-y-4'>
-      <div className="flex">
+      <div className="flex items-center">
         <div className='text-lg- font-semibold mb-2'>Setup Class and Course Products</div>
+        
+        {/* Overall save status */}
+        <div className="ml-4 mb-2">
+          {isAnySaving ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Saving changes...</span>
+            </div>
+          ) : hasAnyUnsaved ? (
+            <div className="flex items-center gap-2 text-sm text-orange-500">
+              <Save className="h-3 w-3 animate-pulse" />
+              <span>Unsaved changes</span>
+            </div>
+          ) : products.some(p => p._id) && (
+            <div className="flex items-center gap-2 text-sm text-green-500">
+              <CheckCircle className="h-3 w-3" />
+              <span>All changes saved</span>
+            </div>
+          )}
+        </div>
+        
         <div className='flex-1'/>
-        <Button size="sm" className="mr-2" variant="outline" onClick={() => addProduct()}>
-          New Product
+        <Button size="sm" className="mr-2" onClick={() => addProduct()}>
+          <Plus className="h-4 w-4 mr-1" /> New Product
         </Button>
         <Button variant="outline" size="sm" onClick={toggleAll}>
           <ChevronsUpDown />
@@ -64,10 +79,9 @@ export default function Page({products, setProducts, categoryName, type}) {
         <Card
           ref={(el) => (contentRefs.current[p._id] = el)}
           key={p._id}
-          className='overflow-hidden transition-all duration-300 ease-in-out'
-          style={{
-            maxHeight: productsUI[p._id]?.expanded ? `${productsUI[p._id]?.height}px` : '105px',
-          }}
+          className={`transition-all duration-300 ease-in-out ${
+            productsUI[p._id]?.expanded ? '' : 'max-h-[105px] overflow-hidden'
+          }`}
         >
           <CardHeader>
             <CardTitle className='flex w-full items-center space-x-4'>
@@ -89,19 +103,51 @@ export default function Page({products, setProducts, categoryName, type}) {
               </div>
               <div className='flex-'>{p.name}</div>
 
-              {isDirty[p._id] && (
-                <Button
-                  size="sm"
-                  className="bg-lime-400"
-                  onClick={async () => {
-
-                    const updated = await saveProduct({product: p, productIdx: pIdx})
-                    originalProducts.current[p._id] = JSON.parse(JSON.stringify(updated));
-                    setIsDirty((prev) => ({ ...prev, [p._id]: false }));                  }}
-                >
-                  Save
-                </Button>
-              )}
+              {/* Right side controls */}
+              <div className="flex items-center gap-2">
+                {/* Save status indicator */}
+                {p._id && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center">
+                          {saving[p._id] ? (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          ) : isDirty[p._id] ? (
+                            <Save className="h-4 w-4 text-orange-500 animate-pulse" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          {saving[p._id] ? 'Saving...' : 
+                           isDirty[p._id] ? 'Unsaved changes (auto-saves in 3s)' : 
+                           'All changes saved'}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                
+                {/* Manual save button for new products only */}
+                {!p._id && (
+                  <Button
+                    size="sm"
+                    className="bg-primary"
+                    onClick={async () => {
+                      const updated = await saveProduct({product: p, productIdx: pIdx})
+                      setProducts(draft => {
+                        draft[pIdx] = updated;
+                      });
+                      markAsSaved(updated._id, updated);
+                    }}
+                  >
+                    Save
+                  </Button>
+                )}
+              </div>
 
               <div className='flex-1' />
                 <Button
@@ -112,11 +158,11 @@ export default function Page({products, setProducts, categoryName, type}) {
                 </Button>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className='px-0'>
             
-            <div className='flex flex-col gap-4 w-full'>
+            <div className='flex flex-col w-full gap-8'>
 
-              <div className='flex flex-col gap-1'>
+              <div className='px-6 space-y-2'>
                 <Label>Name</Label>
                 <Input 
                   placeholder="product name" value={p.name}
@@ -124,7 +170,7 @@ export default function Page({products, setProducts, categoryName, type}) {
                 />
               </div>
 
-              <div className='flex flex-col gap-1'>
+              <div className='px-6 space-y-2'>
                 <Label>Description</Label>
                 <Textarea
                   rows={4} 
@@ -133,8 +179,88 @@ export default function Page({products, setProducts, categoryName, type}) {
                 />
               </div>
 
-              <div className='flex gap-2'>
-                <div className='flex flex-col gap-1 w-full-'>
+              {/* Pricing Section */}
+              <div className='px-6 space-y-4'>
+                <div>
+                  {p.prices?.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex flex-row gap-2">
+                        <Label className="w-32">Price Name</Label>
+                        <Label className="w-24">Amount ($)</Label>
+                        <div className="w-8"></div>
+                      </div>
+                      
+                      {p.prices.map((price, priceIdx) => (
+                        <div key={priceIdx} className="flex items-center gap-2">
+                          <Input
+                            type="text"
+                            placeholder="Adult"
+                            value={price.name || ''}
+                            className="w-32 text-sm"
+                            onChange={(e) => {
+                              setProducts((draft) => {
+                                const productIndex = draft.findIndex(prod => prod._id === p._id);
+                                draft[productIndex].prices[priceIdx].name = e.target.value;
+                              });
+                            }}
+                          />
+                          <Input
+                            type="number"
+                            placeholder="0.00"
+                            value={price.value || ''}
+                            min={0}
+                            step={0.01}
+                            className="w-24 text-sm"
+                            onChange={(e) => {
+                              setProducts((draft) => {
+                                const productIndex = draft.findIndex(prod => prod._id === p._id);
+                                draft[productIndex].prices[priceIdx].value = e.target.value ? parseFloat(e.target.value) : '';
+                              });
+                            }}
+                          />
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setProducts((draft) => {
+                                const productIndex = draft.findIndex(prod => prod._id === p._id);
+                                draft[productIndex].prices.splice(priceIdx, 1);
+                              });
+                            }}
+                            className="w-8 h-8 p-0"
+                          >
+                            <Trash className="size-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-2 mt-2">
+                    <Button 
+                      size="sm" 
+                      className="w-32"
+                      onClick={() => {
+                        setProducts((draft) => {
+                          const productIndex = draft.findIndex(prod => prod._id === p._id);
+                          if (!draft[productIndex].prices) {
+                            draft[productIndex].prices = [];
+                          }
+                          draft[productIndex].prices.push({
+                            name: '',
+                            value: ''
+                          });
+                        });
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Add Price
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className='px-6 flex gap-2'>
+                <div className='flex flex-col gap-2 w-full-'>
                   <div className='flex items-center gap-2'>
                     <Label>Product Type</Label>
                     <TooltipProvider>
@@ -173,27 +299,27 @@ export default function Page({products, setProducts, categoryName, type}) {
                   </Select>
                 </div>
 
-                <div className='flex flex-col gap-1 w-32'>
+                <div className='flex flex-col gap-2 w-32'>
                   <Label>Class Size</Label>
                   <Input 
                     type="number" placeholder="max capacity" min="0"
-                    value={p.capacity || 0}
+                    value={p.capacity || ''}
                     onChange={(e) => updateProduct(p._id, { capacity: e.target.value })}
                   />
                 </div>
 
-                <div className='flex flex-col gap-1'>
+                <div className='flex flex-col gap-2'>
                   <div className='flex items-center gap-2'>
-                    <Label>Duration (h)</Label>
+                    <Label>Duration (min)</Label>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Info size="15"/>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Class length in hours e.g.</p>
-                          <p>1 for 1 hr</p>
-                          <p>1.5 for 1h 30m</p>
+                          <p>Class length in minutes e.g.</p>
+                          <p>60 for 1 hour</p>
+                          <p>90 for 1h 30m</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -202,9 +328,9 @@ export default function Page({products, setProducts, categoryName, type}) {
                   <div className='flex'>
                     <div className='flex flex-col gap-1 w-22'>
                       <Input 
-                        type="number" placeholder="1.5" min="0"
-                        value={p?.duration?.name || 0}
-                        onChange={(e) => updateProduct(p._id, { duration: {name: e.target.value }})}
+                        type="number" placeholder="60" min="0"
+                        value={p?.duration?.minute || ''}
+                        onChange={(e) => updateProduct(p._id, { duration: {minute: e.target.value ? parseInt(e.target.value) : '', unit: 'minute' }})}
                       />
                     </div>
 
@@ -214,194 +340,187 @@ export default function Page({products, setProducts, categoryName, type}) {
 
               </div>
 
-              <div className=''>
-                <div className='flex mb-1'>
-                  <Label className="w-38">Variations ($)</Label>
-                </div>
-                <div className='flex flex-col gap-2'>
-                  {p?.variations?.map((variation, variationIdx) => {
-                    return (
-                      <Card key={variation._id} className='flex flex-col gap-2'>
-                        <CardContent className="flex flex-col gap-2">
-                          {/* Price input headers */}
-                          <div className="flex gap-2 mb-1- justify-start">
-                            <div className="w-38"><Label>Price Name</Label></div>
-                            <div className="w-38"><Label>Price ($)</Label></div>
-                          </div>
-                          {/* Price input rows */}
-                          <div className="flex flex-col gap-2">
-                            {(variation.prices?.length ? variation.prices : variation.prices || []).map((price, priceIdx) => (
-                              <div key={priceIdx} className="flex gap-2">
-                                <div className="w-38">
-                                  <Input
-                                    placeholder="Adult"
-                                    className="w-38 rounded-r-none-"
-                                    value={price.name}
-                                    onChange={e => updatePrice(p._id, variation._id, priceIdx, 'name', e.target.value)}
-                                  />
-                                </div>
-                                <div className="w-38">
-                                  <Input
-                                    type="number"
-                                    placeholder="20.00"
-                                    className="w-38 relative left-[-1px]"
-                                    value={price.value}
-                                    onChange={e => updatePrice(p._id, variation._id, priceIdx, 'value', e.target.value)}
-                                  />
-                                </div>
-                                <Button
-                                  type="icon"
-                                  variant="destructive"
-                                  onClick={() => deletePrice(pIdx, variationIdx, priceIdx)}
-                                >
-                                  <Trash className="size-4" />
-                                </Button>
-                              </div>
-                            ))}
-                            <div className='flex'>
-                              <Button className='flex' type="icon" variant="outline" onClick={() => addPrice(pIdx, variationIdx)}>
-                                <Plus /> New Price
-                              </Button>
-                            </div>
+              <div className="px-6">
+                <ProductInstructions
+                  value={p.instructions}
+                  onChange={(content) => updateProduct(p._id, { instructions: content })}
+                />
+              </div>
 
-                          </div>
+              {/* Schedule Section */}
+              <div className='px-6 space-y-2'>
+                <Label>Schedule</Label>
+                <Card>
+                  <CardContent className='space-y-4'>
+                    {/* Start and End Dates */}
+                    <div className='space-y-2'>
+                  <div className='flex items-center gap-8'>
+                    <Label className="w-[215px]">Start Date</Label>
+                    <div className='flex items-center gap-2'>
+                      <Label className="w-[70px]">End Date</Label>
+                      <Checkbox
+                        checked={p.schedule?.noEndDate || false}
+                        onCheckedChange={(checked) => {
+                          updateProduct(p._id, { 
+                            schedule: { 
+                              ...p.schedule, 
+                              noEndDate: checked,
+                              endDate: checked ? null : p.schedule?.endDate
+                            } 
+                          });
+                        }}
+                      />
+                      <Label className='text-sm font-normal'>No end date</Label>
+                    </div>
+                  </div>
+                  <div className='flex gap-2'>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          className={cn(
+                            "w-[240px] justify-start text-left font-normal",
+                            !p.schedule?.startDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {p.schedule?.startDate ? format(new Date(p.schedule.startDate), "PPP") : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={p.schedule?.startDate ? new Date(p.schedule.startDate) : undefined}
+                          onSelect={(date) => {
+                            updateProduct(p._id, { 
+                              schedule: { 
+                                ...p.schedule, 
+                                startDate: date ? date.toISOString() : null 
+                              } 
+                            });
+                          }}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
 
-                          <Label>Times</Label>
-                          {variation.times?.map((t, tIdx) => {
-                            return (
-                              <Card key={t._id} className=''>
-                                <CardContent>
-                                  <div className='flex flex-col gap-2'>
-                                    <div className="flex gap-2">
-                                      <div>
-                                        <div className='text-sm text-muted-foreground'>starts</div>
-                                        <div className='flex flex-row items-center space-x-2'>
-                                          <Popover>
-                                            <PopoverTrigger asChild>
-                                              <Button
-                                                variant={"outline"}
-                                                className={cn(
-                                                  "w-[280px] justify-start text-left font-normal",
-                                                  !t.start && "text-muted-foreground"
-                                                )}
-                                              >
-                                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                                {t.start ? format(new Date(t.start), "PPP p") : <span>Pick a date and time</span>}
-                                              </Button>
-                                            </PopoverTrigger>
-                                            <PopoverContent className="w-auto p-0">
-                                              <Calendar
-                                                mode="single"
-                                                selected={t.start ? new Date(t.start) : undefined}
-                                                onSelect={(date) => {
-                                                  if (date) {
-                                                    // If there's an existing time, preserve it
-                                                    const existingDate = t.start ? new Date(t.start) : new Date();
-                                                    const newDateTime = new Date(date);
-                                                    newDateTime.setHours(existingDate.getHours());
-                                                    newDateTime.setMinutes(existingDate.getMinutes());
-                                                    
-                                                    updateTime({
-                                                      productIdx: pIdx, variationIdx: variationIdx, timeIdx: tIdx,
-                                                      changes: { start: newDateTime.toISOString() }
-                                                    });
-                                                  }
-                                                }}
-                                                initialFocus
-                                              />
-                                              <div className="p-3 border-t">
-                                                <div className="flex items-center space-x-2">
-                                                  <Input
-                                                    type="time"
-                                                    value={t.start ? format(new Date(t.start), "HH:mm") : ""}
-                                                    onChange={(e) => {
-                                                      if (e.target.value) {
-                                                        const [hours, minutes] = e.target.value.split(':');
-                                                        const date = t.start ? new Date(t.start) : new Date();
-                                                        date.setHours(parseInt(hours), parseInt(minutes));
-                                                        
-                                                        updateTime({
-                                                          productIdx: pIdx, variationIdx: variationIdx, timeIdx: tIdx,
-                                                          changes: { start: date.toISOString() }
-                                                        });
-                                                      }
-                                                    }}
-                                                    className="flex-1"
-                                                  />
-                                                </div>
-                                              </div>
-                                            </PopoverContent>
-                                          </Popover>
-                                        </div>
-                                      </div>
-                                      <div>
-                                        <div className='text-sm text-muted-foreground'>repeats every</div>
-                                        <div className='flex flex-row items-center space-x-2 relative'>
-                                          <Input
-                                            type="number"
-                                            className="w-28"
-                                            value={t.repeatInterval || 0}
-                                            placeholder="7"
-                                            onChange={(e) => updateTime({
-                                              productIdx: pIdx, variationIdx: variationIdx, timeIdx: tIdx,
-                                              changes: { repeatInterval: Number(e.target.value) }
-                                            })}
-                                          />
-                                          <div className="absolute right-10 text-muted-foreground">
-                                            days
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <div className="-ml-2">
-                                        <div className='text-sm text-muted-foreground'>times</div>
-                                        <div className='flex flex-row items-center space-x-2 relative'>
-                                          <Input
-                                            type="number"
-                                            className="w-18"
-                                            placeholder="10"
-                                            value={t.repeatCnt || 0}
-                                            disabled={t.repeatAlways === true}
-                                            onChange={(e) => updateTime({
-                                              productIdx: pIdx, variationIdx: variationIdx, timeIdx: tIdx,
-                                              changes: { repeatCnt: Number(e.target.value) }
-                                            })}
-                                            />
-                                        </div>
-                                      </div>
-                                      <div className='flex flex-col h-full'>
-                                        <div className='text-sm text-muted-foreground'>repeat always</div>
-                                        <Checkbox 
-                                          checked={t.repeatAlways || false}
-                                          onCheckedChange={(e) => updateTime({
-                                            productIdx: pIdx, variationIdx: variationIdx, timeIdx: tIdx,
-                                            changes: { repeatAlways: e, repeatCnt: e ? 0 : t.repeatCnt }
-                                          })}
-                                        />  
-                                      </div>
-                                    </div>
-                                    <div>
-                                      <div className='text-muted-foreground text-sm'>
-                                        {getLastClassDate(t) === -1 ? "repeats until cancelled" : `last class ${getLastClassDate(t)}`}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            )
-                          })}
-                          <div>
-                            <Button type="icon" variant="outline" onClick={() => addTime({productIdx: pIdx, variationIdx: variationIdx})}>
-                              <Plus /> New Time
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )
-                  })}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant={"outline"}
+                          disabled={p.schedule?.noEndDate}
+                          className={cn(
+                            "w-[240px] justify-start text-left font-normal",
+                            !p.schedule?.endDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {p.schedule?.endDate ? format(new Date(p.schedule.endDate), "PPP") : <span>Pick a date</span>}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={p.schedule?.endDate ? new Date(p.schedule.endDate) : undefined}
+                          onSelect={(date) => {
+                            updateProduct(p._id, { 
+                              schedule: { 
+                                ...p.schedule, 
+                                endDate: date ? date.toISOString() : null 
+                              } 
+                            });
+                          }}
+                          disabled={(date) => p.schedule?.startDate && date < new Date(p.schedule.startDate)}
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
-                <Button type="icon" variant="outline" className="mt-2" onClick={() => addVariation(p._id)}>
-                  <Plus /> New Variation
-                </Button>
+
+                {/* Days of Week */}
+                <div className='space-y-2'>
+                  <Label>Days of Week</Label>
+                  <div className='flex gap-3'>
+                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
+                      <div key={day} className='flex items-center gap-1'>
+                        <Checkbox
+                          checked={p.schedule?.daysOfWeek?.[index] || false}
+                          onCheckedChange={(checked) => {
+                            const newDaysOfWeek = [...(p.schedule?.daysOfWeek || [false, false, false, false, false, false, false])];
+                            newDaysOfWeek[index] = checked;
+                            updateProduct(p._id, { 
+                              schedule: { 
+                                ...p.schedule, 
+                                daysOfWeek: newDaysOfWeek 
+                              } 
+                            });
+                          }}
+                        />
+                        <Label className='text-sm font-normal'>{day}</Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Start Times */}
+                <div className='space-y-2'>
+                  <Label>Class Times</Label>
+                  <div className='space-y-2'>
+                    {(p.schedule?.times || []).map((time, timeIdx) => (
+                      <div key={timeIdx} className='flex gap-2 items-center'>
+                        <Input
+                          type="time"
+                          value={time}
+                          onChange={(e) => {
+                            const newTimes = [...(p.schedule?.times || [])];
+                            newTimes[timeIdx] = e.target.value;
+                            updateProduct(p._id, { 
+                              schedule: { 
+                                ...p.schedule, 
+                                times: newTimes 
+                              } 
+                            });
+                          }}
+                          className="w-32"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const newTimes = [...(p.schedule?.times || [])];
+                            newTimes.splice(timeIdx, 1);
+                            updateProduct(p._id, { 
+                              schedule: { 
+                                ...p.schedule, 
+                                times: newTimes 
+                              } 
+                            });
+                          }}
+                        >
+                          <Trash className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        const newTimes = [...(p.schedule?.times || []), ''];
+                        updateProduct(p._id, { 
+                          schedule: { 
+                            ...p.schedule, 
+                            times: newTimes 
+                          } 
+                        });
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-1" /> Add Time
+                    </Button>
+                  </div>
+                </div>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* <Times product={p} setProducts={setProducts} /> */}
