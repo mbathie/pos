@@ -2,25 +2,25 @@
 
 import React, { useState, useEffect } from 'react';
 import { useImmer } from 'use-immer';
-// Drag and drop imports - NO LONGER USED with new menu
-// import {
-//   DndContext,
-//   closestCenter,
-//   KeyboardSensor,
-//   PointerSensor,
-//   useSensor,
-//   useSensors,
-// } from '@dnd-kit/core';
-// import {
-//   arrayMove,
-//   SortableContext,
-//   sortableKeyboardCoordinates,
-//   verticalListSortingStrategy,
-// } from '@dnd-kit/sortable';
-// import {
-//   useSortable,
-// } from '@dnd-kit/sortable';
-// import { CSS } from '@dnd-kit/utilities';
+// Drag and drop imports
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -31,7 +31,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogOverlay,
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Separator } from '@radix-ui/react-separator'
 import { Button } from '@/components/ui/button'
-import { Image, Plus, Ellipsis, EllipsisVertical, Info, Trash, Loader2, CheckCircle, Save, GripVertical, Edit2, Trash2, PanelLeft, ChevronRight, ChevronLeft, MoreVertical, Folder as FolderIcon } from 'lucide-react'
+import { Image, Plus, Ellipsis, EllipsisVertical, Info, Trash, Loader2, CheckCircle, Save, GripVertical, Edit2, Trash2, PanelLeft, ChevronRight, ChevronLeft, MoreVertical, Folder as FolderIcon, Check, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from "@/components/ui/textarea"
@@ -84,6 +84,7 @@ export default function Page() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [toDelete, setToDelete] = useState({});
   // const [categoriesExpanded, setCategoriesExpanded] = useState(false); // No longer needed
+  const [editMode, setEditMode] = useState(false);
 
   const [ addItem, setAddItem ] = useState({})
   const [ addItemOpen, setAddItemOpen ] = useState(false)
@@ -163,6 +164,7 @@ export default function Page() {
     async function fetchCategories() {
       const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/categories?menu=shop');
       const c = await res.json();
+      // Categories are already sorted by order from the API
       setCategories(c.categories);
       
       // Fetch all folders for all categories
@@ -452,14 +454,40 @@ export default function Page() {
             <div className="p-2 flex items-center">
               <div className="text-xs text-muted-foreground font-semibold ml-2">Categories</div>
               <div className="flex-1" />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setCategoryDialogOpen(true)}
-                className="rounded-lg mr-1"
-              >
-                <Plus className="ml-auto" />
-              </Button>
+              {editMode ? (
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditMode(false)}
+                    className="rounded-lg"
+                  >
+                    <Check className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant=""
+                      size="icon"
+                      className="rounded-lg mr-1"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setCategoryDialogOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      New Category
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEditMode(true)}>
+                      <Edit2 className="h-4 w-4 mr-2" />
+                      Edit List
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
             <div className="flex-1 overflow-y-auto min-h-0 px-2">
               <CategoryFolderMenu
@@ -467,10 +495,16 @@ export default function Page() {
                 folders={folders}
                 selectedCategory={category}
                 selectedFolder={selectedFolder}
+                editMode={editMode}
+                onCategoriesReorder={(reorderedCategories) => {
+                  setCategories(reorderedCategories);
+                }}
                 onCategorySelect={(cat) => {
-                  setCategory(cat);
-                  setSelectedFolder(null);
-                  getCategoryProducts(cat);
+                  if (!editMode) {
+                    setCategory(cat);
+                    setSelectedFolder(null);
+                    getCategoryProducts(cat);
+                  }
                 }}
                 onFolderSelect={async (folder, cat) => {
                   setSelectedFolder(folder);
@@ -594,18 +628,18 @@ export default function Page() {
                 
                 {/* New Product Button - moved to right */}
                 {category._id && (
-                  <Button
-                    size="sm"
-                    className="cursor-pointer"
-                    onClick={() => {
-                      const newProductId = addProduct(selectedFolder);
-                      setSelectedProductId(newProductId);
-                      setSheetOpen(true);
-                    }}
-                  >
-                    New Product
-                  </Button>
-                )}
+                   <Button
+                     className="cursor-pointer"
+                     size="sm"
+                     onClick={() => {
+                       const newProductId = addProduct(selectedFolder);
+                       setSelectedProductId(newProductId);
+                       setSheetOpen(true);
+                     }}
+                   >
+                     <Plus className="size-4" /> Product
+                   </Button>
+                 )}
               </div>
               
             {/* Save status indicator (removed All changes saved) */}

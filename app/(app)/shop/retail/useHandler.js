@@ -65,12 +65,12 @@ export function useHandler() {
       });
     }
 
-    // Sum enabled modifiers
-    if (product?.modCats) {
-      product.modCats.forEach(cat => {
-        cat.mods?.forEach(mod => {
+    // Sum selected modifiers from modGroupsData
+    if (product?.modGroupsData) {
+      product.modGroupsData.forEach(group => {
+        group.mods?.forEach(mod => {
           if (mod.selected) {
-            total += parseFloat(mod.amount) || 0;
+            total += parseFloat(mod.price) || 0;
           }
         });
       });

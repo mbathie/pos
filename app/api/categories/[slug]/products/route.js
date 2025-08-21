@@ -65,7 +65,7 @@ export async function GET(req, { params }) {
   const products = await Product.find({ category: category._id })
     .populate('folder')
     .populate({ path: 'accounting', strictPopulate: false })
-    .sort({ createdAt: -1 });
+    .sort({ order: 1, createdAt: -1 });  // Sort by order field first, then by creation date
 
   return NextResponse.json({ products }, { status: 200 });
 }

@@ -131,12 +131,16 @@ export default function TransactionDetailsPage() {
                 <TableCell>{product.item?.variation || '-'}</TableCell>
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
-                    {product.item?.mods?.map((mod, modIndex) => (
-                      <Badge key={modIndex} variant="secondary" className="text-xs">
-                        {mod.name}
-                        {mod.amount && parseFloat(mod.amount) > 0 && ` (+${formatCurrency(mod.amount)})`}
-                      </Badge>
-                    )) || '-'}
+                    {product.item?.modGroups?.length > 0 ? (
+                      product.item.modGroups.map((group) => 
+                        group.mods.filter(mod => mod.selected).map((mod, modIndex) => (
+                          <Badge key={`${group._id}-${modIndex}`} variant="secondary" className="text-xs">
+                            {mod.name}
+                            {mod.price > 0 && ` (+${formatCurrency(mod.price)})`}
+                          </Badge>
+                        ))
+                      )
+                    ) : '-'}
                   </div>
                 </TableCell>
                 <TableCell>{product.qty}</TableCell>

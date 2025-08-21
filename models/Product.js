@@ -16,6 +16,8 @@ const ProductSchema = new mongoose.Schema({
   //   except: [String]
   // }],
   order: { type: Number, default: 0 },
+  // Reference to modification groups that can be applied to this product
+  modGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ModGroup' }],
 }, {
   timestamps: true,
   strict: false  // allow any additional fields

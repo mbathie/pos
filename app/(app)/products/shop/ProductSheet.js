@@ -1,22 +1,4 @@
-import React, { useContext } from 'react';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  horizontalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import {
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import React, { useContext, useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,57 +7,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Tag, Plus, Ellipsis, Info, Loader2, CheckCircle, Save, GripVertical, Trash2 } from 'lucide-react';
+import { Tag, Plus, Ellipsis, Info, Loader2, CheckCircle, Save, Trash2 } from 'lucide-react';
 import { FolderSelect } from './FolderSelect';
 import { FolderManagementSheet } from './FolderManagementSheet';
 import AccountingSelect from './accounting-select';
+import { MultiSelect } from '@/components/ui/multi-select';
 import colors from 'tailwindcss/colors';
 import { actions } from './actions';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-// Sortable Mod Component
-function SortableMod({ mod, enabled, onClick, children }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: mod._id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-    cursor: isDragging ? 'grabbing' : 'grab',
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="inline-flex"
-    >
-      <Button
-        className='cursor-pointer relative'
-        onClick={onClick}
-        variant={enabled ? "default" : "outline"}
-      >
-        <div
-          {...attributes}
-          {...listeners}
-          className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab active:cursor-grabbing"
-        >
-          <GripVertical className={`${enabled ? '' : 'text-muted-foreground' } h-3 w-3`} />
-        </div>
-        <span className="ml-3">
-          {children}
-        </span>
-      </Button>
-    </div>
-  );
-}
 
 export default function ProductSheet({ 
   open, 
@@ -100,13 +40,10 @@ export default function ProductSheet({
   const [folderSheetOpen, setFolderSheetOpen] = React.useState(false);
   const [folderRefreshTrigger, setFolderRefreshTrigger] = React.useState(0);
   
-  // Drag and drop sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  // State for ModGroups
+  const [availableModGroups, setAvailableModGroups] = React.useState([]);
+  const [selectedModGroups, setSelectedModGroups] = React.useState([]);
+  const [loadingModGroups, setLoadingModGroups] = React.useState(true);
   
   // Destructure the actions we need
   const {
@@ -114,10 +51,6 @@ export default function ProductSheet({
     updateVariation,
     addVariation,
     deleteVariation,
-    updateModCat,
-    updateMod,
-    saveMod,
-    addMod,
     setFolder,
     saveProduct,
     deleteProduct
@@ -127,22 +60,39 @@ export default function ProductSheet({
   const product = products?.find(p => p._id === selectedProductId);
   const pIdx = products?.findIndex(p => p._id === selectedProductId);
   
-  // Handle drag end for mods
-  const handleModDragEnd = (event, pIdx, mcIdx) => {
-    const { active, over } = event;
-
-    if (active.id !== over.id) {
-      setProducts(draft => {
-        const modCat = draft[pIdx]?.modCats?.[mcIdx];
-        if (!modCat) return;
-        
-        const oldIndex = modCat.mods.findIndex((m) => m._id === active.id);
-        const newIndex = modCat.mods.findIndex((m) => m._id === over.id);
-        
-        modCat.mods = arrayMove(modCat.mods, oldIndex, newIndex);
-        draft[pIdx].updated = true;
-      });
+  // Fetch available ModGroups
+  React.useEffect(() => {
+    async function fetchModGroups() {
+      try {
+        setLoadingModGroups(true);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/modgroups`);
+        const data = await res.json();
+        setAvailableModGroups(data.modGroups || []);
+      } catch (error) {
+        console.error('Error fetching mod groups:', error);
+      } finally {
+        setLoadingModGroups(false);
+      }
     }
+    
+    if (open) {
+      fetchModGroups();
+    }
+  }, [open]);
+  
+  // Update selected mod groups when product changes
+  React.useEffect(() => {
+    if (product?.modGroups) {
+      setSelectedModGroups(product.modGroups);
+    } else {
+      setSelectedModGroups([]);
+    }
+  }, [product]);
+  
+  // Handle mod groups selection change
+  const handleModGroupsChange = (newSelection) => {
+    setSelectedModGroups(newSelection);
+    updateProduct({pIdx, key: "modGroups", value: newSelection});
   };
   
   // Conditional return must come after all hooks
@@ -382,93 +332,24 @@ export default function ProductSheet({
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className='flex items-center gap-2'>
-              <Label>Mod Groups</Label>
-              <Button
-                className="text-xs"
-                variant="outline"
-                size="icon" 
-                onClick={() => {
-                  setAddItem({pIdx, p: product})
-                  setAddItemOpen(true)
-                }}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-
-            {product.modCats?.map((mp, mcIdx) => (
-              <div key={mcIdx} className="space-y-2">
-                <div className="flex items-center gap-4">
-                  <Label className="">{mp.name}</Label>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm">Allow Multiple</Label>
-                    <Switch
-                      checked={mp.multi}
-                      onCheckedChange={(value) => updateModCat({ pIdx, mcIdx, key: "multi", value })}
-                    />
-                  </div>
-                </div>
-                
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={(event) => handleModDragEnd(event, pIdx, mcIdx)}
-                >
-                  <SortableContext
-                    items={mp.mods.filter(m => !m.new).map(m => m._id)}
-                    strategy={horizontalListSortingStrategy}
-                  >
-                    <div className='flex flex-wrap gap-2'>
-                      {mp?.mods?.map((m, mIdx) => (
-                        <React.Fragment key={m._id || mIdx}>
-                          {!m.new && (
-                            <SortableMod
-                              mod={m}
-                              enabled={m.enabled}
-                              onClick={() => updateMod({ pIdx, mcIdx, mIdx, key: "enabled", value: !m.enabled })}
-                            >
-                              {m.name} {!isNaN(m?.amount) && `$${Number(m.amount).toFixed(2)}`}
-                            </SortableMod>
-                          )}
-                          {m.new && (
-                            <div className='flex'>
-                          <Input
-                            value={m.name || ""} 
-                            placeholder="Soy" 
-                            className="w-24 rounded-r-none"
-                            onChange={(e) => updateMod({ pIdx, mcIdx, mIdx, key: "name", value: e.target.value })}
-                          />
-                          <Input
-                            onChange={(e) => updateMod({ pIdx, mcIdx, mIdx, key: "amount", value: e.target.value })}
-                            value={m.amount || ""} 
-                            placeholder="$0.75" 
-                            className="w-24 rounded-none"
-                          />
-                          <Button
-                            className="rounded-l-none"
-                            onClick={() => saveMod({ pIdx, mcIdx, mIdx })}
-                          >
-                            Save
-                          </Button>
-                        </div>
-                      )}
-                    </React.Fragment>
-                  ))}
-                  {!mp.new && (
-                    <Button
-                      variant="outline"
-                      onClick={() => addMod({ pIdx, mcIdx })}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </SortableContext>
-            </DndContext>
-          </div>
-            ))}
+          <div className="space-y-2">
+            <Label>Mods</Label>
+            <MultiSelect
+              options={availableModGroups.map(group => ({
+                value: group._id,
+                label: group.name
+              }))}
+              selected={selectedModGroups}
+              onChange={handleModGroupsChange}
+              placeholder={loadingModGroups ? "Loading..." : "Select modification groups..."}
+              emptyText="No modification groups available"
+              className="w-full"
+            />
+            {!loadingModGroups && availableModGroups.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No modification groups have been created yet. <a href="/products/mods" className="text-primary hover:underline">Create groups</a> to add product modifications.
+              </p>
+            )}
           </div>
           
           {/* Delete Product Button */}

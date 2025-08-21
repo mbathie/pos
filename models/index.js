@@ -15,6 +15,8 @@ import Order from './Order';
 import Discount from './Discount';
 import Membership from './Membership';
 import Checkin from './Checkin';
+import ModGroup from './ModGroup';
+import Mod from './Mod';
 
 // Export all models
 export {
@@ -33,5 +35,7 @@ export {
   General,
   Order,
   Membership,
-  Checkin
+  Checkin,
+  ModGroup,
+  Mod
 };

@@ -223,8 +223,7 @@ export default function Page({ params }) {
                         <TableHead className="w-1/5 px-0">Product</TableHead>
                         <TableHead className="w-1/5">Qty</TableHead>
                         <TableHead className="w-1/5">Variation</TableHead>
-                        <TableHead className="w-1/5">Mods</TableHead>
-                        <TableHead className="w-1/5"></TableHead>
+                        <TableHead className="w-2/5">Mods</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody className='p-0 m-0'>
@@ -233,23 +232,18 @@ export default function Page({ params }) {
                           <TableCell className='px-0'>{p.name}</TableCell>
                           <TableCell>{p.qty}</TableCell>
                           <TableCell>{p.item.variation || '-'}</TableCell>
-                          <TableCell>
-                            {Array.isArray(p.item?.modCats)
-                              ? p.item.modCats.map((modCat, mIdx) => (
-                                  <div key={mIdx}>{modCat.name}</div>
-                                ))
-                              : null}
-                          </TableCell>
-                          <TableCell>
-                            {Array.isArray(p.item?.modCats)
-                              ? p.item.modCats.map((modCat, mIdx) => (
-                                  <div key={mIdx}>
-                                    {modCat.mods?.filter(mod => mod.selected).map((mod, i) => (
-                                      <div key={i}>{mod.name}</div>
-                                    ))}
-                                  </div>
-                                ))
-                              : null}
+                          <TableCell colSpan={2}>
+                            <div className="flex flex-wrap gap-1">
+                              {p.item?.modGroups?.length > 0 ? (
+                                p.item.modGroups.map((group) => 
+                                  group.mods.filter(mod => mod.selected).map((mod, modIndex) => (
+                                    <Badge key={`${group._id}-${modIndex}`} variant="secondary" className="text-xs">
+                                      {mod.name}
+                                    </Badge>
+                                  ))
+                                )
+                              ) : '-'}
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}

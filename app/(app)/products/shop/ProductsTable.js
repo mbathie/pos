@@ -114,7 +114,7 @@ export default function ProductsTable({
   onProductsReorder
 }) {
   const [sort, setSort] = useState({
-    field: 'name',
+    field: null,  // Start with no sorting to respect the order field
     direction: 'asc'
   });
 
@@ -129,6 +129,9 @@ export default function ProductsTable({
     const { active, over } = event;
 
     if (active.id !== over.id) {
+      // Clear any sorting when manually reordering
+      setSort({ field: null, direction: 'asc' });
+      
       const oldIndex = products.findIndex((p) => p._id === active.id);
       const newIndex = products.findIndex((p) => p._id === over.id);
       
@@ -139,14 +142,22 @@ export default function ProductsTable({
   };
 
   const handleSort = (field) => {
-    setSort(prev => ({
-      field,
-      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc',
-    }));
+    setSort(prev => {
+      // If clicking the same field, toggle direction
+      if (prev.field === field) {
+        if (prev.direction === 'desc') {
+          // Reset to no sorting (manual order)
+          return { field: null, direction: 'asc' };
+        }
+        return { field, direction: 'desc' };
+      }
+      // New field, sort ascending
+      return { field, direction: 'asc' };
+    });
   };
 
   // Sort products based on current sort state
-  const sortedProducts = [...(products || [])].sort((a, b) => {
+  const sortedProducts = sort.field ? [...(products || [])].sort((a, b) => {
     let aVal = a[sort.field];
     let bVal = b[sort.field];
     
@@ -163,7 +174,7 @@ export default function ProductsTable({
     } else {
       return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
     }
-  });
+  }) : [...(products || [])];
 
   const SortableHeader = ({ field, children, className = "" }) => (
     <TableHead 

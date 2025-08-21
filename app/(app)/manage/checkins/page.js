@@ -136,44 +136,34 @@ export default function CheckinsPage() {
     <div className="mx-4 h-[calc(100vh-65px)] flex flex-col">
       {/* Header */}
       <div className="mb-4 flex-shrink-0">
-        <h1 className="text-2xl font-bold tracking-tight">Check-ins</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-lg font-semibold">Check-ins</h1>
+        <div className="text-muted-foreground">
           Manage and view all customer check-ins
-        </p>
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-5 mb-4 flex-shrink-0">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Total Today</CardDescription>
-            <CardTitle className="text-2xl">{stats.totalToday}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>QR Code</CardDescription>
-            <CardTitle className="text-2xl">{stats.qrCode}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Manual</CardDescription>
-            <CardTitle className="text-2xl">{stats.manual}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Classes</CardDescription>
-            <CardTitle className="text-2xl">{stats.classCheckins}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Memberships</CardDescription>
-            <CardTitle className="text-2xl">{stats.membershipCheckins}</CardTitle>
-          </CardHeader>
-        </Card>
+      {/* Stats Boxes - Compact divs in a single row */}
+      <div className="grid grid-cols-5 gap-2 mb-3 flex-shrink-0">
+        <div className="rounded-lg bg-muted/50 p-2">
+          <div className="text-xs text-muted-foreground">Total Today</div>
+          <div className="text-base sm:text-lg font-semibold">{stats.totalToday}</div>
+        </div>
+        <div className="rounded-lg bg-muted/50 p-2">
+          <div className="text-xs text-muted-foreground">QR Code</div>
+          <div className="text-base sm:text-lg font-semibold">{stats.qrCode}</div>
+        </div>
+        <div className="rounded-lg bg-muted/50 p-2">
+          <div className="text-xs text-muted-foreground">Manual</div>
+          <div className="text-base sm:text-lg font-semibold">{stats.manual}</div>
+        </div>
+        <div className="rounded-lg bg-muted/50 p-2">
+          <div className="text-xs text-muted-foreground">Classes</div>
+          <div className="text-base sm:text-lg font-semibold">{stats.classCheckins}</div>
+        </div>
+        <div className="rounded-lg bg-muted/50 p-2">
+          <div className="text-xs text-muted-foreground">Memberships</div>
+          <div className="text-base sm:text-lg font-semibold">{stats.membershipCheckins}</div>
+        </div>
       </div>
 
       {/* Filters and Search */}

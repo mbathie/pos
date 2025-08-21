@@ -36,13 +36,11 @@ export default function Cart({}) {
                 <div className='flex-1' />
                 <div>${p.amount.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
               </div>
-              <div className='flex flex-row text-xs ml-1'>
-                {p.item.mods && p.item.mods.map((mod, pIdx) => (
-                  <span key={pIdx}>
-                    {mod.name}{pIdx < p.item.mods.length - 1 ? ', ' : ''}
-                  </span>
-                ))}
-              </div>
+              {p.item.mods && p.item.mods.length > 0 && (
+                <div className='text-xs ml-1 text-muted-foreground'>
+                  {p.item.mods.map(mod => mod.name).join(', ')}
+                </div>
+              )}
             </div>
 
           );

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { Sheet, SheetContent, SheetFooter, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import React from 'react'
-import { Minus, Plus } from "lucide-react"
+import { Minus, Plus, Loader2 } from "lucide-react"
 import { useHandler } from './useHandler'
 import { useGlobals } from '@/lib/globals'
 import { Checkbox } from '@/components/ui/checkbox'
@@ -12,6 +12,8 @@ import { calcCartValueShop } from '@/lib/product'
 
 export default function ProductDetail({ product, setProduct, setOpen, open }) {
   const [total, setTotal] = useState(0)
+  const [modGroups, setModGroups] = useState([])
+  const [loadingMods, setLoadingMods] = useState(false)
   const { 
     getProducts, selectVariation, 
     selectMod, getProductTotal, setQty } = useHandler()
@@ -23,6 +25,59 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
       setTotal(total)
     }
   }, [product])
+
+  // Fetch ModGroups when product changes
+  useEffect(() => {
+    async function fetchProductMods() {
+      if (!product?._id || !product?.modGroups?.length) {
+        setModGroups([])
+        return
+      }
+      
+      try {
+        setLoadingMods(true)
+        // Fetch all modGroups with their mods
+        const modGroupPromises = product.modGroups.map(groupId => 
+          fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/modgroups/${groupId}?includeMods=true`)
+            .then(res => res.json())
+        )
+        
+        const fetchedGroups = await Promise.all(modGroupPromises)
+        
+        // Deep clone the groups to avoid read-only issues and initialize selected: false
+        const groupsWithSelection = fetchedGroups.map(group => ({
+          _id: group._id,
+          name: group.name,
+          allowMultiple: group.allowMultiple || false,
+          required: group.required || false,
+          order: group.order || 0,
+          mods: (group.mods || []).map(mod => ({
+            _id: mod._id,
+            name: mod.name,
+            price: mod.price || 0,
+            isDefault: mod.isDefault || false,
+            order: mod.order || 0,
+            selected: false
+          }))
+        }))
+        
+        setModGroups(groupsWithSelection)
+        
+        // Update product with modGroups data
+        setProduct(draft => {
+          draft.modGroupsData = groupsWithSelection
+        })
+      } catch (error) {
+        console.error('Error fetching mod groups:', error)
+      } finally {
+        setLoadingMods(false)
+      }
+    }
+    
+    if (open && product?._id) {
+      fetchProductMods()
+    }
+  }, [open, product?._id, product?.modGroups])
 
   if (!product?._id) return
   
@@ -67,35 +122,69 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
               </div>
             }
 
-            <div className='flex flex-col gap-2'>
-              {/* <div className='text-sm'>Mods</div> */}
-              {product?.modCats.map((mc, mcIdx) => {
-                return (
-                  <div 
-                    key={mcIdx} className='text-sm flex space-x-4 items-center w-full'
-                  >
-                    {/* <Checkbox checked={v.selected} /> */}
-                    <div className='flex flex-col gap-2- w-full'>
-                      {mc.mods.some(m => m.enabled) && <div className='font-medium'>{mc.name}</div>}
-                      <div className='flex flex-wrap gap-2'>
-                        {mc.mods.filter(m => m.enabled).map((m, mIdx) => {
-                          return (
-                            <div 
-                              key={m._id} className='gap-2 flex items-center flex-row cursor-pointer hover:bg-muted/50 p-2 pl-0 rounded-md'
-                              onClick={() => selectMod({setProduct, mcIdx, mIdx, mName: m.name})}
-                            >
-                              <Checkbox checked={m.selected} className='size-9' />
-                              <div>{m.name}</div>
-                              {m.amount > 0 && <div className='ml-1'>${parseFloat(m.amount).toFixed(2)}</div>}
-                            </div>
-                          )
-                        })}
-                      </div>
+            {loadingMods && (
+              <div className='flex items-center justify-center py-4'>
+                <Loader2 className='h-6 w-6 animate-spin' />
+              </div>
+            )}
+            
+            {!loadingMods && modGroups.length > 0 && (
+              <div className='flex flex-col gap-4'>
+                {modGroups.map((group, groupIdx) => (
+                  <div key={group._id} className='flex flex-col gap-2'>
+                    <div className='text-sm font-medium'>
+                      {group.name}
+                      {group.required && <span className='text-muted-foreground ml-2'>(Required)</span>}
+                    </div>
+                    <div className='flex flex-wrap gap-2'>
+                      {group.mods.map((mod, modIdx) => (
+                        <div 
+                          key={mod._id} 
+                          className='gap-2 flex items-center flex-row cursor-pointer hover:bg-muted/50 p-2 pl-0 rounded-md'
+                          onClick={() => {
+                            setModGroups(prev => {
+                              // Deep clone to avoid mutation issues
+                              const updated = prev.map((group, gIdx) => {
+                                if (gIdx !== groupIdx) return group
+                                
+                                return {
+                                  ...group,
+                                  mods: group.mods.map((m, mIdx) => {
+                                    if (!group.allowMultiple) {
+                                      // Single selection - only the clicked mod can be selected
+                                      return {
+                                        ...m,
+                                        selected: mIdx === modIdx ? !m.selected : false
+                                      }
+                                    } else {
+                                      // Multiple selection - toggle only the clicked mod
+                                      return mIdx === modIdx 
+                                        ? { ...m, selected: !m.selected }
+                                        : m
+                                    }
+                                  })
+                                }
+                              })
+                              
+                              // Update product with the new selection
+                              setProduct(draft => {
+                                draft.modGroupsData = updated
+                              })
+                              
+                              return updated
+                            })
+                          }}
+                        >
+                          <Checkbox checked={mod.selected} className='size-9' />
+                          <div>{mod.name}</div>
+                          {mod.price > 0 && <div className='ml-1'>${parseFloat(mod.price).toFixed(2)}</div>}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                )
-              })}
-            </div>
+                ))}
+              </div>
+            )}
 
           </div>
         </div>
