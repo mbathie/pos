@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { NumberInput } from '@/components/ui/number-input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -204,17 +205,16 @@ export default function Page({products, setProducts, categoryName, type}) {
                               });
                             }}
                           />
-                          <Input
-                            type="number"
+                          <NumberInput
                             placeholder="0.00"
-                            value={price.value || ''}
+                            value={price.value || null}
                             min={0}
                             step={0.01}
                             className="w-24 text-sm"
-                            onChange={(e) => {
+                            onChange={(value) => {
                               setProducts((draft) => {
                                 const productIndex = draft.findIndex(prod => prod._id === p._id);
-                                draft[productIndex].prices[priceIdx].value = e.target.value ? parseFloat(e.target.value) : '';
+                                draft[productIndex].prices[priceIdx].value = value;
                               });
                             }}
                           />
@@ -301,10 +301,11 @@ export default function Page({products, setProducts, categoryName, type}) {
 
                 <div className='flex flex-col gap-2 w-32'>
                   <Label>Class Size</Label>
-                  <Input 
-                    type="number" placeholder="max capacity" min="0"
-                    value={p.capacity || ''}
-                    onChange={(e) => updateProduct(p._id, { capacity: e.target.value })}
+                  <NumberInput 
+                    placeholder="max capacity" 
+                    min={0}
+                    value={p.capacity || null}
+                    onChange={(value) => updateProduct(p._id, { capacity: value })}
                   />
                 </div>
 
@@ -327,10 +328,11 @@ export default function Page({products, setProducts, categoryName, type}) {
 
                   <div className='flex'>
                     <div className='flex flex-col gap-1 w-22'>
-                      <Input 
-                        type="number" placeholder="60" min="0"
-                        value={p?.duration?.minute || ''}
-                        onChange={(e) => updateProduct(p._id, { duration: {minute: e.target.value ? parseInt(e.target.value) : '', unit: 'minute' }})}
+                      <NumberInput 
+                        placeholder="60" 
+                        min={0}
+                        value={p?.duration?.minute || null}
+                        onChange={(value) => updateProduct(p._id, { duration: {minute: value, unit: 'minute' }})}
                       />
                     </div>
 
@@ -348,10 +350,10 @@ export default function Page({products, setProducts, categoryName, type}) {
               </div>
 
               {/* Schedule Section */}
-              <div className='px-6 space-y-2'>
+              <div className='px-6 space-y-6'>
                 <Label>Schedule</Label>
                 <Card>
-                  <CardContent className='space-y-4'>
+                  <CardContent className='gap-8 flex flex-col'>
                     {/* Start and End Dates */}
                     <div className='space-y-2'>
                   <div className='flex items-center gap-8'>
@@ -441,9 +443,9 @@ export default function Page({products, setProducts, categoryName, type}) {
                 {/* Days of Week */}
                 <div className='space-y-2'>
                   <Label>Days of Week</Label>
-                  <div className='flex gap-3'>
+                  <div className='flex gap-4'>
                     {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
-                      <div key={day} className='flex items-center gap-1'>
+                      <div key={day} className='flex items-center gap-1.5'>
                         <Checkbox
                           checked={p.schedule?.daysOfWeek?.[index] || false}
                           onCheckedChange={(checked) => {
@@ -465,16 +467,23 @@ export default function Page({products, setProducts, categoryName, type}) {
 
                 {/* Start Times */}
                 <div className='space-y-2'>
-                  <Label>Class Times</Label>
+                  <div className='flex gap-2'>
+                    <Label className="w-32">Class Times</Label>
+                    <Label className="w-48">Class Label</Label>
+                  </div>
                   <div className='space-y-2'>
                     {(p.schedule?.times || []).map((time, timeIdx) => (
                       <div key={timeIdx} className='flex gap-2 items-center'>
                         <Input
                           type="time"
-                          value={time}
+                          value={typeof time === 'string' ? time : time?.time || ''}
                           onChange={(e) => {
                             const newTimes = [...(p.schedule?.times || [])];
-                            newTimes[timeIdx] = e.target.value;
+                            if (typeof newTimes[timeIdx] === 'string') {
+                              newTimes[timeIdx] = { time: e.target.value, label: '' };
+                            } else {
+                              newTimes[timeIdx] = { ...newTimes[timeIdx], time: e.target.value };
+                            }
                             updateProduct(p._id, { 
                               schedule: { 
                                 ...p.schedule, 
@@ -483,6 +492,26 @@ export default function Page({products, setProducts, categoryName, type}) {
                             });
                           }}
                           className="w-32"
+                        />
+                        <Input
+                          type="text"
+                          placeholder="Warm Up, Cool Down, Main Class"
+                          value={typeof time === 'object' ? time?.label || '' : ''}
+                          onChange={(e) => {
+                            const newTimes = [...(p.schedule?.times || [])];
+                            if (typeof newTimes[timeIdx] === 'string') {
+                              newTimes[timeIdx] = { time: newTimes[timeIdx], label: e.target.value };
+                            } else {
+                              newTimes[timeIdx] = { ...newTimes[timeIdx], label: e.target.value };
+                            }
+                            updateProduct(p._id, { 
+                              schedule: { 
+                                ...p.schedule, 
+                                times: newTimes 
+                              } 
+                            });
+                          }}
+                          className="w-64"
                         />
                         <Button
                           type="button"
@@ -506,7 +535,7 @@ export default function Page({products, setProducts, categoryName, type}) {
                     <Button
                       type="button"
                       onClick={() => {
-                        const newTimes = [...(p.schedule?.times || []), ''];
+                        const newTimes = [...(p.schedule?.times || []), { time: '', label: '' }];
                         updateProduct(p._id, { 
                           schedule: { 
                             ...p.schedule, 

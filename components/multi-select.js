@@ -239,7 +239,7 @@ const MultiSelect = React.forwardRef(function MultiSelect(
             placeholder="Search..."
             onKeyDown={handleInputKeyDown}
           />
-          <CommandList>
+          <CommandList className="max-h-[350px]">
             <CommandEmpty>No results found.</CommandEmpty>
             <CommandGroup>
               {!disableSelectAll && (
@@ -287,9 +287,20 @@ const MultiSelect = React.forwardRef(function MultiSelect(
                     {option.icon && (
                       <option.icon className="mr-2 h-4 w-4 text-muted-foreground" />
                     )}
-                    <div className="flex flex-row gap-4">
-                      <div>{option.label}</div>
-                      <div className="">{`(x${option.available})`}</div>
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2">
+                        <span>{option.label}</span>
+                        {option.timeLabel && (
+                          <Badge variant="secondary" className="text-xs">
+                            {option.timeLabel}
+                          </Badge>
+                        )}
+                      </div>
+                      {option.available !== undefined && (
+                        <span className="text-muted-foreground text-sm ml-auto">
+                          (x{option.available})
+                        </span>
+                      )}
                     </div>
                   </CommandItem>
                 );

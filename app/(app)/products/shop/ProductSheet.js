@@ -11,7 +11,14 @@ import { Tag, Plus, Ellipsis, Info, Loader2, CheckCircle, Save, Trash2 } from 'l
 import { FolderSelect } from './FolderSelect';
 import { FolderManagementSheet } from './FolderManagementSheet';
 import AccountingSelect from './accounting-select';
-import { MultiSelect } from '@/components/ui/multi-select';
+import { 
+  MultiSelect, 
+  MultiSelectTrigger, 
+  MultiSelectValue, 
+  MultiSelectContent,
+  MultiSelectItem,
+  MultiSelectGroup
+} from '@/components/ui/multi-select';
 import colors from 'tailwindcss/colors';
 import { actions } from './actions';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -335,16 +342,34 @@ export default function ProductSheet({
           <div className="space-y-2">
             <Label>Mods</Label>
             <MultiSelect
-              options={availableModGroups.map(group => ({
-                value: group._id,
-                label: group.name
-              }))}
-              selected={selectedModGroups}
-              onChange={handleModGroupsChange}
-              placeholder={loadingModGroups ? "Loading..." : "Select modification groups..."}
-              emptyText="No modification groups available"
-              className="w-full"
-            />
+              values={selectedModGroups}
+              onValuesChange={handleModGroupsChange}
+            >
+              <MultiSelectTrigger className="w-full">
+                <MultiSelectValue 
+                  placeholder={loadingModGroups ? "Loading..." : "Select modification groups..."} 
+                />
+              </MultiSelectTrigger>
+              <MultiSelectContent>
+                <MultiSelectGroup>
+                  {availableModGroups.length > 0 ? (
+                    availableModGroups.map(group => (
+                      <MultiSelectItem 
+                        key={group._id} 
+                        value={group._id}
+                        badgeLabel={group.name}
+                      >
+                        {group.name}
+                      </MultiSelectItem>
+                    ))
+                  ) : (
+                    <div className="py-6 text-center text-sm text-muted-foreground">
+                      No modification groups available
+                    </div>
+                  )}
+                </MultiSelectGroup>
+              </MultiSelectContent>
+            </MultiSelect>
             {!loadingModGroups && availableModGroups.length === 0 && (
               <p className="text-sm text-muted-foreground">
                 No modification groups have been created yet. <a href="/products/mods" className="text-primary hover:underline">Create groups</a> to add product modifications.

@@ -7,39 +7,44 @@ import { Minus, Plus } from "lucide-react"
 import { useGlobals } from '@/lib/globals'
 import { useState, useEffect } from 'react'
 import { calcCartValueClass, cleanupProduct } from '@/lib/product'
-import MultiSelect from '@/components/multi-select'
+import { 
+  MultiSelect, 
+  MultiSelectTrigger, 
+  MultiSelectValue, 
+  MultiSelectContent,
+  MultiSelectItem,
+  MultiSelectGroup
+} from '@/components/ui/multi-select'
 import { useClass } from './useClass'
 
 export default function ProductDetail({ product, setProduct, setOpen, open }) {
   
   if (!product) return null;
-
-  const { setQty, onSelectTime } = useClass({product, setProduct})
   
   const { addToCart } = useGlobals()
   const [total, setTotal] = useState(0)
-
-  // useEffect(() => {
-  //   console.log('calling setTimes()')
-  //   setTimes()
-  // },[])
+  const [selectedTimes, setSelectedTimes] = useState(product?.selectedTimes || [])
 
   useEffect(() => {
-
     async function fetch() {
       if (product) {
         const t = await calcCartValueClass({ product });
-        // console.log(t)
         setTotal(t.amount.subtotal);
       }
     }
     fetch()
-
-  }, [product])
+  }, [product, product?.prices])
+  
+  // Sync selectedTimes when product changes
+  useEffect(() => {
+    if (product?.selectedTimes) {
+      setSelectedTimes(product.selectedTimes);
+    }
+  }, [product?.selectedTimes])
   
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent className="w-[400px] sm:w-[540px]">
+      <SheetContent className="sm:max-w-[700px] flex flex-col h-full">
 
         <SheetHeader className=''>
           <SheetTitle>
@@ -58,63 +63,94 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
 
           <div className='flex flex-col gap-2 text-sm w-full'>
 
-            {product.variations.map((variation, vIdx) => {
-              return (
-                <div key={vIdx} className='w-full'>
+            {/* Display prices with quantity selectors */}
+            {product.prices?.map((price, priceIdx) => (
+              <div key={priceIdx} className='flex'>
+                <div className='flex gap-2 w-full items-center'>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setProduct(draft => {
+                        if (!draft.prices[priceIdx].qty) {
+                          draft.prices[priceIdx].qty = 0;
+                        }
+                        if (draft.prices[priceIdx].qty > 0) {
+                          draft.prices[priceIdx].qty--;
+                        }
+                      });
+                    }}
+                    disabled={!price.qty}
+                  >
+                    <Minus />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setProduct(draft => {
+                        if (!draft.prices[priceIdx].qty) {
+                          draft.prices[priceIdx].qty = 0;
+                        }
+                        draft.prices[priceIdx].qty++;
+                      });
+                    }}
+                  >
+                    <Plus />
+                  </Button>
 
-                  <div className='flex flex-col gap-2 w-full'>
-                    {variation.prices?.map((price, priceIdx) => (
-                      <div key={priceIdx} className='flex'>
-                        <div className='flex gap-2 w-full items-center'>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setQty({ type: '-', vIdx, priceIdx })}
-                            disabled={!price.qty}
-                          >
-                            <Minus />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setQty({ type: '+', vIdx, priceIdx })}
-                          >
-                            <Plus />
-                          </Button>
-
-                          {price.name}
-                          <div className='flex-1' />
-                          {price.qty || 0}x
-                          ${parseFloat(price.value).toFixed(2)}
-                        </div>
-                      </div>
-                    ))}
-
-                    {variation.prices?.some(p => p.qty > 0) && variation.times?.length > 0 && (
-                      <>
-                        {console.log('MultiSelect debug:', {
-                          vIdx,
-                          timesCalc: variation.timesCalc,
-                          times: variation.times,
-                          prices: variation.prices,
-                        })}
-                        <MultiSelect
-                          options={variation.timesCalc}
-                          onValueChange={(tcValues) => onSelectTime({ vIdx, tcValues })}
-                          placeholder="Times..."
-                          variant="inverted"
-                          animation={2}
-                          maxCount={1}
-                          disableSelectAll={true}
-                        />
-                      </>
-                    )}
-                  </div>
-
+                  {price.name}
+                  <div className='flex-1' />
+                  {price.qty || 0}x
+                  ${parseFloat(price.value || 0).toFixed(2)}
                 </div>
-              )
-            })}
+              </div>
+            ))}
+
+            {/* Show time selector if any price has quantity > 0 */}
+            {product.prices?.some(p => p.qty > 0) && product.timesCalc?.length > 0 && (
+              <MultiSelect 
+                values={selectedTimes}
+                onValuesChange={(values) => {
+                  setSelectedTimes(values);
+                  setProduct(draft => {
+                    draft.selectedTimes = values;
+                  });
+                }}
+              >
+                <MultiSelectTrigger className="w-full">
+                  <MultiSelectValue placeholder="Select class times..." />
+                </MultiSelectTrigger>
+                <MultiSelectContent>
+                  <MultiSelectGroup>
+                    {product.timesCalc.map((option) => (
+                      <MultiSelectItem 
+                        key={option.value} 
+                        value={option.value}
+                        disabled={option.disabled}
+                        badgeLabel={`${option.label}${option.timeLabel ? ` - ${option.timeLabel}` : ''}`}
+                      >
+                        <div className="flex items-center justify-between w-full pr-6">
+                          <div className="flex items-center gap-2">
+                            <span>{option.label}</span>
+                            {option.timeLabel && (
+                              <span className="text-muted-foreground text-sm">
+                                {option.timeLabel}
+                              </span>
+                            )}
+                          </div>
+                          {option.available !== undefined && (
+                            <span className="text-muted-foreground text-sm">
+                              (x{option.available})
+                            </span>
+                          )}
+                        </div>
+                      </MultiSelectItem>
+                    ))}
+                  </MultiSelectGroup>
+                </MultiSelectContent>
+              </MultiSelect>
+            )}
 
           </div>
 
@@ -131,15 +167,24 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
           <SheetClose asChild>
             <Button 
               type="submit" 
-              disabled={!total}
+              disabled={(() => {
+                // Check if we have selected prices and times
+                const hasSelectedPrices = product.prices?.some(p => (p.qty || 0) > 0);
+                const hasSelectedTimes = selectedTimes && selectedTimes.length > 0;
+                
+                // Need both: selected prices AND selected times
+                return !hasSelectedPrices || !hasSelectedTimes;
+              })()}
               onClick={async () => {
-                const _product = await calcCartValueClass({product})
-                const _productCleaned = await cleanupProduct({product:_product})
+                // Prepare product for cart
+                const cartProduct = {
+                  ...product,
+                  selectedTimes: selectedTimes,
+                  prices: product.prices?.filter(p => (p.qty || 0) > 0)
+                };
 
-                _product.variations = _product.variations?.map(v => ({
-                  ...v,
-                  prices: v.prices?.filter(price => (price.qty ?? 0) > 0) || []
-                }));
+                const _product = await calcCartValueClass({product: cartProduct})
+                const _productCleaned = await cleanupProduct({product:_product})
 
                 await addToCart(_productCleaned)
               }}
@@ -148,8 +193,6 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
             </Button>
           </SheetClose>
         </SheetFooter>
-
-
 
       </SheetContent>
     </Sheet>
