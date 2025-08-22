@@ -1,0 +1,221 @@
+import React, { useState } from 'react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Tag, Loader2, CheckCircle, Save, Trash2 } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import ProductInstructions from '@/components/product-instructions';
+import GeneralPricing from './GeneralPricing';
+
+export default function GeneralProductSheet({ 
+  open, 
+  onOpenChange, 
+  products,
+  selectedProductId,
+  setProducts,
+  isDirty,
+  saving,
+  markAsSaved,
+  setIconDialogOpen,
+  setIconDialogProductIdx,
+  setIconDialogQuery,
+  createProduct,
+  categoryName
+}) {
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  
+  // Find product and index
+  const product = products?.find(p => p._id === selectedProductId);
+  const pIdx = products?.findIndex(p => p._id === selectedProductId);
+  
+  if (!product || pIdx === -1) return null;
+  
+  const handleDelete = async () => {
+    setProducts(draft => {
+      draft.splice(pIdx, 1);
+    });
+    onOpenChange(false);
+    setDeleteDialogOpen(false);
+    
+    // If product has _id, delete from database
+    if (product._id) {
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${product._id}`, {
+          method: 'DELETE'
+        });
+      } catch (error) {
+        console.error('Error deleting product:', error);
+      }
+    }
+  };
+  
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent className="w-[75vw] sm:max-w-[75vw] overflow-y-auto p-4">
+        <SheetHeader className='m-0 p-0 mt-4'>
+          <SheetTitle className="flex items-center gap-4">
+            <div onClick={() => {
+              setIconDialogOpen(true);
+              setIconDialogProductIdx(pIdx);
+              setIconDialogQuery(product.name);
+            }}>
+              {!product?.thumbnail ? (
+                <Button className="bg-white rounded-lg size-16">
+                  <Tag className="!w-8 !h-8" />
+                </Button>
+              ) : (
+                <Button className="rounded-lg -p-1 size-16">
+                  <img className='rounded-lg size-16' src={product.thumbnail} alt="Thumbnail" />
+                </Button>
+              )}
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold">{product.name}</h2>
+            </div>
+            
+            {/* Auto-save indicator */}
+            {product._id && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center">
+                      {saving[product._id] ? (
+                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                      ) : isDirty[product._id] ? (
+                        <Save className="h-5 w-5 text-orange-500 animate-pulse" />
+                      ) : (
+                        <CheckCircle className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      {saving[product._id] ? 'Saving...' : 
+                       isDirty[product._id] ? 'Unsaved changes (auto-saves in 3s)' : 
+                       'All changes saved'}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            
+            {/* Manual save for new products */}
+            {!product._id && (
+              <Button
+                size="sm"
+                onClick={async () => {
+                  const createdProduct = await createProduct(categoryName, product);
+                  setProducts(draft => {
+                    draft[pIdx] = createdProduct;
+                  });
+                  markAsSaved(createdProduct._id, createdProduct);
+                }}
+              >
+                Save
+              </Button>
+            )}
+          </SheetTitle>
+        </SheetHeader>
+        
+        <div className="flex flex-col space-y-6 mt-4">
+          <div className="flex flex-col gap-2">
+            <Label>Product Name</Label>
+            <Input
+              type="text"
+              placeholder="Product Name"
+              onChange={(e) => {
+                setProducts(draft => {
+                  draft[pIdx].name = e.target.value;
+                });
+              }}
+              value={product.name || ''}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label>Description</Label>
+            <Textarea
+              type="text"
+              rows={6}
+              placeholder="Product description"
+              onChange={(e) => {
+                setProducts(draft => {
+                  draft[pIdx].desc = e.target.value;
+                });
+              }}
+              value={product.desc || ''}
+            />
+          </div>
+
+          <div>
+            <ProductInstructions
+              value={product.instructions}
+              onChange={(content) => {
+                setProducts(draft => {
+                  draft[pIdx].instructions = content;
+                });
+              }}
+            />
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={`waiver-${pIdx}`}
+              checked={product.waiverRequired || false}
+              onCheckedChange={(checked) => {
+                setProducts(draft => {
+                  draft[pIdx].waiverRequired = checked;
+                });
+              }}
+            />
+            <Label htmlFor={`waiver-${pIdx}`} className="cursor-pointer">
+              Waiver Required
+            </Label>
+          </div>
+
+          {/* Pricing Section */}
+          <GeneralPricing
+            product={product}
+            productIdx={pIdx}
+            setProducts={setProducts}
+          />
+          
+          {/* Delete Product Button */}
+          <div className="w-54">
+            <Button
+              variant="destructive"
+              className="w-full cursor-pointer"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete Product
+            </Button>
+          </div>
+        </div>
+      </SheetContent>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogTitle>Delete Product</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete "{product?.name}"? This action cannot be undone.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Sheet>
+  );
+}

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useImmer } from 'use-immer';
 // Drag and drop imports
 import {
@@ -31,7 +32,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogOverlay,
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Separator } from '@radix-ui/react-separator'
 import { Button } from '@/components/ui/button'
-import { Image, Plus, Ellipsis, EllipsisVertical, Info, Trash, Loader2, CheckCircle, Save, GripVertical, Edit2, Trash2, PanelLeft, ChevronRight, ChevronLeft, MoreVertical, Folder as FolderIcon, Check, X } from 'lucide-react'
+import { Image, Plus, Ellipsis, EllipsisVertical, Info, Trash, Loader2, CheckCircle, Save, GripVertical, Edit2, Trash2, PanelLeft, ChevronRight, ChevronLeft, MoreVertical, Folder as FolderIcon, Check, X, ExternalLink } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from "@/components/ui/textarea"
@@ -484,6 +485,12 @@ export default function Page() {
                     <DropdownMenuItem onClick={() => setEditMode(true)}>
                       <Edit2 className="h-4 w-4 mr-2" />
                       Edit List
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/products/mods" className="flex cursor-pointer">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Manage Mods
+                      </Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

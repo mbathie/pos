@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox'
 import { Tag, Ellipsis, Loader2, CheckCircle, Save } from 'lucide-react'
 import Variations from './Variations'
 import GeneralPricing from './GeneralPricing'
@@ -197,6 +198,23 @@ export default function Page({products, setProducts, units, title, description, 
                 })
               }}
             />
+          </div>
+
+          <div className="px-6 pb-4">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id={`waiver-${pIdx}`}
+                checked={p.waiverRequired || false}
+                onCheckedChange={(checked) => {
+                  setProducts(draft => {
+                    draft[pIdx].waiverRequired = checked;
+                  })
+                }}
+              />
+              <Label htmlFor={`waiver-${pIdx}`} className="cursor-pointer">
+                Waiver Required
+              </Label>
+            </div>
           </div>
 
           <CardContent>

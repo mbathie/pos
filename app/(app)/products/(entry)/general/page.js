@@ -1,12 +1,29 @@
 'use client'
 
-import Products from '../Products'
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useImmer } from 'use-immer';
+import { Button } from '@/components/ui/button';
+import { Plus, Loader2, CheckCircle, Save } from 'lucide-react';
+import ProductsTable from '../ProductsTable';
+import GeneralProductSheet from '../GeneralProductSheet';
+import IconSelect from '@/components/icon-select';
+import { useProduct } from '../useProduct';
+import { useAutoSave } from '../../useAutoSave';
 
 export default function Page() {
   const [products, setProducts] = useImmer([]);
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState(null);
+  const [iconDialogOpen, setIconDialogOpen] = useState(false);
+  const [iconDialogProductIdx, setIconDialogProductIdx] = useState(null);
+  const [iconDialogQuery, setIconDialogQuery] = useState('');
+  
   const categoryName = "general";
+  
+  const { updateProduct, updateProductKey, addProduct, createProduct } = useProduct(setProducts);
+  
+  // Use the auto-save hook
+  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(products, updateProduct, 3000);
 
   const getProducts = async () => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${categoryName}/products`);
@@ -18,22 +35,95 @@ export default function Page() {
 
   useEffect(() => {
     getProducts();
-  }, [])
+  }, []);
 
-  const units = ['hour', 'day']
-
-  // if (!products?.length) return (<></>)
+  const handleAddProduct = () => {
+    const newProduct = {
+      name: 'New Product',
+      type: 'general',
+      category: categoryName,
+      desc: '',
+      instructions: '',
+      waiverRequired: false,
+      prices: []
+    };
+    
+    setProducts(draft => {
+      draft.push(newProduct);
+    });
+    
+    // Select the new product and open sheet
+    setSelectedProductId(products.length); // Use index as temporary ID
+    setSheetOpen(true);
+  };
 
   return (
-    <div className='px-4'>
-      <Products
+    <div className='px-4 pb-4'>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <div className='font-semibold'>General Entry Products</div>
+          <div className='text-sm text-muted-foreground'>General admission products for untimed events</div>
+        </div>
+        
+        {/* Overall save status */}
+        <div className="ml-4">
+          {isAnySaving ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              <span>Saving changes...</span>
+            </div>
+          ) : hasAnyUnsaved ? (
+            <div className="flex items-center gap-2 text-sm text-orange-500">
+              <Save className="h-3 w-3 animate-pulse" />
+              <span>Unsaved changes</span>
+            </div>
+          ) : products.some(p => p._id) && (
+            <div className="flex items-center gap-2 text-sm text-green-500">
+              <CheckCircle className="h-3 w-3" />
+              <span>All changes saved</span>
+            </div>
+          )}
+        </div>
+        
+        <Button size="sm" variant="outline" onClick={handleAddProduct}>
+          <Plus className="h-4 w-4 mr-1" />
+          New Product
+        </Button>
+      </div>
+
+      {/* Products Table */}
+      <ProductsTable
         products={products}
+        onProductClick={(product, idx) => {
+          setSelectedProductId(product._id || idx);
+          setSheetOpen(true);
+        }}
+      />
+      
+      {/* Product Details Sheet */}
+      <GeneralProductSheet
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
+        products={products}
+        selectedProductId={selectedProductId}
         setProducts={setProducts}
-        units={units}
-        type="general"
-        title="General Entry Products"
-        description="General admission products for untimed events"
+        isDirty={isDirty}
+        saving={saving}
+        markAsSaved={markAsSaved}
+        setIconDialogOpen={setIconDialogOpen}
+        setIconDialogProductIdx={setIconDialogProductIdx}
+        setIconDialogQuery={setIconDialogQuery}
+        createProduct={createProduct}
         categoryName={categoryName}
+      />
+      
+      {/* Icon Select Dialog */}
+      <IconSelect
+        open={iconDialogOpen}
+        setOpen={setIconDialogOpen}
+        pIdx={iconDialogProductIdx}
+        query={iconDialogQuery}
+        updateProduct={updateProductKey}
       />
     </div>
   );

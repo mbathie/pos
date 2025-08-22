@@ -349,6 +349,19 @@ export default function Page({products, setProducts, categoryName, type}) {
                 />
               </div>
 
+              <div className="px-6">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id={`waiver-${p._id}`}
+                    checked={p.waiverRequired || false}
+                    onCheckedChange={(checked) => updateProduct(p._id, { waiverRequired: checked })}
+                  />
+                  <Label htmlFor={`waiver-${p._id}`} className="cursor-pointer">
+                    Waiver Required
+                  </Label>
+                </div>
+              </div>
+
               {/* Schedule Section */}
               <div className='px-6 space-y-6'>
                 <Label>Schedule</Label>

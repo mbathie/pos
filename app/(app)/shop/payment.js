@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
+import { NumberInput } from "@/components/ui/number-input"
 
 import { useGlobals } from "@/lib/globals"
 import { useCard } from './useCard'
@@ -61,7 +62,8 @@ export default function Page() {
   const [discounts, setDiscounts] = useState([])
   const [loadingDiscounts, setLoadingDiscounts] = useState(false)
   const [discountExpanded, setDiscountExpanded] = useState(false)
-  const [customDiscountInput, setCustomDiscountInput] = useState('')
+  const [customDiscountDollar, setCustomDiscountDollar] = useState(null)
+  const [customDiscountPercent, setCustomDiscountPercent] = useState(null)
   const [showDiscountPinDialog, setShowDiscountPinDialog] = useState(false)
   const [pendingDiscountAmount, setPendingDiscountAmount] = useState('')
   
@@ -379,7 +381,10 @@ export default function Page() {
   }, []);
 
   // Handle custom discount application
-  const applyCustomDiscount = (amount) => {
+  const applyCustomDiscount = () => {
+    const amount = customDiscountDollar;
+    if (!amount || amount <= 0) return;
+    
     const discountAmount = parseFloat(amount);
     if (isNaN(discountAmount) || discountAmount <= 0) return;
     
@@ -393,7 +398,7 @@ export default function Page() {
     // Check if current user has permission for custom discounts
     if (!hasPermission(employee?.role, 'discount:custom')) {
       // Store the pending discount amount and show pin dialog
-      setPendingDiscountAmount(amount);
+      setPendingDiscountAmount(amount.toString());
       setShowDiscountPinDialog(true);
       return;
     }
@@ -416,8 +421,33 @@ export default function Page() {
       draft.total = Math.max(0, draft.subtotal + draft.tax - discountAmount);
     });
     
-    setCustomDiscountInput('');
+    setCustomDiscountDollar(null);
+    setCustomDiscountPercent(null);
     toast.success(`Applied custom discount of $${discountAmount.toFixed(2)}`);
+  };
+  
+  // Calculate percentage from dollar amount
+  const updatePercentFromDollar = (dollarAmount) => {
+    if (!dollarAmount || dollarAmount <= 0) {
+      setCustomDiscountPercent(null);
+      return;
+    }
+    const cartTotal = cart.subtotal + cart.tax;
+    if (cartTotal > 0) {
+      const percent = (dollarAmount / cartTotal) * 100;
+      setCustomDiscountPercent(Math.round(percent * 100) / 100); // Round to 2 decimals
+    }
+  };
+  
+  // Calculate dollar amount from percentage
+  const updateDollarFromPercent = (percentAmount) => {
+    if (!percentAmount || percentAmount <= 0) {
+      setCustomDiscountDollar(null);
+      return;
+    }
+    const cartTotal = cart.subtotal + cart.tax;
+    const dollarAmount = (percentAmount / 100) * cartTotal;
+    setCustomDiscountDollar(Math.round(dollarAmount * 100) / 100); // Round to 2 decimals
   };
 
   // Handle successful PIN verification for custom discount
@@ -525,7 +555,14 @@ export default function Page() {
                   )}
                 </div>
                 <span className="text-right">
-                  -${displayCart.discountAmount.toFixed(2)}
+                  {!displayCart.discount && (
+                    <>
+                      ({((displayCart.discountAmount / (displayCart.subtotal + displayCart.tax)) * 100).toFixed(1)}%) 
+                    </>
+                  )}
+                  <span className="ml-2">
+                    -${displayCart.discountAmount.toFixed(2)}
+                  </span>
                 </span>
               </div>
             )}
@@ -639,25 +676,51 @@ export default function Page() {
                 <div className="">Custom Discount</div>
                 <div className="flex-1" />
                 <div className="flex gap-2 items-center">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    max={cart.subtotal + cart.tax}
-                    value={customDiscountInput}
-                    onChange={(e) => setCustomDiscountInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        applyCustomDiscount(customDiscountInput);
-                      }
-                    }}
-                    placeholder="0.00"
-                    className="w-26"
-                    disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
-                  />
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-muted-foreground">$</span>
+                    <NumberInput
+                      min={0}
+                      max={cart.subtotal + cart.tax}
+                      step={0.01}
+                      value={customDiscountDollar}
+                      onChange={(value) => {
+                        setCustomDiscountDollar(value);
+                        updatePercentFromDollar(value);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          applyCustomDiscount();
+                        }
+                      }}
+                      placeholder="0.00"
+                      className="w-24"
+                      disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <NumberInput
+                      min={0}
+                      max={100}
+                      step={0.01}
+                      value={customDiscountPercent}
+                      onChange={(value) => {
+                        setCustomDiscountPercent(value);
+                        updateDollarFromPercent(value);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          applyCustomDiscount();
+                        }
+                      }}
+                      placeholder="0"
+                      className="w-20"
+                      disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                    />
+                    <span className="text-sm text-muted-foreground">%</span>
+                  </div>
                   <Button
-                    onClick={() => applyCustomDiscount(customDiscountInput)}
-                    disabled={!customDiscountInput || parseFloat(customDiscountInput) <= 0 || paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                    onClick={() => applyCustomDiscount()}
+                    disabled={!customDiscountDollar || customDiscountDollar <= 0 || paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
                     className="px-2"
                   >
                     Apply

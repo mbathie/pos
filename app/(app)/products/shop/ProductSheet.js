@@ -1,7 +1,9 @@
 import React, { useContext, useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -254,12 +256,11 @@ export default function ProductSheet({
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <Input
-                type="number"
-                min="0"
-                value={product.qty || ''}
-                onChange={(e) => {
-                  updateProduct({pIdx, key: "qty", value: parseInt(e.target.value) || 0});
+              <NumberInput
+                min={0}
+                value={product.qty || null}
+                onChange={(value) => {
+                  updateProduct({pIdx, key: "qty", value: value || 0});
                 }}
                 placeholder="0"
                 className="w-24"
@@ -280,12 +281,11 @@ export default function ProductSheet({
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <Input
-                type="number"
-                min="0"
-                value={product.par || ''}
-                onChange={(e) => {
-                  updateProduct({pIdx, key: "par", value: parseInt(e.target.value) || 0});
+              <NumberInput
+                min={0}
+                value={product.par || null}
+                onChange={(value) => {
+                  updateProduct({pIdx, key: "par", value: value || 0});
                 }}
                 placeholder="0"
                 className="w-24"
@@ -306,12 +306,13 @@ export default function ProductSheet({
                     className="w-24"
                     onChange={(e) => updateVariation({pIdx, vIdx: i, key: "name", value: e.target.value})}
                   />
-                  <Input
-                    type="text" 
+                  <NumberInput
                     placeholder="5.50" 
-                    value={v.amount || ''}
+                    value={v.amount ? parseFloat(v.amount) : null}
+                    min={0}
+                    step={0.01}
                     className="w-24"
-                    onChange={(e) => updateVariation({pIdx, vIdx: i, key: "amount", value: e.target.value})}
+                    onChange={(value) => updateVariation({pIdx, vIdx: i, key: "amount", value: value ? value.toString() : ''})}
                   />
                   <Button
                     className="cursor-pointer"
@@ -340,7 +341,14 @@ export default function ProductSheet({
           </div>
 
           <div className="space-y-2">
-            <Label>Mods</Label>
+            <div className="flex items-center justify-between">
+              <Label>Mods</Label>
+              <Link href="/products/mods">
+                <Button variant="outline" size="sm" className="cursor-pointer">
+                  Manage Mods
+                </Button>
+              </Link>
+            </div>
             <MultiSelect
               values={selectedModGroups}
               onValuesChange={handleModGroupsChange}

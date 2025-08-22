@@ -11,6 +11,7 @@ const ProductSchema = new mongoose.Schema({
   duration: { name: Number, unit: String },
   capacity: Number,
   bump: { type: Boolean, default: false },
+  waiverRequired: { type: Boolean, default: false },
   // times: [{
   //   _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
   //   except: [String]

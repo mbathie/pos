@@ -29,7 +29,8 @@ export default function ProductDetail({ open, setOpen, product, setQty }) {
   
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent className="w-[400px] sm:w-[540px]">
+      <SheetContent className="sm:max-w-[700px] flex flex-col h-full">
+
 
         <SheetHeader className=''>
           <SheetTitle>

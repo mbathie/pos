@@ -72,7 +72,7 @@ function SortableCategory({
       >
         <div 
           className={cn(
-            "group flex items-center justify-between h-10 px-2 rounded-lg transition-colors",
+            "group flex items-center justify-between h-12 px-2 rounded-lg transition-colors",
             editMode ? "cursor-move" : "cursor-pointer",
             isCategorySelected ? "bg-accent font-medium" : "hover:bg-accent/50"
           )}
@@ -90,7 +90,7 @@ function SortableCategory({
               <SvgIcon
                 src={category.thumbnail}
                 alt={category.name}
-                className="size-5 text-foreground"
+                className="size-5 text-foreground rounded-xs"
               />
             ) : (
               <Image className="size-5" />
@@ -272,7 +272,7 @@ export function CategoryFolderMenu({
           >
             <div 
               className={cn(
-                "group flex items-center justify-between h-10 px-2 rounded-lg cursor-pointer transition-colors",
+                "group flex items-center justify-between h-12 px-2 rounded-lg cursor-pointer transition-colors",
                 isCategorySelected ? "bg-accent font-medium" : "hover:bg-accent/50"
               )}
               onClick={() => {
@@ -289,7 +289,7 @@ export function CategoryFolderMenu({
                   <SvgIcon
                     src={category.thumbnail}
                     alt={category.name}
-                    className="size-5 text-foreground"
+                    className="size-5 text-foreground rounded-xs"
                   />
                 ) : (
                   <Image className="size-5" />
