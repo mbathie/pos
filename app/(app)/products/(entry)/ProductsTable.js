@@ -1,7 +1,7 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tag, ChevronRight, Check } from 'lucide-react';
-import { SvgIcon } from '@/components/ui/svg-icon';
+import { ChevronRight, Check } from 'lucide-react';
+import { ProductIcon } from '@/components/product-icon';
 
 export default function ProductsTable({ 
   products, 
@@ -37,19 +37,11 @@ export default function ProductsTable({
                 onClick={() => onProductClick(product, pIdx)}
               >
                 <TableCell>
-                  {!product?.thumbnail ? (
-                    <div className="bg-muted rounded-lg w-10 h-10 flex items-center justify-center">
-                      <Tag className="w-5 h-5" />
-                    </div>
-                  ) : (
-                    <div className="bg-muted rounded-lg w-10 h-10 flex items-center justify-center">
-                      <SvgIcon
-                        src={product.thumbnail}
-                        alt={product.name}
-                        className="w-6 h-6"
-                      />
-                    </div>
-                  )}
+                  <ProductIcon
+                    src={product.thumbnail}
+                    alt={product.name}
+                    size="xs"
+                  />
                 </TableCell>
                 
                 <TableCell>

@@ -122,13 +122,13 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
               </div>
             }
 
-            {loadingMods && (
+            {loadingMods && product?.variations?.some(v => v.selected) && (
               <div className='flex items-center justify-center py-4'>
                 <Loader2 className='h-6 w-6 animate-spin' />
               </div>
             )}
             
-            {!loadingMods && modGroups.length > 0 && (
+            {!loadingMods && modGroups.length > 0 && product?.variations?.some(v => v.selected) && (
               <div className='flex flex-col gap-4'>
                 {modGroups.map((group, groupIdx) => (
                   <div key={group._id} className='flex flex-col gap-2'>

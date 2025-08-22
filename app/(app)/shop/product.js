@@ -1,29 +1,25 @@
 'use client'
 
 import React from 'react'
-import Image from 'next/image'
+import { ProductIcon } from '@/components/product-icon'
 
 export default function ProductCard({ product, onClick }) {
-  const isIcon = !product?.thumbnail || product?.thumbnail?.includes("thenounproject.com");
-
   return (
     <div
       key={product._id}
       className='w-24 flex flex-col items-center text-center'
     >
       <div 
-        className="cursor-pointer border border-accent-foreground/50 relative size-24 rounded-lg"
+        className="cursor-pointer"
         onClick={onClick}
       >
-        <Image
-          src={product?.thumbnail || "https://static.thenounproject.com/png/2206029-200.png"}
-          alt="Product Icon"
-          fill
-          style={{ objectFit: 'contain' }}
-          className={`rounded-lg ${isIcon ? 'invert' : ''}`}
+        <ProductIcon
+          src={product.thumbnail}
+          alt={product.name}
+          size="lg"
         />
       </div>
-      <div className="text-xs w-24">{product.name}</div>
+      <div className="text-xs w-24 mt-1">{product.name}</div>
     </div>
   );
 }

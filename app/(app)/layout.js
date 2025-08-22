@@ -14,11 +14,10 @@ import {
 } from "@/components/ui/sidebar"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
-import BreadcrumbMenu from '@/components/breadcrumb-menu'
-// import Cart from './shop/cart'
+import { CartSheet } from '@/components/cart-sheet'
 
 export default function Page({children}) {
-  const { location, employee, setEmployee, resetBreadcrumb, resetCart, setLowStockData, clearLowStockData } = useGlobals()
+  const { location, employee, setEmployee, resetCart, setLowStockData, clearLowStockData } = useGlobals()
   const [ open, setOpen ] = useState(false)
   const [ isRedirecting, setIsRedirecting ] = useState(false)
 
@@ -47,7 +46,6 @@ export default function Page({children}) {
             setIsRedirecting(true);
             
             // Use the same logout pattern as nav-user component
-            resetBreadcrumb();
             resetCart();
             
             // Call logout API and redirect
@@ -140,8 +138,6 @@ export default function Page({children}) {
     setOpen(state)
   }
 
-  const showBreadcrumbs = ['/shop', '/locations']
-  const showHeaderExtras = showBreadcrumbs.some(path => pathname.startsWith(path));
 
   return (
     <TooltipProvider>
@@ -163,14 +159,7 @@ export default function Page({children}) {
 
           <div className='flex-1'/>
 
-          <div className='flex gap-8'>
-            {showHeaderExtras && (
-              <>
-                <BreadcrumbMenu />
-                {/* <Cart /> */}
-              </>
-            )}
-          </div>
+          <CartSheet />
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4- pt-0">
           {children}

@@ -5,14 +5,14 @@ import { Button } from "@/components/ui/button"
 import Link from 'next/link'
 import { useGlobals } from '@/lib/globals'
 import { Coffee, Ticket, Dumbbell, IdCard } from "lucide-react";
+import Cart from '@/components/cart'
 
 export default function Page() {
-  const { pushBreadcrumb, resetBreadcrumb } = useGlobals()
+  const { cart } = useGlobals()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    resetBreadcrumb({ name: "Shop", href: "/shop" })
     fetchProducts()
   }, []);
 
@@ -45,72 +45,71 @@ export default function Page() {
       icon: Ticket, 
       href: "/shop/general", 
       setupHref: "/products/general",
-      type: "general",
-      breadcrumb: { href: "/shop/general", name: "General Entry" } 
+      type: "general"
     },
     { 
       title: "Classes & Courses", 
       icon: Dumbbell, 
       href: "/shop/classes", 
       setupHref: "/products/classes",
-      type: "class",
-      breadcrumb: { href: "/shop/classes", name: "Classes & Courses" } 
+      type: "class"
     },
     { 
       title: "Membership", 
       icon: IdCard, 
       href: "/shop/memberships", 
       setupHref: "/products/memberships",
-      type: "membership",
-      breadcrumb: { href: "/shop/memberships", name: "Memberships" } 
+      type: "membership"
     },
     { 
       title: "Food, Bev & Shop", 
       icon: Coffee, 
       href: "/shop/retail", 
       setupHref: "/products/shop",
-      type: "shop",
-      breadcrumb: { href: "/shop/retail", name: "Folders" } 
+      type: "shop"
     }
   ];
 
   return (
-    <div className='text-center'>
-      <div className='flex gap-4 justify-center flex-wrap'>
-        {shopItems.map((item, i) => {
-          const hasProducts = hasProductsOfType(item.type)
-          
-          const content = (
-            <Card key={item.title} className="aspect-square size-50 text-center">
-              <CardHeader>
-                <CardTitle>{item.title}</CardTitle>
-              </CardHeader>
-              <CardContent className="flex items-center justify-center h-full">
-                {!loading && !hasProducts ? (
-                  <Link href={item.setupHref}>
-                    <Button variant="outline" size="lg">
-                      Setup
-                    </Button>
-                  </Link>
-                ) : (
-                  <item.icon className="size-10 mx-auto mt-4" />
-                )}
-              </CardContent>
-            </Card>
-          );
+    <div className='flex h-full'>
+      <div className={`flex-1 ${cart?.products?.length > 0 ? '' : 'text-center'}`}>
+        <div className='flex gap-4 justify-center flex-wrap p-4'>
+          {shopItems.map((item, i) => {
+            const hasProducts = hasProductsOfType(item.type)
+            
+            const content = (
+              <Card key={item.title} className="aspect-square size-50 text-center">
+                <CardHeader>
+                  <CardTitle>{item.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="flex items-center justify-center h-full">
+                  {!loading && !hasProducts ? (
+                    <Link href={item.setupHref}>
+                      <Button variant="outline" size="lg">
+                        Setup
+                      </Button>
+                    </Link>
+                  ) : (
+                    <item.icon className="size-10 mx-auto mt-4" />
+                  )}
+                </CardContent>
+              </Card>
+            );
 
-          // Only make it clickable if products exist
-          return hasProducts && item.href ? (
-            <Link
-              key={item.title}
-              href={item.href}
-              onClick={() => pushBreadcrumb(item.breadcrumb)}
-            >
-              {content}
-            </Link>
-          ) : content;
-        })}
+            // Only make it clickable if products exist
+            return hasProducts && item.href ? (
+              <Link
+                key={item.title}
+                href={item.href}
+              >
+                {content}
+              </Link>
+            ) : content;
+          })}
+        </div>
       </div>
+      
+      {cart?.products?.length > 0 && <Cart />}
     </div>
   )
 }

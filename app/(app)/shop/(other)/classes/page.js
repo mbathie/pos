@@ -8,7 +8,7 @@ import Products from '../../products'
 import ProductDetailClass from './productDetailClass';
 import ProductDetailCourse from './ProductDetailCourse';
 import { useImmer } from 'use-immer'
-import Cart from '../../cart'
+import Cart from '@/components/cart'
 
 export default function Page() {
   // const { pushBreadcrumb } = useGlobals()

@@ -7,7 +7,7 @@ import { useMembership } from './useMembership'
 import Products from '../../products'
 import ProductDetailMembership from './productDetailMembership';
 import { useImmer } from 'use-immer'
-import Cart from '../../cart'
+import Cart from '@/components/cart'
 
 export default function Page() {
   // const { pushBreadcrumb } = useGlobals()

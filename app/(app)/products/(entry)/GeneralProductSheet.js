@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Tag, Loader2, CheckCircle, Save, Trash2, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { SvgIcon } from '@/components/ui/svg-icon';
+import { ProductIcon } from '@/components/product-icon';
 import ProductInstructions from '@/components/product-instructions';
 import GeneralPricing from './GeneralPricing';
 
@@ -59,24 +59,19 @@ export default function GeneralProductSheet({
       <SheetContent className="w-[75vw] sm:max-w-[75vw] overflow-y-auto p-4">
         <SheetHeader className='m-0 p-0 mt-4'>
           <SheetTitle className="flex items-center gap-4">
-            <div onClick={() => {
-              setIconDialogOpen(true);
-              setIconDialogProductIdx(pIdx);
-              setIconDialogQuery(product.name);
-            }}>
-              {!product?.thumbnail ? (
-                <Button className="bg-white rounded-lg size-16">
-                  <Tag className="!w-8 !h-8" />
-                </Button>
-              ) : (
-                <Button className="bg-white rounded-lg size-16 flex items-center justify-center">
-                  <SvgIcon
-                    src={product.thumbnail}
-                    alt={product.name}
-                    className="w-10 h-10"
-                  />
-                </Button>
-              )}
+            <div 
+              className="cursor-pointer"
+              onClick={() => {
+                setIconDialogOpen(true);
+                setIconDialogProductIdx(pIdx);
+                setIconDialogQuery(product.name);
+              }}
+            >
+              <ProductIcon
+                src={product.thumbnail}
+                alt={product.name}
+                size="lg"
+              />
             </div>
             <div className="flex-1">
               <h2 className="text-xl font-semibold">{product.name}</h2>

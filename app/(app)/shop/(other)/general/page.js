@@ -6,7 +6,7 @@ import { useHandler } from './useHandler'
 import Products from '../../products'
 import ProductDetail from './productDetail';
 import { useImmer } from 'use-immer'
-import Cart from '../../cart'
+import Cart from '@/components/cart'
 
 export default function Page() {
   const [ products, setProducts ] = useState([]);

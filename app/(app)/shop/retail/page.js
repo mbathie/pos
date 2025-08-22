@@ -2,17 +2,15 @@
 import React, { useEffect, useState } from 'react'
 import { useHandler } from './useHandler'
 import { useImmer } from 'use-immer'
-import { useGlobals } from '@/lib/globals'
 import ProductDetail from './productDetail'
 import Categories from './cats'
 import Product from '../product'
 import { useRouter } from 'next/navigation';
 import colors from 'tailwindcss/colors';
 import { Plus, Minus } from 'lucide-react'
-import Cart from '../cart'
+import Cart from '@/components/cart'
 
 export default function Page() {
-  const { pushBreadcrumb, resetBreadcrumb } = useGlobals()
     
   const { 
     getProducts, selectVariation, 

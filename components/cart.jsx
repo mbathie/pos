@@ -6,15 +6,15 @@ import { Button } from '@/components/ui/button'
 import dayjs from 'dayjs';
 import { Badge } from '@/components/ui/badge';
 
-export default function Cart({}) {
-  const { cart, removeFromCart, resetCart, pushBreadcrumb } = useGlobals()
+export default function Cart({ asSheet = false, onClose }) {
+  const { cart, removeFromCart, resetCart } = useGlobals()
 
-  if (cart.products.length < 1)
-    return
+  if (cart.products.length < 1 && !asSheet)
+    return null
 
   return (
-    <div className="flex flex-col p-4 text-sm w-[380px] bg-muted rounded-tl-lg h-[calc(100vh-65px)]">
-      <div className="space-y-1 w-full flex-1 overflow-y-auto">
+    <div className="flex flex-col h-full text-sm bg-muted w-[380px] rounded-tl-lg">
+      <div className="space-y-1 w-full flex-1 overflow-y-auto p-4">
         {cart?.products?.map((p, pIdx) => {
 
           // for shop product item
@@ -183,7 +183,7 @@ export default function Cart({}) {
       
 
 
-      <div className='flex flex-col mt-6 flex-shrink-0 text-sm'>
+      <div className='border-t p-4 flex flex-col flex-shrink-0 text-sm'>
         <div className='flex flex-col text-sm'>
           <div className='flex'>
             <div className=''>Subtotal</div>
@@ -211,7 +211,9 @@ export default function Cart({}) {
               type="submit"
               className="w-full"
               disabled={!cart.products.length}
-              onClick={() => pushBreadcrumb({ href: '/shop/retail/payment', name: "Payment" })}
+              onClick={() => {
+                if (asSheet && onClose) onClose()
+              }}
             >
               Payment
             </Button>
@@ -222,7 +224,10 @@ export default function Cart({}) {
             className="w-full"
             variant="destructive"
             disabled={!cart.products.length}
-            onClick={() => resetCart()}
+            onClick={() => {
+              resetCart()
+              if (asSheet && onClose) onClose()
+            }}
           >
             Clear Cart
           </Button>
