@@ -1,5 +1,4 @@
 'use client'
-import colors from 'tailwindcss/colors';
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { Button } from "@/components/ui/button";
-import { LoaderCircle, Circle, CircleCheck, CircleX, Filter } from "lucide-react";
+import { Clock, CircleCheck, CircleX, Filter } from "lucide-react";
 dayjs.extend(relativeTime);
 
 export default function Page({ params }) {
@@ -38,16 +37,19 @@ export default function Page({ params }) {
 
   const statuses = {
     'placed': {
-      icon: LoaderCircle,
-      color: 'yellow-500'
+      icon: Clock,
+      className: 'text-chart-4',
+      badgeVariant: 'chart4'
     },
     'cancelled': {
       icon: CircleX,
-      color: 'red-500'
+      className: 'text-destructive',
+      badgeVariant: 'destructive'
     },
     'completed': {
       icon: CircleCheck,
-      color: 'green-500'
+      className: 'text-primary',
+      badgeVariant: 'default'
     }
   }
 
@@ -170,14 +172,19 @@ export default function Page({ params }) {
                     <div>
                       <div className="flex flex-row items-center gap-2 text-lg- font-semibold">
                         {statuses[o.status] && (() => {
-                          const { icon: StatusIcon, color } = statuses[o.status];
+                          const { icon: StatusIcon, className, badgeVariant } = statuses[o.status];
                           return (
-                            <StatusIcon
-                              className="size-5 stroke-3"
-                              style={{
-                                color: colors[color.split('-')[0]][color.split('-')[1]]
-                              }}
-                            />
+                            <>
+                              <StatusIcon
+                                className={`size-5 stroke-2 ${className}`}
+                              />
+                              <Badge 
+                                variant={badgeVariant}
+                                className="text-xs font-medium capitalize w-[90px] text-center"
+                              >
+                                {o.status}
+                              </Badge>
+                            </>
                           );
                         })()}
                         <div>Order #</div>

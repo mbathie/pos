@@ -128,14 +128,56 @@ export default function Page() {
   }
   
   const sigRef = useRef(null)
+  const sigContainerRef = useRef(null)
+  
   const clear = () => {
     sigRef.current.clear()
     setCustomer({...customer, signature: ""})
   }
+  
   const getSig = () => {
     const dataURL = sigRef.current.getTrimmedCanvas().toDataURL('image/png')
     setCustomer({...customer, signature: dataURL})
   }
+  
+  // Handle signature canvas resize
+  const resizeCanvas = () => {
+    if (sigRef.current && sigContainerRef.current) {
+      const container = sigContainerRef.current
+      const canvas = sigRef.current.getCanvas()
+      const ratio = Math.max(window.devicePixelRatio || 1, 1)
+      
+      // Get the actual width of the container
+      const width = container.clientWidth
+      const height = 200 // Fixed height
+      
+      // Set the actual canvas size
+      canvas.width = width * ratio
+      canvas.height = height * ratio
+      canvas.style.width = `${width}px`
+      canvas.style.height = `${height}px`
+      
+      // Scale the drawing context to match device pixel ratio
+      const context = canvas.getContext('2d')
+      context.scale(ratio, ratio)
+      
+      // Clear and reset the signature
+      sigRef.current.clear()
+    }
+  }
+  
+  // Resize canvas on mount and window resize
+  useEffect(() => {
+    // Initial resize
+    setTimeout(resizeCanvas, 100)
+    
+    // Add resize listener
+    window.addEventListener('resize', resizeCanvas)
+    
+    return () => {
+      window.removeEventListener('resize', resizeCanvas)
+    }
+  }, [])
 
   // Handle waiver content scroll
   const handleWaiverScroll = (e) => {
@@ -632,7 +674,7 @@ export default function Page() {
           </div>
 
           {/* Dependents Section */}
-          <div className="flex flex-col gap-2 w-full">
+          <div className="flex flex-col gap-2 w-full mt-2">
             {dependents.length > 0 && (
               <>
                 <Label>Dependents</Label>
@@ -730,12 +772,26 @@ export default function Page() {
 
           <div className="flex flex-col gap-2 mt-2">
             <Label>Signature</Label>
-            <SignatureCanvas
-              ref={sigRef}
-              penColor="white"
-              canvasProps={{ height: 200, className: 'w-full border border-card-foreground/20 rounded-lg bg-accent/50' }}
-              onEnd={() => getSig()}
-            />
+            <div 
+              ref={sigContainerRef}
+              className="relative w-full border border-card-foreground/20 rounded-lg bg-accent/50"
+              style={{ height: '200px' }}
+            >
+              <SignatureCanvas
+                ref={sigRef}
+                penColor="white"
+                canvasProps={{ 
+                  style: { 
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%'
+                  }
+                }}
+                onEnd={() => getSig()}
+              />
+            </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={clear}>Clear</Button>
             </div>

@@ -20,18 +20,10 @@ export default function Page() {
   
   const categoryName = "class";
   
-  const { updateProduct, updateProductKey, saveProduct, addProduct } = useProduct({setProducts, categoryName});
-  
-  // Wrapper function for auto-save that provides the correct parameters
-  const autoSaveProduct = useCallback(async (product) => {
-    const productIdx = products.findIndex(p => p._id === product._id);
-    if (productIdx !== -1) {
-      return await saveProduct({ product, productIdx });
-    }
-  }, [products, saveProduct]);
+  const { updateProduct, updateProductKey, addProduct, createProduct } = useProduct(setProducts);
   
   // Use the auto-save hook
-  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(products, autoSaveProduct, 3000);
+  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(products, updateProduct, 3000);
 
   const getProducts = async () => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${categoryName}/products`);
@@ -102,7 +94,8 @@ export default function Page() {
         setIconDialogOpen={setIconDialogOpen}
         setIconDialogProductIdx={setIconDialogProductIdx}
         setIconDialogQuery={setIconDialogQuery}
-        saveProduct={saveProduct}
+        createProduct={createProduct}
+        categoryName={categoryName}
       />
       
       {/* Icon Select Dialog */}

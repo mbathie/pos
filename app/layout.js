@@ -1,13 +1,13 @@
 import "./globals.css";
-import { Inter } from "next/font/google";
+import { Outfit } from "next/font/google";
 import { GlobalProvider } from "@/components/global-context";
 import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 
-const inter = Inter({ subsets: ['latin'] })
+const outfit = Outfit({ subsets: ['latin'] })
 
 export const metadata = {
-  title: "Cultcha Lifestyle Management",
+  title: "Cultcha Point of Sale Lifestyle Management Suite",
   description: "All-in-one POS platform for fitness centers, entertainment, and dining experiences",
 };
 
@@ -21,7 +21,7 @@ export default async function RootLayout({ children }) {
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
       </head>
-      <body className={`${inter.className} antialiased`}>
+      <body className={`${outfit.className} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

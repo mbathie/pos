@@ -13,8 +13,9 @@ import { useGlobals } from "@/lib/globals"
 import { useCard } from './useCard'
 import { useCash } from "./useCash";
 import { Separator } from "@radix-ui/react-separator";
-import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail } from "lucide-react";
+import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail, Plus, OctagonAlert } from "lucide-react";
 import { toast } from 'sonner'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
 import CustomerConnect from './customerConnect'
 import DiscountPinDialog from '@/components/pin-dialog-discount'
@@ -704,7 +705,7 @@ export default function Page() {
                         }
                       }}
                       placeholder="0.00"
-                      className="w-24"
+                      className="w-18"
                       disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
                     />
                   </div>
@@ -724,7 +725,7 @@ export default function Page() {
                         }
                       }}
                       placeholder="0"
-                      className="w-20"
+                      className="w-18"
                       disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
                     />
                     <span className="text-sm text-muted-foreground">%</span>
@@ -753,7 +754,21 @@ export default function Page() {
                   return p.prices?.map((price, priceIdx) =>
                     price.customers?.map((c, cIdx) => (
                       <div className="flex items-center gap-4" key={`${pIdx}-${priceIdx}-${cIdx}`}>
-                        <div className="whitespace-nowrap">{cIdx + 1}. {price.name}</div>
+                        <div className="whitespace-nowrap flex items-center gap-1">
+                          {cIdx + 1}. {price.name}
+                          {p.waiverRequired && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <OctagonAlert className="h-4 w-4 text-chart-4" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Must connect a customer who's signed a waiver</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
+                        </div>
                         <div className="flex justify-end w-full text-right">
                           {c.customer ? (
                             <div className="flex items-center gap-1">
@@ -790,7 +805,7 @@ export default function Page() {
                                 setShowCustomerConnect(true);
                               }}
                             >
-                              Connect Customer
+                              <Plus className="size-4" /> Customer
                             </Button>
                           )}
                         </div>

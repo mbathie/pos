@@ -176,10 +176,20 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
                 return !hasSelectedPrices || !hasSelectedTimes;
               })()}
               onClick={async () => {
+                // Map selected times to include labels
+                const selectedTimesWithLabels = selectedTimes.map(value => {
+                  const timeCalc = product.timesCalc?.find(tc => tc.value === value);
+                  if (timeCalc?.timeLabel) {
+                    // Store as "datetime|label" format
+                    return `${value}|${timeCalc.timeLabel}`;
+                  }
+                  return value;
+                });
+                
                 // Prepare product for cart
                 const cartProduct = {
                   ...product,
-                  selectedTimes: selectedTimes,
+                  selectedTimes: selectedTimesWithLabels,
                   prices: product.prices?.filter(p => (p.qty || 0) > 0)
                 };
 

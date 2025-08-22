@@ -4,6 +4,7 @@ import { useGlobals } from '@/lib/globals'
 import { Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import dayjs from 'dayjs';
+import { Badge } from '@/components/ui/badge';
 
 export default function Cart({}) {
   const { cart, removeFromCart, resetCart, pushBreadcrumb } = useGlobals()
@@ -94,21 +95,33 @@ export default function Cart({}) {
               ))}
               
               {/* Display selected times */}
-              {p.selectedTimes?.map((time, tIdx) => (
-                <div key={tIdx} className='flex'>
-                  <div className="mr-auto">
-                    {dayjs(time).format('ddd DD/MM/YY HH:mm A')}
+              {p.selectedTimes?.map((time, tIdx) => {
+                // Extract the time label if it exists in the format "datetime|label"
+                const [datetime, label] = typeof time === 'string' && time.includes('|') 
+                  ? time.split('|') 
+                  : [time, null];
+                
+                return (
+                  <div key={tIdx} className='flex items-center'>
+                    <div className="mr-auto flex items-center gap-2">
+                      {dayjs(datetime).format('ddd DD/MM/YY HH:mm A')}
+                      {label && (
+                        <Badge variant="secondary" className="bg-foreground text-background">
+                          {label}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className=''>
+                      {(() => {
+                        const lineTotal = p.prices?.reduce((sum, price) => {
+                          return sum + ((price.qty ?? 0) * parseFloat(price.value ?? 0));
+                        }, 0);
+                        return `$${lineTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                      })()}
+                    </div>
                   </div>
-                  <div className=''>
-                    {(() => {
-                      const lineTotal = p.prices?.reduce((sum, price) => {
-                        return sum + ((price.qty ?? 0) * parseFloat(price.value ?? 0));
-                      }, 0);
-                      return `$${lineTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                    })()}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )
 

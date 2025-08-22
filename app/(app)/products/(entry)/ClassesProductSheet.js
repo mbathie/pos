@@ -29,7 +29,8 @@ export default function ClassesProductSheet({
   setIconDialogOpen,
   setIconDialogProductIdx,
   setIconDialogQuery,
-  saveProduct
+  createProduct,
+  categoryName
 }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   
@@ -123,11 +124,11 @@ export default function ClassesProductSheet({
               <Button
                 size="sm"
                 onClick={async () => {
-                  const updated = await saveProduct({product, productIdx: pIdx});
+                  const createdProduct = await createProduct(categoryName, product);
                   setProducts(draft => {
-                    draft[pIdx] = updated;
+                    draft[pIdx] = createdProduct;
                   });
-                  markAsSaved(updated._id, updated);
+                  markAsSaved(createdProduct._id, createdProduct);
                 }}
               >
                 Save
