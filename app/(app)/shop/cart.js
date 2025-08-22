@@ -48,7 +48,7 @@ export default function Cart({}) {
           else if (p.type=='course') return (
             <div key={pIdx} className="flex flex-col space-y-1">
               <div className="flex">
-                <div className="font-semibold">{p.name}</div>
+                <div>{p.name}</div>
                 <div
                   className='ml-2 cursor-pointer mt-0.5'
                   onClick={(e) => {
@@ -73,7 +73,7 @@ export default function Cart({}) {
           else if (p.type=='class') return (
             <div key={pIdx} className="flex flex-col space-y-1">
               <div className="flex">
-                <div className="font-semibold">{p.name}</div>
+                <div>{p.name}</div>
                 <div
                   className='ml-1 cursor-pointer mt-0.5'
                   onClick={(e) => {
@@ -85,30 +85,28 @@ export default function Cart({}) {
                 </div>
               </div>
 
-              {p.variations?.map((v, vIdx) => (
-                <div key={vIdx}>
-                  {v.prices?.map((price, i) => (
-                    <div key={i} className="flex">
-                      <div>{price.qty}x {price.name}</div>
-                      <div className="ml-auto opacity-40">${parseFloat(price.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    </div>
-                  ))}
-
-                  {v.timesCalc?.filter(t => t.selected)?.map((time, tIdx) => (
-                    <div key={tIdx} className='flex'>
-                      <div className="mr-auto">
-                        {dayjs(time.value).format('ddd DD/MM/YY HH:mm A')}
-                      </div>
-                      <div className=''>
-                        {(() => {
-                          const lineTotal = v.prices?.reduce((sum, price) => {
-                            return sum + ((price.qty ?? 0) * parseFloat(price.value ?? 0));
-                          }, 0);
-                          return `$${lineTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                        })()}
-                      </div>
-                    </div>
-                  ))}
+              {/* Display prices */}
+              {p.prices?.map((price, i) => (
+                <div key={i} className="flex">
+                  <div>{price.qty}x {price.name}</div>
+                  <div className="ml-auto opacity-40">${parseFloat(price.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                </div>
+              ))}
+              
+              {/* Display selected times */}
+              {p.selectedTimes?.map((time, tIdx) => (
+                <div key={tIdx} className='flex'>
+                  <div className="mr-auto">
+                    {dayjs(time).format('ddd DD/MM/YY HH:mm A')}
+                  </div>
+                  <div className=''>
+                    {(() => {
+                      const lineTotal = p.prices?.reduce((sum, price) => {
+                        return sum + ((price.qty ?? 0) * parseFloat(price.value ?? 0));
+                      }, 0);
+                      return `$${lineTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                    })()}
+                  </div>
                 </div>
               ))}
             </div>
@@ -142,7 +140,7 @@ export default function Cart({}) {
           else if (p.type=='membership') return (
             <div key={pIdx} className="flex flex-col space-y-1">
               <div className="flex">
-                <div className="font-semibold">{p.name}</div>
+                <div>{p.name}</div>
                 <div
                   className='ml-1 cursor-pointer mt-0.5'
                   onClick={(e) => {

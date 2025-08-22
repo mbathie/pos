@@ -12,6 +12,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tag, Loader2, CheckCircle, Save, Trash2, Plus, Info, Trash, CalendarIcon } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { SvgIcon } from '@/components/ui/svg-icon';
 import ProductInstructions from '@/components/product-instructions';
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -78,8 +79,12 @@ export default function ClassesProductSheet({
                   <Tag className="!w-8 !h-8" />
                 </Button>
               ) : (
-                <Button className="rounded-lg -p-1 size-16">
-                  <img className='rounded-lg size-16' src={product.thumbnail} alt="Thumbnail" />
+                <Button className="bg-white rounded-lg size-16 flex items-center justify-center">
+                  <SvgIcon
+                    src={product.thumbnail}
+                    alt={product.name}
+                    className="w-10 h-10"
+                  />
                 </Button>
               )}
             </div>
@@ -319,6 +324,16 @@ export default function ClassesProductSheet({
             <Label htmlFor={`waiver-${pIdx}`} className="cursor-pointer">
               Waiver Required
             </Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Check if customers will be required to complete a waiver or not</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           {/* Schedule Section */}

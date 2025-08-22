@@ -10,13 +10,15 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Progress } from "@/components/ui/progress"
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem
 } from '@/components/ui/select'
 import SignatureCanvas from 'react-signature-canvas'
 import { Calendar } from '@/components/ui/calendar';
-import { ChevronDownIcon, Camera, Upload, User, X } from 'lucide-react';
+import { ChevronDownIcon, Camera, Upload, User, X, Plus, Trash2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { toast } from "sonner";
 import React from 'react';
 
 function DateOfBirthPicker({ value, onChange }) {
@@ -65,6 +67,9 @@ function DateOfBirthPicker({ value, onChange }) {
 export default function Page() {
   const [ org, setOrg ] = useState()
   const [ waiverContent, setWaiverContent ] = useState('')
+  const [ hasScrolledWaiver, setHasScrolledWaiver ] = useState(false)
+  const [ scrollProgress, setScrollProgress ] = useState(0)
+  const waiverContentRef = useRef(null)
   const params = useParams()
 
   useEffect(() => {
@@ -132,6 +137,56 @@ export default function Page() {
     setCustomer({...customer, signature: dataURL})
   }
 
+  // Handle waiver content scroll
+  const handleWaiverScroll = (e) => {
+    const element = e.target;
+    const scrollPercentage = (element.scrollTop / (element.scrollHeight - element.clientHeight)) * 100;
+    setScrollProgress(Math.min(scrollPercentage, 100));
+    
+    const scrolledToBottom = Math.abs(element.scrollHeight - element.scrollTop - element.clientHeight) < 5;
+    if (scrolledToBottom || scrollPercentage >= 98) {
+      setHasScrolledWaiver(true);
+      setScrollProgress(100);
+    }
+  }
+
+  // Handle checkbox change
+  const handleAgreeChange = (checked) => {
+    if (checked && !hasScrolledWaiver) {
+      toast.error("You must review the entire waiver text before you can agree", {
+        style: {
+          background: 'rgb(249 115 22 / 0.9)', // orange-500 with opacity
+          color: 'white',
+          border: '1px solid rgb(249 115 22)',
+        },
+        duration: 4000,
+      });
+      // Scroll to the waiver section
+      waiverContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    setAgree(checked);
+  }
+
+  // Handle dependent functions
+  const addDependent = () => {
+    setDependents([...dependents, { name: "", dob: "", gender: "" }]);
+  }
+
+  const updateDependent = (index, field, value) => {
+    const updated = [...dependents];
+    updated[index][field] = value;
+    setDependents(updated);
+  }
+
+  const removeDependent = (index) => {
+    setDependents(dependents.filter((_, i) => i !== index));
+  }
+  
+  // State for dependent date pickers
+  const [dependentDatePickerOpen, setDependentDatePickerOpen] = useState({})
+
+
   const [ customer, setCustomer ] = useState({name: "", nameParent: "", email: "", phone: "", dob: "", gender: "", signature: "", photo: ""})
   const [ address, setAddress ] = useState({
     address1: "",
@@ -139,6 +194,7 @@ export default function Page() {
     state: "",
     postcode: ""
   })
+  const [ dependents, setDependents ] = useState([])
   const [ agree, setAgree ] = useState(false)
   const [ submitted, setSubmitted ] = useState(false)
   const [ errors, setErrors ] = useState([])
@@ -150,7 +206,7 @@ export default function Page() {
 
   useEffect(() => {
     setErrors([])
-  }, [customer, address, agree])
+  }, [customer, address, hasScrolledWaiver, agree])
 
   // Initialize camera when modal opens
   useEffect(() => {
@@ -194,26 +250,53 @@ export default function Page() {
     city: z.string().min(1),
     state: z.string().min(1),
     postcode: z.string().min(4),
+    waiverReviewed: z.literal(true),
     agree: z.literal(true),
     signature: z.string().min(100),
     photo: z.string().min(1, "Photo is required"),
   })
+  
+  // Check if all dependents have complete information
+  const dependentsValid = dependents.every(dep => 
+    dep.name && dep.name.trim() !== '' && 
+    dep.gender && dep.gender.trim() !== '' && 
+    dep.dob && dep.dob.trim() !== ''
+  )
+  
   const result = waiverSchema.safeParse({
     ...customer,
     ...address,
+    waiverReviewed: hasScrolledWaiver,
     agree,
   })
-  const isValid = result.success
+  const isValid = result.success && dependentsValid
 
   const register = async () => {
+    // Check if waiver has been reviewed before submitting
+    if (!hasScrolledWaiver) {
+      toast.error("Please review the entire waiver before submitting", {
+        style: {
+          background: 'rgb(249 115 22 / 0.9)', // orange-500 with opacity
+          color: 'white',
+          border: '1px solid rgb(249 115 22)',
+        },
+        duration: 4000,
+      });
+      // Scroll to the waiver section
+      waiverContentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    
     const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/api/unauth/customers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
         ...customer, 
         ...address, 
+        waiverReviewed: hasScrolledWaiver,
         agree, 
         org,
+        dependents,
         photo: customer.photo // Ensure photo is included
       }),
     })
@@ -227,6 +310,9 @@ export default function Page() {
     // Reset all form states before marking as submitted
     setCustomer({ name: "", email: "", phone: "", signature: "", nameParent: "", photo: "", dob: "", gender: "" });
     setAddress({ address1: "", city: "", state: "", postcode: "" });
+    setDependents([]);
+    setHasScrolledWaiver(false);
+    setScrollProgress(0);
     setAgree(false);
     setErrors([]);
     setSubmitted(true);
@@ -252,7 +338,7 @@ export default function Page() {
 
           {/* Photo Capture Section */}
           <div className="flex flex-col gap-2">
-            <Label>Photo</Label>
+            <Label>Portrait</Label>
             <div className="flex gap-4">
               <div 
                 className={`${customer.photo ? '' : 'border-2 border-dashed hover:bg-accent/50'} rounded-lg w-32 h-32 flex items-center justify-center cursor-pointer transition-colors relative`}
@@ -292,17 +378,19 @@ export default function Page() {
                   <Button
                     type="button"
                     variant="outline"
+                    className="justify-start"
                     onClick={() => setShowCamera(true)}
                   >
-                    <Camera className="mr-2 h-4 w-4" />
+                    <Camera className="h-4 w-4" />
                     Take Photo
                   </Button>
                   <Button
                     type="button"
                     variant="outline"
+                    className="justify-start"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    <Upload className="mr-2 h-4 w-4" />
+                    <Upload className="h-4 w-4" />
                     Upload Photo
                   </Button>
                   <input
@@ -399,17 +487,43 @@ export default function Page() {
           )}
 
           {/* Display waiver content as HTML */}
-          <div 
-            className="p-4 border rounded-lg bg-muted/30 max-h-60 overflow-y-auto max-w-none waiver-content"
-            dangerouslySetInnerHTML={{ __html: waiverContent }}
-          />
+          <div className="space-y-">
+            <div 
+              ref={waiverContentRef}
+              className={`p-4 border-2 rounded-lg bg-muted/30 max-h-60 overflow-y-auto max-w-none waiver-content ${
+                !hasScrolledWaiver ? '' : ''
+              }`}
+              onScroll={handleWaiverScroll}
+              dangerouslySetInnerHTML={{ __html: waiverContent }}
+            />
+            
+            {/* Progress indicator */}
+              <div className="space-y-2">
+                <Progress 
+                  value={scrollProgress} 
+                  className={`h-2 mt-2 ${hasScrolledWaiver ? 'bg-green-100' : 'bg-orange-100'}`}
+                />
+                <div className="flex justify-between">
+                  <div className="flex justfiy-center items-center gap-2">
+                    <Checkbox 
+                      checked={agree} 
+                      onCheckedChange={handleAgreeChange}
+                      disabled={!hasScrolledWaiver}
+                    />
+                    <div className={`text-sm ml-auto ${!hasScrolledWaiver ? 'text-destructive' : ''}`}>
+                      {hasScrolledWaiver ? 'I agree to the terms and conditions' : 'Please scroll to review entire waiver'}
+                    </div>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {Math.round(scrollProgress)}%
+                  </span>
+                </div>
+              </div>
+            </div>
 
-          <div className="flex justfiy-center items-center gap-2">
-            <Checkbox checked={agree} onCheckedChange={setAgree} />
-            <div className="text-sm">I agree</div>
-          </div>
 
-          <div className="flex flex-col gap-4 items-start *:min-w-72">
+
+          <div className="flex flex-col gap-6 items-start *:min-w-72 mt-2">
 
             <div className="flex gap-4 w-full">
               <div className="flex flex-col gap-2 w-full">
@@ -517,8 +631,104 @@ export default function Page() {
             </div>
           </div>
 
+          {/* Dependents Section */}
+          <div className="flex flex-col gap-2 w-full">
+            {dependents.length > 0 && (
+              <>
+                <Label>Dependents</Label>
+                <div className="space-y-4">
+                  {dependents.map((dependent, index) => (
+                    <Card key={index} className="p-4">
+                      <div className="flex justify-between items-start">
+                        <h4 className="text-sm font-medium">Dependent {index + 1}</h4>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeDependent(index)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                      
+                      <div className="grid gap-4">
+                        <div className="flex flex-col gap-2">
+                          <Label>Name</Label>
+                          <Input
+                            type="text"
+                            placeholder="Dependent name"
+                            value={dependent.name}
+                            onChange={(e) => updateDependent(index, 'name', e.target.value)}
+                          />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="flex flex-col gap-2">
+                            <Label>Date of Birth</Label>
+                            <Popover 
+                              open={dependentDatePickerOpen[index] || false}
+                              onOpenChange={(open) => {
+                                setDependentDatePickerOpen(prev => ({...prev, [index]: open}))
+                              }}
+                            >
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className="w-full justify-start text-left font-normal"
+                                >
+                                  {dependent.dob ? new Date(dependent.dob).toLocaleDateString() : "Select date"}
+                                  <ChevronDownIcon className="ml-auto h-4 w-4" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={dependent.dob ? new Date(dependent.dob) : undefined}
+                                  captionLayout="dropdown"
+                                  onSelect={(selectedDate) => {
+                                    updateDependent(index, 'dob', selectedDate ? selectedDate.toISOString().slice(0, 10) : '');
+                                    setDependentDatePickerOpen(prev => ({...prev, [index]: false}));
+                                  }}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          
+                          <div className="flex flex-col gap-2">
+                            <Label>Gender</Label>
+                            <Select 
+                              value={dependent.gender} 
+                              onValueChange={(value) => updateDependent(index, 'gender', value)}
+                            >
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Select gender" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Male">Male</SelectItem>
+                                <SelectItem value="Female">Female</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </>
+            )}
+            
+            <Button
+              type="button"
+              onClick={addDependent}
+              variant="outline"
+              className="w-fit"
+            >
+              <Plus className="h-4 w-4" />
+              Add Dependent
+            </Button>
+          </div>
 
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 mt-2">
             <Label>Signature</Label>
             <SignatureCanvas
               ref={sigRef}
@@ -531,19 +741,6 @@ export default function Page() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-2 w-full">
-            <div className="flex gap-1 flex-col">
-              <Label>Parent Guardian Name</Label>
-              <Label className='text-xs font-normal text-accent-foreground/80'>Only required if signing on behalf of a child / dependent</Label>
-            </div>
-            <Input
-              type="text"
-              placeholder="Parent/Guardian Name"
-              value={customer.nameParent}
-              onChange={(e) => setCustomer({ ...customer, nameParent: e.target.value })}
-              className=''
-            />
-          </div>
 
           {errors.length > 0 && (
             <div className="text-sm bg-red-400/60 p-4 rounded-lg border border-red-500">
@@ -553,7 +750,13 @@ export default function Page() {
             </div>
           )}
 
-          <Button disabled={!isValid} onClick={register}>Submit</Button>
+          <Button 
+            disabled={!isValid} 
+            onClick={register}
+            className={isValid ? "cursor-pointer" : ""}
+          >
+            Submit
+          </Button>
 
         </CardContent>
       </Card>

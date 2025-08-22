@@ -364,7 +364,18 @@ export default function Page() {
   useEffect(() => {
     setCart(draft => {
       draft.products.forEach((p) => {
-        if (['class', 'course', 'general', 'membership'].includes(p.type)) {
+        if (['class', 'course', 'general'].includes(p.type)) {
+          // Prices are directly on product for these types
+          p.prices?.forEach((pr) => {
+            const qty = pr.qty ?? 0;
+            if (!pr.customers || pr.customers.length !== qty) {
+              pr.customers = Array.from({ length: qty }, (_, i) => ({
+                customer: pr.customers?.[i]?.customer || null
+              }));
+            }
+          });
+        } else if (p.type === 'membership') {
+          // Memberships still use variations
           p.variations?.forEach((v) => {
             v.prices?.forEach((pr) => {
               const qty = pr.qty ?? 0;
@@ -612,7 +623,7 @@ export default function Page() {
             <Separator orientation="vertical" className="h-[1px] bg-muted my-2" />
 
             {/* Discount Code Selection */}
-            <div className="flex flex-row gap-2">
+            <div className="flex flex-row gap-2 items-center">
               <div className="">Discount</div>
               <div className="flex-1" />
               
@@ -736,12 +747,13 @@ export default function Page() {
             {/* CUSTOMERS */}
             {requiresWaiver &&
             <div className="flex flex-col gap-1">
-              {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' ? cartSnapshot?.products : cart.products)?.map((p, pIdx) =>
-                p.variations?.map((v, vIdx) =>
-                  v.prices?.map((price, priceIdx) =>
+              {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' ? cartSnapshot?.products : cart.products)?.map((p, pIdx) => {
+                // Classes, courses, and general products have prices directly on product
+                if (['class', 'course', 'general'].includes(p.type)) {
+                  return p.prices?.map((price, priceIdx) =>
                     price.customers?.map((c, cIdx) => (
-                      <div className="flex items-start gap-4" key={`${pIdx}-${vIdx}-${priceIdx}-${cIdx}`}>
-                        <div className="whitespace-nowrap self-start">{cIdx + 1}. {price.name}</div>
+                      <div className="flex items-center gap-4" key={`${pIdx}-${priceIdx}-${cIdx}`}>
+                        <div className="whitespace-nowrap">{cIdx + 1}. {price.name}</div>
                         <div className="flex justify-end w-full text-right">
                           {c.customer ? (
                             <div className="flex items-center gap-1">
@@ -754,7 +766,7 @@ export default function Page() {
                                 onClick={() => {
                                   if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
                                     setCart(draft => {
-                                      draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = null;
+                                      draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = null;
                                     });
                                     // Update snapshot after removing customer
                                     setTimeout(updateSnapshotCustomers, 50);
@@ -770,7 +782,7 @@ export default function Page() {
                               onClick={() => {
                                 setConnectCustomerFn(() => (_c) => {
                                   setCart(draft => {
-                                    draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = _c;
+                                    draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = _c;
                                   });
                                   // Update snapshot after connecting customer with longer delay
                                   setTimeout(updateSnapshotCustomers, 100);
@@ -784,14 +796,67 @@ export default function Page() {
                         </div>
                       </div>
                     ))
-                  )
-                )
-              )}
+                  );
+                }
+                // Memberships still use variations
+                else if (p.type === 'membership') {
+                  return p.variations?.map((v, vIdx) =>
+                    v.prices?.map((price, priceIdx) =>
+                      price.customers?.map((c, cIdx) => (
+                        <div className="flex items-center gap-4" key={`${pIdx}-${vIdx}-${priceIdx}-${cIdx}`}>
+                          <div className="whitespace-nowrap">{cIdx + 1}. {price.name}</div>
+                          <div className="flex justify-end w-full text-right">
+                            {c.customer ? (
+                              <div className="flex items-center gap-1">
+                                <Trash2 
+                                  className={`size-4 ${
+                                    paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
+                                      ? 'text-muted-foreground cursor-not-allowed opacity-50' 
+                                      : 'cursor-pointer hover:text-destructive'
+                                  }`}
+                                  onClick={() => {
+                                    if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
+                                      setCart(draft => {
+                                        draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = null;
+                                      });
+                                      // Update snapshot after removing customer
+                                      setTimeout(updateSnapshotCustomers, 50);
+                                    }
+                                  }}
+                                />
+                                <div>{c.customer.name}</div>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm" variant="outline"
+                                disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                                onClick={() => {
+                                  setConnectCustomerFn(() => (_c) => {
+                                    setCart(draft => {
+                                      draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = _c;
+                                    });
+                                    // Update snapshot after connecting customer with longer delay
+                                    setTimeout(updateSnapshotCustomers, 100);
+                                  });
+                                  setShowCustomerConnect(true);
+                                }}
+                              >
+                                Connect Customer
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )
+                  );
+                }
+                return null;
+              })}
             </div>
             }
             {!requiresWaiver &&
-              <div className="flex items-start gap-4">
-                <div className="whitespace-nowrap self-start">Customer</div>
+              <div className="flex items-center gap-4">
+                <div className="whitespace-nowrap">Customer</div>
                 <div className="flex justify-end w-full text-right">
                 {((paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') ? cartSnapshot?.customer : cart.customer) ? (
                   <div className="flex items-center gap-1">

@@ -6,8 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Tag, Loader2, CheckCircle, Save, Trash2 } from 'lucide-react';
+import { Tag, Loader2, CheckCircle, Save, Trash2, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { SvgIcon } from '@/components/ui/svg-icon';
 import ProductInstructions from '@/components/product-instructions';
 import GeneralPricing from './GeneralPricing';
 
@@ -68,8 +69,12 @@ export default function GeneralProductSheet({
                   <Tag className="!w-8 !h-8" />
                 </Button>
               ) : (
-                <Button className="rounded-lg -p-1 size-16">
-                  <img className='rounded-lg size-16' src={product.thumbnail} alt="Thumbnail" />
+                <Button className="bg-white rounded-lg size-16 flex items-center justify-center">
+                  <SvgIcon
+                    src={product.thumbnail}
+                    alt={product.name}
+                    className="w-10 h-10"
+                  />
                 </Button>
               )}
             </div>
@@ -175,6 +180,16 @@ export default function GeneralProductSheet({
             <Label htmlFor={`waiver-${pIdx}`} className="cursor-pointer">
               Waiver Required
             </Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Check if customers will be required to complete a waiver or not</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           {/* Pricing Section */}

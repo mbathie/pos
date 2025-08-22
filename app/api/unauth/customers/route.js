@@ -6,7 +6,7 @@ import { Customer } from "@/models"
 export async function POST(req) {
   await connectDB();
 
-  const { name, email, phone, dob, gender, address1, city, state, postcode, agree, signature, org, photo } = await req.json();
+  const { name, email, phone, dob, gender, address1, city, state, postcode, agree, signature, org, photo, dependents } = await req.json();
 
   if (await Customer.findOne({ email }))
     return NextResponse.json({ error: 'email exists', exists: true, field: "email" }, { status: 400 });
@@ -17,6 +17,7 @@ export async function POST(req) {
     const customer = await Customer.create({
       name, email, phone, dob, gender, assigned: false,
       photo,
+      dependents: dependents || [],
       // memberId,
       address: {
         address1,

@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react'
 import { Input } from '@/components/ui/input'
+import { NumberInput } from '@/components/ui/number-input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Trash2 } from 'lucide-react'
@@ -38,8 +39,7 @@ const GeneralPricing = ({
 
   const updatePriceValue = (priceIdx, value) => {
     setProducts((draft) => {
-      const numValue = parseFloat(value) || 0;
-      draft[productIdx].prices[priceIdx].value = numValue;
+      draft[productIdx].prices[priceIdx].value = value;
     });
   };
 
@@ -68,14 +68,13 @@ const GeneralPricing = ({
                 className="w-32 text-sm"
                 onChange={(e) => updatePriceName(i, e.target.value)}
               />
-              <Input
-                type="number"
+              <NumberInput
                 placeholder="0.00"
-                value={price.value || ''}
+                value={price.value || null}
                 min={0}
                 step={0.01}
                 className="w-24 text-sm"
-                onChange={(e) => updatePriceValue(i, e.target.value)}
+                onChange={(value) => updatePriceValue(i, value)}
               />
               <Button
                 variant="ghost"
