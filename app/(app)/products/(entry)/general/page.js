@@ -73,12 +73,12 @@ export default function Page() {
               <span>Saving changes...</span>
             </div>
           ) : hasAnyUnsaved ? (
-            <div className="flex items-center gap-2 text-sm text-orange-500">
+            <div className="flex items-center gap-2 text-sm text-chart-4">
               <Save className="h-3 w-3 animate-pulse" />
               <span>Unsaved changes</span>
             </div>
           ) : products.some(p => p._id) && (
-            <div className="flex items-center gap-2 text-sm text-green-500">
+            <div className="flex items-center gap-2 text-sm text-primary">
               <CheckCircle className="h-3 w-3" />
               <span>All changes saved</span>
             </div>

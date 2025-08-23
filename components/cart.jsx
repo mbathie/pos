@@ -96,10 +96,9 @@ export default function Cart({ asSheet = false, onClose }) {
               
               {/* Display selected times */}
               {p.selectedTimes?.map((time, tIdx) => {
-                // Extract the time label if it exists in the format "datetime|label"
-                const [datetime, label] = typeof time === 'string' && time.includes('|') 
-                  ? time.split('|') 
-                  : [time, null];
+                // Extract datetime and label from object format
+                const datetime = time.datetime;
+                const label = time.label;
                 
                 return (
                   <div key={tIdx} className='flex items-center'>

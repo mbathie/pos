@@ -111,7 +111,7 @@ export async function POST(req, { params }) {
       stripeAccount: org.stripeAccountId
     });
 
-    // Create transaction record for the first period payment
+    // Create transaction record for the first period payment (cleanup happens in createStripeTransaction)
     const transaction = await createStripeTransaction({ 
       cart, 
       employee, 

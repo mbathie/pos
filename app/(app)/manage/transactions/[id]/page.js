@@ -174,33 +174,36 @@ export default function TransactionDetailsPage() {
             {products.map((product, index) => (
               <TableRow key={index}>
                 <TableCell className="font-medium align-top">{product.name}</TableCell>
-                <TableCell>
+                <TableCell className="align-top">
                   <div className="space-y-1">
-                    {product.variations?.map((variation, vIndex) => 
-                      variation.timesCalc?.filter(time => time.selected)?.map((time, tIndex) => (
-                        <div key={`${vIndex}-${tIndex}`} className="text-sm">
-                          {dayjs(time.value).format('DD/MM/YYYY h:mm A')}
-                        </div>
-                      ))
-                    )}
+                    {product.selectedTimes?.map((time, tIndex) => (
+                      <div key={tIndex} className="text-sm">
+                        <div>{dayjs(time.value).format('DD/MM/YYYY h:mm A')}</div>
+                        {time.label && (
+                          <div className="text-xs text-muted-foreground">{time.label}</div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </TableCell>
                 <TableCell className="align-top">
-                  <div className="space-y-1">
-                    {product.variations?.map((variation, vIndex) => 
-                      variation.prices?.map((price, pIndex) => (
-                        <div key={`${vIndex}-${pIndex}`} className="text-sm">
+                  <div className="space-y-2">
+                    {product.prices?.map((price, pIndex) => (
+                      <div key={pIndex} className="border-b pb-1 last:border-0">
+                        <div className="text-sm font-medium">
                           {price.qty}x {price.name}
-                          {price.customers?.map((customer, cIndex) => (
-                            customer.customer && (
-                              <div key={cIndex} className="text-xs">
-                                {customer.customer.name}
-                              </div>
-                            )
-                          ))}
                         </div>
-                      ))
-                    )}
+                        {price.customers?.length > 0 && (
+                          <div className="ml-2 mt-1 space-y-1">
+                            {price.customers.map((customerObj, cIndex) => (
+                              <div key={cIndex} className="text-xs text-muted-foreground">
+                                • {customerObj.customer?.name || 'Guest'}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </TableCell>
                 <TableCell className="text-right align-top">
@@ -232,33 +235,40 @@ export default function TransactionDetailsPage() {
           <TableBody>
             {products.map((product, index) => (
               <TableRow key={index}>
-                <TableCell className="font-medium">{product.name}</TableCell>
-                <TableCell>
-                  {product.variations?.[0]?.times?.[0]?.start ? (
-                    <div className="text-sm">
-                      {dayjs(product.variations[0].times[0].start).format('DD/MM/YYYY h:mm A')}
+                <TableCell className="font-medium align-top">{product.name}</TableCell>
+                <TableCell className="align-top">
+                  {product.selectedTimes?.[0] ? (
+                    <div>
+                      <div className="text-sm">
+                        {dayjs(product.selectedTimes[0].value).format('DD/MM/YYYY h:mm A')}
+                      </div>
+                      {product.selectedTimes[0].label && (
+                        <div className="text-xs text-muted-foreground">{product.selectedTimes[0].label}</div>
+                      )}
                     </div>
                   ) : '-'}
                 </TableCell>
-                <TableCell>
-                  <div className="space-y-1">
-                    {product.variations?.map((variation, vIndex) => 
-                      variation.prices?.map((price, pIndex) => (
-                        <div key={`${vIndex}-${pIndex}`} className="text-sm">
+                <TableCell className="align-top">
+                  <div className="space-y-2">
+                    {product.prices?.map((price, pIndex) => (
+                      <div key={pIndex} className="border-b pb-1 last:border-0">
+                        <div className="text-sm font-medium">
                           {price.qty}x {price.name}
-                          {price.customers?.map((customer, cIndex) => (
-                            customer.customer && (
-                              <div key={cIndex} className="text-xs">
-                                {customer.customer.name}
-                              </div>
-                            )
-                          ))}
                         </div>
-                      ))
-                    )}
+                        {price.customers?.length > 0 && (
+                          <div className="ml-2 mt-1 space-y-1">
+                            {price.customers.map((customerObj, cIndex) => (
+                              <div key={cIndex} className="text-xs text-muted-foreground">
+                                • {customerObj.customer?.name || 'Guest'}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </TableCell>
-                <TableCell className="text-right font-medium">
+                <TableCell className="text-right align-top">
                   {formatCurrency(product.amount?.subtotal)}
                 </TableCell>
               </TableRow>
@@ -290,29 +300,31 @@ export default function TransactionDetailsPage() {
                 <TableCell className="font-medium align-top">{product.name}</TableCell>
                 <TableCell className="align-top">
                   <div className="space-y-1">
-                    {product.variations?.map((variation, vIndex) => (
-                      <div key={vIndex} className="text-sm">
-                        {variation.name} {variation.unit}
+                    {product.item?.variation && product.item?.unit && (
+                      <div className="text-sm">
+                        {product.item.variation} {product.item.unit}
                       </div>
-                    ))}
+                    )}
                   </div>
                 </TableCell>
                 <TableCell className="align-top">
-                  <div className="space-y-1">
-                    {product.variations?.map((variation, vIndex) => 
-                      variation.prices?.map((price, pIndex) => (
-                        <div key={`${vIndex}-${pIndex}`} className="text-sm">
+                  <div className="space-y-2">
+                    {product.prices?.map((price, pIndex) => (
+                      <div key={pIndex} className="border-b pb-1 last:border-0">
+                        <div className="text-sm font-medium">
                           {price.qty}x {price.name}
-                          {price.customers?.map((customer, cIndex) => (
-                            customer.customer && (
-                              <div key={cIndex} className="text-xs">
-                                {customer.customer.name}
-                              </div>
-                            )
-                          ))}
                         </div>
-                      ))
-                    )}
+                        {price.customers?.length > 0 && (
+                          <div className="ml-2 mt-1 space-y-1">
+                            {price.customers.map((customerObj, cIndex) => (
+                              <div key={cIndex} className="text-xs text-muted-foreground">
+                                • {customerObj.customer?.name || 'Guest'}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </TableCell>
                 <TableCell className="text-right align-top">
@@ -348,44 +360,28 @@ export default function TransactionDetailsPage() {
                 <TableCell className="font-medium align-top">{product.name}</TableCell>
                 <TableCell className="align-top">
                   <div className="space-y-1">
-                    {product.item ? (
-                      // Use cart item data for billing period
+                    {product.item && (
                       <div className="text-sm">
                         {product.item.variation === "1" && product.item.unit === "month" ? "Monthly" :
                          product.item.variation === "1" && product.item.unit === "year" ? "Yearly" :
                          `${product.item.variation} ${product.item.unit}${parseInt(product.item.variation) > 1 ? 's' : ''}`}
                       </div>
-                    ) : (
-                      // Fallback: find variation with customers (qty > 0)
-                      product.variations?.filter(variation => 
-                        variation.prices?.some(price => 
-                          price.customers?.some(customer => customer.customer)
-                        )
-                      ).map((variation, vIndex) => (
-                        <div key={vIndex} className="text-sm">
-                          {variation.name === "1" && variation.unit === "month" ? "Monthly" :
-                           variation.name === "1" && variation.unit === "year" ? "Yearly" :
-                           `${variation.name} ${variation.unit}${parseInt(variation.name) > 1 ? 's' : ''}`}
-                        </div>
-                      ))
                     )}
                   </div>
                 </TableCell>
                 <TableCell className="align-top">
                   <div className="space-y-1">
-                    {product.variations?.map((variation, vIndex) => 
-                      variation.prices?.map((price, pIndex) => (
-                        <div key={`${vIndex}-${pIndex}`} className="text-sm">
-                          {price.customers?.map((customer, cIndex) => (
-                            customer.customer && (
-                              <div key={cIndex}>
-                                {customer.customer.name} ({price.name})
-                              </div>
-                            )
-                          ))}
-                        </div>
-                      ))
-                    )}
+                    {product.prices?.map((price, pIndex) => (
+                      <div key={pIndex} className="text-sm">
+                        {price.customers?.map((customer, cIndex) => (
+                          customer.customer && (
+                            <div key={cIndex}>
+                              {customer.customer.name} ({price.name})
+                            </div>
+                          )
+                        ))}
+                      </div>
+                    ))}
                   </div>
                 </TableCell>
                 <TableCell className="align-top">

@@ -93,6 +93,7 @@ export async function GET(req) {
     
     const [customers, total] = await Promise.all([
       Customer.find(baseQuery)
+        .select('_id name email phone')  // Only select basic fields
         .sort(sortObj)
         .skip(skip)
         .limit(limit),
@@ -112,11 +113,15 @@ export async function GET(req) {
       membershipMap[membership.customer.toString()] = membership;
     });
 
-    // Add membership data to customers
+    // Add membership data to customers (with only basic fields)
     const customersWithMembership = customers.map(customer => {
-      const customerObj = customer.toObject();
-      customerObj.membership = membershipMap[customer._id.toString()] || null;
-      return customerObj;
+      return {
+        _id: customer._id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone,
+        membership: membershipMap[customer._id.toString()] || null
+      };
     });
 
     return NextResponse.json({
@@ -129,8 +134,15 @@ export async function GET(req) {
     });
   }
 
-  // Legacy behavior for existing endpoints
+  // Legacy behavior for existing endpoints - also return only basic fields
+  // Include waiver status if specifically filtering for waivers
+  let selectFields = '_id name email phone';
+  if (requiresWaiver === "true" || recentWaiver === "1") {
+    selectFields += ' waiver.agree assigned';  // Include waiver status for waiver-specific queries
+  }
+  
   const customers = await Customer.find(baseQuery)
+    .select(selectFields)
 
   return NextResponse.json(customers)
 }

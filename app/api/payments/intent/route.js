@@ -25,7 +25,7 @@ export async function POST(req, { params }) {
     stripeAccount: org.stripeAccountId
   });
 
-  // Create the stripe transaction
+  // Create the stripe transaction (cleanup happens in createStripeTransaction)
   const transaction = await createStripeTransaction({ cart, employee, customer, paymentIntent });
 
   return NextResponse.json({

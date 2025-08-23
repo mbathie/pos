@@ -1,4 +1,75 @@
+import { format } from 'date-fns'
+
 export function useClass({product, setProduct}) {
+
+  // Get all dates that have classes in the next 6 months
+  const getAvailableDates = (schedule) => {
+    if (!schedule?.startDate || !schedule?.times?.length || !schedule?.daysOfWeek) {
+      return [];
+    }
+
+    const dates = [];
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    
+    const sixMonthsLater = new Date();
+    sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
+    
+    const start = new Date(schedule.startDate);
+    const current = new Date(Math.max(start, now));
+    
+    while (current <= sixMonthsLater) {
+      const dayOfWeek = current.getDay();
+      // Convert Sunday = 0 to our format where Monday = 0
+      const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      
+      if (schedule.daysOfWeek[adjustedDayOfWeek]) {
+        dates.push(format(current, 'yyyy-MM-dd'));
+      }
+      
+      current.setDate(current.getDate() + 1);
+    }
+    
+    return dates;
+  };
+
+  // Get available times for a specific date
+  const getTimesForDate = (date, schedule) => {
+    if (!date || !schedule?.times?.length) {
+      return [];
+    }
+
+    const times = [];
+    const dayOfWeek = date.getDay();
+    // Convert Sunday = 0 to our format where Monday = 0
+    const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    
+    // Check if this day has classes
+    if (!schedule.daysOfWeek?.[adjustedDayOfWeek]) {
+      return [];
+    }
+
+    // Add all times for this day
+    schedule.times.forEach(timeItem => {
+      const timeStr = typeof timeItem === 'string' ? timeItem : timeItem?.time;
+      const timeLabel = typeof timeItem === 'object' ? timeItem?.label : '';
+      
+      if (timeStr) {
+        const [hours, minutes] = timeStr.split(':');
+        const classDateTime = new Date(date);
+        classDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        
+        times.push({
+          datetime: classDateTime.toISOString(),
+          time: format(classDateTime, 'h:mm a'),
+          label: timeLabel,
+          available: product?.capacity || 5 // TODO: Get actual availability from schedule
+        });
+      }
+    });
+    
+    return times.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
+  };
 
   const setTimesCourse = async (_product) => {
     const res = await fetch(`/api/products/${_product._id}/schedules/remaining`);
@@ -28,13 +99,16 @@ export function useClass({product, setProduct}) {
       }
 
       const start = new Date(startDate);
-      const end = endDate && !noEndDate ? new Date(endDate) : twoMonthsLater;
+      // Always use 2 months from now as the end date for generating class times
+      // This ensures we always show 2 months worth of classes in the dropdown
+      const end = twoMonthsLater;
       
       // Generate all possible class dates
       const classDates = [];
-      const current = new Date(start);
+      // Start from today or the configured start date, whichever is later
+      const current = new Date(Math.max(start, now));
       
-      while (current <= end && classDates.length < 100) { // Limit to 100 dates for performance
+      while (current <= end && classDates.length < 500) { // Limit to 500 dates for 2 months of classes
         const dayOfWeek = current.getDay();
         // Convert Sunday = 0 to our format where Monday = 0
         const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
@@ -80,5 +154,5 @@ export function useClass({product, setProduct}) {
     });
   };
 
-  return { setTimesClass, setTimesCourse }
+  return { setTimesClass, setTimesCourse, getAvailableDates, getTimesForDate }
 }

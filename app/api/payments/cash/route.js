@@ -9,8 +9,6 @@ export async function POST(req, { params }) {
   const { employee } = await getEmployee();
   const { received, change, cart, customer } = await req.json();
 
-  console.log(cart)
-
   // Check if cart contains membership products (not allowed for cash payments)
   const hasMemberships = cart.products.some(product => product.type === 'membership');
   
@@ -20,7 +18,7 @@ export async function POST(req, { params }) {
     }, { status: 400 });
   }
 
-  // Create the cash transaction
+  // Create the cash transaction (cleanup happens in createCashTransaction)
   const transaction = await createCashTransaction({ cart, employee, received, change });
 
   // Handle post-transaction success operations
