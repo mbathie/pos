@@ -5,26 +5,31 @@ import Class from './class'
 
 export default function Page({ params }) {
   const { id } = useParams();
-  const [ schedule, setSchedule ] = useState({})
+  const [ schedule, setSchedule ] = useState(null)
+  const [ loading, setLoading ] = useState(true)
 
   useEffect(() => {
     async function getData() {
+      setLoading(true)
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/schedules/${id}`);
       const data = await res.json()
       setSchedule(data)
+      setLoading(false)
     }
     getData()
-  },[])
+  },[id])
+
+  if (loading) {
+    return (
+      <div className="px-4">
+        <div className="text-center py-8 text-muted-foreground">Loading schedule...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="px-4">
-      {/* {schedule?.product.type} */}
-      {/* {schedule?.product?.type == 'class' && */}
-      <Class schedule={schedule} setSchedule={setSchedule}/>
-      {/* } */}
-      {/* <h1 className="text-lg font-semibold">Schedule ID: {id}</h1> */}
-
-
+      {schedule && <Class schedule={schedule} setSchedule={setSchedule}/>}
     </div>
   );
 }

@@ -34,7 +34,7 @@ export function useClass({product, setProduct}) {
   };
 
   // Get available times for a specific date
-  const getTimesForDate = (date, schedule) => {
+  const getTimesForDate = async (date, schedule) => {
     if (!date || !schedule?.times?.length) {
       return [];
     }
@@ -49,6 +49,10 @@ export function useClass({product, setProduct}) {
       return [];
     }
 
+    // Fetch actual schedule data to get availability
+    const res = await fetch(`/api/products/${product._id}/schedules`);
+    const scheduleData = res.ok ? await res.json() : { classes: [] };
+
     // Add all times for this day
     schedule.times.forEach(timeItem => {
       const timeStr = typeof timeItem === 'string' ? timeItem : timeItem?.time;
@@ -59,11 +63,19 @@ export function useClass({product, setProduct}) {
         const classDateTime = new Date(date);
         classDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
         
+        const iso = classDateTime.toISOString();
+        // Find matching scheduled class to get actual availability
+        const match = scheduleData.classes?.find(s => {
+          const scheduleDate = new Date(s.datetime).toISOString();
+          return scheduleDate === iso;
+        });
+        const available = match?.available ?? product?.capacity ?? 5;
+        
         times.push({
-          datetime: classDateTime.toISOString(),
+          datetime: iso,
           time: format(classDateTime, 'h:mm a'),
           label: timeLabel,
-          available: product?.capacity || 5 // TODO: Get actual availability from schedule
+          available: available
         });
       }
     });
@@ -127,7 +139,11 @@ export function useClass({product, setProduct}) {
               
               if (classDateTime >= now && classDateTime <= end) {
                 const iso = classDateTime.toISOString();
-                const match = scheduleData.classes?.find(s => s.datetime === iso);
+                const match = scheduleData.classes?.find(s => {
+                  // Compare datetime strings after converting both to ISO format
+                  const scheduleDate = new Date(s.datetime).toISOString();
+                  return scheduleDate === iso;
+                });
                 const available = match?.available ?? _product.capacity;
                 
                 // Format the label without the time label (it will be shown separately)

@@ -8,23 +8,66 @@ dayjs.extend(relativeTime);
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader,TableRow } from "@/components/ui/table"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button";
 import { ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import ProductIcon from '@/components/icon';
 
 export default function Page() {
-  const [casuals, setCasuals] = useState([]);
+  const [schedules, setSchedules] = useState([]);
+  const [filteredSchedules, setFilteredSchedules] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [filters, setFilters] = useState({
+    product: 'all',
+    type: 'all'
+  });
   const router = useRouter();
 
   useEffect(() => {
-    const fetchCasuals = async () => {
+    const fetchSchedules = async () => {
       const res = await fetch('/api/schedules');
       const data = await res.json();
       console.log(data)
-      setCasuals(data);
+      setSchedules(data);
+      setFilteredSchedules(data);
+      
+      // Extract unique products for filter
+      const uniqueProducts = [...new Map(data.map(item => 
+        [item.product?._id, item.product]
+      )).values()].filter(p => p);
+      setProducts(uniqueProducts);
     };
-    fetchCasuals();
+    fetchSchedules();
   }, []);
+
+  // Apply filters when they change
+  useEffect(() => {
+    let filtered = [...schedules];
+    
+    // Filter by product
+    if (filters.product !== 'all') {
+      filtered = filtered.filter(s => s.product?._id === filters.product);
+    }
+    
+    // Filter by type
+    if (filters.type !== 'all') {
+      filtered = filtered.filter(s => s.product?.type === filters.type);
+    }
+    
+    setFilteredSchedules(filtered);
+  }, [filters, schedules]);
+
+  const handleFilterChange = (key, value) => {
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      product: 'all',
+      type: 'all'
+    });
+  };
 
   const getStatusLabel = (entry) => {
     const now = dayjs();
@@ -45,8 +88,44 @@ export default function Page() {
 
   return (
     <div className='flex flex-col px-4'>
-      <div className="flex">
-        <div className='font-semibold mb-2'>Classes & Courses</div>
+      <div className="flex justify-between items-center mb-4">
+        <div className='font-semibold'>Classes & Courses</div>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-2 items-end mb-4">
+        <Select value={filters.product} onValueChange={(value) => handleFilterChange('product', value)}>
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="All Products" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Products</SelectItem>
+            {products.map(product => (
+              <SelectItem key={product._id} value={product._id}>
+                {product.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        
+        <Select value={filters.type} onValueChange={(value) => handleFilterChange('type', value)}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="All Types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Types</SelectItem>
+            <SelectItem value="class">Class</SelectItem>
+            <SelectItem value="course">Course</SelectItem>
+          </SelectContent>
+        </Select>
+        
+        <Button 
+          variant="outline" 
+          onClick={clearFilters}
+          className="ml-auto"
+        >
+          Reset
+        </Button>
       </div>
 
       <Card className='p-0'>
@@ -64,8 +143,12 @@ export default function Page() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {casuals.map((entry) => (
-                <TableRow key={entry._id}>
+              {filteredSchedules.map((entry) => (
+                <TableRow 
+                  key={entry._id}
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => router.push(`/manage/schedules/${entry._id}`)}
+                >
                   {/* <TableCell className="align-top">{entry._id}</TableCell> */}
 
                   <TableCell>
@@ -100,13 +183,7 @@ export default function Page() {
                     })()}
                   </TableCell>
                   <TableCell>
-                    <ChevronRight
-                      className='size-5 cursor-pointer'
-                      onClick={() => {
-                        const path = `/manage/schedules/${entry._id}`;
-                        router.push(path);
-                      }}
-                    />
+                    <ChevronRight className='size-5' />
                   </TableCell>
 
                 </TableRow>

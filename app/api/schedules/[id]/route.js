@@ -20,17 +20,18 @@ export async function GET(req, { params }) {
     return NextResponse.json({ error: "Schedule not found" }, { status: 404 });
   }
 
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate());
-
   const scheduleObj = schedule.toObject();
   const loc = scheduleObj.locations?.find(loc =>
     loc.location?.toString() === employee.selectedLocationId?.toString()
   );
-  const filteredClasses = (loc?.classes || []).filter(cls => new Date(cls.datetime) > cutoffDate);
+  
+  // Get all classes for this location, sorted by datetime
+  const allClasses = (loc?.classes || []).sort((a, b) => 
+    new Date(a.datetime) - new Date(b.datetime)
+  );
   const filteredSchedule = {
     ...scheduleObj,
-    classes: filteredClasses,
+    classes: allClasses,
     locations: undefined
   };
 

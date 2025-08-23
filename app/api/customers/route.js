@@ -93,7 +93,7 @@ export async function GET(req) {
     
     const [customers, total] = await Promise.all([
       Customer.find(baseQuery)
-        .select('_id name email phone')  // Only select basic fields
+        .select('_id name email phone memberId createdAt waiver photo')  // Include memberId, createdAt, waiver, and photo
         .sort(sortObj)
         .skip(skip)
         .limit(limit),
@@ -113,13 +113,17 @@ export async function GET(req) {
       membershipMap[membership.customer.toString()] = membership;
     });
 
-    // Add membership data to customers (with only basic fields)
+    // Add membership data to customers (with all necessary fields)
     const customersWithMembership = customers.map(customer => {
       return {
         _id: customer._id,
         name: customer.name,
         email: customer.email,
         phone: customer.phone,
+        memberId: customer.memberId,
+        createdAt: customer.createdAt,
+        waiver: customer.waiver,
+        photo: customer.photo,
         membership: membershipMap[customer._id.toString()] || null
       };
     });

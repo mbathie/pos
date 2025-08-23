@@ -50,12 +50,15 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
   
   // Get times for selected date
   useEffect(() => {
-    if (selectedDate && product?.schedule) {
-      const times = getTimesForDate(selectedDate, product.schedule);
-      setTimesForSelectedDate(times);
-    } else {
-      setTimesForSelectedDate([]);
-    }
+    const fetchTimes = async () => {
+      if (selectedDate && product?.schedule) {
+        const times = await getTimesForDate(selectedDate, product.schedule);
+        setTimesForSelectedDate(times);
+      } else {
+        setTimesForSelectedDate([]);
+      }
+    };
+    fetchTimes();
   }, [selectedDate, product?.schedule])
   
   return (

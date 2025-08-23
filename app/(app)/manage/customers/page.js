@@ -197,24 +197,18 @@ export default function CustomersPage() {
               <Table className="table-fixed w-full">
                 <TableHeader className="sticky top-0 z-10 bg-background">
                   <TableRow>
-                    <SortableHeader field="name" className="rounded-tl-lg w-[22%]">
+                    <SortableHeader field="name" className="rounded-tl-lg w-[30%]">
                       <User className="size-4 mr-1" />
                       Name
                     </SortableHeader>
-                    <SortableHeader field="email" className="w-[22%]">
+                    <SortableHeader field="email" className="w-[30%]">
                       <Mail className="size-4 mr-1" />
                       Contact
                     </SortableHeader>
-                    <SortableHeader field="memberId" className="w-[14%]">
+                    <SortableHeader field="memberId" className="w-[18%]">
                       <IdCard className="size-4 mr-1" />
                       Member ID
                     </SortableHeader>
-                    <TableHead className="bg-muted w-[18%]">
-                      <div className="flex items-center gap-1">
-                        <CreditCard className="size-4 mr-1" />
-                        Member Since
-                      </div>
-                    </TableHead>
                     <SortableHeader field="createdAt" className="w-[18%]">
                       Account
                     </SortableHeader>
@@ -230,7 +224,7 @@ export default function CustomersPage() {
                   <TableBody>
                     {customers.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                           {searchQuery ? 'No customers found matching your search.' : 'No customers found.'}
                         </TableCell>
                       </TableRow>
@@ -241,7 +235,7 @@ export default function CustomersPage() {
                           className="hover:bg-muted/50 cursor-pointer"
                           onClick={() => router.push(`/manage/customers/${customer._id}`)}
                         >
-                          <TableCell className="align-top w-[22%]">
+                          <TableCell className="align-top w-[30%]">
                             <div className="flex items-center gap-3">
                               {customer.photo ? (
                                 <img 
@@ -267,7 +261,7 @@ export default function CustomersPage() {
                             </div>
                           </TableCell>
                           
-                          <TableCell className="align-top w-[22%]">
+                          <TableCell className="align-top w-[30%]">
                             <div className="flex flex-col gap-1">
                               {customer.email && (
                                 <div className="text-sm">
@@ -285,25 +279,10 @@ export default function CustomersPage() {
                             </div>
                           </TableCell>
                           
-                          <TableCell className="align-top w-[14%]">
+                          <TableCell className="align-top w-[18%]">
                             <div className="text-sm font-mono">
                               {customer.memberId || '-'}
                             </div>
-                          </TableCell>
-                          
-                          <TableCell className="w-[18%] align-top">
-                            {customer.membership ? (
-                              <div className="flex flex-col gap-1">
-                                <Badge variant="default" className="text-xs w-fit">
-                                  {customer.membership.priceName || customer.membership.product?.name}
-                                </Badge>
-                                <span className="text-sm text-muted-foreground">
-                                  {dayjs(customer.membership.subscriptionStartDate).format('DD/MM/YY')}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">-</span>
-                            )}
                           </TableCell>
                           
                           <TableCell className="w-[18%]">

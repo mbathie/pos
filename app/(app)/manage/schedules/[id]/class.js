@@ -1,190 +1,298 @@
 'use client'
+import React from 'react';
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime';
 dayjs.extend(relativeTime);
 import { useEffect, useState } from "react";
-// import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
-import { Separator } from '@radix-ui/react-separator';
 import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader,TableRow } from "@/components/ui/table"
-// import { Checkbox } from "@/components/ui/checkbox"
 import { Button } from '@/components/ui/button'
-import { Ellipsis, Check } from 'lucide-react';
+import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Calendar } from "@/components/ui/calendar"
+import { Ellipsis, Check, Clock, CheckCircle, XCircle, User, CalendarIcon, Search } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-// import Image from 'next/image'
 import ProductIcon from '@/components/icon';
+import { format } from "date-fns"
 
 export default function Page({ schedule, setSchedule }) {
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
-  // const isIcon = !schedule.product?.thumbnail || schedule.product.thumbnail.includes("thenounproject.com");
+  if (!schedule || !schedule.product) return null
 
-  if (!schedule?.product?.name) return null
+  // Filter classes based on selected filters
+  const filteredClasses = schedule.classes?.filter(cls => {
+    // Date filter
+    if (selectedDate) {
+      const classDate = dayjs(cls.datetime).format('YYYY-MM-DD');
+      const filterDate = dayjs(selectedDate).format('YYYY-MM-DD');
+      if (classDate !== filterDate) return false;
+    }
+
+    // Search filter (customer name or member ID)
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const hasMatchingCustomer = cls.customers?.some(cust => 
+        cust.customer?.name?.toLowerCase().includes(query) ||
+        cust.customer?.memberId?.toString().includes(query)
+      );
+      if (!hasMatchingCustomer) return false;
+    }
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      const hasMatchingStatus = cls.customers?.some(cust => 
+        cust.status === statusFilter
+      );
+      if (!hasMatchingStatus) return false;
+    }
+
+    return true;
+  }) || [];
+
+  const clearFilters = () => {
+    setSelectedDate(null);
+    setSearchQuery('');
+    setStatusFilter('all');
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'confirmed':
+        return <CheckCircle className="size-4 text-chart-2" />;
+      case 'checked in':
+        return <CheckCircle className="size-4 text-primary" />;
+      case 'cancelled':
+        return <XCircle className="size-4 text-destructive" />;
+      default:
+        return <Clock className="size-4 text-muted-foreground" />;
+    }
+  };
+
+  const getInitials = (name) => {
+    if (!name) return 'UN';
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase())
+      .join('');
+  };
 
   return (
-    <Card className='p-4'>
-      <CardContent className='p-0'>
-
-        <Table className='m-0'>
-          <TableBody>
-
-            <TableRow>
-              <TableCell colSpan={4}>
-                <div className="relative w-[50px] h-[50px]">
-                  <ProductIcon product={schedule.product} size="md" />
+    <div className="flex flex-col gap-4">
+      {/* Product Info Card */}
+      <Card className='p-4'>
+        <CardContent className='p-0'>
+          <div className="flex items-start gap-4">
+            <div className="relative w-[50px] h-[50px]">
+              <ProductIcon product={schedule.product} size="md" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-start justify-between">
+                <h2 className="text-xl font-semibold">{schedule.product.name}</h2>
+                <div className="text-sm text-muted-foreground-">
+                  Class Size {schedule.product.capacity}
+                  {schedule.product.type === 'course' && (
+                    <span className="ml-4">Available {schedule.available}</span>
+                  )}
                 </div>
-              </TableCell>
-            </TableRow>
+              </div>
+            </div>
+          </div>
 
-            <TableRow className="border-0">
-              <TableCell className='font-semibold'>Product Name</TableCell>
-              <TableCell colSpan={4}>{schedule.product.name}</TableCell>
-            </TableRow>
-            <TableRow className="border-0">
-              <TableCell className='font-semibold'>Capacity</TableCell>
-              <TableCell colSpan={4}>{schedule.product.capacity}</TableCell>
-            </TableRow>
-            {schedule.product.type == 'course' &&
-            <TableRow className="border-0">
-              <TableCell className='font-semibold'>Availability</TableCell>
-              <TableCell colSpan={4}>{schedule.available}</TableCell>
-            </TableRow>
-            }
-            <TableRow>
-              <TableCell colSpan={4} className='font-semibold'>Variations</TableCell>
-            </TableRow>
+          {/* Pricing */}
+          {schedule.product.prices?.length > 0 && (
+            <div className="mt-4 pt-4 border-t">
+              <h3 className="mb-2">Pricing</h3>
+              <div className='flex gap-6'>
+                {schedule.product.prices?.map((price, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span>{price.name}:</span>
+                    <span>${Number(price.value).toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-            <TableRow>
-              <TableCell className="align-top">
-                {schedule.product.variations.map((v, vIdx) => {
-                  return (
-                    <div key={vIdx} className='flex flex-col'>
-                        {v.prices.map((p, pIdx) => {
-                          return (
-                            <div key={pIdx}>
-                              {p.name} ${Number(p.value).toFixed(2)}
-                            </div>
-                          )
-                        })}
-                    </div>
-                  )
-                })}
-              </TableCell>
+      {/* Filters */}
+      <div className="flex gap-2 items-end">
+        {/* Calendar Filter */}
+        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-[200px] justify-start text-left font-normal">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => {
+                setSelectedDate(date);
+                setCalendarOpen(false);
+              }}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
 
-              <TableCell colSpan={4}>
-                {schedule.product.variations.map((v, vIdx) => {
-                  return (
-                    <div key={vIdx} className='flex flex-col'>
-                        {v.times.map((t, tIdx) => {
-                          return (
-                            <div key={tIdx}>
-                              <div>{dayjs(t.start).format('DD/MM/YY hh:mm A')}</div>
-                              <div>Repeats every: {t.repeatInterval} day</div>
-                              <div>
-                                Ends: {t.repeatAlways
-                                  ? 'Until cancel'
-                                  : (() => {
-                                      const end = dayjs(t.start).add((t.repeatCnt - 1) * t.repeatInterval, 'day');
-                                      return `${end.format('DD/MM/YY hh:mm A')} (${end.diff(dayjs(t.start), 'day')} days)`;
-                                    })()}
+        {/* Search Box */}
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground size-4" />
+          <Input
+            placeholder="Search by name or member ID..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+
+        {/* Status Filter */}
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="All Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="confirmed">Confirmed</SelectItem>
+            <SelectItem value="checked in">Checked In</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Clear Filters Button */}
+        {(selectedDate || searchQuery || statusFilter !== 'all') && (
+          <Button variant="outline" onClick={clearFilters}>
+            Clear
+          </Button>
+        )}
+
+        {/* Results Count */}
+        <Badge variant="secondary" className="ml-auto">
+          {filteredClasses.length} class{filteredClasses.length !== 1 ? 'es' : ''}
+        </Badge>
+      </div>
+
+      {/* Classes Table */}
+      <Card className='p-0'>
+        <CardContent className='p-0'>
+          <Table className="w-full">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="bg-muted/50">Customer</TableHead>
+                <TableHead className="bg-muted/50">Phone</TableHead>
+                <TableHead className="bg-muted/50">Member ID</TableHead>
+                <TableHead className="bg-muted/50">Status</TableHead>
+                <TableHead className="bg-muted/50"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+                  {!filteredClasses || filteredClasses.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        {(selectedDate || searchQuery || statusFilter !== 'all') 
+                          ? 'No classes found matching your filters' 
+                          : 'No classes scheduled'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredClasses.map((cls, clsIdx) => {
+                      const classTime = dayjs(cls.datetime);
+                      const isExpired = classTime.isBefore(dayjs());
+                      
+                      return (
+                        <React.Fragment key={`class-${clsIdx}`}>
+                          {/* Class Header Row */}
+                          <TableRow className="bg-background">
+                            <TableCell colSpan={5} className="font-semibold">
+                              <div className="flex items-center justify-between-">
+                                <div className="flex items-center gap-2">
+                                  <span>{classTime.format('DD/MM/YYYY')}</span>
+                                  <span>{classTime.format('h:mm A')}</span>
+                                  {cls.label && <span className="text-sm text-muted-foreground">({cls.label})</span>}
+                                  <Badge variant={isExpired ? "destructive" : "outline"}>
+                                    {isExpired ? 'Completed' : classTime.fromNow()}
+                                  </Badge>
+                                </div>
+                                <div className="flex items-center gap-4 text-sm ml-2">
+                                  {schedule.product.type === 'class' && (
+                                    <Badge variant="primary">
+                                      Available {cls.available}/{schedule.product.capacity}
+                                    </Badge>
+                                  )}
+                                </div>
                               </div>
-                              <div>
-                                Next Class: {(() => {
-                                  const now = dayjs();
-                                  let next = dayjs(t.start);
-                                  const interval = t.repeatInterval;
-                                  const end = t.repeatAlways ? null : dayjs(t.repeatEnd);
-
-                                  while (next.isBefore(now)) {
-                                    next = next.add(interval, 'day');
-                                    if (end && next.isAfter(end)) return 'Expired';
-                                  }
-
-                                  return `${next.format('DD/MM/YY hh:mm A')} (${next.fromNow(true)})`;
-                                })()}
-                              </div>
-                            </div>
-                          )
-                        })}
-                    </div>
-                  )
-                })}
-              </TableCell>
-            </TableRow>
-
-            <TableRow className='border-0'>
-              <TableCell className='font-semibold'>
-                Classes
-              </TableCell>
-              {schedule.product.type == 'class' &&
-              <TableCell className='font-semibold'>
-                Available
-              </TableCell>
-              }
-              <TableCell className='font-semibold'>
-                Enrollment
-              </TableCell>
-              <TableCell className='font-semibold'>
-                Status
-              </TableCell>
-            </TableRow>
-
-            {schedule.classes.map((c, cIdx) => {
-              return (
-                <TableRow key={cIdx}>
-                  <TableCell className="align-top flex flex-col">
-                    <div>{dayjs(c.datetime).format('DD/MM/YY')}</div>
-                    <div>{dayjs(c.datetime).format('hh:mm A')}</div>
-                  </TableCell>
-                  {schedule.product.type == 'class' &&
-                  <TableCell className="align-top">
-                    {c.available}
-                  </TableCell>
-                  }
-                  <TableCell className='align-top'>
-                    <div className='flex flex-col gap-2'>
-                      {c.customers.map((cust, custIdx) => {
-                        return (
-                          <div key={cust._id} className='flex flex-col'>
-                            <div>{cust.customer.name}</div>
-                            <div>{cust.customer.phone}</div>
-                            <div>{cust.customer.memberId}</div>
-
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </TableCell>
-                  <TableCell className='align-top'>
-                    <div className='align-top flex flex-col gap-2'>
-                      {c.customers.map((cust, custIdx) => {
-                        return (
-                          <div key={custIdx} className='flex gap-4'>
-                            <div>{cust.status}</div>
-                            <div className='flex-1'/>
-                            <ManageCustomer 
-                              schedule={schedule}
-                              scheduleId={schedule._id} 
-                              customer={cust}
-                              classId={c._id}
-                              setSchedule={setSchedule}
-                            />
-                          </div>
-                        )
-                      })}
-                    </div>
-                    
-
-                  </TableCell>
-
-                </TableRow>
-              )
-            })}
-
-          </TableBody>
-        </Table>
-
-      </CardContent>
-    </Card>
+                            </TableCell>
+                          </TableRow>
+                          
+                          {/* Customer Rows */}
+                          {cls.customers?.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center py-4 text-muted-foreground text-sm">
+                                No enrollments yet
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            cls.customers?.map((cust, custIdx) => (
+                              <TableRow 
+                                key={`${clsIdx}-${custIdx}`}
+                                className="hover:bg-muted/50"
+                              >
+                                <TableCell className="w-1/5">
+                                  <div className="flex items-center gap-2">
+                                    <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
+                                      {getInitials(cust.customer?.name)}
+                                    </div>
+                                    <span>{cust.customer?.name || 'Unknown'}</span>
+                                  </div>
+                                </TableCell>
+                                
+                                <TableCell className="w-1/5">
+                                  {cust.customer?.phone || '-'}
+                                </TableCell>
+                                
+                                <TableCell className="w-1/5">
+                                  {cust.customer?.memberId || '-'}
+                                </TableCell>
+                                
+                                <TableCell className="w-1/6">
+                                  <div className="flex items-center gap-2">
+                                    {getStatusIcon(cust.status)}
+                                    <span className="capitalize">{cust.status}</span>
+                                  </div>
+                                </TableCell>
+                                
+                                <TableCell className="w-1/4">
+                                  <div className="flex justify-end gap-2">
+                                    <ManageCustomer 
+                                      schedule={schedule}
+                                      scheduleId={schedule._id} 
+                                      customer={cust}
+                                      classId={cls._id}
+                                      setSchedule={setSchedule}
+                                    />
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </React.Fragment>
+                      );
+                    })
+                  )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -213,21 +321,33 @@ function ManageCustomer({ schedule, customer, classId, scheduleId, setSchedule }
   return (
     <div className="flex gap-2">
       <Button 
-        variant={customer.status === "checked in" ? undefined : "secondary"}
-        size="icon"
-        onClick={() => handleUpdateStatus(customer.status === "checked in" ? "cancel" : "checkin")}
-        disabled={customer.status === "checked in"}
+        variant={customer.status === "checked in" ? "default" : "secondary"}
+        size="sm"
+        onClick={() => handleUpdateStatus(customer.status === "checked in" ? "confirmed" : "checkin")}
       >
         <Check className='size-4' />
       </Button>
       <DropdownMenu>
-        <DropdownMenuTrigger><Ellipsis className='size-5' /></DropdownMenuTrigger>
-        <DropdownMenuContent>
-          <DropdownMenuLabel>Set Status</DropdownMenuLabel>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <Ellipsis className='size-4' />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Change Status</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => handleUpdateStatus("confirmed")}>Confirmed</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleUpdateStatus("checkin")}>Checkin</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => handleUpdateStatus("cancel")}>Cancel</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleUpdateStatus("confirmed")}>
+            <CheckCircle className="size-4 mr-2 text-chart-2" />
+            Confirmed
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleUpdateStatus("checkin")}>
+            <CheckCircle className="size-4 mr-2 text-primary" />
+            Check In
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleUpdateStatus("cancel")}>
+            <XCircle className="size-4 mr-2 text-destructive" />
+            Cancel
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
