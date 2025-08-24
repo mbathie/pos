@@ -8,12 +8,14 @@ const ScheduleSchema = new mongoose.Schema({
     type: Number,
     default: 0,
   },
+  // Both classes and courses use locations.classes structure
   locations: [{
     location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', required: true },
     classes: [{
       datetime: { type: Date, required: true },
       duration: Number,
       available: Number,
+      label: String, // For course time labels like "Morning" or "Arvo"
       customers: [{
         customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
         status: { type: String, enum: ['confirmed', 'cancelled', 'checked in'] },

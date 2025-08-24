@@ -1132,20 +1132,18 @@ export default function Page() {
                   </Button>
                 )}
 
-                {/* Return to Shop Button - only show after successful payment */}
-                {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') && (
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      console.log('🗑️ Clearing cart snapshot - returning to shop')
-                      setCartSnapshot(null)
-                      hasInitialSnapshot.current = false
-                      router.push('/shop')
-                    }}
-                  >
-                    Return to Shop
-                  </Button>
-                )}
+                {/* Return to Shop Button - always visible */}
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    console.log('🗑️ Clearing cart snapshot - returning to shop')
+                    setCartSnapshot(null)
+                    hasInitialSnapshot.current = false
+                    router.push('/shop')
+                  }}
+                >
+                  Return to Shop
+                </Button>
               </div>
               )}
 
@@ -1267,10 +1265,9 @@ export default function Page() {
                       'Accept'
                     )}
                   </Button>
-                                     <Button
+                   <Button
                      variant="outline"
                      className="w-full h-12"
-                     disabled={paymentStatus !== 'succeeded'}
                      onClick={() => {
                        console.log('🗑️ Clearing cart snapshot - returning to shop')
                        setCartSnapshot(null)

@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import React from 'react'
 import { ChevronRight, Minus, Plus, Folder, Check } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Badge } from "@/components/ui/badge"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useGlobals } from '@/lib/globals'
 import { useState, useEffect } from 'react'
 import { calcCartValueCourse } from '@/lib/product'
@@ -21,6 +23,7 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
 
   const { addToCart } = useGlobals()
   const [total, setTotal] = useState(0)
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState(null)
 
 
   useEffect(() => {
@@ -56,43 +59,7 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
 
           <div className='flex flex-col gap-4 text-sm'>
 
-            {/* Course schedule info - moved above pricing */}
-            {product.schedule && (
-              <div className='p-3 bg-muted rounded-md text-sm'>
-                <div className='font-semibold mb-2'>Course Schedule</div>
-                {product.schedule.startDate && (
-                  <div>Starts: {dayjs(product.schedule.startDate).format('DD/MM/YYYY')}</div>
-                )}
-                {product.schedule.endDate && (
-                  <div>Ends: {dayjs(product.schedule.endDate).format('DD/MM/YYYY')}</div>
-                )}
-                
-                {/* Days of the week */}
-                {product.schedule.daysOfWeek && (
-                  <div className='mt-2'>
-                    Days: {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-                      .filter((_, idx) => product.schedule.daysOfWeek[idx])
-                      .join(', ')}
-                  </div>
-                )}
-                
-                {/* Times */}
-                {product.schedule.times && product.schedule.times.length > 0 && (
-                  <div className='mt-1'>
-                    Times: {product.schedule.times.map(t => {
-                      if (typeof t === 'string') return t;
-                      return t.label ? `${t.time} (${t.label})` : t.time;
-                    }).join(', ')}
-                  </div>
-                )}
-                
-                {product.available !== undefined && (
-                  <div className='mt-2'>Available Spots: {product.available}</div>
-                )}
-              </div>
-            )}
-
-            {/* Course pricing - uses root-level prices */}
+            {/* Course pricing - moved to top like classes */}
             {product.prices && product.prices.length > 0 ? (
               <div className='w-full'>
                 <div className='flex flex-col gap-2 w-full'>
@@ -132,6 +99,85 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
               </div>
             )}
 
+            {/* Course schedule info */}
+            {product.schedule && (
+              <div className='p-3 bg-muted rounded-md text-sm'>
+                <div className='font-semibold mb-2'>Course Schedule</div>
+                {product.schedule.startDate && (
+                  <div>Starts: {dayjs(product.schedule.startDate).format('DD/MM/YYYY')}</div>
+                )}
+                {product.schedule.endDate && (
+                  <div>Ends: {dayjs(product.schedule.endDate).format('DD/MM/YYYY')}</div>
+                )}
+                
+                {/* Days of the week */}
+                {product.schedule.daysOfWeek && (
+                  <div className='mt-2'>
+                    Days: {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                      .filter((_, idx) => product.schedule.daysOfWeek[idx])
+                      .join(', ')}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Time slot selection for courses - only show if prices have been selected */}
+            {product.prices?.some(p => p.qty > 0) && product.schedule?.times && product.schedule.times.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium mb-2">Select Time Slot</h3>
+                <ScrollArea className="h-[150px] border rounded-md p-3">
+                  <div className="space-y-2">
+                    {product.schedule.times.map((time, idx) => {
+                      const timeStr = typeof time === 'string' ? time : time.time;
+                      const label = typeof time === 'object' ? time.label : '';
+                      const timeId = `time-${idx}`;
+                      
+                      return (
+                        <div
+                          key={timeId}
+                          className="flex items-center space-x-3 p-2 hover:bg-muted rounded-md"
+                        >
+                          <Checkbox
+                            id={timeId}
+                            checked={selectedTimeSlot === timeId}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedTimeSlot(timeId);
+                                setProduct(draft => {
+                                  draft.selectedTimeSlot = { time: timeStr, label };
+                                });
+                              } else {
+                                setSelectedTimeSlot(null);
+                                setProduct(draft => {
+                                  draft.selectedTimeSlot = null;
+                                });
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor={timeId}
+                            className="flex-1 flex items-center justify-between cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span>{timeStr}</span>
+                              {label && (
+                                <Badge variant="secondary">{label}</Badge>
+                              )}
+                            </div>
+                            <span className="text-sm text-muted-foreground">
+                              {(product.available ?? product.capacity ?? 0) > 0 
+                                ? `${product.available ?? product.capacity ?? 0} spots` 
+                                : 'Full'}
+                            </span>
+                          </label>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+
           </div>
 
         </div>
@@ -146,6 +192,11 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
               </div>
               <Button
                 onClick={async () => {
+                  // Check if time slot is selected for courses with multiple times
+                  if (product.schedule?.times?.length > 1 && !product.selectedTimeSlot) {
+                    return; // Don't proceed without time slot selection
+                  }
+                  
                   // Clean up the product before adding to cart
                   const cleanProduct = {
                     ...product,
@@ -153,7 +204,9 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
                     prices: product.prices?.map(p => ({
                       ...p,
                       qty: p.qty || 0
-                    })) || []
+                    })) || [],
+                    // Include selected time slot
+                    selectedTimeSlot: product.selectedTimeSlot
                   };
                   
                   // Only add if there's something selected
@@ -165,7 +218,10 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
                     setOpen(false);
                   }
                 }}
-                disabled={!product.prices?.some(p => p.qty > 0)}
+                disabled={
+                  !product.prices?.some(p => p.qty > 0) || 
+                  (product.schedule?.times?.length > 1 && !selectedTimeSlot)
+                }
                 className='w-full mt-2'
               >
                 Add

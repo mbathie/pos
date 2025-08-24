@@ -66,6 +66,12 @@ export default function Cart({ asSheet = false, onClose }) {
                 <div className='text-xs text-muted-foreground'>
                   {p.schedule.startDate && dayjs(p.schedule.startDate).format('DD/MM/YY')} - 
                   {p.schedule.endDate && dayjs(p.schedule.endDate).format(' DD/MM/YY')}
+                  {p.selectedTimeSlot && (
+                    <span className='ml-2'>
+                      @ {p.selectedTimeSlot.time}
+                      {p.selectedTimeSlot.label && ` (${p.selectedTimeSlot.label})`}
+                    </span>
+                  )}
                 </div>
               )}
 
