@@ -70,7 +70,7 @@ export default function Page({products, setProducts, categoryName, type}) {
         
         <div className='flex-1'/>
         <Button size="sm" className="mr-2" onClick={() => addProduct()}>
-          <Plus className="h-4 w-4 mr-1" /> New Product
+          <Plus className="h-4 w-4" />Product
         </Button>
         <Button variant="outline" size="sm" onClick={toggleAll}>
           <ChevronsUpDown />

@@ -65,8 +65,18 @@ export default function Page() {
           )}
         </div>
         
-        <Button size="sm" onClick={() => addProduct()}>
-          <Plus className="h-4 w-4 mr-1" />
+        <Button 
+          size="sm" 
+          onClick={() => {
+            const newProductId = addProduct('New Class', 'class');
+            if (newProductId) {
+              setSelectedProductId(newProductId);
+              setSheetOpen(true);
+            }
+          }} 
+          className="cursor-pointer"
+        >
+          <Plus className="size-4 mr-1" />
           New Product
         </Button>
       </div>

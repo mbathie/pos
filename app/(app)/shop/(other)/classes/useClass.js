@@ -170,5 +170,26 @@ export function useClass({product, setProduct}) {
     });
   };
 
-  return { setTimesClass, setTimesCourse, getAvailableDates, getTimesForDate }
+  const setQty = ({ type, vIdx, priceIdx }) => {
+    setProduct(draft => {
+      // For courses, prices are at the root level
+      const price = draft.prices?.[priceIdx];
+      if (!price) return;
+
+      if (type === '+') {
+        price.qty = (price.qty ?? 0) + 1;
+      } else if (type === '-') {
+        price.qty = Math.max(0, (price.qty ?? 0) - 1);
+      }
+
+      // Update total product quantity
+      let totalQty = 0;
+      draft.prices?.forEach(p => {
+        totalQty += p.qty || 0;
+      });
+      draft.qty = totalQty;
+    });
+  };
+
+  return { setTimesClass, setTimesCourse, getAvailableDates, getTimesForDate, setQty }
 }

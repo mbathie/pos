@@ -36,7 +36,8 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
   
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent className="w-[400px] sm:w-[540px]">
+      <SheetContent className="sm:max-w-[700px] flex flex-col h-full">
+
 
         <SheetHeader className=''>
           <SheetTitle>
@@ -55,116 +56,125 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
 
           <div className='flex flex-col gap-4 text-sm'>
 
-            {product.variations.map((variation, vIdx) => {
-              return (
-                <div key={vIdx} className='w-full'>
-
-                  <div className='flex flex-col gap-2 w-full'>
-                    {variation.prices?.map((price, priceIdx) => (
-                      <div key={priceIdx} className='flex'>
-                        <div className='flex gap-2 w-full items-center'>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setQty({ type: '-', vIdx, priceIdx })}
-                            disabled={!price.qty}
-                          >
-                            <Minus />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setQty({ type: '+', vIdx, priceIdx })}
-                            disabled={
-                              product.variations
-                                ?.flatMap(v => v.prices || [])
-                                .reduce((sum, p) => sum + (p.qty ?? 0), 0) >= product.available
-                            }
-                          >
-                            <Plus />
-                          </Button>
-
-                          {price.name}
-                          <div className='flex-1' />
-                          {price.qty || 0}x
-                          ${parseFloat(price.value).toFixed(2)}
-                        </div>
-                      </div>
-                      
-                    ))}
-                    {variation.times?.map((time, timeIdx) => {
-                      const start = new Date(time.start);
-                      const repeatInterval = time.repeatInterval || 0;
-                      const repeatCnt = time.repeatCnt || 1;
-                      const last = new Date(start);
-                      last.setDate(start.getDate() + (repeatInterval * (repeatCnt - 1)));
-
-                      return (
-                        <div key={timeIdx} className="">
-                          <div className='flex'>
-                            <div className='mr-auto'>Availability</div>
-                            <div>{product.available}/{product.capacity}</div>
-                          </div>
-                          <div className='flex'>
-                            <div className='mr-auto'>First class</div>
-                            <div>{dayjs(start).format('ddd DD/MM/YY HH:mm A')}</div>
-                          </div>
-                          <div className='flex'>
-                            <div className='mr-auto'>Repeats every</div>
-                            <div>{repeatInterval === 7 ? 'Weekly' : `${repeatInterval} days`}</div>
-                          </div>
-                          <div className='flex'>
-                            <div className='mr-auto'>Last class</div>
-                            <div>{dayjs(last).format('ddd DD/MM/YY HH:mm A')}</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-
+            {/* Course schedule info - moved above pricing */}
+            {product.schedule && (
+              <div className='p-3 bg-muted rounded-md text-sm'>
+                <div className='font-semibold mb-2'>Course Schedule</div>
+                {product.schedule.startDate && (
+                  <div>Starts: {dayjs(product.schedule.startDate).format('DD/MM/YYYY')}</div>
+                )}
+                {product.schedule.endDate && (
+                  <div>Ends: {dayjs(product.schedule.endDate).format('DD/MM/YYYY')}</div>
+                )}
+                
+                {/* Days of the week */}
+                {product.schedule.daysOfWeek && (
+                  <div className='mt-2'>
+                    Days: {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                      .filter((_, idx) => product.schedule.daysOfWeek[idx])
+                      .join(', ')}
                   </div>
+                )}
+                
+                {/* Times */}
+                {product.schedule.times && product.schedule.times.length > 0 && (
+                  <div className='mt-1'>
+                    Times: {product.schedule.times.map(t => {
+                      if (typeof t === 'string') return t;
+                      return t.label ? `${t.time} (${t.label})` : t.time;
+                    }).join(', ')}
+                  </div>
+                )}
+                
+                {product.available !== undefined && (
+                  <div className='mt-2'>Available Spots: {product.available}</div>
+                )}
+              </div>
+            )}
 
+            {/* Course pricing - uses root-level prices */}
+            {product.prices && product.prices.length > 0 ? (
+              <div className='w-full'>
+                <div className='flex flex-col gap-2 w-full'>
+                  {product.prices.map((price, priceIdx) => (
+                    <div key={priceIdx} className='flex'>
+                      <div className='flex gap-2 w-full items-center'>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setQty({ type: '-', vIdx: 0, priceIdx })}
+                          disabled={!price.qty}
+                        >
+                          <Minus />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setQty({ type: '+', vIdx: 0, priceIdx })}
+                          disabled={
+                            product.prices.reduce((sum, p) => sum + (p.qty ?? 0), 0) >= (product.available || 999)
+                          }
+                        >
+                          <Plus />
+                        </Button>
+                        {price.name}
+                        <div className='flex-1' />
+                        {price.qty || 0}x
+                        ${parseFloat(price.value).toFixed(2)}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              )
-            })}
-
+              </div>
+            ) : (
+              <div className='text-center py-8 text-muted-foreground'>
+                No pricing available for this course
+              </div>
+            )}
 
           </div>
-
 
         </div>
 
         <SheetFooter>
-          <div className='flex'>
-            <div className='uppercase font-semibold'>total</div>
-            <div className='ml-auto'>
-              ${total.toFixed(2)}
+          <div className='flex gap-2 w-full'>
+            <div className='flex flex-col w-full'>
+              {/* Grand Total for cart */}
+              <div className='flex justify-between text-lg font-bold border-gray-200 pt-2'>
+                <span>TOTAL</span>
+                <span>${total.toFixed(2)}</span>
+              </div>
+              <Button
+                onClick={async () => {
+                  // Clean up the product before adding to cart
+                  const cleanProduct = {
+                    ...product,
+                    // Ensure prices have qty values
+                    prices: product.prices?.map(p => ({
+                      ...p,
+                      qty: p.qty || 0
+                    })) || []
+                  };
+                  
+                  // Only add if there's something selected
+                  const hasItems = cleanProduct.prices.some(p => p.qty > 0);
+                  if (hasItems) {
+                    // Calculate the amount for the cart
+                    const productWithAmount = await calcCartValueCourse({ product: cleanProduct });
+                    addToCart(productWithAmount);
+                    setOpen(false);
+                  }
+                }}
+                disabled={!product.prices?.some(p => p.qty > 0)}
+                className='w-full mt-2'
+              >
+                Add
+              </Button>
             </div>
           </div>
-
-          <SheetClose asChild>
-            <Button 
-              type="submit" 
-              disabled={!total}
-              onClick={async () => {
-                const _product = await calcCartValueCourse({product})
-
-                _product.variations = _product.variations?.map(v => ({
-                  ...v,
-                  prices: v.prices?.filter(price => (price.qty ?? 0) > 0) || []
-                }))
-                
-                await addToCart(_product)
-              }}
-            >
-              Add
-            </Button>
-          </SheetClose>
         </SheetFooter>
-
-
 
       </SheetContent>
     </Sheet>
-  );
+  )
 }

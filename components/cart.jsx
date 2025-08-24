@@ -60,12 +60,20 @@ export default function Cart({ asSheet = false, onClose }) {
                   <Trash2 className='size-4'/>
                 </div>
               </div>
-              <div className=''>{p.variations?.[0]?.times?.[0]?.start && dayjs(p.variations[0].times[0].start).format('ddd DD/MM/YY HH:mm A')}</div>
+              
+              {/* Display course schedule info */}
+              {p.schedule && (
+                <div className='text-xs text-muted-foreground'>
+                  {p.schedule.startDate && dayjs(p.schedule.startDate).format('DD/MM/YY')} - 
+                  {p.schedule.endDate && dayjs(p.schedule.endDate).format(' DD/MM/YY')}
+                </div>
+              )}
 
-              {p.variations?.[0]?.prices?.map((price, i) => (
+              {/* Display prices from root level */}
+              {p.prices?.filter(price => price.qty > 0).map((price, i) => (
                 <div key={i} className="flex">
                   <div>{price.qty}x {price.name}</div>
-                  <div className="ml-auto">${parseFloat(price.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div className="ml-auto">${(price.qty * parseFloat(price.value)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
               ))}
             </div>

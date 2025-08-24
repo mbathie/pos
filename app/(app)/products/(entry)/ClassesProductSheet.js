@@ -115,11 +115,13 @@ export default function ClassesProductSheet({
             )}
             
             {/* Manual save for new products */}
-            {!product._id && (
+            {(product.isNew || !product._id) && (
               <Button
                 size="sm"
                 onClick={async () => {
-                  const createdProduct = await createProduct(categoryName, product);
+                  // Remove the isNew flag and temporary _id before creating
+                  const { isNew, _id, ...productToCreate } = product;
+                  const createdProduct = await createProduct(categoryName, productToCreate);
                   setProducts(draft => {
                     draft[pIdx] = createdProduct;
                   });

@@ -47,12 +47,18 @@ export function useProduct(setProducts) {
   };
 
   const addProduct = useCallback((name, type) => {
+    // Import generateObjectId at the top of this file
+    const { generateObjectId } = require('@/lib/utils');
+    
     // Prevent adding a new product if name is empty or if createProduct is being used
     if (!name) return;
 
+    const newProductId = generateObjectId();
     const newProduct = {
+      _id: newProductId,
       name,
       type,
+      isNew: true, // Flag to identify new products
     };
 
     // Initialize with prices array for general products, variations for others
@@ -63,6 +69,7 @@ export function useProduct(setProducts) {
     }
 
     setProducts(prev => [newProduct, ...prev]);
+    return newProductId; // Return the ID so the caller can use it
   }, [setProducts]);
 
   const createProduct = async (categoryName, product) => {

@@ -62,7 +62,6 @@ export function useProduct({setProducts, categoryName}) {
       type: '',
       duration: { name: 1, unit: 'hour' },
       capacity: 0,
-      variations: [],
     };
 
     setProducts(draft => {
