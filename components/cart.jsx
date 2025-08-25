@@ -1,13 +1,17 @@
 'use client'
 import Link from 'next/link';
 import { useGlobals } from '@/lib/globals'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Info } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import dayjs from 'dayjs';
 import { Badge } from '@/components/ui/badge';
+import { useState } from 'react';
+import CourseScheduleDialog from '@/components/CourseScheduleDialog';
 
 export default function Cart({ asSheet = false, onClose }) {
   const { cart, removeFromCart, resetCart } = useGlobals()
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
+  const [selectedCourse, setSelectedCourse] = useState(null)
 
   if (cart.products.length < 1 && !asSheet)
     return null
@@ -63,15 +67,35 @@ export default function Cart({ asSheet = false, onClose }) {
               
               {/* Display course schedule info */}
               {p.schedule && (
-                <div className='text-xs text-muted-foreground'>
-                  {p.schedule.startDate && dayjs(p.schedule.startDate).format('DD/MM/YY')} - 
-                  {p.schedule.endDate && dayjs(p.schedule.endDate).format(' DD/MM/YY')}
-                  {p.selectedTimeSlot && (
-                    <span className='ml-2'>
-                      @ {p.selectedTimeSlot.time}
-                      {p.selectedTimeSlot.label && ` (${p.selectedTimeSlot.label})`}
+                <div className='text-xs text-muted-foreground flex items-center'>
+                  <div className='flex items-center gap-2'>
+                    <span>
+                      {p.schedule.startDate && dayjs(p.schedule.startDate).format('DD/MM/YY')} - 
+                      {p.schedule.endDate && dayjs(p.schedule.endDate).format(' DD/MM/YY')}
                     </span>
-                  )}
+                    {p.selectedTimeSlot && (
+                      <>
+                        <span>@ {p.selectedTimeSlot.time}</span>
+                        {p.selectedTimeSlot.label && (
+                          <Badge variant="secondary" className="text-xs">
+                            {p.selectedTimeSlot.label}
+                          </Badge>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-4 w-4 ml-2 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedCourse(p);
+                      setScheduleDialogOpen(true);
+                    }}
+                  >
+                    <Info className="h-3 w-3" />
+                  </Button>
                 </div>
               )}
 
@@ -116,10 +140,10 @@ export default function Cart({ asSheet = false, onClose }) {
                 
                 return (
                   <div key={tIdx} className='flex items-center'>
-                    <div className="mr-auto flex items-center gap-2">
-                      {dayjs(datetime).format('ddd DD/MM/YY HH:mm A')}
+                    <div className="mr-auto flex items-center gap-2 text-xs text-muted-foreground">
+                      <span>{dayjs(datetime).format('ddd DD/MM/YY HH:mm A')}</span>
                       {label && (
-                        <Badge variant="secondary" className="bg-foreground text-background">
+                        <Badge variant="secondary" className="text-xs">
                           {label}
                         </Badge>
                       )}
@@ -247,6 +271,12 @@ export default function Cart({ asSheet = false, onClose }) {
         </div>
       </div>
 
+      {/* Course Schedule Dialog */}
+      <CourseScheduleDialog 
+        open={scheduleDialogOpen}
+        onOpenChange={setScheduleDialogOpen}
+        course={selectedCourse}
+      />
 
     </div>
 
