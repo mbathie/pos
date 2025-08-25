@@ -263,6 +263,7 @@ export default function Page({ schedule, setSchedule }) {
                               <TableCell colSpan={5} className="font-semibold-">
                                 <div className="flex items-center justify-between-">
                                   <div className="flex items-center gap-2">
+                                    <span>{classTime.format('ddd')}</span>
                                     <span>{classTime.format('DD/MM/YYYY')}</span>
                                     <span>{classTime.format('h:mm A')}</span>
                                     {cls.label && <Badge variant="secondary">{cls.label}</Badge>}

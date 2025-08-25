@@ -289,7 +289,6 @@ export default function TransactionDetailsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Entry Pass</TableHead>
-              <TableHead>Duration</TableHead>
               <TableHead>Attendees</TableHead>
               <TableHead className="text-right">Amount</TableHead>
             </TableRow>
@@ -298,15 +297,6 @@ export default function TransactionDetailsPage() {
             {products.map((product, index) => (
               <TableRow key={index}>
                 <TableCell className="font-medium align-top">{product.name}</TableCell>
-                <TableCell className="align-top">
-                  <div className="space-y-1">
-                    {product.item?.variation && product.item?.unit && (
-                      <div className="text-sm">
-                        {product.item.variation} {product.item.unit}
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
                 <TableCell className="align-top">
                   <div className="space-y-2">
                     {product.prices?.map((price, pIndex) => (
