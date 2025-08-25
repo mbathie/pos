@@ -18,7 +18,7 @@ import ProductIcon from '@/components/icon';
 import { format } from "date-fns"
 
 export default function Page({ schedule, setSchedule }) {
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -186,6 +186,16 @@ export default function Page({ schedule, setSchedule }) {
                   setSelectedDate(date);
                   setCalendarOpen(false);
                 }}
+                modifiers={{
+                  today: new Date()
+                }}
+                modifiersStyles={{
+                  today: {
+                    backgroundColor: 'hsl(var(--primary))',
+                    color: 'hsl(var(--primary-foreground))',
+                    borderRadius: '6px'
+                  }
+                }}
                 initialFocus
               />
             </PopoverContent>
@@ -255,24 +265,25 @@ export default function Page({ schedule, setSchedule }) {
                       filteredClasses.map((cls, clsIdx) => {
                         const classTime = dayjs(cls.datetime);
                         const isExpired = classTime.isBefore(dayjs());
+                        const isToday = classTime.format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD');
                         
                         return (
                           <React.Fragment key={`class-${clsIdx}`}>
                             {/* Class Header Row */}
-                            <TableRow className="bg-background">
+                            <TableRow className={isToday ? "bg-primary/50 text-primary-foreground" : "bg-background"}>
                               <TableCell colSpan={5} className="font-semibold-">
                                 <div className="flex items-center justify-between-">
                                   <div className="flex items-center gap-2">
                                     <span>{classTime.format('ddd')}</span>
                                     <span>{classTime.format('DD/MM/YYYY')}</span>
                                     <span>{classTime.format('h:mm A')}</span>
-                                    {cls.label && <Badge variant="secondary">{cls.label}</Badge>}
-                                    <Badge variant={isExpired ? "destructive" : "outline"}>
+                                    {cls.label && <Badge variant={isToday ? "secondary" : "secondary"} className={isToday ? "bg-primary-foreground text-primary" : ""}>{cls.label}</Badge>}
+                                    <Badge variant={isExpired ? "destructive" : isToday ? "secondary" : "outline"} className={isToday && !isExpired ? "bg-primary-foreground text-primary" : ""}>
                                       {isExpired ? 'Completed' : classTime.fromNow()}
                                     </Badge>
                                   </div>
                                   <div className="flex items-center gap-4 text-sm ml-2">
-                                    <Badge variant="primary">
+                                    <Badge variant={isToday ? "secondary" : "primary"} className={isToday ? "bg-primary-foreground text-primary" : ""}>
                                       Available {cls.available}/{schedule.product.capacity}
                                     </Badge>
                                   </div>

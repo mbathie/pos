@@ -1,3 +1,17 @@
+25th Aug 2025
+- test location selection, make sure all pages filter for selected employee location
+- memberships
+- class products setup, define different class times per day
+- discounts
+  - discount editor via a Sheet as well as on settings page
+    so you can pop it open during memebership product creation as well.
+- attaching customers to transactions
+  - waiver required support
+- re-test Stripe payments after massive changes
+- re-test emails after massive changes
+
+
+
 - apply a custom discount - update to use new api endpoints
 - Look into when signing up as an adult on behalf of a child, the transaction
   should be tied to the adult

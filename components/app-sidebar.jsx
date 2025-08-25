@@ -59,6 +59,7 @@ export function AppSidebar(props) {
         { title: "Membership", url: "/products/memberships" },
         { title: "Shop", url: "/products/shop" },
         { title: "Shop Mods", url: "/products/mods" },
+        { title: "Discounts", url: "/manage/discounts" },
         { title: "All Products", url: "/manage/products" },
       ]
     },
@@ -67,7 +68,6 @@ export function AppSidebar(props) {
     // { title: "Product Locations", url: "/products/locations", icon: MapPinCheckInside },
     // { title: "Terminals", url: "/manage/terminals", icon: Terminal },
     { title: "Accounting", url: "/manage/accounting", icon: Landmark },
-    { title: "Discounts", url: "/manage/discounts", icon: Percent },
     { title: "Settings", url: "/settings", icon: Settings },
   ];
 

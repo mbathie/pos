@@ -20,9 +20,14 @@ export async function GET(request) {
     const customerId = searchParams.get('customerId');
 
     let query = { 
-      org: employee.org._id,
-      location: employee.selectedLocationId 
+      org: employee.org._id
     };
+
+    // Only filter by location if not searching for a specific customer
+    // When searching by customer, we want to see all their transactions across all locations
+    if (!customerId) {
+      query.location = employee.selectedLocationId;
+    }
 
     // Filter by status
     if (status && status !== 'all') {
@@ -49,6 +54,7 @@ export async function GET(request) {
       .populate('discount', 'name value type')
       .populate('employee', 'name')
       .populate('customer', 'name phone')
+      .populate('location', 'name')
       .sort({ createdAt: -1 })
       .lean();
 
