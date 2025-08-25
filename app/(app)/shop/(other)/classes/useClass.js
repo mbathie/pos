@@ -4,7 +4,7 @@ export function useClass({product, setProduct}) {
 
   // Get all dates that have classes in the next 6 months
   const getAvailableDates = (schedule) => {
-    if (!schedule?.startDate || !schedule?.times?.length || !schedule?.daysOfWeek) {
+    if (!schedule?.startDate || !schedule?.daysOfWeek?.length) {
       return [];
     }
 
@@ -23,7 +23,9 @@ export function useClass({product, setProduct}) {
       // Convert Sunday = 0 to our format where Monday = 0
       const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
       
-      if (schedule.daysOfWeek[adjustedDayOfWeek]) {
+      // Check if this day has any selected times in the new structure
+      const dayConfig = schedule.daysOfWeek.find(d => d.dayIndex === adjustedDayOfWeek);
+      if (dayConfig && dayConfig.times?.some(t => t.selected)) {
         dates.push(format(current, 'yyyy-MM-dd'));
       }
       
@@ -35,7 +37,7 @@ export function useClass({product, setProduct}) {
 
   // Get available times for a specific date
   const getTimesForDate = async (date, schedule) => {
-    if (!date || !schedule?.times?.length) {
+    if (!date || !schedule?.daysOfWeek?.length) {
       return [];
     }
 
@@ -44,8 +46,11 @@ export function useClass({product, setProduct}) {
     // Convert Sunday = 0 to our format where Monday = 0
     const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     
-    // Check if this day has classes
-    if (!schedule.daysOfWeek?.[adjustedDayOfWeek]) {
+    // Find the day configuration for this day
+    const dayConfig = schedule.daysOfWeek.find(d => d.dayIndex === adjustedDayOfWeek);
+    
+    // Check if this day has any selected times
+    if (!dayConfig || !dayConfig.times?.some(t => t.selected)) {
       return [];
     }
 
@@ -53,10 +58,12 @@ export function useClass({product, setProduct}) {
     const res = await fetch(`/api/products/${product._id}/schedules`);
     const scheduleData = res.ok ? await res.json() : { classes: [] };
 
-    // Add all times for this day
-    schedule.times.forEach(timeItem => {
-      const timeStr = typeof timeItem === 'string' ? timeItem : timeItem?.time;
-      const timeLabel = typeof timeItem === 'object' ? timeItem?.label : '';
+    // Add all selected times for this day
+    dayConfig.times.forEach(timeItem => {
+      if (!timeItem.selected) return; // Skip unselected times
+      
+      const timeStr = timeItem.time;
+      const timeLabel = timeItem.label || '';
       
       if (timeStr) {
         const [hours, minutes] = timeStr.split(':');
@@ -103,9 +110,9 @@ export function useClass({product, setProduct}) {
       const twoMonthsLater = new Date();
       twoMonthsLater.setMonth(twoMonthsLater.getMonth() + 2);
 
-      const { startDate, endDate, noEndDate, daysOfWeek, times } = draft.schedule || {};
+      const { startDate, endDate, noEndDate, daysOfWeek } = draft.schedule || {};
       
-      if (!startDate || !times?.length) {
+      if (!startDate || !daysOfWeek?.length) {
         draft.timesCalc = [];
         return;
       }
@@ -125,12 +132,16 @@ export function useClass({product, setProduct}) {
         // Convert Sunday = 0 to our format where Monday = 0
         const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         
-        if (daysOfWeek?.[adjustedDayOfWeek]) {
-          // For each selected day, add all the times
-          times.forEach(timeItem => {
-            // Handle both string format and object format
-            const timeStr = typeof timeItem === 'string' ? timeItem : timeItem?.time;
-            const timeLabel = typeof timeItem === 'object' ? timeItem?.label : '';
+        // Find the day configuration for this day
+        const dayConfig = daysOfWeek.find(d => d.dayIndex === adjustedDayOfWeek);
+        
+        if (dayConfig && dayConfig.times?.length) {
+          // For each selected time on this day
+          dayConfig.times.forEach(timeItem => {
+            if (!timeItem.selected) return; // Skip unselected times
+            
+            const timeStr = timeItem.time;
+            const timeLabel = timeItem.label || '';
             
             if (timeStr) {
               const [hours, minutes] = timeStr.split(':');

@@ -17,6 +17,52 @@ import ProductInstructions from '@/components/product-instructions';
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
+// Helper function to migrate old schedule format to new format
+function migrateScheduleFormat(schedule) {
+  if (!schedule) return schedule;
+  
+  // Check if already in new format
+  if (schedule.daysOfWeek && Array.isArray(schedule.daysOfWeek) && 
+      schedule.daysOfWeek.length > 0 && typeof schedule.daysOfWeek[0] === 'object') {
+    return schedule;
+  }
+  
+  // Convert old format to new format
+  const newDaysOfWeek = [];
+  
+  // Convert times array to All template
+  if (schedule.times && Array.isArray(schedule.times)) {
+    const allTimes = schedule.times.map(t => {
+      if (typeof t === 'string') {
+        return { time: t, label: '', selected: true };
+      }
+      return { ...t, selected: true };
+    });
+    newDaysOfWeek.push({ dayIndex: -1, times: allTimes });
+  }
+  
+  // Convert boolean daysOfWeek array to new structure
+  if (schedule.daysOfWeek && Array.isArray(schedule.daysOfWeek)) {
+    const oldDaysOfWeek = schedule.daysOfWeek;
+    const allDay = newDaysOfWeek.find(d => d.dayIndex === -1);
+    const templateTimes = allDay?.times || [];
+    
+    oldDaysOfWeek.forEach((isActive, dayIdx) => {
+      if (isActive && templateTimes.length > 0) {
+        newDaysOfWeek.push({
+          dayIndex: dayIdx,
+          times: templateTimes.map(t => ({ ...t, selected: true }))
+        });
+      }
+    });
+  }
+  
+  return {
+    ...schedule,
+    daysOfWeek: newDaysOfWeek
+  };
+}
+
 export default function ClassesProductSheet({ 
   open, 
   onOpenChange, 
@@ -33,12 +79,19 @@ export default function ClassesProductSheet({
   categoryName
 }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [activeScheduleTab, setActiveScheduleTab] = React.useState('all');
   
   // Find product and index
-  const product = products?.find(p => p._id === selectedProductId);
+  const rawProduct = products?.find(p => p._id === selectedProductId);
   const pIdx = products?.findIndex(p => p._id === selectedProductId);
   
-  if (!product || pIdx === -1) return null;
+  if (!rawProduct || pIdx === -1) return null;
+  
+  // Migrate schedule format if needed (for backward compatibility)
+  const product = {
+    ...rawProduct,
+    schedule: migrateScheduleFormat(rawProduct.schedule)
+  };
   
   const updateProduct = (updates) => {
     setProducts(draft => {
@@ -424,114 +477,276 @@ export default function ClassesProductSheet({
               </div>
             </div>
 
-            {/* Days of Week */}
+            {/* Schedule Configuration with Tabs */}
             <div className='space-y-2'>
-              <Label>Days of Week</Label>
-              <div className='flex gap-4'>
-                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
-                  <div key={day} className='flex items-center gap-1.5'>
-                    <Checkbox
-                      checked={product.schedule?.daysOfWeek?.[index] || false}
-                      onCheckedChange={(checked) => {
-                        const newDaysOfWeek = [...(product.schedule?.daysOfWeek || [false, false, false, false, false, false, false])];
-                        newDaysOfWeek[index] = checked;
-                        updateProduct({ 
-                          schedule: { 
-                            ...product.schedule, 
-                            daysOfWeek: newDaysOfWeek 
-                          } 
-                        });
-                      }}
-                    />
-                    <Label className='text-sm font-normal'>{day}</Label>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Start Times */}
-            <div className='space-y-2'>
-              <div className='flex gap-2'>
-                <Label className="w-32">Class Times</Label>
-                <Label className="w-48">Class Label</Label>
-              </div>
-              <div className='space-y-2'>
-                {(product.schedule?.times || []).map((time, timeIdx) => (
-                  <div key={timeIdx} className='flex gap-2 items-center'>
-                    <Input
-                      type="time"
-                      value={typeof time === 'string' ? time : time?.time || ''}
-                      onChange={(e) => {
-                        const newTimes = [...(product.schedule?.times || [])];
-                        if (typeof newTimes[timeIdx] === 'string') {
-                          newTimes[timeIdx] = { time: e.target.value, label: '' };
-                        } else {
-                          newTimes[timeIdx] = { ...newTimes[timeIdx], time: e.target.value };
-                        }
-                        updateProduct({ 
-                          schedule: { 
-                            ...product.schedule, 
-                            times: newTimes 
-                          } 
-                        });
-                      }}
-                      className="w-32"
-                    />
-                    <Input
-                      type="text"
-                      placeholder="Warm Up, Cool Down, Main Class"
-                      value={typeof time === 'object' ? time?.label || '' : ''}
-                      onChange={(e) => {
-                        const newTimes = [...(product.schedule?.times || [])];
-                        if (typeof newTimes[timeIdx] === 'string') {
-                          newTimes[timeIdx] = { time: newTimes[timeIdx], label: e.target.value };
-                        } else {
-                          newTimes[timeIdx] = { ...newTimes[timeIdx], label: e.target.value };
-                        }
-                        updateProduct({ 
-                          schedule: { 
-                            ...product.schedule, 
-                            times: newTimes 
-                          } 
-                        });
-                      }}
-                      className="w-64"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        const newTimes = [...(product.schedule?.times || [])];
-                        newTimes.splice(timeIdx, 1);
-                        updateProduct({ 
-                          schedule: { 
-                            ...product.schedule, 
-                            times: newTimes 
-                          } 
-                        });
-                      }}
+              <Label>Schedule Configuration</Label>
+              <div className="w-full space-y-4">
+                {/* Tab List */}
+                <div className="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
+                  {[
+                    { value: 'all', label: 'All' },
+                    { value: '0', label: 'Mon' },
+                    { value: '1', label: 'Tue' },
+                    { value: '2', label: 'Wed' },
+                    { value: '3', label: 'Thu' },
+                    { value: '4', label: 'Fri' },
+                    { value: '5', label: 'Sat' },
+                    { value: '6', label: 'Sun' }
+                  ].map((tab) => (
+                    <button
+                      key={tab.value}
+                      onClick={() => setActiveScheduleTab(tab.value)}
+                      className={cn(
+                        "inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                        activeScheduleTab === tab.value
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "hover:bg-accent hover:text-accent-foreground"
+                      )}
                     >
-                      <Trash className="h-4 w-4" />
-                    </Button>
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+                
+                {/* Tab Content */}
+                <div>
+                  {/* All Tab - Template for all days */}
+                  {activeScheduleTab === 'all' && (
+                    <div className="space-y-4">
+                      <div className="text-sm text-muted-foreground mb-2">
+                        Configure all available time slots. These will be used as templates for each day.
+                      </div>
+                      <div className='space-y-2'>
+                    <div className='flex gap-2'>
+                      <Label className="w-32">Class Time</Label>
+                      <Label className="w-48">Class Label</Label>
+                    </div>
+                    {(() => {
+                      // Get or initialize the daysOfWeek structure
+                      const daysOfWeek = product.schedule?.daysOfWeek || [];
+                      const allDay = daysOfWeek.find(d => d?.dayIndex === -1) || { dayIndex: -1, times: [] };
+                      const allTimes = allDay.times || [];
+                      
+                      return (
+                        <>
+                          {allTimes.map((time, timeIdx) => (
+                            <div key={timeIdx} className='flex gap-2 items-center'>
+                              <Input
+                                type="time"
+                                value={time?.time || ''}
+                                onChange={(e) => {
+                                  const newDaysOfWeek = [...(product.schedule?.daysOfWeek || [])];
+                                  let allDayIndex = newDaysOfWeek.findIndex(d => d?.dayIndex === -1);
+                                  
+                                  if (allDayIndex === -1) {
+                                    newDaysOfWeek.push({ dayIndex: -1, times: [] });
+                                    allDayIndex = newDaysOfWeek.length - 1;
+                                  }
+                                  
+                                  const newTimes = [...(newDaysOfWeek[allDayIndex].times || [])];
+                                  newTimes[timeIdx] = { ...newTimes[timeIdx], time: e.target.value };
+                                  newDaysOfWeek[allDayIndex].times = newTimes;
+                                  
+                                  updateProduct({ 
+                                    schedule: { 
+                                      ...product.schedule, 
+                                      daysOfWeek: newDaysOfWeek 
+                                    } 
+                                  });
+                                }}
+                                className="w-32"
+                              />
+                              <Input
+                                type="text"
+                                placeholder="Warm Up, Main, Cool Down"
+                                value={time?.label || ''}
+                                onChange={(e) => {
+                                  const newDaysOfWeek = [...(product.schedule?.daysOfWeek || [])];
+                                  let allDayIndex = newDaysOfWeek.findIndex(d => d?.dayIndex === -1);
+                                  
+                                  if (allDayIndex === -1) {
+                                    newDaysOfWeek.push({ dayIndex: -1, times: [] });
+                                    allDayIndex = newDaysOfWeek.length - 1;
+                                  }
+                                  
+                                  const newTimes = [...(newDaysOfWeek[allDayIndex].times || [])];
+                                  newTimes[timeIdx] = { ...newTimes[timeIdx], label: e.target.value };
+                                  newDaysOfWeek[allDayIndex].times = newTimes;
+                                  
+                                  updateProduct({ 
+                                    schedule: { 
+                                      ...product.schedule, 
+                                      daysOfWeek: newDaysOfWeek 
+                                    } 
+                                  });
+                                }}
+                                className="w-64"
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  const newDaysOfWeek = [...(product.schedule?.daysOfWeek || [])];
+                                  const allDayIndex = newDaysOfWeek.findIndex(d => d?.dayIndex === -1);
+                                  
+                                  if (allDayIndex !== -1) {
+                                    const newTimes = [...(newDaysOfWeek[allDayIndex].times || [])];
+                                    newTimes.splice(timeIdx, 1);
+                                    newDaysOfWeek[allDayIndex].times = newTimes;
+                                    
+                                    updateProduct({ 
+                                      schedule: { 
+                                        ...product.schedule, 
+                                        daysOfWeek: newDaysOfWeek 
+                                      } 
+                                    });
+                                  }
+                                }}
+                              >
+                                <Trash className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              const newDaysOfWeek = [...(product.schedule?.daysOfWeek || [])];
+                              let allDayIndex = newDaysOfWeek.findIndex(d => d?.dayIndex === -1);
+                              
+                              if (allDayIndex === -1) {
+                                newDaysOfWeek.push({ dayIndex: -1, times: [{ time: '', label: '', selected: true }] });
+                              } else {
+                                const newTimes = [...(newDaysOfWeek[allDayIndex].times || []), { time: '', label: '', selected: true }];
+                                newDaysOfWeek[allDayIndex].times = newTimes;
+                              }
+                              
+                              updateProduct({ 
+                                schedule: { 
+                                  ...product.schedule, 
+                                  daysOfWeek: newDaysOfWeek 
+                                } 
+                              });
+                            }}
+                          >
+                            <Plus className="h-4 w-4 mr-1" /> Add Time
+                          </Button>
+                        </>
+                      );
+                    })()}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Individual Day Tabs */}
+                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((dayName, dayIdx) => {
+                    if (activeScheduleTab !== dayIdx.toString()) return null;
+                    
+                    return (
+                      <div key={dayIdx} className="space-y-4">
+                    <div className="text-sm text-muted-foreground mb-2">
+                      Select which time slots are available on {dayName}
+                    </div>
+                    <div className='space-y-2'>
+                      {(() => {
+                        const daysOfWeek = product.schedule?.daysOfWeek || [];
+                        const allDay = daysOfWeek.find(d => d?.dayIndex === -1) || { dayIndex: -1, times: [] };
+                        const currentDay = daysOfWeek.find(d => d?.dayIndex === dayIdx);
+                        const allTimes = allDay.times || [];
+                        
+                        if (allTimes.length === 0) {
+                          return (
+                            <div className="text-sm text-muted-foreground py-4">
+                              No time slots configured. Please add time slots in the "All" tab first.
+                            </div>
+                          );
+                        }
+                        
+                        // Format time to 12-hour format with AM/PM
+                        const formatTime12Hour = (timeStr) => {
+                          if (!timeStr) return 'No time set';
+                          const [hours, minutes] = timeStr.split(':').map(Number);
+                          const ampm = hours >= 12 ? 'PM' : 'AM';
+                          const displayHours = hours % 12 || 12;
+                          return `${displayHours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+                        };
+                        
+                        return allTimes.map((time, timeIdx) => {
+                          const isSelected = currentDay?.times?.[timeIdx]?.selected ?? false;
+                          
+                          return (
+                            <div key={timeIdx} className='flex items-center gap-3 p-2 rounded hover:bg-muted/50'>
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={(checked) => {
+                                  const newDaysOfWeek = [...(product.schedule?.daysOfWeek || [])];
+                                  let dayIndex = newDaysOfWeek.findIndex(d => d?.dayIndex === dayIdx);
+                                  
+                                  if (dayIndex === -1) {
+                                    // Initialize this day with all times from template
+                                    const dayTimes = allTimes.map((t, idx) => ({
+                                      ...t,
+                                      selected: idx === timeIdx ? checked : false
+                                    }));
+                                    newDaysOfWeek.push({ dayIndex: dayIdx, times: dayTimes });
+                                  } else {
+                                    // Create a new day object with updated times
+                                    const existingDay = newDaysOfWeek[dayIndex];
+                                    const newTimes = allTimes.map((t, idx) => {
+                                      // Check if this day already has this time configured
+                                      const existingTime = existingDay.times?.[idx];
+                                      if (idx === timeIdx) {
+                                        // This is the time being toggled
+                                        return {
+                                          ...t,
+                                          selected: checked
+                                        };
+                                      } else if (existingTime) {
+                                        // Keep existing selection state for other times
+                                        return {
+                                          ...t,
+                                          selected: existingTime.selected ?? false
+                                        };
+                                      } else {
+                                        // New time slot, default to unselected
+                                        return {
+                                          ...t,
+                                          selected: false
+                                        };
+                                      }
+                                    });
+                                    
+                                    // Replace the entire day object
+                                    newDaysOfWeek[dayIndex] = {
+                                      dayIndex: dayIdx,
+                                      times: newTimes
+                                    };
+                                  }
+                                  
+                                  updateProduct({ 
+                                    schedule: { 
+                                      ...product.schedule, 
+                                      daysOfWeek: newDaysOfWeek 
+                                    } 
+                                  });
+                                }}
+                              />
+                              <div className='flex-1'>
+                                <div className='text-sm'>
+                                  <span className='font-medium'>{formatTime12Hour(time.time)}</span>
+                                  {time.label && <span className='text-muted-foreground ml-2'>{time.label}</span>}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
                   </div>
-                ))}
-                <Button
-                  type="button"
-                  onClick={() => {
-                    const newTimes = [...(product.schedule?.times || []), { time: '', label: '' }];
-                    updateProduct({ 
-                      schedule: { 
-                        ...product.schedule, 
-                        times: newTimes 
-                      } 
-                    });
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Add Time
-                </Button>
-              </div>
+                );
+              })}
             </div>
+          </div>
           </div>
           
           {/* Delete Product Button */}
@@ -545,6 +760,7 @@ export default function ClassesProductSheet({
               Delete Product
             </Button>
           </div>
+        </div>
         </div>
       </SheetContent>
       
