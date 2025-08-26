@@ -192,7 +192,7 @@ export default function MembershipsPage() {
 
   return (
     <div className="px-4 h-[calc(100vh-65px)] flex flex-col">
-      <TypographyLarge>Memberships</TypographyLarge>
+      {/* <TypographyLarge>Memberships</TypographyLarge> */}
       
       {/* Search, Filters and Stats */}
       <div className="flex gap-2 items-center mb-4 flex-shrink-0">
