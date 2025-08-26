@@ -169,38 +169,36 @@ export default function Page({ schedule, setSchedule }) {
 
       {/* Filters */}
       <div className="flex gap-2 items-end">
-        {/* Calendar Filter - only for classes */}
-        {schedule.product.type === 'class' && (
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[200px] justify-start text-left font-normal">
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => {
-                  setSelectedDate(date);
-                  setCalendarOpen(false);
-                }}
-                modifiers={{
-                  today: new Date()
-                }}
-                modifiersStyles={{
-                  today: {
-                    backgroundColor: 'hsl(var(--primary))',
-                    color: 'hsl(var(--primary-foreground))',
-                    borderRadius: '6px'
-                  }
-                }}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-        )}
+        {/* Calendar Filter - for both classes and courses */}
+        <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-[200px] justify-start text-left font-normal">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(date) => {
+                setSelectedDate(date);
+                setCalendarOpen(false);
+              }}
+              modifiers={{
+                today: new Date()
+              }}
+              modifiersStyles={{
+                today: {
+                  backgroundColor: 'hsl(var(--primary))',
+                  color: 'hsl(var(--primary-foreground))',
+                  borderRadius: '6px'
+                }
+              }}
+              initialFocus
+            />
+          </PopoverContent>
+        </Popover>
 
         {/* Search Box */}
         <div className="relative flex-1 max-w-xs">
