@@ -1,26 +1,54 @@
 'use client'
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useRouter } from 'next/navigation';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button";
-import { Filter } from "lucide-react";
-import TransactionsTable from '@/components/transactions-table';
+import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { 
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
+import { 
+  Search, 
+  Filter, 
+  Download, 
+  MoreHorizontal, 
+  CreditCard, 
+  Banknote, 
+  CheckCircle, 
+  XCircle, 
+  Clock,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  User
+} from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
 dayjs.extend(relativeTime);
 
-// Custom transactions table with filters for the main transactions page
-function FilteredTransactionsTable() {
+export default function TransactionsPage() {
   const router = useRouter();
   const [transactions, setTransactions] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState({
     status: 'all',
     paymentMethod: 'all',
     dateRange: '24'
   });
   const [loading, setLoading] = useState(false);
+  const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
 
   // Fetch transactions when filters change
   useEffect(() => {
@@ -57,29 +85,216 @@ function FilteredTransactionsTable() {
       paymentMethod: 'all',
       dateRange: '24'
     });
+    setSearchQuery('');
+  };
+
+  // Handle sorting
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Get sort icon
+  const getSortIcon = (column) => {
+    if (sortConfig.key !== column) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    return sortConfig.direction === 'asc' 
+      ? <ArrowUp className="ml-2 h-4 w-4" />
+      : <ArrowDown className="ml-2 h-4 w-4" />;
+  };
+
+  // Filter and sort data
+  const processedData = useMemo(() => {
+    let filtered = transactions;
+
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter(item =>
+        item._id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.customer?.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.employee?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Apply sorting
+    if (sortConfig.key) {
+      filtered = [...filtered].sort((a, b) => {
+        let aValue, bValue;
+        
+        switch(sortConfig.key) {
+          case 'createdAt':
+            aValue = new Date(a.createdAt);
+            bValue = new Date(b.createdAt);
+            break;
+          case 'customer':
+            aValue = a.customer?.name || 'Walk-in';
+            bValue = b.customer?.name || 'Walk-in';
+            break;
+          case 'total':
+            aValue = a.total;
+            bValue = b.total;
+            break;
+          case 'paymentMethod':
+            aValue = a.paymentMethod;
+            bValue = b.paymentMethod;
+            break;
+          case 'status':
+            aValue = a.status;
+            bValue = b.status;
+            break;
+          default:
+            aValue = a[sortConfig.key];
+            bValue = b[sortConfig.key];
+        }
+        
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return filtered;
+  }, [transactions, searchQuery, sortConfig]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(processedData.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentData = processedData.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filters, itemsPerPage]);
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisible = 5;
+    
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i);
+        }
+        pages.push('ellipsis');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('ellipsis');
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        pages.push(1);
+        pages.push('ellipsis');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i);
+        }
+        pages.push('ellipsis');
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'succeeded':
+        return <CheckCircle className="h-4 w-4 text-primary" />;
+      case 'failed':
+        return <XCircle className="h-4 w-4 text-destructive" />;
+      case 'pending':
+        return <Clock className="h-4 w-4 text-secondary" />;
+      default:
+        return <Clock className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  const getPaymentMethodIcon = (method) => {
+    switch (method) {
+      case 'card':
+        return <CreditCard className="h-4 w-4" />;
+      case 'cash':
+        return <Banknote className="h-4 w-4" />;
+      default:
+        return <CreditCard className="h-4 w-4" />;
+    }
+  };
+
+  const getStatusBadgeVariant = (status) => {
+    switch (status) {
+      case 'succeeded': return 'default';
+      case 'pending': return 'secondary';
+      case 'failed': return 'destructive';
+      default: return 'outline';
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return `$${parseFloat(amount || 0).toFixed(2)}`;
+  };
+
+  const getInitials = (name) => {
+    if (!name) return 'UN';
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase())
+      .slice(0, 2)
+      .join('');
   };
 
   return (
-    <>
-      {/* Filters */}
-      <div className="flex gap-2 items-end mb-4 flex-shrink-0">
-        <div className="flex flex-col gap-2">
+    <div className="container mx-auto px-4 pt-2 max-w-7xl h-full flex flex-col py-4">
+      {/* Header */}
+      <div className="mb-4 flex-shrink-0">
+        <h1 className="text-xl font-semibold mb-1">Transactions</h1>
+        <p className="text-sm text-muted-foreground">
+          View and manage all transactions
+        </p>
+      </div>
+
+      {/* Controls */}
+      <div className="flex-shrink-0">
+        <div className="flex flex-col md:flex-row gap-4 mb-4">
+          {/* Search */}
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search transactions..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {/* Status Filter */}
           <Select value={filters.status} onValueChange={(value) => handleFilterChange('status', value)}>
             <SelectTrigger className="w-[140px]">
+              <Filter className="h-4 w-4" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="succeeded">Succeeded</SelectItem>
-              <SelectItem value="failed">Failed</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="failed">Failed</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-        
-        <div className="flex flex-col gap-2">
-          <Select value={filters.paymentMethod} onValueChange={(value) => handleFilterChange('paymentMethod', value)}>
-            <SelectTrigger className="w-[140px]">
+
+          {/* Payment Method Filter */}
+          {/* <Select value={filters.paymentMethod} onValueChange={(value) => handleFilterChange('paymentMethod', value)}>
+            <SelectTrigger className="w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -87,12 +302,11 @@ function FilteredTransactionsTable() {
               <SelectItem value="cash">Cash</SelectItem>
               <SelectItem value="card">Card</SelectItem>
             </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="flex flex-col gap-2">
+          </Select> */}
+
+          {/* Date Range Filter */}
           <Select value={filters.dateRange} onValueChange={(value) => handleFilterChange('dateRange', value)}>
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -104,33 +318,239 @@ function FilteredTransactionsTable() {
               <SelectItem value="720">Last 30 days</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-        
-        <Button variant="outline" onClick={clearFilters}>
-          Reset
-        </Button>
 
-        <Badge variant="secondary" className="text-sm mt-1 ml-auto">
-          {loading ? 'Loading...' : `${transactions.length} transaction${transactions.length !== 1 ? 's' : ''}`}
-        </Badge>
+          {/* Clear Filters Button */}
+          <Button variant="outline" onClick={clearFilters} className="cursor-pointer">
+            Clear
+          </Button>
+
+        </div>
       </div>
 
-      {/* Use shared table component with filtered data */}
-      <TransactionsTable 
-        customerId={null}
-        showFilters={false}
-        className="flex-1"
-        data={transactions}
-        loading={loading}
-      />
-    </>
-  );
-}
+      {/* Table Container - Scrollable */}
+      <div className="flex-1 flex flex-col min-h-0 top-0 relative">
+        {/* Table */}
+        <div className="rounded-md border flex-1 overflow-auto">
+          <table className="w-full caption-bottom text-sm">
+            <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
+              <tr className="border-b bg-muted/50 hover:bg-muted/50">
+                <th 
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  onClick={() => handleSort('createdAt')}
+                >
+                  <div className="flex items-center">
+                    Date & Time
+                    {getSortIcon('createdAt')}
+                  </div>
+                </th>
+                <th 
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  onClick={() => handleSort('customer')}
+                >
+                  <div className="flex items-center">
+                    Customer
+                    {getSortIcon('customer')}
+                  </div>
+                </th>
+                <th 
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  onClick={() => handleSort('total')}
+                >
+                  <div className="flex items-center">
+                    Total
+                    {getSortIcon('total')}
+                  </div>
+                </th>
+                <th 
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  onClick={() => handleSort('paymentMethod')}
+                >
+                  <div className="flex items-center">
+                    Payment
+                    {getSortIcon('paymentMethod')}
+                  </div>
+                </th>
+                <th 
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  onClick={() => handleSort('status')}
+                >
+                  <div className="flex items-center">
+                    Status
+                    {getSortIcon('status')}
+                  </div>
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Discount
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Location
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Employee
+                </th>
+                <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground"></th>
+              </tr>
+            </thead>
+            <tbody className="[&_tr:last-child]:border-0">
+              {loading && transactions.length === 0 ? (
+                <tr className="border-b">
+                  <td colSpan={9} className="p-4 text-center py-8">
+                    <p className="text-muted-foreground">Loading transactions...</p>
+                  </td>
+                </tr>
+              ) : currentData.length === 0 ? (
+                <tr className="border-b">
+                  <td colSpan={9} className="p-4 text-center py-8">
+                    <p className="text-muted-foreground">No transactions found matching your criteria</p>
+                  </td>
+                </tr>
+              ) : (
+                currentData.map((transaction) => (
+                  <tr key={transaction._id} className="border-b hover:bg-muted/50">
+                    <td className="px-4 py-3 align-middle">
+                      <div>
+                        <div className="font-medium">
+                          {dayjs(transaction.createdAt).format('MMM DD, YYYY')}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {dayjs(transaction.createdAt).format('h:mm A')}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      {transaction.customer ? transaction.customer.name : 'Walk-in'}
+                    </td>
+                    <td className="px-4 py-3 align-middle font-medium">
+                      {formatCurrency(transaction.total)}
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <div className="flex items-center gap-2">
+                        {getPaymentMethodIcon(transaction.paymentMethod)}
+                        <span className="capitalize">{transaction.paymentMethod}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <Badge variant={getStatusBadgeVariant(transaction.status)} className="capitalize">
+                        {transaction.status}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      {transaction.discount ? (
+                        <div>
+                          <div className="text-sm">{transaction.discount.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            -{formatCurrency(transaction.discountAmount)}
+                          </div>
+                        </div>
+                      ) : (
+                        <></>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      {transaction.location?.name || '-'}
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <Avatar className="h-8 w-8 flex-shrink-0">
+                        <AvatarFallback className="bg-secondary text-xs">
+                          {getInitials(transaction.employee?.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </td>
+                    <td className="px-4 py-3 text-right align-middle">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="cursor-pointer h-8 w-8">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="cursor-pointer"
+                            onClick={() => router.push(`/manage/transactions/${transaction._id}`)}
+                          >
+                            View details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer">
+                            Download receipt
+                          </DropdownMenuItem>
+                          {transaction.status === 'succeeded' && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="cursor-pointer">
+                                Refund transaction
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
 
-export default function TransactionsPage() {
-  return (
-    <div className="mx-4 h-[calc(100vh-65px)] flex flex-col">
-      <FilteredTransactionsTable />
+        {/* Pagination and Info - Fixed at bottom */}
+        <div className="flex flex-col md:flex-row items-center justify-between mt-4 gap-4 flex-shrink-0">
+          <div className="text-sm text-muted-foreground text-nowrap">
+            {processedData.length > 0 
+              ? `Showing ${startIndex + 1} to ${Math.min(endIndex, processedData.length)} of ${processedData.length} transactions`
+              : 'No transactions to display'
+            }
+          </div>
+
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent className="ml-auto">
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage > 1) setCurrentPage(currentPage - 1);
+                    }}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+                
+                {getPageNumbers().map((page, index) => (
+                  <PaginationItem key={index}>
+                    {page === 'ellipsis' ? (
+                      <PaginationEllipsis />
+                    ) : (
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(page);
+                        }}
+                        isActive={currentPage === page}
+                        className="cursor-pointer"
+                      >
+                        {page}
+                      </PaginationLink>
+                    )}
+                  </PaginationItem>
+                ))}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                    }}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
+        </div>
+      </div>
     </div>
   );
-} 
+}

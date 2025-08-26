@@ -59,10 +59,79 @@
 - Run tests with UI: `npm run test:ui`
 - Run headed tests: `npm run test:headed`
 
+### Browser Testing with Playwright
+- When testing pages behind authentication, use the following authentication cookie:
+  ```
+  eyJhbGciOiJIUzI1NiJ9.eyJzZWxlY3RlZExvY2F0aW9uSWQiOiI2OGEyOGJjMzY4MjA0ZmEwZmJkYzRjNjYiLCJlbWFpbCI6Im1iYXRoaWVAZ21haWwuY29tIiwiZW1wbG95ZWVJZCI6IjY4OWYxM2YxY2IwNzU0MzQxZTA5M2Q5MiIsIm9yZ0lkIjoiNjg5ZjEzZjBjYjA3NTQzNDFlMDkzZDc4IiwiZXhwIjoxNzg3NzI0MDY3fQ.t5YqTRUPCg-jtJB7DbJEA4ngMFhTmsV_ZbnbgYMdsgw
+  ```
+- After making UI changes, always verify the UI/UX using Playwright MCP to ensure:
+  - Visual consistency with design system
+  - Proper responsive behavior
+  - Interactive elements work as expected
+  - No visual regressions
+
 ## Development
 - Start dev server: `npm run dev --turbopack`
 - Build: `npm run build`
 - Lint: `npm run lint`
 
 ## UI/UX Conventions
+
+### Reference Pages
+- **Style Guide**: `/app/(unauth)/style-guide/page.js` - Comprehensive UI/UX style guide with all components, patterns, and best practices
+- **Sample Table**: `/app/(unauth)/sample-table/page.js` - Reference implementation for tables with sorting, pagination, filtering, and sticky headers
+
+### Core Principles
 - All Button components should include `className='cursor-pointer'` to ensure consistent cursor behavior
+- Use only standard shadcn/ui component variants - avoid custom Tailwind colors like `bg-red-500`, use shadcn variants instead
+- Page titles should use `text-xl` (not larger) for better visual hierarchy
+- Subheadings should follow the hierarchy defined in the style guide
+
+### Typography
+- Page titles: `text-xl font-semibold`
+- Page descriptions: `text-sm text-muted-foreground`
+- Section headings: `text-2xl font-semibold`
+- Card titles: `text-lg font-semibold`
+- Regular text: Default size, no additional classes needed
+
+### Tables
+- Use `align-middle` for table cells (better visual balance than `align-top`)
+- Table headers should have `bg-muted/50` with `font-medium`
+- Implement consistent icon/avatar spacing in first column with empty placeholder divs when needed
+- For scrollable tables with fixed headers, use HTML `<table>` elements with `sticky top-0` on `<thead>`
+- Always include hover states with `hover:bg-muted/50` on rows
+- Use dropdown menus for row actions (never inline multiple buttons)
+
+### Colors & Theming
+- Use only shadcn/ui semantic color classes: `primary`, `secondary`, `destructive`, `muted`, `accent`
+- For status indicators use Badge variants: `default`, `secondary`, `destructive`, `outline`
+- Never use direct Tailwind color classes like `text-red-600` or `bg-green-500`
+
+### Forms
+- Always link labels to inputs with `htmlFor` and `id` attributes
+- Include descriptive placeholders
+- Use `aria-describedby` for helper text
+- Disabled inputs should have `disabled` prop and show visual indication
+
+### Spacing
+- Use consistent spacing scale: `p-1` (4px), `p-2` (8px), `p-3` (12px), `p-4` (16px), `p-6` (24px), `p-8` (32px)
+- Card padding: `p-4` for CardContent, default padding for CardHeader
+- Section spacing: `mb-12` between major sections, `mb-6` for subsections
+
+### Loading States
+- Use Skeleton components for content that's loading
+- Show loading spinners with `Loader2` icon for buttons and inline states
+- Always provide loading feedback for async operations
+
+### Empty States
+- Include descriptive icon
+- Explain why it's empty
+- Provide clear call-to-action
+- Keep messaging positive and helpful
+
+### Accessibility
+- All interactive elements must be keyboard accessible
+- Include proper ARIA labels and descriptions
+- Maintain 4.5:1 contrast ratio for normal text
+- Focus indicators must be clearly visible
+- Use semantic HTML elements
