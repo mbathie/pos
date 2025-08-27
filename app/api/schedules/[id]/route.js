@@ -13,7 +13,7 @@ export async function GET(req, { params }) {
     .populate("product")
     .populate({
       path: "locations.classes.customers.customer",
-      select: "name email phone memberId"
+      select: "name email phone memberId dependents"
     })
 
   if (!schedule) {
@@ -26,9 +26,28 @@ export async function GET(req, { params }) {
   );
   
   // Get all classes for this location, sorted by datetime
-  const allClasses = (loc?.classes || []).sort((a, b) => 
+  let allClasses = (loc?.classes || []).sort((a, b) => 
     new Date(a.datetime) - new Date(b.datetime)
   );
+  
+  // Process classes to extract dependent details
+  allClasses = allClasses.map(cls => ({
+    ...cls,
+    customers: cls.customers?.map(cust => {
+      // If there's a dependent ID, find the dependent in the customer's dependents array
+      if (cust.dependent && cust.customer?.dependents) {
+        const dependentDetails = cust.customer.dependents.find(
+          dep => dep._id?.toString() === cust.dependent.toString()
+        );
+        return {
+          ...cust,
+          dependent: dependentDetails || { _id: cust.dependent }
+        };
+      }
+      return cust;
+    }) || []
+  }));
+  
   const filteredSchedule = {
     ...scheduleObj,
     classes: allClasses,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongoose"
 import { getEmployee } from "@/lib/auth"
 import { Customer } from "@/models"
+import mongoose from "mongoose"
 
 export async function GET(req, { params }) {
   await connectDB()
@@ -32,6 +33,14 @@ export async function PUT(req, { params }) {
   const { id } = await params
   const orgId = employee.org._id
   const updates = await req.json()
+
+  // If dependents are being updated, ensure they have ObjectIds
+  if (updates.dependents && Array.isArray(updates.dependents)) {
+    updates.dependents = updates.dependents.map(dep => ({
+      ...dep,
+      _id: dep._id ? new mongoose.Types.ObjectId(dep._id) : new mongoose.Types.ObjectId()
+    }))
+  }
 
   try {
     const customer = await Customer.findOneAndUpdate(

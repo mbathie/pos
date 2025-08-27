@@ -214,9 +214,22 @@ export default function ClassesProductSheet({
             <div>
               {product.prices?.length > 0 && (
                 <div className="space-y-2">
-                  <div className="flex flex-row gap-2">
+                  <div className="flex flex-row gap-2 items-center">
                     <Label className="w-32">Price Name</Label>
                     <Label className="w-24">Amount ($)</Label>
+                    <Label className="flex items-center gap-2">
+                      Minor
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="size-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p>Price is for a minor, generally under 18 years old. Will require consent from a guardian or parent</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </Label>
                     <div className="w-8"></div>
                   </div>
                   
@@ -245,6 +258,16 @@ export default function ClassesProductSheet({
                           });
                         }}
                       />
+                      <div className="flex items-center justify-center w-[60px]">
+                        <Checkbox
+                          checked={price.minor || false}
+                          onCheckedChange={(checked) => {
+                            setProducts((draft) => {
+                              draft[pIdx].prices[priceIdx].minor = checked;
+                            });
+                          }}
+                        />
+                      </div>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -273,7 +296,8 @@ export default function ClassesProductSheet({
                       }
                       draft[pIdx].prices.push({
                         name: '',
-                        value: ''
+                        value: '',
+                        minor: false
                       });
                     });
                   }}
@@ -544,8 +568,8 @@ export default function ClassesProductSheet({
                                   }
                                   
                                   const newTimes = [...(newDaysOfWeek[allDayIndex].times || [])];
-                                  newTimes[timeIdx] = { ...newTimes[timeIdx], time: e.target.value };
-                                  newDaysOfWeek[allDayIndex].times = newTimes;
+                                  newTimes[timeIdx] = { ...(newTimes[timeIdx] || {}), time: e.target.value };
+                                  newDaysOfWeek[allDayIndex] = { ...newDaysOfWeek[allDayIndex], times: newTimes };
                                   
                                   updateProduct({ 
                                     schedule: { 
@@ -570,8 +594,8 @@ export default function ClassesProductSheet({
                                   }
                                   
                                   const newTimes = [...(newDaysOfWeek[allDayIndex].times || [])];
-                                  newTimes[timeIdx] = { ...newTimes[timeIdx], label: e.target.value };
-                                  newDaysOfWeek[allDayIndex].times = newTimes;
+                                  newTimes[timeIdx] = { ...(newTimes[timeIdx] || {}), label: e.target.value };
+                                  newDaysOfWeek[allDayIndex] = { ...newDaysOfWeek[allDayIndex], times: newTimes };
                                   
                                   updateProduct({ 
                                     schedule: { 

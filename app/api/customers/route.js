@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongoose"
 import { getEmployee } from "@/lib/auth"
 import { Customer, Membership } from "@/models"
+import mongoose from "mongoose"
 // import { generateCustomerId } from "@/lib/customers";
 
 export async function POST(req) {
@@ -93,7 +94,7 @@ export async function GET(req) {
     
     const [customers, total] = await Promise.all([
       Customer.find(baseQuery)
-        .select('_id name email phone memberId createdAt waiver photo')  // Include memberId, createdAt, waiver, and photo
+        .select('_id name email phone memberId createdAt waiver photo dependents')  // Include memberId, createdAt, waiver, photo, and dependents
         .sort(sortObj)
         .skip(skip)
         .limit(limit),
@@ -124,6 +125,7 @@ export async function GET(req) {
         createdAt: customer.createdAt,
         waiver: customer.waiver,
         photo: customer.photo,
+        dependents: customer.dependents,
         membership: membershipMap[customer._id.toString()] || null
       };
     });
@@ -142,7 +144,7 @@ export async function GET(req) {
   // Include waiver status if specifically filtering for waivers
   let selectFields = '_id name email phone';
   if (requiresWaiver === "true" || recentWaiver === "1") {
-    selectFields += ' waiver.agree assigned';  // Include waiver status for waiver-specific queries
+    selectFields += ' waiver.agree assigned dependents';  // Include waiver status and dependents for waiver-specific queries
   }
   
   const customers = await Customer.find(baseQuery)

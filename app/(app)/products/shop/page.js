@@ -3,49 +3,26 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useImmer } from 'use-immer';
-// Drag and drop imports
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+
 import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogDescription } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Separator } from '@radix-ui/react-separator'
 import { Button } from '@/components/ui/button'
 import { Image, Plus, Ellipsis, EllipsisVertical, Info, Trash, Loader2, CheckCircle, Save, GripVertical, Edit2, Trash2, PanelLeft, ChevronRight, ChevronLeft, MoreVertical, Folder as FolderIcon, Check, X, ExternalLink } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
+
 
 import { actions } from './actions'
 import Delete from '../Delete'
 import ProductsTable from './ProductsTable'
 import ProductSheet from './ProductSheet'
-import { FolderSelect } from './FolderSelect'
 import { FolderManagementSheet } from './FolderManagementSheet'
 import IconSelect from '@/components/icon-select'
-import AccountingSelect from './accounting-select'
 import colors from 'tailwindcss/colors';
 import { useAutoSave } from '../useAutoSave';
 import { CategoryFolderMenu } from './CategoryFolderMenu';

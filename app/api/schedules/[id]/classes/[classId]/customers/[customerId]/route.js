@@ -184,7 +184,7 @@ export async function PUT(req, { params }) {
     .populate({
       path: "locations.classes.customers.customer",
       model: "Customer",
-      select: "name email phone memberId"
+      select: "name email phone memberId dependents"
     });
 
   const cutoffDate = new Date();
@@ -205,13 +205,31 @@ export async function PUT(req, { params }) {
   console.log('Found location:', loc ? 'Yes' : 'No');
   console.log('Classes in location before filtering:', loc?.classes?.length || 0);
   
-  const filteredClasses = (loc?.classes || []).filter(cls => {
+  let filteredClasses = (loc?.classes || []).filter(cls => {
     const classDate = new Date(cls.datetime);
     const isAfterCutoff = classDate > cutoffDate;
     console.log(`Class ${cls._id}: ${cls.datetime} -> After cutoff (${cutoffDate.toISOString()}): ${isAfterCutoff}`);
     return isAfterCutoff;
   });
   console.log('Classes after filtering:', filteredClasses.length);
+  
+  // Process classes to extract dependent details (same as GET endpoint)
+  filteredClasses = filteredClasses.map(cls => ({
+    ...cls,
+    customers: cls.customers?.map(cust => {
+      // If there's a dependent ID, find the dependent in the customer's dependents array
+      if (cust.dependent && cust.customer?.dependents) {
+        const dependentDetails = cust.customer.dependents.find(
+          dep => dep._id?.toString() === cust.dependent.toString()
+        );
+        return {
+          ...cust,
+          dependent: dependentDetails || { _id: cust.dependent }
+        };
+      }
+      return cust;
+    }) || []
+  }));
   
   const filteredSchedule = {
     ...scheduleObj,

@@ -4,6 +4,7 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime';
 dayjs.extend(relativeTime);
 import { useEffect, useState } from "react";
+import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card'
 import { Table, TableBody, TableCaption, TableCell, TableFooter, TableHead, TableHeader,TableRow } from "@/components/ui/table"
 import { Button } from '@/components/ui/button'
@@ -12,12 +13,13 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
-import { Ellipsis, Check, Clock, CheckCircle, XCircle, User, CalendarIcon, Search } from 'lucide-react';
+import { Ellipsis, Check, Clock, CheckCircle, XCircle, User, CalendarIcon, Search, ArrowLeft } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import ProductIcon from '@/components/icon';
 import { format } from "date-fns"
 
 export default function Page({ schedule, setSchedule }) {
+  const router = useRouter();
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -84,6 +86,14 @@ export default function Page({ schedule, setSchedule }) {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Header with Back Button */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+          <ArrowLeft className="size-4 mr-2" />
+          Back
+        </Button>
+      </div>
+
       {/* Product Info Card */}
       <Card className='p-4'>
         <CardContent className='p-0'>
@@ -305,9 +315,16 @@ export default function Page({ schedule, setSchedule }) {
                                 <TableCell className="w-1/5">
                                   <div className="flex items-center gap-2">
                                     <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
-                                      {getInitials(cust.customer?.name)}
+                                      {getInitials(cust.dependent?.name || cust.customer?.name)}
                                     </div>
-                                    <span>{cust.customer?.name || 'Unknown'}</span>
+                                    <div className="flex flex-col">
+                                      <span>{cust.dependent?.name || cust.customer?.name || 'Unknown'}</span>
+                                      {cust.dependent && (
+                                        <span className="text-xs text-muted-foreground">
+                                          Guardian: {cust.customer?.name}
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 </TableCell>
                                 

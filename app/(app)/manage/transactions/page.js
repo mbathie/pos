@@ -255,7 +255,7 @@ export default function TransactionsPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 pt-2 max-w-7xl h-full flex flex-col py-4">
+    <div className="container mr-auto px-4 pt-2 w-full h-full flex flex-col py-4">
       {/* Header */}
       <div className="mb-4 flex-shrink-0">
         <h1 className="text-xl font-semibold mb-1">Transactions</h1>
@@ -291,18 +291,6 @@ export default function TransactionsPage() {
               <SelectItem value="failed">Failed</SelectItem>
             </SelectContent>
           </Select>
-
-          {/* Payment Method Filter */}
-          {/* <Select value={filters.paymentMethod} onValueChange={(value) => handleFilterChange('paymentMethod', value)}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Methods</SelectItem>
-              <SelectItem value="cash">Cash</SelectItem>
-              <SelectItem value="card">Card</SelectItem>
-            </SelectContent>
-          </Select> */}
 
           {/* Date Range Filter */}
           <Select value={filters.dateRange} onValueChange={(value) => handleFilterChange('dateRange', value)}>
@@ -386,7 +374,7 @@ export default function TransactionsPage() {
                   Location
                 </th>
                 <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-                  Employee
+                  Empl.
                 </th>
                 <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground"></th>
               </tr>
@@ -406,7 +394,16 @@ export default function TransactionsPage() {
                 </tr>
               ) : (
                 currentData.map((transaction) => (
-                  <tr key={transaction._id} className="border-b hover:bg-muted/50">
+                  <tr 
+                    key={transaction._id} 
+                    className="border-b hover:bg-muted/50 cursor-pointer"
+                    onClick={(e) => {
+                      // Don't navigate if clicking on the dropdown menu button or its content
+                      if (!e.target.closest('[role="button"]') && !e.target.closest('[role="menu"]')) {
+                        router.push(`/manage/transactions/${transaction._id}`);
+                      }
+                    }}
+                  >
                     <td className="px-4 py-3 align-middle">
                       <div>
                         <div className="font-medium">

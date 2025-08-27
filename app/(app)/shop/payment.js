@@ -17,7 +17,7 @@ import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail, Plus, Oct
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
-import CustomerConnect from './customerConnect'
+import CustomerSelectionSheet from './customerSelectionSheet'
 import DiscountPinDialog from '@/components/pin-dialog-discount'
 import { hasPermission } from '@/lib/permissions'
 // import { User } from "lucide-react";
@@ -54,9 +54,7 @@ export default function Page() {
   const [ cartSnapshot, setCartSnapshot ] = useState(null)
   const hasInitialSnapshot = useRef(false)
 
-  const [ showCustomerConnect, setShowCustomerConnect ] = useState(false)
-  const [ connectCustomerFn, setConnectCustomerFn ] = useState()
-
+  const [ showCustomerSelection, setShowCustomerSelection ] = useState(false)
   const [ requiresWaiver, setRequiresWaiver ] = useState(false)
   
   // Discount state
@@ -109,6 +107,75 @@ export default function Page() {
       }
     }
   }, [cardPaymentStatus, tab, cartSnapshot, cardTransactionId])
+
+  // Handle customer selection and auto-assignment
+  const handleCustomerSelection = (assignments) => {
+    if (!assignments || assignments.length === 0) return
+    
+    // Separate adult and minor assignments
+    const adultAssignments = assignments.filter(a => !a.isMinor)
+    const minorAssignments = assignments.filter(a => a.isMinor)
+    
+    setCart(draft => {
+      let adultIndex = 0
+      let minorIndex = 0
+      
+      // Go through each product and assign customers
+      draft.products.forEach((product, pIdx) => {
+        if (['class', 'course', 'general'].includes(product.type)) {
+          product.prices?.forEach((price, priceIdx) => {
+            price.customers?.forEach((customer, cIdx) => {
+              // Skip if already assigned
+              if (draft.products[pIdx].prices[priceIdx].customers[cIdx].customer) return
+              
+              const isMinorPrice = price.minor || false
+              
+              if (isMinorPrice && minorIndex < minorAssignments.length) {
+                // Assign minor
+                const assignment = minorAssignments[minorIndex]
+                draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = assignment.customer
+                draft.products[pIdx].prices[priceIdx].customers[cIdx].dependent = assignment.dependent
+                minorIndex++
+              } else if (!isMinorPrice && adultIndex < adultAssignments.length) {
+                // Assign adult
+                const assignment = adultAssignments[adultIndex]
+                draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = assignment.customer
+                draft.products[pIdx].prices[priceIdx].customers[cIdx].dependent = null
+                adultIndex++
+              }
+            })
+          })
+        }
+        // Handle memberships
+        else if (product.type === 'membership') {
+          product.variations?.forEach((variation, vIdx) => {
+            variation.prices?.forEach((price, priceIdx) => {
+              price.customers?.forEach((customer, cIdx) => {
+                // Skip if already assigned
+                if (draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer) return
+                
+                if (adultIndex < adultAssignments.length) {
+                  const assignment = adultAssignments[adultIndex]
+                  draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = assignment.customer
+                  adultIndex++
+                }
+              })
+            })
+          })
+        }
+      })
+      
+      // Handle main cart customer if we have at least one adult assignment
+      if (adultAssignments.length > 0) {
+        draft.customer = adultAssignments[0].customer
+      }
+    })
+    
+    // Update snapshot after assignment
+    setTimeout(updateSnapshotCustomers, 100)
+    
+    toast.success('Customers assigned successfully')
+  }
 
   // Check if Stripe is configured
   useEffect(() => {
@@ -743,7 +810,26 @@ export default function Page() {
 
             <Separator orientation="vertical" className="h-[1px] bg-muted my-2" />
 
-            <div className="mb-2">Customers</div>
+            <div className="flex items-center justify-between mb-2">
+              <div>Customers</div>
+              {/* Add All Customers Button */}
+              {cart.products?.some(p => 
+                ['class', 'course', 'general'].includes(p.type) && 
+                p.prices?.some(price => 
+                  price.customers?.some(c => !c.customer)
+                )
+              ) && (
+                <Button
+                  size="sm"
+                  onClick={() => setShowCustomerSelection(true)}
+                  disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                  className="cursor-pointer"
+                >
+                  <Plus className="size-4" />
+                  Select
+                </Button>
+              )}
+            </div>
 
             {/* CUSTOMERS */}
             {requiresWaiver &&
@@ -782,31 +868,25 @@ export default function Page() {
                                   if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
                                     setCart(draft => {
                                       draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = null;
+                                      draft.products[pIdx].prices[priceIdx].customers[cIdx].dependent = null;
                                     });
                                     // Update snapshot after removing customer
                                     setTimeout(updateSnapshotCustomers, 50);
                                   }
                                 }}
                               />
-                              <div>{c.customer.name}</div>
+                              <div>
+                                {c.dependent ? (
+                                  <span>{c.dependent.name} <span className="text-xs text-muted-foreground">(via {c.customer.name})</span></span>
+                                ) : (
+                                  c.customer.name
+                                )}
+                              </div>
                             </div>
                           ) : (
-                            <Button
-                              size="sm" variant="outline"
-                              disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
-                              onClick={() => {
-                                setConnectCustomerFn(() => (_c) => {
-                                  setCart(draft => {
-                                    draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = _c;
-                                  });
-                                  // Update snapshot after connecting customer with longer delay
-                                  setTimeout(updateSnapshotCustomers, 100);
-                                });
-                                setShowCustomerConnect(true);
-                              }}
-                            >
-                              <Plus className="size-4" /> Customer
-                            </Button>
+                            <span className="text-sm text-muted-foreground">
+                              Not assigned
+                            </span>
                           )}
                         </div>
                       </div>
@@ -842,22 +922,9 @@ export default function Page() {
                                 <div>{c.customer.name}</div>
                               </div>
                             ) : (
-                              <Button
-                                size="sm" variant="outline"
-                                disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
-                                onClick={() => {
-                                  setConnectCustomerFn(() => (_c) => {
-                                    setCart(draft => {
-                                      draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = _c;
-                                    });
-                                    // Update snapshot after connecting customer with longer delay
-                                    setTimeout(updateSnapshotCustomers, 100);
-                                  });
-                                  setShowCustomerConnect(true);
-                                }}
-                              >
-                                Connect Customer
-                              </Button>
+                              <span className="text-sm text-muted-foreground">
+                                Not assigned
+                              </span>
                             )}
                           </div>
                         </div>
@@ -897,16 +964,7 @@ export default function Page() {
                   <Button
                     size="sm" variant="outline"
                     disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
-                    onClick={() => {
-                      setConnectCustomerFn(() => (_c) => {
-                        setCart(draft => {
-                          draft.customer = _c;
-                        });
-                        // Update snapshot after connecting customer
-                        setTimeout(updateSnapshotCustomers, 50);
-                      });
-                      setShowCustomerConnect(true);
-                    }}
+                    onClick={() => setShowCustomerSelection(true)}
                   >
                     Connect Customer
                   </Button>
@@ -1225,6 +1283,23 @@ export default function Page() {
                             pr.customers?.some(c => !c.customer?._id)
                           )
                         )
+                      ) ||
+                      // Check for products requiring waivers that don't have all customers assigned
+                      cart.products.some(p =>
+                        p.waiverRequired && (
+                          // For class/course/general products, check prices directly on product
+                          (['class', 'course', 'general'].includes(p.type) && 
+                            p.prices?.some(price =>
+                              price.customers?.some(c => !c.customer?._id)
+                            )
+                          ) ||
+                          // For other products, check variations
+                          (p.variations?.some(v =>
+                            v.prices?.some(pr =>
+                              pr.customers?.some(c => !c.customer?._id)
+                            )
+                          ))
+                        )
                       )
                     }
                     onClick={async () => {
@@ -1284,10 +1359,12 @@ export default function Page() {
         </TabsContent>
       </Tabs>
 
-      <CustomerConnect
-        connectCustomerFn={connectCustomerFn}
+      <CustomerSelectionSheet
+        open={showCustomerSelection}
+        onOpenChange={setShowCustomerSelection}
+        onConfirm={handleCustomerSelection}
+        cart={cart}
         requiresWaiver={requiresWaiver}
-        open={showCustomerConnect} onOpenChange={setShowCustomerConnect} 
       />
 
       <DiscountPinDialog

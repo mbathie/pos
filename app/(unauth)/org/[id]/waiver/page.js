@@ -20,6 +20,7 @@ import { ChevronDownIcon, Camera, Upload, User, X, Plus, Trash2 } from 'lucide-r
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from "sonner";
 import React from 'react';
+import { generateObjectId } from '@/lib/utils';
 
 function DateOfBirthPicker({ value, onChange }) {
   const [open, setOpen] = React.useState(false);
@@ -212,7 +213,12 @@ export default function Page() {
 
   // Handle dependent functions
   const addDependent = () => {
-    setDependents([...dependents, { name: "", dob: "", gender: "" }]);
+    setDependents([...dependents, { 
+      _id: generateObjectId(),
+      name: "", 
+      dob: "", 
+      gender: "" 
+    }]);
   }
 
   const updateDependent = (index, field, value) => {

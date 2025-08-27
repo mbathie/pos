@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { connectDB } from "@/lib/mongoose"
 import { Customer } from "@/models"
+import mongoose from "mongoose"
 // import { generateCustomerId } from "@/lib/customers";
 
 export async function POST(req) {
@@ -14,10 +15,16 @@ export async function POST(req) {
   try {
     // const memberId = await generateCustomerId();
 
+    // Ensure each dependent has a proper MongoDB ObjectId
+    const dependentsWithIds = (dependents || []).map(dep => ({
+      ...dep,
+      _id: dep._id ? new mongoose.Types.ObjectId(dep._id) : new mongoose.Types.ObjectId()
+    }));
+
     const customer = await Customer.create({
       name, email, phone, dob, gender, assigned: false,
       photo,
-      dependents: dependents || [],
+      dependents: dependentsWithIds,
       // memberId,
       address: {
         address1,

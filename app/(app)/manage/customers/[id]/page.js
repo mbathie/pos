@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt, Users } from "lucide-react";
 import TransactionsTable from '@/components/transactions-table';
 import dayjs from 'dayjs';
 
@@ -262,28 +262,58 @@ export default function CustomerDetailPage({ params }) {
           </CardContent>
         </Card>
 
-        {/* Account Information */}
+        {/* Dependents */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Calendar className="size-5" />
-              Account Information
+              <Users className="size-5" />
+              Dependents
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Joined</label>
-                <p className="text-sm">{dayjs(customer.createdAt).format('DD/MM/YYYY h:mm A')}</p>
+            {customer.dependents && customer.dependents.length > 0 ? (
+              <div className="space-y-3">
+                {customer.dependents.map((dependent, index) => (
+                  <div key={index} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
+                          {getInitials(dependent.name)}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{dependent.name}</p>
+                          <p className="text-xs text-muted-foreground capitalize">{dependent.gender || 'Not specified'}</p>
+                        </div>
+                      </div>
+                      {dependent.dob && (
+                        <Badge variant="outline" className="text-xs">
+                          {(() => {
+                            const age = dayjs().diff(dayjs(dependent.dob), 'year');
+                            return `${age} year${age !== 1 ? 's' : ''} old`;
+                          })()}
+                        </Badge>
+                      )}
+                    </div>
+                    {dependent.dob && (
+                      <div>
+                        <label className="text-xs font-medium text-muted-foreground">Date of Birth</label>
+                        <p className="text-sm">{dayjs(dependent.dob).format('DD/MM/YYYY')}</p>
+                      </div>
+                    )}
+                    {index < customer.dependents.length - 1 && <div className="border-b" />}
+                  </div>
+                ))}
               </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Last Updated</label>
-                <p className="text-sm">{dayjs(customer.updatedAt).format('DD/MM/YYYY h:mm A')}</p>
+            ) : (
+              <div className="text-center py-4">
+                <Users className="size-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No dependents</p>
+                <p className="text-xs text-muted-foreground">This customer has no registered dependents</p>
               </div>
-            </div>
-            
+            )}
+            {/* Waiver Status at bottom of dependents card */}
             {customer.waiver && (
-              <div>
+              <div className="pt-3 border-t">
                 <label className="text-sm font-medium text-muted-foreground">Waiver Status</label>
                 <div className="flex items-center gap-2 mt-1">
                   {customer.waiver.agree ? (

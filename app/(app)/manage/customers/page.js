@@ -15,7 +15,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { Search, ChevronsUpDown, ChevronRight, User, Mail, Phone, IdCard, Check, CreditCard } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, User, Mail, Phone, IdCard, Check, CreditCard, MoreHorizontal, Users } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -30,8 +31,8 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [sort, setSort] = useState({
-    field: 'createdAt',
+  const [sortConfig, setSortConfig] = useState({
+    key: 'createdAt',
     direction: 'desc', // 'asc' or 'desc'
   });
 
@@ -42,7 +43,7 @@ export default function CustomersPage() {
     }, searchQuery ? 300 : 0); // Debounce search by 300ms
 
     return () => clearTimeout(delayedSearch);
-  }, [searchQuery, currentPage, sort]);
+  }, [searchQuery, currentPage, sortConfig]);
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -53,8 +54,8 @@ export default function CustomersPage() {
       }
       params.append('page', currentPage.toString());
       params.append('limit', ITEMS_PER_PAGE.toString());
-      params.append('sortField', sort.field);
-      params.append('sortDirection', sort.direction);
+      params.append('sortField', sortConfig.key);
+      params.append('sortDirection', sortConfig.direction);
 
       const response = await fetch(`/api/customers?${params}`);
       if (response.ok) {
@@ -75,12 +76,22 @@ export default function CustomersPage() {
     }
   };
 
-  const handleSort = (field) => {
-    setSort(prev => ({
-      field,
-      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : 'asc',
-    }));
+  const handleSort = (key) => {
+    let direction = 'asc';
+    if (sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
     setCurrentPage(1); // Reset to first page when sorting
+  };
+
+  const getSortIcon = (column) => {
+    if (sortConfig.key !== column) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    return sortConfig.direction === 'asc' 
+      ? <ArrowUp className="ml-2 h-4 w-4" />
+      : <ArrowDown className="ml-2 h-4 w-4" />;
   };
 
   const handleSearchChange = (value) => {
@@ -138,177 +149,206 @@ export default function CustomersPage() {
     return pages;
   };
 
-  const SortableHeader = ({ field, children, className = "" }) => (
-    <TableHead 
-      className={`cursor-pointer bg-muted hover:bg-muted/80 ${className}`}
-      onClick={() => handleSort(field)}
-    >
-      <div className="flex items-center gap-1">
-        {children}
-        <ChevronsUpDown className="size-4" />
-      </div>
-    </TableHead>
-  );
 
   return (
-    <div className="mx-4 h-[calc(100vh-65px)] flex flex-col">
+    <div className="container mr-auto px-4 pt-2 w-full h-full flex flex-col py-4">
+      {/* Header */}
+      <div className="mb-4 flex-shrink-0">
+        <h1 className="text-xl font-semibold mb-1">Customers Management</h1>
+        <p className="text-sm text-muted-foreground">
+          View and manage all customers
+        </p>
+      </div>
       
-      {/* Search and Stats */}
-      <div className="flex gap-2 items-center mb-4 flex-shrink-0">
-        <div className="flex-1 max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground size-4" />
+      {/* Controls */}
+      <div className="flex-shrink-0">
+        <div className="flex flex-col md:flex-row gap-4 mb-4">
+          {/* Search */}
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search by name, email, phone, or member ID..."
+              placeholder="Search customers..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-8"
+              className="pl-10"
             />
           </div>
-        </div>
-        
-        {searchQuery && (
-          <Button variant="outline" onClick={clearSearch}>
-            Clear
-          </Button>
-        )}
 
-        <div className="flex items-center gap-2 ml-auto">
-          <Badge variant="secondary" className="text-sm">
-            {loading ? 'Loading...' : `${totalCustomers} customer${totalCustomers !== 1 ? 's' : ''}`}
-          </Badge>
-          {totalCustomers > 0 && !loading && (
-            <span className="text-sm text-muted-foreground">
-              Showing {startIndex}-{endIndex}
-            </span>
-          )}
+          {/* Results count */}
+          <div className="flex items-center gap-2 ml-auto">
+            <Badge variant="secondary" className="text-sm">
+              {loading ? 'Loading...' : `${totalCustomers} customer${totalCustomers !== 1 ? 's' : ''}`}
+            </Badge>
+          </div>
         </div>
       </div>
 
-      {/* Table Card */}
-      <Card className="p-0 m-0 flex-1 flex flex-col overflow-hidden">
-        <CardContent className="p-0 m-0 flex-1 flex flex-col overflow-hidden">
-          {loading && customers.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground flex-1 flex items-center justify-center">
-              Loading customers...
-            </div>
-          ) : (
-            <div className="flex-1 min-h-0 relative">
-              <Table className="table-fixed w-full">
-                <TableHeader className="sticky top-0 z-10 bg-background">
-                  <TableRow>
-                    <SortableHeader field="name" className="rounded-tl-lg w-[30%]">
-                      <User className="size-4 mr-1" />
-                      Name
-                    </SortableHeader>
-                    <SortableHeader field="email" className="w-[30%]">
-                      <Mail className="size-4 mr-1" />
-                      Contact
-                    </SortableHeader>
-                    <SortableHeader field="memberId" className="w-[18%]">
-                      <IdCard className="size-4 mr-1" />
-                      Member ID
-                    </SortableHeader>
-                    <SortableHeader field="createdAt" className="w-[18%]">
-                      Account
-                    </SortableHeader>
-                    <TableHead className="bg-muted rounded-tr-lg w-[4%]">
-                      
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-              </Table>
-              
-              <div className="absolute inset-0 top-12 overflow-y-auto">
-                <Table className="table-fixed w-full">
-                  <TableBody>
-                    {customers.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                          {searchQuery ? 'No customers found matching your search.' : 'No customers found.'}
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      customers.map((customer) => (
-                        <TableRow 
-                          key={customer._id} 
-                          className="hover:bg-muted/50 cursor-pointer"
-                          onClick={() => router.push(`/manage/customers/${customer._id}`)}
-                        >
-                          <TableCell className="align-top w-[30%]">
-                            <div className="flex items-center gap-3">
-                              {customer.photo ? (
-                                <img 
-                                  src={customer.photo} 
-                                  alt={customer.name} 
-                                  className="size-8 rounded-full object-cover"
-                                />
-                              ) : (
-                                <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
-                                  {getInitials(customer.name)}
-                                </div>
-                              )}
-                              <div className="flex flex-col">
-                                <div className="font-medium">
-                                  {customer.name || 'Unnamed Customer'}
-                                </div>
-                                {customer.waiver?.agree && (
-                                  <Badge variant="outline" className="text-xs w-fit text-primary border-primary">
-                                    <Check className="size-3"/> Waiver
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell className="align-top w-[30%]">
-                            <div className="flex flex-col gap-1">
-                              {customer.email && (
-                                <div className="text-sm">
-                                  {customer.email}
-                                </div>
-                              )}
-                              {customer.phone && (
-                                <div className="text-sm">
-                                  {formatPhone(customer.phone)}
-                                </div>
-                              )}
-                              {!customer.email && !customer.phone && (
-                                <span className="text-sm text-muted-foreground">-</span>
-                              )}
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell className="align-top w-[18%]">
-                            <div className="text-sm font-mono">
-                              {customer.memberId || '-'}
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell className="w-[18%]">
-                            <div className="flex flex-col text-sm">
-                              <div>
-                                {dayjs(customer.createdAt).format('DD/MM/YYYY')}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {dayjs(customer.createdAt).fromNow()}
-                              </div>
-                            </div>
-                          </TableCell>
-                          
-                          <TableCell className="w-[4%]">
-                            <ChevronRight className="size-4 text-muted-foreground" />
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Table Container - Scrollable */}
+      <div className="flex-1 flex flex-col min-h-0 relative">
+        {/* Table */}
+        <div className="rounded-md border flex-1 overflow-auto">
+          <table className="w-full caption-bottom text-sm">
+            <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
+              <tr className="border-b bg-muted/50 hover:bg-muted/50">
+                <th 
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  onClick={() => handleSort('name')}
+                >
+                  <div className="flex items-center">
+                    Name
+                    {getSortIcon('name')}
+                  </div>
+                </th>
+                <th 
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  onClick={() => handleSort('email')}
+                >
+                  <div className="flex items-center">
+                    Contact
+                    {getSortIcon('email')}
+                  </div>
+                </th>
+                <th 
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  onClick={() => handleSort('memberId')}
+                >
+                  <div className="flex items-center">
+                    Member ID
+                    {getSortIcon('memberId')}
+                  </div>
+                </th>
+                <th 
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  onClick={() => handleSort('dependents')}
+                >
+                  <div className="flex items-center">
+                    Dependents
+                    {getSortIcon('dependents')}
+                  </div>
+                </th>
+                <th 
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  onClick={() => handleSort('createdAt')}
+                >
+                  <div className="flex items-center">
+                    Account
+                    {getSortIcon('createdAt')}
+                  </div>
+                </th>
+                <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="[&_tr:last-child]:border-0">
+              {loading && customers.length === 0 ? (
+                <tr className="border-b">
+                  <td colSpan={6} className="p-4 text-center py-8">
+                    <p className="text-muted-foreground">Loading customers...</p>
+                  </td>
+                </tr>
+              ) : customers.length === 0 ? (
+                <tr className="border-b">
+                  <td colSpan={6} className="p-4 text-center py-8">
+                    <p className="text-muted-foreground">
+                      {searchQuery ? 'No customers found matching your criteria' : 'No customers found'}
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                customers.map((customer) => (
+                  <tr 
+                    key={customer._id} 
+                    className="border-b hover:bg-muted/50 cursor-pointer"
+                    onClick={(e) => {
+                      // Don't navigate if clicking on actions menu
+                      if (!e.target.closest('[data-actions]')) {
+                        router.push(`/manage/customers/${customer._id}`);
+                      }
+                    }}
+                  >
+                    <td className="px-4 py-3 align-middle">
+                      <div className="flex items-center gap-3">
+                        {customer.photo ? (
+                          <img 
+                            src={customer.photo} 
+                            alt={customer.name} 
+                            className="h-8 w-8 rounded-full object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium flex-shrink-0">
+                            {getInitials(customer.name)}
+                          </div>
+                        )}
+                        <div className="flex flex-col min-w-0">
+                          <div className="font-medium">
+                            {customer.name || 'Unnamed Customer'}
+                          </div>
+                          {customer.waiver?.agree && (
+                            <Badge variant="outline" className="text-xs w-fit text-primary border-primary">
+                              <Check className="size-3"/> Waiver
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    
+                    <td className="px-4 py-3 align-middle">
+                      <div className="flex flex-col">
+                        {customer.email && (
+                          <div>
+                            {customer.email}
+                          </div>
+                        )}
+                        {customer.phone && (
+                          <div className="text-sm text-muted-foreground">
+                            {formatPhone(customer.phone)}
+                          </div>
+                        )}
+                        {!customer.email && !customer.phone && (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </div>
+                    </td>
+                    
+                    <td className="px-4 py-3 align-middle">
+                      <div className="font-mono">
+                        {customer.memberId || '-'}
+                      </div>
+                    </td>
+                    
+                    <td className="px-4 py-3 align-middle">
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">
+                          {customer.dependents?.length || 0}
+                        </span>
+                      </div>
+                    </td>
+                    
+                    <td className="px-4 py-3 align-middle">
+                      <div className="flex flex-col">
+                        <div>
+                          {dayjs(customer.createdAt).format('DD/MM/YYYY')}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {dayjs(customer.createdAt).fromNow()}
+                        </div>
+                      </div>
+                    </td>
+                    
+                    <td className="px-4 py-3 text-right align-middle">
+                      <div className="flex items-center justify-end gap-2">
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
