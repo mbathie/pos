@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Check, AlertCircle, ChevronsUpDown } from 'lucide-react'
+import { Check, AlertCircle, ChevronsUpDown, X } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import dayjs from 'dayjs'
 
@@ -23,19 +23,17 @@ export default function CustomerSelectionSheet({
   const [customers, setCustomers] = useState([])
   const [recentCustomers, setRecentCustomers] = useState([])
   const [loading, setLoading] = useState(false)
-  const [selectedCustomer, setSelectedCustomer] = useState(null)
-  const [checkedItems, setCheckedItems] = useState({
-    customer: false,
-    dependents: {}
-  })
+  const [selectedCustomers, setSelectedCustomers] = useState([])
+  const [checkedItems, setCheckedItems] = useState({})
   const [comboboxOpen, setComboboxOpen] = useState(false)
 
-  // Calculate needed slots
+  // Calculate needed slots and check if we have shop items
   const getNeededSlots = () => {
     const slots = {
       adult: 0,
       minor: 0,
-      total: 0
+      total: 0,
+      hasShopItems: false
     }
     
     cart.products?.forEach(product => {
@@ -49,6 +47,8 @@ export default function CustomerSelectionSheet({
           }
           slots.total += qty
         })
+      } else if (product.type === 'shop' || !product.type) {
+        slots.hasShopItems = true
       }
     })
     
@@ -56,6 +56,7 @@ export default function CustomerSelectionSheet({
   }
 
   const slots = getNeededSlots()
+  const isShopOnly = slots.hasShopItems && slots.total === 0
 
   // Fetch recent customers (waiver in last 4 hours)
   useEffect(() => {
@@ -63,8 +64,8 @@ export default function CustomerSelectionSheet({
       // Reset state when closed
       setSearchQuery('')
       setCustomers([])
-      setSelectedCustomer(null)
-      setCheckedItems({ customer: false, dependents: {} })
+      setSelectedCustomers([])
+      setCheckedItems({})
       setComboboxOpen(false)
       return
     }
@@ -126,33 +127,59 @@ export default function CustomerSelectionSheet({
     return () => clearTimeout(delayedSearch)
   }, [searchQuery, requiresWaiver])
 
-  // Handle customer selection
+  // Handle customer selection - append to list instead of replace
   const handleCustomerSelect = (customerId) => {
     const customer = [...recentCustomers, ...customers].find(c => c._id === customerId)
-    if (customer) {
-      setSelectedCustomer(customer)
-      // Reset checkboxes when switching customers
-      setCheckedItems({ customer: false, dependents: {} })
+    if (customer && !selectedCustomers.find(c => c._id === customerId)) {
+      setSelectedCustomers(prev => [...prev, customer])
+      // Initialize checkbox state for this customer
+      setCheckedItems(prev => ({
+        ...prev,
+        [customerId]: { customer: true, dependents: {} }
+      }))
       setComboboxOpen(false)
+      setSearchQuery('')
     }
   }
 
-  // Handle checkbox changes
-  const handleCustomerCheck = (checked) => {
-    setCheckedItems(prev => ({ ...prev, customer: checked }))
+  // Remove a customer from selection
+  const handleRemoveCustomer = (customerId) => {
+    setSelectedCustomers(prev => prev.filter(c => c._id !== customerId))
+    setCheckedItems(prev => {
+      const updated = { ...prev }
+      delete updated[customerId]
+      return updated
+    })
   }
 
-  const handleDependentCheck = (dependentId, checked) => {
+  // Handle checkbox changes
+  const handleCustomerCheck = (customerId, checked) => {
     setCheckedItems(prev => ({
       ...prev,
-      dependents: { ...prev.dependents, [dependentId]: checked }
+      [customerId]: { ...prev[customerId], customer: checked }
     }))
   }
 
-  // Calculate what's been selected
+  const handleDependentCheck = (customerId, dependentId, checked) => {
+    setCheckedItems(prev => ({
+      ...prev,
+      [customerId]: {
+        ...prev[customerId],
+        dependents: { ...prev[customerId].dependents, [dependentId]: checked }
+      }
+    }))
+  }
+
+  // Calculate what's been selected across all customers
   const getSelectionCount = () => {
-    let adultCount = checkedItems.customer ? 1 : 0
-    let minorCount = Object.values(checkedItems.dependents).filter(Boolean).length
+    let adultCount = 0
+    let minorCount = 0
+    
+    Object.entries(checkedItems).forEach(([customerId, items]) => {
+      if (items.customer) adultCount++
+      minorCount += Object.values(items.dependents || {}).filter(Boolean).length
+    })
+    
     return { adultCount, minorCount }
   }
 
@@ -160,34 +187,36 @@ export default function CustomerSelectionSheet({
 
   // Handle confirmation
   const handleConfirm = () => {
-    if (!selectedCustomer) return
-
-    const selection = {
-      customer: checkedItems.customer ? selectedCustomer : null,
-      dependents: selectedCustomer.dependents?.filter(dep => 
-        checkedItems.dependents[dep._id]
-      ) || []
-    }
+    if (selectedCustomers.length === 0) return
 
     // Build assignments array for auto-assignment
     const assignments = []
     
-    // Add customer if selected
-    if (checkedItems.customer) {
-      assignments.push({
-        customer: selectedCustomer,
-        dependent: null,
-        isMinor: false
-      })
-    }
-    
-    // Add selected dependents
-    selection.dependents.forEach(dep => {
-      assignments.push({
-        customer: selectedCustomer,
-        dependent: dep,
-        isMinor: true
-      })
+    selectedCustomers.forEach(customer => {
+      const items = checkedItems[customer._id]
+      if (!items) return
+      
+      // Add customer if selected
+      if (items.customer) {
+        assignments.push({
+          customer: customer,
+          dependent: null,
+          isMinor: false
+        })
+      }
+      
+      // Add selected dependents
+      if (items.dependents) {
+        customer.dependents?.forEach(dep => {
+          if (items.dependents[dep._id]) {
+            assignments.push({
+              customer: customer,
+              dependent: dep,
+              isMinor: true
+            })
+          }
+        })
+      }
     })
 
     onConfirm(assignments)
@@ -209,17 +238,14 @@ export default function CustomerSelectionSheet({
             Select Customer{slots.total > 1 ? 's' : ''}
           </SheetTitle>
           <SheetDescription>
-            {slots.total === 1 ? (
-              slots.minor > 0 
-                ? 'Select a parent/guardian for the minor pricing'
-                : 'Select a customer for this purchase'
+            {isShopOnly ? (
+              'Select a customer for this purchase'
+            ) : slots.total === 0 ? (
+              'Select a customer'
+            ) : slots.total === 1 && slots.minor > 0 ? (
+              'Select a parent/guardian for the minor pricing'
             ) : (
-              <>
-                Select customers for {slots.total} spot{slots.total !== 1 ? 's' : ''}: {' '}
-                {slots.adult > 0 && <>{slots.adult} adult{slots.adult !== 1 ? 's' : ''}</>}
-                {slots.adult > 0 && slots.minor > 0 && ', '}
-                {slots.minor > 0 && <>{slots.minor} minor{slots.minor !== 1 ? 's' : ''}</>}
-              </>
+              'Select a customer for this purchase'
             )}
           </SheetDescription>
         </SheetHeader>
@@ -227,7 +253,7 @@ export default function CustomerSelectionSheet({
         <div className="p-4 pt-0 gap-4 flex flex-col">
           {/* Customer Selection Combobox */}
           <div className="space-y-2">
-            <Label>Select Customer</Label>
+            <Label>Add Customer</Label>
             <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -236,7 +262,7 @@ export default function CustomerSelectionSheet({
                   aria-expanded={comboboxOpen}
                   className="w-full justify-between cursor-pointer"
                 >
-                  {selectedCustomer ? selectedCustomer.name : "Search or select a customer..."}
+                  {"Search or select a customer..."}
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
@@ -269,7 +295,7 @@ export default function CustomerSelectionSheet({
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                selectedCustomer?._id === customer._id ? "opacity-100" : "opacity-0"
+                                selectedCustomers.find(c => c._id === customer._id) ? "opacity-100" : "opacity-0"
                               )}
                             />
                             <div className="flex-1">
@@ -299,7 +325,7 @@ export default function CustomerSelectionSheet({
                             <Check
                               className={cn(
                                 "mr-2 h-4 w-4",
-                                selectedCustomer?._id === customer._id ? "opacity-100" : "opacity-0"
+                                selectedCustomers.find(c => c._id === customer._id) ? "opacity-100" : "opacity-0"
                               )}
                             />
                             <div className="flex-1">
@@ -322,32 +348,41 @@ export default function CustomerSelectionSheet({
           </div>
 
           {/* Selected Customer Details */}
-          {selectedCustomer && (
+          {selectedCustomers.length > 0 && (
             <div className="space-y-4">
-              {/* Customer info with checkbox */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">Customer Details</Label>
-                <div className="border rounded-lg p-4 space-y-3">
+              <Label className="text-sm font-medium">Selected Customers</Label>
+              
+              {selectedCustomers.map((customer) => (
+                <div key={customer._id} className="space-y-3 border rounded-lg p-4">
+                  {/* Customer info with checkbox */}
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3 flex-1">
                       <Checkbox
-                        id="customer"
-                        checked={checkedItems.customer}
-                        onCheckedChange={handleCustomerCheck}
-                        disabled={slots.adult === 0}
+                        id={`customer-${customer._id}`}
+                        checked={checkedItems[customer._id]?.customer || false}
+                        onCheckedChange={(checked) => handleCustomerCheck(customer._id, checked)}
+                        disabled={!isShopOnly && slots.adult === 0}
                       />
                       <div className="space-y-1">
-                        <Label htmlFor="customer" className="font-medium cursor-pointer">
-                          {selectedCustomer.name}
+                        <Label htmlFor={`customer-${customer._id}`} className="font-medium cursor-pointer">
+                          {customer.name}
                         </Label>
                         <div className="text-sm text-muted-foreground space-y-0.5">
-                          <div>{selectedCustomer.email}</div>
-                          {selectedCustomer.phone && <div>{selectedCustomer.phone}</div>}
-                          {selectedCustomer.memberId && <div>ID: {selectedCustomer.memberId}</div>}
+                          <div>{customer.email}</div>
+                          {customer.phone && <div>{customer.phone}</div>}
+                          {customer.memberId && <div>ID: {customer.memberId}</div>}
                         </div>
                       </div>
                     </div>
                     <div className="flex gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        onClick={() => handleRemoveCustomer(customer._id)}
+                        className="cursor-pointer h-6 w-6"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
                       <Badge variant="outline" className="text-xs">
                         <Check className="h-3 w-3 mr-1" />
                         Waiver
@@ -357,90 +392,92 @@ export default function CustomerSelectionSheet({
                       </Badge>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Dependents with checkboxes */}
-              {selectedCustomer.dependents && selectedCustomer.dependents.length > 0 && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Dependents</Label>
-                  <div className="space-y-2">
-                    {selectedCustomer.dependents.map((dependent, index) => {
-                      const age = getAge(dependent.dob)
-                      // Use the dependent's _id if available, otherwise use index as fallback
-                      const depId = dependent._id || `dep-${index}`
-                      
-                      return (
-                        <div key={depId} className="border rounded-lg p-3">
-                          <div className="flex items-center gap-3">
-                            <Checkbox
-                              id={depId}
-                              checked={checkedItems.dependents[depId] || false}
-                              onCheckedChange={(checked) => handleDependentCheck(depId, checked)}
-                              disabled={slots.minor === 0}
-                            />
-                            <Label 
-                              htmlFor={depId} 
-                              className="flex items-center gap-2 cursor-pointer flex-1"
-                            >
-                              <span>{dependent.name}</span>
-                              {dependent.gender && (
-                                <span className="text-xs text-muted-foreground capitalize">
-                                  ({dependent.gender})
-                                </span>
-                              )}
-                              {age !== null && (
-                                <Badge variant="outline" className="text-xs">
-                                  {age} yr{age !== 1 ? 's' : ''} old
+                  {/* Dependents with checkboxes */}
+                  {customer.dependents && customer.dependents.length > 0 && (
+                    <div className="space-y-2 ml-8">
+                      <Label className="text-xs text-muted-foreground">Dependents</Label>
+                      {customer.dependents.map((dependent, index) => {
+                        const age = getAge(dependent.dob)
+                        // Use the dependent's _id if available, otherwise use index as fallback
+                        const depId = dependent._id || `dep-${index}`
+                        
+                        return (
+                          <div key={depId} className="border rounded-lg p-2">
+                            <div className="flex items-center gap-3">
+                              <Checkbox
+                                id={`${customer._id}-${depId}`}
+                                checked={checkedItems[customer._id]?.dependents?.[depId] || false}
+                                onCheckedChange={(checked) => handleDependentCheck(customer._id, depId, checked)}
+                                disabled={!isShopOnly && slots.minor === 0}
+                              />
+                              <Label 
+                                htmlFor={`${customer._id}-${depId}`} 
+                                className="flex items-center gap-2 cursor-pointer flex-1 text-sm"
+                              >
+                                <span>{dependent.name}</span>
+                                {dependent.gender && (
+                                  <span className="text-xs text-muted-foreground capitalize">
+                                    ({dependent.gender})
+                                  </span>
+                                )}
+                                {age !== null && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {age} yr{age !== 1 ? 's' : ''} old
+                                  </Badge>
+                                )}
+                                <Badge variant="secondary" className="text-xs ml-auto">
+                                  Minor
                                 </Badge>
-                              )}
-                              <Badge variant="secondary" className="text-xs ml-auto">
-                                Minor
-                              </Badge>
-                            </Label>
+                              </Label>
+                            </div>
                           </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
-              
-              {/* Debug: Show if no dependents */}
-              {(!selectedCustomer.dependents || selectedCustomer.dependents.length === 0) && slots.minor > 0 && (
-                <div className="text-sm text-muted-foreground">
-                  This customer has no registered dependents.
-                </div>
-              )}
-
-              {/* Selection Summary */}
-              <div className="bg-muted rounded-lg p-3">
-                <div className="text-sm space-y-1">
-                  <div className="font-medium">Selected:</div>
-                  <div className="flex gap-4">
-                    <span className={adultCount > slots.adult ? 'text-destructive' : ''}>
-                      {adultCount} / {slots.adult} adult{slots.adult !== 1 ? 's' : ''}
-                    </span>
-                    <span className={minorCount > slots.minor ? 'text-destructive' : ''}>
-                      {minorCount} / {slots.minor} minor{slots.minor !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                  {(adultCount > slots.adult || minorCount > slots.minor) && (
-                    <div className="text-destructive text-xs mt-2">
-                      Too many selections. Please adjust to match required slots.
+                        )
+                      })}
                     </div>
                   )}
                 </div>
-              </div>
+              ))}
+
+              {/* Selection Summary */}
+              {isShopOnly ? (
+                <div className="bg-muted rounded-lg p-3">
+                  <div className="text-sm space-y-1">
+                    <div className="font-medium">Selected:</div>
+                    <div>
+                      {adultCount + minorCount} customer{adultCount + minorCount !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                </div>
+              ) : slots.total > 0 ? (
+                <div className="bg-muted rounded-lg p-3">
+                  <div className="text-sm space-y-1">
+                    <div className="font-medium">Selected:</div>
+                    <div className="flex gap-4">
+                      <span className={adultCount > slots.adult ? 'text-destructive' : ''}>
+                        {adultCount} / {slots.adult} adult{slots.adult !== 1 ? 's' : ''}
+                      </span>
+                      <span className={minorCount > slots.minor ? 'text-destructive' : ''}>
+                        {minorCount} / {slots.minor} minor{slots.minor !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    {(adultCount > slots.adult || minorCount > slots.minor) && (
+                      <div className="text-destructive text-xs mt-2">
+                        Too many selections. Please adjust to match required slots.
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </div>
           )}
 
           {/* No customer selected message */}
-          {!selectedCustomer && !loading && (
+          {selectedCustomers.length === 0 && !loading && (
             <div className="text-center py-8">
               <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
               <p className="text-muted-foreground">
-                Select a customer to continue
+                Search and add customers to continue
               </p>
             </div>
           )}
@@ -452,7 +489,8 @@ export default function CustomerSelectionSheet({
             </Button>
             <Button 
               onClick={handleConfirm}
-              disabled={!canConfirm || adultCount > slots.adult || minorCount > slots.minor}
+              disabled={!canConfirm || (!isShopOnly && (adultCount > slots.adult || minorCount > slots.minor))}
+              className="cursor-pointer"
             >
               Confirm Selection
             </Button>

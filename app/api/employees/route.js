@@ -3,7 +3,7 @@ import { connectDB } from "@/lib/mongoose"
 import { getEmployee } from "@/lib/auth"
 import { Employee, Org } from "@/models"
 import bcrypt from 'bcrypt'
-import { sendNewEmployeeEmail } from "@/lib/mailer"
+import { sendNewEmployeeEmail } from "@/lib/email/employee"
 
 export async function POST(req) {
   await connectDB()

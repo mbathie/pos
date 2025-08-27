@@ -291,7 +291,10 @@ export default function Page({ schedule, setSchedule }) {
                                     </Badge>
                                   </div>
                                   <div className="flex items-center gap-4 text-sm ml-2">
-                                    <Badge variant={isToday ? "secondary" : "primary"} className={isToday ? "bg-primary-foreground text-primary" : ""}>
+                                    <Badge 
+                                      variant={cls.available === schedule.product.capacity ? "outline" : isToday ? "secondary" : "primary"} 
+                                      className={isToday && cls.available !== schedule.product.capacity ? "bg-primary-foreground text-primary" : ""}
+                                    >
                                       Available {cls.available}/{schedule.product.capacity}
                                     </Badge>
                                   </div>
@@ -321,7 +324,7 @@ export default function Page({ schedule, setSchedule }) {
                                       <span>{cust.dependent?.name || cust.customer?.name || 'Unknown'}</span>
                                       {cust.dependent && (
                                         <span className="text-xs text-muted-foreground">
-                                          Guardian: {cust.customer?.name}
+                                          Parent: {cust.customer?.name}
                                         </span>
                                       )}
                                     </div>

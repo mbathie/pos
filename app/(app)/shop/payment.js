@@ -858,6 +858,13 @@ export default function Page() {
                         <div className="flex justify-end w-full text-right">
                           {c.customer ? (
                             <div className="flex items-center gap-1">
+                              <div>
+                                {c.dependent ? (
+                                  <span>{c.dependent.name} <span className="text-xs text-muted-foreground">(via {c.customer.name})</span></span>
+                                ) : (
+                                  c.customer.name
+                                )}
+                              </div>
                               <Trash2 
                                 className={`size-4 ${
                                   paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
@@ -875,13 +882,6 @@ export default function Page() {
                                   }
                                 }}
                               />
-                              <div>
-                                {c.dependent ? (
-                                  <span>{c.dependent.name} <span className="text-xs text-muted-foreground">(via {c.customer.name})</span></span>
-                                ) : (
-                                  c.customer.name
-                                )}
-                              </div>
                             </div>
                           ) : (
                             <span className="text-sm text-muted-foreground">
@@ -903,6 +903,7 @@ export default function Page() {
                           <div className="flex justify-end w-full text-right">
                             {c.customer ? (
                               <div className="flex items-center gap-1">
+                                <div>{c.customer.name}</div>
                                 <Trash2 
                                   className={`size-4 ${
                                     paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
@@ -919,7 +920,6 @@ export default function Page() {
                                     }
                                   }}
                                 />
-                                <div>{c.customer.name}</div>
                               </div>
                             ) : (
                               <span className="text-sm text-muted-foreground">
@@ -942,6 +942,7 @@ export default function Page() {
                 <div className="flex justify-end w-full text-right">
                 {((paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') ? cartSnapshot?.customer : cart.customer) ? (
                   <div className="flex items-center gap-1">
+                    <div>{(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') ? cartSnapshot?.customer?.name : cart.customer.name}</div>
                     <Trash2 
                       className={`size-4 ${
                         paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
@@ -958,7 +959,6 @@ export default function Page() {
                         }
                       }}
                     />
-                    <div>{(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') ? cartSnapshot?.customer?.name : cart.customer.name}</div>
                   </div>
                 ) : (
                   <Button

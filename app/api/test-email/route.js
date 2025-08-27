@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { getEmployee } from "@/lib/auth";
 import { Org } from "@/models";
-import { sendTestEmail } from "@/lib/mailer";
+import { sendTestEmail } from "@/lib/email/employee";
 
 export async function POST(req) {
   await connectDB();
