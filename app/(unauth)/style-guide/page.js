@@ -37,9 +37,25 @@ export default function StyleGuidePage() {
   const [checkboxChecked, setCheckboxChecked] = useState(false);
   const [progress, setProgress] = useState(65);
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    toast.success(`Copied "${text}" to clipboard`);
+  const copyToClipboard = async (text) => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const el = document.createElement('textarea');
+        el.value = text;
+        el.setAttribute('readonly', '');
+        el.style.position = 'absolute';
+        el.style.left = '-9999px';
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+      }
+      toast.success(`Copied "${text}" to clipboard`);
+    } catch (e) {
+      toast.error('Failed to copy to clipboard');
+    }
   };
 
   const sections = [
@@ -364,7 +380,7 @@ export default function StyleGuidePage() {
               <Button size="sm" className="cursor-pointer">Small</Button>
               <Button className="cursor-pointer">Default</Button>
               <Button size="lg" className="cursor-pointer">Large</Button>
-              <Button size="icon" className="cursor-pointer"><Settings className="h-4 w-4" /></Button>
+              <Button size="icon" className="cursor-pointer" aria-label="Settings" title="Settings"><Settings className="h-4 w-4" /></Button>
             </CardContent>
           </Card>
 
@@ -647,7 +663,7 @@ export default function StyleGuidePage() {
                       <TableCell className="text-right align-middle">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="cursor-pointer">
+                            <Button variant="ghost" size="icon" className="cursor-pointer" aria-label="Row actions" title="Row actions">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -676,7 +692,7 @@ export default function StyleGuidePage() {
                       <TableCell className="text-right align-middle">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="cursor-pointer">
+                            <Button variant="ghost" size="icon" className="cursor-pointer" aria-label="Row actions" title="Row actions">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -707,7 +723,7 @@ export default function StyleGuidePage() {
                       <TableCell className="text-right align-middle">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="cursor-pointer">
+                            <Button variant="ghost" size="icon" className="cursor-pointer" aria-label="Row actions" title="Row actions">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -824,7 +840,7 @@ export default function StyleGuidePage() {
                 </div>
               </div>
               <div className="mt-4 p-2 bg-muted rounded text-xs">
-                <code>import {`{Skeleton}`} from '@/components/ui/skeleton'</code>
+                <code>{"import {Skeleton} from '@/components/ui/skeleton'"}</code>
               </div>
             </CardContent>
           </Card>
@@ -848,7 +864,7 @@ export default function StyleGuidePage() {
                 <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-primary" />
               </div>
               <div className="mt-4 p-2 bg-muted rounded text-xs">
-                <code>import {`{Loader2}`} from 'lucide-react'</code>
+                <code>{"import {Loader2} from 'lucide-react'"}</code>
               </div>
             </CardContent>
           </Card>

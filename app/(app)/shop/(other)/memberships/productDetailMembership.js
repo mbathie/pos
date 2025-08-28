@@ -6,98 +6,111 @@ import React from 'react'
 import { Minus, Plus } from "lucide-react"
 import { useGlobals } from '@/lib/globals'
 import { useState, useEffect } from 'react'
-import { calcCartValueMembership, cleanupProduct } from '@/lib/product'
-import { useMembership } from './useMembership'
+import { Badge } from '@/components/ui/badge'
 
 export default function ProductDetailMembership({ product, setProduct, setOpen, open }) {
-  
-  const { setQty } = useMembership({product, setProduct})
   
   const { addToCart } = useGlobals()
   const [total, setTotal] = useState(0)
 
+  // Calculate total whenever product or quantities change
   useEffect(() => {
-    async function fetch() {
-      if (product) {
-        console.log(product)
-        const t = await calcCartValueMembership({ product });
-        console.log(t)
-        setTotal(t.amount.subtotal);
-      }
+    if (product?.prices) {
+      const subtotal = product.prices.reduce((sum, price) => {
+        const qty = price.qty || 0;
+        const amount = parseFloat(price.value || 0);
+        return sum + (qty * amount);
+      }, 0);
+      setTotal(subtotal);
     }
-    fetch()
+  }, [product?.prices])
 
-  }, [product])
+  const updateQuantity = (priceIdx, change) => {
+    setProduct(draft => {
+      if (!draft.prices[priceIdx].qty) {
+        draft.prices[priceIdx].qty = 0;
+      }
+      draft.prices[priceIdx].qty = Math.max(0, draft.prices[priceIdx].qty + change);
+    });
+  };
 
   if (!product) return null;
   
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetContent className="w-[400px] sm:w-[540px]">
+      <SheetContent className="sm:max-w-[700px] flex flex-col h-full">
 
         <SheetHeader className=''>
           <SheetTitle>
-            <div className='flex items-center space-x-1'>
-              <div>{product?.name?.length > 20 ? `${product.name.substring(0, 20)}...` : product?.name}</div>
-              {/* <div className="relative size-6 ml-1">
+            <div className='flex items-center space-x-2'>
+              {product.thumbnail && (
                 <img
-                  src={`/api/icons/${product?.icon || 'store'}`}
-                  alt=""
-                  className="size-6"
+                  src={product.thumbnail}
+                  alt={product.name}
+                  className="w-10 h-10 rounded-lg object-cover"
                 />
-              </div> */}
+              )}
+              <div>{product?.name?.length > 30 ? `${product.name.substring(0, 30)}...` : product?.name}</div>
             </div>
           </SheetTitle>
           <SheetDescription>
-            {product.desc?.length > 100 ? `${product.desc.substring(0, 100)}...` : product.desc}
+            {product.desc?.length > 150 ? `${product.desc.substring(0, 150)}...` : product.desc}
           </SheetDescription>
         </SheetHeader>
 
-        <div className='flex flex-col mx-4 text-sm'>
-          {product?.variations?.map((variation, vIdx) => {
-            return (
-              <div key={vIdx} className='space-y-4-'>
-                {variation.prices?.map((price, priceIdx) => (
-                  <div key={priceIdx} className='flex items-center justify-between py-1'>
-                    <div className='flex items-center gap-2'>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="size-8"
-                        disabled={!price.qty || price.qty <= 0}
-                        onClick={() => setQty(vIdx, priceIdx, Math.max(0, (price.qty || 0) - 1))}
-                      >
-                        <Minus className="size-4" />
-                      </Button>
+        <div className='flex flex-col mx-4 gap-2'>
+          <div className='flex flex-col gap-2 text-sm w-full'>
+            {/* Display prices with quantity selectors */}
+            {product?.prices?.map((price, priceIdx) => {
+              const billingLabel = price.billingFrequency ? 
+                `/${price.billingFrequency === 'yearly' ? 'year' : 
+                  price.billingFrequency === 'monthly' ? 'month' : 
+                  price.billingFrequency === 'fortnightly' ? '2 weeks' : 
+                  'week'}` : '';
+              
+              return (
+                <div key={priceIdx} className='flex'>
+                  <div className='flex gap-2 w-full items-center'>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateQuantity(priceIdx, -1)}
+                      disabled={!price.qty}
+                    >
+                      <Minus />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => updateQuantity(priceIdx, 1)}
+                    >
+                      <Plus />
+                    </Button>
 
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="size-8"
-                        onClick={() => setQty(vIdx, priceIdx, (price.qty || 0) + 1)}
-                      >
-                        <Plus className="size-4" />
-                      </Button>
-
-                      <span className="font-medium">{price.name} {variation.unit && `(${variation.unit})`}</span>
-                    </div>
-                    
-                    <div className='flex items-center gap-4'>
-                      <span className="text-sm text-muted-foreground">
-                        {price.qty || 0}x ${parseFloat(price.value).toFixed(2)}
-                      </span>
-                    </div>
+                    {price.name}
+                    {price.minor && (
+                      <Badge variant="secondary" className="text-xs ml-1">Minor</Badge>
+                    )}
+                    <div className='flex-1' />
+                    {price.qty || 0}x
+                    ${parseFloat(price.value || 0).toFixed(2)}{billingLabel}
                   </div>
-                ))}
+                </div>
+              )
+            })}
+
+            {(!product?.prices || product.prices.length === 0) && (
+              <div className="text-center py-8 text-muted-foreground">
+                No pricing options available
               </div>
-            )
-          })}
+            )}
+          </div>
         </div>
 
-        <SheetFooter>
-          <div className='flex'>
-            <div className='uppercase font-semibold'>total</div>
-            <div className='ml-auto'>
+        <SheetFooter className="mt-auto">
+          <div className='flex w-full'>
+            <div className='uppercase font-semibold'>TOTAL</div>
+            <div className='ml-auto font-semibold'>
               ${total.toFixed(2)}
             </div>
           </div>
@@ -105,25 +118,29 @@ export default function ProductDetailMembership({ product, setProduct, setOpen, 
           <SheetClose asChild>
             <Button 
               type="submit" 
-              disabled={!total}
+              disabled={!total || total === 0}
               onClick={async () => {
-                const _product = await calcCartValueMembership({product})
-                const _productCleaned = await cleanupProduct({product:_product})
+                // Create a cleaned product for the cart
+                const cartProduct = {
+                  ...product,
+                  prices: product.prices?.filter(price => (price.qty ?? 0) > 0) || [],
+                  amount: {
+                    subtotal: total,
+                    total: total
+                  }
+                };
 
-                _product.variations = _product.variations?.map(v => ({
-                  ...v,
-                  prices: v.prices?.filter(price => (price.qty ?? 0) > 0) || []
-                }));
-
-                await addToCart(_productCleaned)
+                // Only add to cart if there are selected items
+                if (cartProduct.prices.length > 0) {
+                  await addToCart(cartProduct);
+                }
               }}
+              className="w-full"
             >
               Add
             </Button>
           </SheetClose>
         </SheetFooter>
-
-
 
       </SheetContent>
     </Sheet>

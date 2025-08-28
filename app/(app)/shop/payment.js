@@ -75,10 +75,8 @@ export default function Page() {
   
   // Check if customer is required and connected for memberships
   const membershipNeedsCustomer = hasMembershipProducts && cart.products.some(p => 
-    p.type === 'membership' && p.variations?.some(v => 
-      v.prices?.some(pr => 
-        pr.customers?.some(c => !c.customer?._id)
-      )
+    p.type === 'membership' && p.prices?.some(pr => 
+      pr.customers?.some(c => !c.customer?._id)
     )
   )
 
@@ -146,20 +144,28 @@ export default function Page() {
             })
           })
         }
-        // Handle memberships
+        // Handle memberships (now using prices directly like classes)
         else if (product.type === 'membership') {
-          product.variations?.forEach((variation, vIdx) => {
-            variation.prices?.forEach((price, priceIdx) => {
-              price.customers?.forEach((customer, cIdx) => {
-                // Skip if already assigned
-                if (draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer) return
-                
-                if (adultIndex < adultAssignments.length) {
-                  const assignment = adultAssignments[adultIndex]
-                  draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = assignment.customer
-                  adultIndex++
-                }
-              })
+          product.prices?.forEach((price, priceIdx) => {
+            price.customers?.forEach((customer, cIdx) => {
+              // Skip if already assigned
+              if (draft.products[pIdx].prices[priceIdx].customers[cIdx].customer) return
+              
+              const isMinorPrice = price.minor || false
+              
+              if (isMinorPrice && minorIndex < minorAssignments.length) {
+                // Assign minor
+                const assignment = minorAssignments[minorIndex]
+                draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = assignment.customer
+                draft.products[pIdx].prices[priceIdx].customers[cIdx].dependent = assignment.dependent
+                minorIndex++
+              } else if (!isMinorPrice && adultIndex < adultAssignments.length) {
+                // Assign adult
+                const assignment = adultAssignments[adultIndex]
+                draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = assignment.customer
+                draft.products[pIdx].prices[priceIdx].customers[cIdx].dependent = null
+                adultIndex++
+              }
             })
           })
         }
@@ -290,16 +296,29 @@ export default function Page() {
       let hasCustomerChange = false;
       
       cart.products.forEach((product, pIdx) => {
-        product.variations?.forEach((variation, vIdx) => {
-          variation.prices?.forEach((price, prIdx) => {
+        // All products now use prices directly
+        if (['class', 'course', 'general', 'membership'].includes(product.type)) {
+          product.prices?.forEach((price, prIdx) => {
             price.customers?.forEach((customer, cIdx) => {
-              const snapshotCustomer = cartSnapshot.products?.[pIdx]?.variations?.[vIdx]?.prices?.[prIdx]?.customers?.[cIdx]?.customer;
+              const snapshotCustomer = cartSnapshot.products?.[pIdx]?.prices?.[prIdx]?.customers?.[cIdx]?.customer;
               if (customer.customer?._id !== snapshotCustomer?._id) {
                 hasCustomerChange = true;
               }
             });
           });
-        });
+        } else {
+          // Legacy support for products that might still use variations
+          product.variations?.forEach((variation, vIdx) => {
+            variation.prices?.forEach((price, prIdx) => {
+              price.customers?.forEach((customer, cIdx) => {
+                const snapshotCustomer = cartSnapshot.products?.[pIdx]?.variations?.[vIdx]?.prices?.[prIdx]?.customers?.[cIdx]?.customer;
+                if (customer.customer?._id !== snapshotCustomer?._id) {
+                  hasCustomerChange = true;
+                }
+              });
+            });
+          });
+        }
       });
       
       // Also check main customer
@@ -432,8 +451,8 @@ export default function Page() {
   useEffect(() => {
     setCart(draft => {
       draft.products.forEach((p) => {
-        if (['class', 'course', 'general'].includes(p.type)) {
-          // Prices are directly on product for these types
+        if (['class', 'course', 'general', 'membership'].includes(p.type)) {
+          // All these types now use prices directly on product
           p.prices?.forEach((pr) => {
             const qty = pr.qty ?? 0;
             if (!pr.customers || pr.customers.length !== qty) {
@@ -441,18 +460,6 @@ export default function Page() {
                 customer: pr.customers?.[i]?.customer || null
               }));
             }
-          });
-        } else if (p.type === 'membership') {
-          // Memberships still use variations
-          p.variations?.forEach((v) => {
-            v.prices?.forEach((pr) => {
-              const qty = pr.qty ?? 0;
-              if (!pr.customers || pr.customers.length !== qty) {
-                pr.customers = Array.from({ length: qty }, (_, i) => ({
-                  customer: pr.customers?.[i]?.customer || null
-                }));
-              }
-            });
           });
         }
       });
@@ -814,7 +821,7 @@ export default function Page() {
               <div>Customers</div>
               {/* Add All Customers Button */}
               {cart.products?.some(p => 
-                ['class', 'course', 'general'].includes(p.type) && 
+                ['class', 'course', 'general', 'membership'].includes(p.type) && 
                 p.prices?.some(price => 
                   price.customers?.some(c => !c.customer)
                 )
@@ -893,43 +900,62 @@ export default function Page() {
                     ))
                   );
                 }
-                // Memberships still use variations
+                // Memberships now use prices directly like other products
                 else if (p.type === 'membership') {
-                  return p.variations?.map((v, vIdx) =>
-                    v.prices?.map((price, priceIdx) =>
-                      price.customers?.map((c, cIdx) => (
-                        <div className="flex items-center gap-4" key={`${pIdx}-${vIdx}-${priceIdx}-${cIdx}`}>
-                          <div className="whitespace-nowrap">{cIdx + 1}. {price.name}</div>
-                          <div className="flex justify-end w-full text-right">
-                            {c.customer ? (
-                              <div className="flex items-center gap-1">
-                                <div>{c.customer.name}</div>
-                                <Trash2 
-                                  className={`size-4 ${
-                                    paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
-                                      ? 'text-muted-foreground cursor-not-allowed opacity-50' 
-                                      : 'cursor-pointer hover:text-destructive'
-                                  }`}
-                                  onClick={() => {
-                                    if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
-                                      setCart(draft => {
-                                        draft.products[pIdx].variations[vIdx].prices[priceIdx].customers[cIdx].customer = null;
-                                      });
-                                      // Update snapshot after removing customer
-                                      setTimeout(updateSnapshotCustomers, 50);
-                                    }
-                                  }}
-                                />
-                              </div>
-                            ) : (
-                              <span className="text-sm text-muted-foreground">
-                                Not assigned
-                              </span>
-                            )}
-                          </div>
+                  return p.prices?.map((price, priceIdx) =>
+                    price.customers?.map((c, cIdx) => (
+                      <div className="flex items-center gap-4" key={`${pIdx}-${priceIdx}-${cIdx}`}>
+                        <div className="whitespace-nowrap flex items-center gap-1">
+                          {cIdx + 1}. {price.name}
+                          {p.waiverRequired && (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <OctagonAlert className="h-4 w-4 text-chart-4" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Must connect a customer who's signed a waiver</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          )}
                         </div>
-                      ))
-                    )
+                        <div className="flex justify-end w-full text-right">
+                          {c.customer ? (
+                            <div className="flex items-center gap-1">
+                              <div>
+                                {c.dependent ? (
+                                  <span>{c.dependent.name} <span className="text-xs text-muted-foreground">(via {c.customer.name})</span></span>
+                                ) : (
+                                  c.customer.name
+                                )}
+                              </div>
+                              <Trash2 
+                                className={`size-4 ${
+                                  paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
+                                    ? 'text-muted-foreground cursor-not-allowed opacity-50' 
+                                    : 'cursor-pointer hover:text-destructive'
+                                }`}
+                                onClick={() => {
+                                  if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
+                                    setCart(draft => {
+                                      draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = null;
+                                      draft.products[pIdx].prices[priceIdx].customers[cIdx].dependent = null;
+                                    });
+                                    // Update snapshot after removing customer
+                                    setTimeout(updateSnapshotCustomers, 50);
+                                  }
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">
+                              Not assigned
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))
                   );
                 }
                 return null;

@@ -1,11 +1,8 @@
 'use client';
-import dayjs from "dayjs";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Switch } from "@/components/ui/switch"
+import { Card, CardContent } from '@/components/ui/card'
 import { generateObjectId } from '@/lib/utils';
 
-import { Inbox, Plus } from 'lucide-react'
+import { Plus } from 'lucide-react'
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -55,11 +52,7 @@ export default function Times({ product, setProducts }) {
     { value: "0", label: "Sunday" },
   ]
 
-  const getOptions = (i) => {
-    if (product.times[i].repeatInterval === 'h') return hourlyOptions;
-    if (product.times[i].repeatInterval === 'd') return dailyOptions;
-    return [];
-  };
+  // Removed unused getOptions helper
 
   return (
     <div>

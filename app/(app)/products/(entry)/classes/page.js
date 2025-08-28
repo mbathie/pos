@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useImmer } from 'use-immer';
 import { Button } from '@/components/ui/button';
 import { Plus, Loader2, CheckCircle, Save } from 'lucide-react';
@@ -38,11 +38,12 @@ export default function Page() {
   }, []);
 
   return (
-    <div className='px-4 pb-4'>
+    <div className="container mr-auto px-4 pt-2 w-full h-full flex flex-col py-4">
+
       <div className="flex items-center justify-between mb-4">
         <div>
-          <div className='font-semibold'>Setup Class and Course Products</div>
-          <div className='text-sm text-muted-foreground'>Configure class schedules and course offerings</div>
+          <h1 className="text-xl font-semibold mb-1">Setup Class and Course Products</h1>
+          <p className='text-sm text-muted-foreground'>Configure class schedules and course offerings</p>
         </div>
         
         {/* Overall save status */}

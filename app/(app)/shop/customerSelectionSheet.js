@@ -37,7 +37,7 @@ export default function CustomerSelectionSheet({
     }
     
     cart.products?.forEach(product => {
-      if (['class', 'course', 'general'].includes(product.type)) {
+      if (['class', 'course', 'general', 'membership'].includes(product.type)) {
         product.prices?.forEach(price => {
           const qty = price.qty || price.customers?.length || 0
           if (price.minor) {
@@ -395,7 +395,7 @@ export default function CustomerSelectionSheet({
 
                   {/* Dependents with checkboxes */}
                   {customer.dependents && customer.dependents.length > 0 && (
-                    <div className="space-y-2 ml-8">
+                    <div className="space-y-3">
                       <Label className="text-xs text-muted-foreground">Dependents</Label>
                       {customer.dependents.map((dependent, index) => {
                         const age = getAge(dependent.dob)
@@ -403,17 +403,17 @@ export default function CustomerSelectionSheet({
                         const depId = dependent._id || `dep-${index}`
                         
                         return (
-                          <div key={depId} className="border rounded-lg p-2">
-                            <div className="flex items-center gap-3">
-                              <Checkbox
-                                id={`${customer._id}-${depId}`}
-                                checked={checkedItems[customer._id]?.dependents?.[depId] || false}
-                                onCheckedChange={(checked) => handleDependentCheck(customer._id, depId, checked)}
-                                disabled={!isShopOnly && slots.minor === 0}
-                              />
+                          <div key={depId} className="flex items-center gap-3">
+                            <Checkbox
+                              id={`${customer._id}-${depId}`}
+                              checked={checkedItems[customer._id]?.dependents?.[depId] || false}
+                              onCheckedChange={(checked) => handleDependentCheck(customer._id, depId, checked)}
+                              disabled={!isShopOnly && slots.minor === 0}
+                            />
+                            <div className="flex items-center justify-between flex-1">
                               <Label 
                                 htmlFor={`${customer._id}-${depId}`} 
-                                className="flex items-center gap-2 cursor-pointer flex-1 text-sm"
+                                className="flex items-center gap-2 cursor-pointer text-sm"
                               >
                                 <span>{dependent.name}</span>
                                 {dependent.gender && (
@@ -422,14 +422,14 @@ export default function CustomerSelectionSheet({
                                   </span>
                                 )}
                                 {age !== null && (
-                                  <Badge variant="outline" className="text-xs">
+                                  <span className="text-xs text-muted-foreground">
                                     {age} yr{age !== 1 ? 's' : ''} old
-                                  </Badge>
+                                  </span>
                                 )}
-                                <Badge variant="secondary" className="text-xs ml-auto">
-                                  Minor
-                                </Badge>
                               </Label>
+                              <Badge variant="secondary" className="text-xs">
+                                Minor
+                              </Badge>
                             </div>
                           </div>
                         )
@@ -438,37 +438,6 @@ export default function CustomerSelectionSheet({
                   )}
                 </div>
               ))}
-
-              {/* Selection Summary */}
-              {isShopOnly ? (
-                <div className="bg-muted rounded-lg p-3">
-                  <div className="text-sm space-y-1">
-                    <div className="font-medium">Selected:</div>
-                    <div>
-                      {adultCount + minorCount} customer{adultCount + minorCount !== 1 ? 's' : ''}
-                    </div>
-                  </div>
-                </div>
-              ) : slots.total > 0 ? (
-                <div className="bg-muted rounded-lg p-3">
-                  <div className="text-sm space-y-1">
-                    <div className="font-medium">Selected:</div>
-                    <div className="flex gap-4">
-                      <span className={adultCount > slots.adult ? 'text-destructive' : ''}>
-                        {adultCount} / {slots.adult} adult{slots.adult !== 1 ? 's' : ''}
-                      </span>
-                      <span className={minorCount > slots.minor ? 'text-destructive' : ''}>
-                        {minorCount} / {slots.minor} minor{slots.minor !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                    {(adultCount > slots.adult || minorCount > slots.minor) && (
-                      <div className="text-destructive text-xs mt-2">
-                        Too many selections. Please adjust to match required slots.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : null}
             </div>
           )}
 

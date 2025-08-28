@@ -202,14 +202,11 @@ export default function Cart({ asSheet = false, onClose }) {
                 </div>
               </div>
 
-              {p.variations?.map((v, vIdx) => (
-                <div key={vIdx}>
-                  {v.prices?.map((price, i) => (
-                    <div key={i} className="flex">
-                      <div>{price.qty}x {price.name} {v.unit && `(${v.unit})`}</div>
-                      <div className="ml-auto">${parseFloat(price.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    </div>
-                  ))}
+              {/* Display prices directly for membership products */}
+              {p.prices?.filter(price => price.qty > 0).map((price, i) => (
+                <div key={i} className="flex">
+                  <div>{price.qty}x {price.name}</div>
+                  <div className="ml-auto">${(price.qty * parseFloat(price.value)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
               ))}
             </div>

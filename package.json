@@ -11,6 +11,7 @@
     "start": "next start",
     "lint": "next lint",
     "test": "playwright test",
+    "test:local-http": "playwright test --config=playwright.local-http.config.js --project=chromium --reporter=line",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed"
   },

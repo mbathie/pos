@@ -67,10 +67,15 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
 
         <SheetHeader className=''>
           <SheetTitle>
-            <div className='flex items-center space-x-1'>
+            <div className='flex items-center space-x-2'>
+              {product.thumbnail && (
+                <img
+                  src={product.thumbnail}
+                  alt={product.name}
+                  className="w-10 h-10 rounded-lg object-cover"
+                />
+              )}
               <div>{product?.name?.length > 20 ? `${product.name.substring(0, 20)}...` : product?.name}</div>
-              <div className="relative size-6 ml-1">
-              </div>
             </div>
           </SheetTitle>
           <SheetDescription>
@@ -119,6 +124,9 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
                   </Button>
 
                   {price.name}
+                  {price.minor && (
+                    <Badge variant="secondary" className="text-xs ml-1">Minor</Badge>
+                  )}
                   <div className='flex-1' />
                   {price.qty || 0}x
                   ${parseFloat(price.value || 0).toFixed(2)}

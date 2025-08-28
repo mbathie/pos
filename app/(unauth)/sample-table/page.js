@@ -1,7 +1,6 @@
 'use client'
 import React, { useState, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+// Removed unused Card and Table component imports
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -15,7 +14,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { ArrowUpDown, ArrowUp, ArrowDown, Search, Download, Filter, MoreHorizontal, Package, User, ShoppingBag } from 'lucide-react';
+import { ArrowUpDown, ArrowUp, ArrowDown, Search, Download, Filter, MoreHorizontal, Package, User } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -79,6 +78,13 @@ export default function SampleTablePage() {
       direction = 'desc';
     }
     setSortConfig({ key, direction });
+  };
+
+  const handleHeaderKey = (e, key) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleSort(key);
+    }
   };
 
   // Get sort icon
@@ -249,8 +255,12 @@ export default function SampleTablePage() {
             <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
               <tr className="border-b bg-muted/50 hover:bg-muted/50">
                 <th 
+                  scope="col"
+                  aria-sort={sortConfig.key==='id' ? (sortConfig.direction==='asc' ? 'ascending' : 'descending') : 'none'}
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  tabIndex={0}
                   onClick={() => handleSort('id')}
+                  onKeyDown={(e) => handleHeaderKey(e, 'id')}
                 >
                   <div className="flex items-center">
                     Order ID
@@ -258,8 +268,12 @@ export default function SampleTablePage() {
                   </div>
                 </th>
                 <th 
+                  scope="col"
+                  aria-sort={sortConfig.key==='customer' ? (sortConfig.direction==='asc' ? 'ascending' : 'descending') : 'none'}
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  tabIndex={0}
                   onClick={() => handleSort('customer')}
+                  onKeyDown={(e) => handleHeaderKey(e, 'customer')}
                 >
                   <div className="flex items-center">
                     Customer
@@ -267,8 +281,12 @@ export default function SampleTablePage() {
                   </div>
                 </th>
                 <th 
+                  scope="col"
+                  aria-sort={sortConfig.key==='product' ? (sortConfig.direction==='asc' ? 'ascending' : 'descending') : 'none'}
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  tabIndex={0}
                   onClick={() => handleSort('product')}
+                  onKeyDown={(e) => handleHeaderKey(e, 'product')}
                 >
                   <div className="flex items-center">
                     Product
@@ -276,8 +294,12 @@ export default function SampleTablePage() {
                   </div>
                 </th>
                 <th 
+                  scope="col"
+                  aria-sort={sortConfig.key==='category' ? (sortConfig.direction==='asc' ? 'ascending' : 'descending') : 'none'}
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  tabIndex={0}
                   onClick={() => handleSort('category')}
+                  onKeyDown={(e) => handleHeaderKey(e, 'category')}
                 >
                   <div className="flex items-center">
                     Category
@@ -285,8 +307,12 @@ export default function SampleTablePage() {
                   </div>
                 </th>
                 <th 
+                  scope="col"
+                  aria-sort={sortConfig.key==='quantity' ? (sortConfig.direction==='asc' ? 'ascending' : 'descending') : 'none'}
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  tabIndex={0}
                   onClick={() => handleSort('quantity')}
+                  onKeyDown={(e) => handleHeaderKey(e, 'quantity')}
                 >
                   <div className="flex items-center">
                     Qty
@@ -294,8 +320,12 @@ export default function SampleTablePage() {
                   </div>
                 </th>
                 <th 
+                  scope="col"
+                  aria-sort={sortConfig.key==='amount' ? (sortConfig.direction==='asc' ? 'ascending' : 'descending') : 'none'}
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  tabIndex={0}
                   onClick={() => handleSort('amount')}
+                  onKeyDown={(e) => handleHeaderKey(e, 'amount')}
                 >
                   <div className="flex items-center">
                     Amount
@@ -303,8 +333,12 @@ export default function SampleTablePage() {
                   </div>
                 </th>
                 <th 
+                  scope="col"
+                  aria-sort={sortConfig.key==='date' ? (sortConfig.direction==='asc' ? 'ascending' : 'descending') : 'none'}
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  tabIndex={0}
                   onClick={() => handleSort('date')}
+                  onKeyDown={(e) => handleHeaderKey(e, 'date')}
                 >
                   <div className="flex items-center">
                     Date
@@ -312,15 +346,19 @@ export default function SampleTablePage() {
                   </div>
                 </th>
                 <th 
+                  scope="col"
+                  aria-sort={sortConfig.key==='status' ? (sortConfig.direction==='asc' ? 'ascending' : 'descending') : 'none'}
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  tabIndex={0}
                   onClick={() => handleSort('status')}
+                  onKeyDown={(e) => handleHeaderKey(e, 'status')}
                 >
                   <div className="flex items-center">
                     Status
                     {getSortIcon('status')}
                   </div>
                 </th>
-                <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Actions</th>
+                <th scope="col" className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
@@ -383,7 +421,7 @@ export default function SampleTablePage() {
                       <td className="px-4 py-3 text-right align-middle">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="cursor-pointer h-8 w-8">
+                            <Button variant="ghost" size="icon" className="cursor-pointer h-8 w-8" aria-label="Row actions" title="Row actions">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>

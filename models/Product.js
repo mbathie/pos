@@ -12,13 +12,7 @@ const ProductSchema = new mongoose.Schema({
   capacity: Number,
   bump: { type: Boolean, default: false },
   waiverRequired: { type: Boolean, default: false },
-  // times: [{
-  //   _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
-  //   except: [String]
-  // }],
   order: { type: Number, default: 0 },
-  // Reference to modification groups that can be applied to this product
-  modGroups: [{ type: mongoose.Schema.Types.ObjectId, ref: 'ModGroup' }],
 }, {
   timestamps: true,
   strict: false  // allow any additional fields

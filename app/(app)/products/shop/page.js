@@ -4,16 +4,13 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useImmer } from 'use-immer';
 
-import {
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+// Removed unused sortable imports
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogDescription } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button'
-import { Image, Plus, Ellipsis, EllipsisVertical, Info, Trash, Loader2, CheckCircle, Save, GripVertical, Edit2, Trash2, PanelLeft, ChevronRight, ChevronLeft, MoreVertical, Folder as FolderIcon, Check, X, ExternalLink } from 'lucide-react'
+import { Image, Plus, Loader2, Save, Edit2, Trash2, MoreVertical, Folder as FolderIcon, Check, ExternalLink } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 
 
@@ -28,28 +25,7 @@ import { useAutoSave } from '../useAutoSave';
 import { CategoryFolderMenu } from './CategoryFolderMenu';
 import { SvgIcon } from '@/components/ui/svg-icon';
 
-// Sortable Category Component - NO LONGER USED (replaced by CategoryFolderMenu)
-// Keeping for reference only
-function SortableCategory({ category, isActive, onSelect, onEdit, onEditIcon, onDelete, expanded }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: category._id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-
-
-
-}
+// Note: An older SortableCategory component was removed as it was unused
 
 export default function Page() {
   const [categories, setCategories] = useState([]);

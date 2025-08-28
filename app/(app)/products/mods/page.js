@@ -34,8 +34,6 @@ import {
   Trash2, 
   MoreVertical, 
   DollarSign,
-  Check,
-  X,
   Loader2
 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
