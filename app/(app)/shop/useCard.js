@@ -213,8 +213,8 @@ export function useCard({ cart }) {
         
         console.log('✅ Membership first period payment processed successfully')
         
-        // Now create manual subscription records for future billing
-        const subscriptionRes = await fetch('/api/payments/subscription/create-manual', {
+        // Now create subscription records for future billing
+        const subscriptionRes = await fetch('/api/payments/subscription/complete', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 

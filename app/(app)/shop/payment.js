@@ -147,6 +147,11 @@ export default function Page() {
         // Handle memberships (now using prices directly like classes)
         else if (product.type === 'membership') {
           product.prices?.forEach((price, priceIdx) => {
+            // Initialize customers array if it doesn't exist (for membership products)
+            if (!price.customers && price.qty > 0) {
+              draft.products[pIdx].prices[priceIdx].customers = Array(price.qty).fill(null).map(() => ({}))
+            }
+            
             price.customers?.forEach((customer, cIdx) => {
               // Skip if already assigned
               if (draft.products[pIdx].prices[priceIdx].customers[cIdx].customer) return
@@ -902,7 +907,7 @@ export default function Page() {
                 }
                 // Memberships now use prices directly like other products
                 else if (p.type === 'membership') {
-                  return p.prices?.map((price, priceIdx) =>
+                  return p.prices?.map((price, priceIdx) => 
                     price.customers?.map((c, cIdx) => (
                       <div className="flex items-center gap-4" key={`${pIdx}-${priceIdx}-${cIdx}`}>
                         <div className="whitespace-nowrap flex items-center gap-1">
@@ -956,7 +961,7 @@ export default function Page() {
                         </div>
                       </div>
                     ))
-                  );
+                  )
                 }
                 return null;
               })}
@@ -1078,13 +1083,6 @@ export default function Page() {
           </div>
         </TabsList>
         
-        
-        {/* Customer required for memberships */}
-        {membershipNeedsCustomer && (
-          <div className="text-sm text-red-600 bg-red-50 p-2 rounded mb-2">
-            🚨 Customer connection required for membership subscriptions. Please connect a customer below.
-          </div>
-        )}
         <TabsContent value="card">
           <Card>
             <CardContent className='h-88 flex flex-col gap-2-'>
@@ -1108,8 +1106,8 @@ export default function Page() {
                   <div className="flex items-center gap-2">
                     {terminalStatus === 'connected' && (
                       <>
-                        <Wifi className="size-4 text-green-600" />
-                        <span className="text-xs text-green-600">Ready</span>
+                        <Wifi className="size-4 text-primary" />
+                        <span className="text-xs text-primary">Ready</span>
                       </>
                     )}
                     {terminalStatus === 'disconnected' && (
@@ -1120,8 +1118,8 @@ export default function Page() {
                     )}
                     {(terminalStatus === 'discovering' || terminalStatus === 'connecting') && (
                       <>
-                        <Loader2 className="size-4 animate-spin text-yellow-500" />
-                        <span className="text-xs text-yellow-500">
+                        <Loader2 className="size-4 animate-spin text-chart-4" />
+                        <span className="text-xs text-chart-4">
                           {terminalStatus === 'discovering' ? 'Discovering...' : 'Connecting...'}
                         </span>
                       </>

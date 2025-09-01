@@ -5,21 +5,15 @@ import { getEmployee } from "@/lib/auth";
 import { connectDB } from "@/lib/mongoose";
 import { Org } from "@/models";
 
-// export async function POST(req, { params }) {
-
-// }
-
-
 export async function GET(req, { params }) {
   await connectDB();
 
   const { employee } = await getEmployee();
   const org = employee.org;
-  // console.log(org)
 
   const account = await stripe.accounts.create({
     type: 'standard',
-    email: org.email,
+    // email: org.email,
     business_profile: {
       url: "https://change.me",
       name: org.name,

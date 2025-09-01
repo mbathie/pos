@@ -330,11 +330,11 @@ export default function MembershipsPage() {
                     <td className="px-4 py-3 align-middle">
                       <div className="flex items-center gap-3">
                         <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium flex-shrink-0">
-                          {getInitials(membership.customer?.name)}
+                          {getInitials(membership.dependent?.name || membership.customer?.name)}
                         </div>
                         <div className="flex flex-col min-w-0">
                           <div className="font-medium">
-                            {membership.customer?.name || 'Unknown'}
+                            {membership.dependent?.name || membership.customer?.name || 'Unknown'}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {membership.customer?.email || '-'}
@@ -342,6 +342,11 @@ export default function MembershipsPage() {
                           {membership.customer?.phone && (
                             <div className="text-xs text-muted-foreground">
                               {formatPhone(membership.customer?.phone)}
+                            </div>
+                          )}
+                          {membership.dependent && (
+                            <div className="text-xs text-muted-foreground">
+                              Guardian: {membership.customer?.name}
                             </div>
                           )}
                         </div>

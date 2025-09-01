@@ -210,18 +210,12 @@ export const useTerminalManagement = () => {
   }
 
   const handleDeleteTerminal = async (terminalId, onSuccess, onError) => {
-    if (!confirm('Are you sure you want to delete this terminal?')) {
-      return false
-    }
-
     const result = await deleteTerminal(terminalId)
 
     if (result.success) {
-      onSuccess?.()
-      return true
+      return onSuccess?.() || { error: false }
     } else {
-      onError?.(result.error)
-      return false
+      return onError?.(result.error) || { error: true, message: result.error }
     }
   }
 

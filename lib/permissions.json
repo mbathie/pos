@@ -23,7 +23,11 @@
         "/manage/customers",
         "/manage/memberships",
         "/manage/checkins",
-        "/manage/accounting"
+        "/manage/accounting",
+        "/manage/terminals",
+        "/manage/discounts",
+        "/sample-table",
+        "/style-guide"
       ],
       "description": "Limited access to sales and basic operations"
     },

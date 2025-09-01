@@ -26,17 +26,16 @@ export async function POST(req, { params }) {
     const customersToProcess = [];
     
     for (const product of membershipProducts) {
-      for (const variation of product.variations || []) {
-        for (const price of variation.prices || []) {
-          for (const customerSlot of price.customers || []) {
-            if (customerSlot.customer?._id) {
-              customersToProcess.push({
-                customer: customerSlot.customer,
-                product,
-                variation,
-                price
-              });
-            }
+      // Memberships now have prices directly on the product (like classes)
+      for (const price of product.prices || []) {
+        for (const customerSlot of price.customers || []) {
+          if (customerSlot.customer?._id) {
+            customersToProcess.push({
+              customer: customerSlot.customer,
+              product,
+              variation: null, // No longer using variations
+              price
+            });
           }
         }
       }
@@ -54,23 +53,36 @@ export async function POST(req, { params }) {
     // Create or retrieve Stripe customers for each customer
     const processedCustomers = [];
     for (const { customer, product, variation, price } of customersToProcess) {
-      let stripeCustomerId = customer.stripeCustomerId;
+      // First, fetch the latest customer data from DB to check for existing Stripe ID
+      const dbCustomer = await Customer.findById(customer._id);
+      let stripeCustomerId = dbCustomer.stripeCustomerId;
       
       // Create Stripe customer if doesn't exist
       if (!stripeCustomerId) {
-        const stripeCustomer = await stripe.customers.create({
+        // Check if a Stripe customer already exists with this email
+        const existingCustomers = await stripe.customers.list({
           email: customer.email,
-          name: customer.name,
-          phone: customer.phone,
-          metadata: {
-            customerId: customer._id.toString(),
-            orgId: org._id.toString()
-          }
+          limit: 1
         }, {
           stripeAccount: org.stripeAccountId
         });
-
-        stripeCustomerId = stripeCustomer.id;
+        
+        if (existingCustomers.data.length > 0) {
+          stripeCustomerId = existingCustomers.data[0].id;
+        } else {
+          const stripeCustomer = await stripe.customers.create({
+            email: customer.email,
+            name: customer.name,
+            phone: customer.phone,
+            metadata: {
+              customerId: customer._id.toString(),
+              orgId: org._id.toString()
+            }
+          }, {
+            stripeAccount: org.stripeAccountId
+          });
+          stripeCustomerId = stripeCustomer.id;
+        }
 
         // Update customer record with Stripe ID
         await Customer.findByIdAndUpdate(customer._id, {
@@ -111,7 +123,8 @@ export async function POST(req, { params }) {
       stripeAccount: org.stripeAccountId
     });
 
-    // Create transaction record for the first period payment (cleanup happens in createStripeTransaction)
+    // Create transaction record for the first period payment
+    // Pass isSetupPhase: true to prevent membership creation here (will be done in create-manual route)
     const transaction = await createStripeTransaction({ 
       cart, 
       employee, 
@@ -119,7 +132,7 @@ export async function POST(req, { params }) {
       paymentIntent,
       isSubscription: true,
       processedCustomers,
-      isFirstPeriodCharge: true
+      isSetupPhase: true  // Prevent duplicate membership creation
     });
 
     return NextResponse.json({

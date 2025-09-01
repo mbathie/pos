@@ -12,6 +12,8 @@ export default function CustomerDetailPage({ params }) {
   const router = useRouter();
   const [customer, setCustomer] = useState(null);
   const [memberships, setMemberships] = useState([]);
+  const [parentMemberships, setParentMemberships] = useState([]);
+  const [dependentMemberships, setDependentMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [customerId, setCustomerId] = useState(null);
 
@@ -56,7 +58,16 @@ export default function CustomerDetailPage({ params }) {
       const response = await fetch(`/api/customers/${customerId}/memberships`);
       if (response.ok) {
         const membershipData = await response.json();
-        setMemberships(membershipData.memberships || []);
+        const allMemberships = membershipData.memberships || [];
+        setMemberships(allMemberships);
+        
+        // Separate parent memberships (where customer is the actual member)
+        // from dependent memberships (where customer is the guardian)
+        const parentMems = allMemberships.filter(m => !m.dependent);
+        const dependentMems = allMemberships.filter(m => m.dependent);
+        
+        setParentMemberships(parentMems);
+        setDependentMemberships(dependentMems);
       } else {
         console.error('Failed to fetch memberships');
       }
@@ -218,9 +229,9 @@ export default function CustomerDetailPage({ params }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {memberships.length > 0 ? (
+            {parentMemberships.length > 0 ? (
               <div className="space-y-3">
-                {memberships.map((membership, index) => (
+                {parentMemberships.map((membership, index) => (
                   <div key={membership._id || index} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
@@ -273,64 +284,72 @@ export default function CustomerDetailPage({ params }) {
           <CardContent className="space-y-4">
             {customer.dependents && customer.dependents.length > 0 ? (
               <div className="space-y-3">
-                {customer.dependents.map((dependent, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
-                          {getInitials(dependent.name)}
+                {customer.dependents.map((dependent, index) => {
+                  // Find membership for this dependent
+                  const dependentMembership = dependentMemberships.find(m => 
+                    m.dependent?._id === dependent._id
+                  );
+                  
+                  return (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
+                            {getInitials(dependent.name)}
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{dependent.name}</p>
+                            <p className="text-xs text-muted-foreground capitalize">{dependent.gender || 'Not specified'}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium text-sm">{dependent.name}</p>
-                          <p className="text-xs text-muted-foreground capitalize">{dependent.gender || 'Not specified'}</p>
+                        <div className="flex items-center gap-2">
+                          {dependent.dob && (
+                            <Badge variant="outline" className="text-xs">
+                              {(() => {
+                                const age = dayjs().diff(dayjs(dependent.dob), 'year');
+                                return `${age} year${age !== 1 ? 's' : ''} old`;
+                              })()}
+                            </Badge>
+                          )}
+                          {dependentMembership && (
+                            <Badge variant={getStatusBadgeVariant(dependentMembership.status)} className="text-xs capitalize">
+                              {dependentMembership.status} Member
+                            </Badge>
+                          )}
                         </div>
                       </div>
+                      
                       {dependent.dob && (
-                        <Badge variant="outline" className="text-xs">
-                          {(() => {
-                            const age = dayjs().diff(dayjs(dependent.dob), 'year');
-                            return `${age} year${age !== 1 ? 's' : ''} old`;
-                          })()}
-                        </Badge>
+                        <div>
+                          <label className="text-xs font-medium text-muted-foreground">Date of Birth</label>
+                          <p className="text-sm">{dayjs(dependent.dob).format('DD/MM/YYYY')}</p>
+                        </div>
                       )}
+                      
+                      {dependentMembership && (
+                        <div className="mt-2 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-medium">{dependentMembership.product?.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              ${dependentMembership.amount}/{dependentMembership.unit === 'month' ? 'mo' : dependentMembership.unit === 'year' ? 'yr' : dependentMembership.unit}
+                            </p>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs text-muted-foreground">Next billing</p>
+                            <p className="text-xs">{dayjs(dependentMembership.nextBillingDate).format('DD/MM/YYYY')}</p>
+                          </div>
+                        </div>
+                      )}
+                      {index < customer.dependents.length - 1 && <div className="border-b mt-3" />}
                     </div>
-                    {dependent.dob && (
-                      <div>
-                        <label className="text-xs font-medium text-muted-foreground">Date of Birth</label>
-                        <p className="text-sm">{dayjs(dependent.dob).format('DD/MM/YYYY')}</p>
-                      </div>
-                    )}
-                    {index < customer.dependents.length - 1 && <div className="border-b" />}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-4">
                 <Users className="size-8 mx-auto text-muted-foreground mb-2" />
                 <p className="text-sm text-muted-foreground">No dependents</p>
                 <p className="text-xs text-muted-foreground">This customer has no registered dependents</p>
-              </div>
-            )}
-            {/* Waiver Status at bottom of dependents card */}
-            {customer.waiver && (
-              <div className="pt-3 border-t">
-                <label className="text-sm font-medium text-muted-foreground">Waiver Status</label>
-                <div className="flex items-center gap-2 mt-1">
-                  {customer.waiver.agree ? (
-                    <>
-                      <Badge variant="outline" className="text-primary border-primary">
-                        Signed
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        on {dayjs(customer.waiver.signed).format('DD/MM/YYYY')}
-                      </span>
-                    </>
-                  ) : (
-                    <Badge variant="outline" className="text-destructive border-destructive">
-                      Not Signed
-                    </Badge>
-                  )}
-                </div>
               </div>
             )}
           </CardContent>

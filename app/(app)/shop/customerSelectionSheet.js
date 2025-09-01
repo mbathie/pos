@@ -196,8 +196,12 @@ export default function CustomerSelectionSheet({
       const items = checkedItems[customer._id]
       if (!items) return
       
-      // Add customer if selected
-      if (items.customer) {
+      // For minor-only pricing, don't add the parent as an assignment
+      // They're just the guardian/payer, not a participant
+      const isMinorOnlyPricing = slots.minor > 0 && slots.adult === 0
+      
+      // Add customer if selected (but not for minor-only pricing)
+      if (items.customer && !isMinorOnlyPricing) {
         assignments.push({
           customer: customer,
           dependent: null,
@@ -210,8 +214,8 @@ export default function CustomerSelectionSheet({
         customer.dependents?.forEach(dep => {
           if (items.dependents[dep._id]) {
             assignments.push({
-              customer: customer,
-              dependent: dep,
+              customer: customer, // This is the parent/guardian who will be stored
+              dependent: dep, // This is the minor who is actually taking the class
               isMinor: true
             })
           }
@@ -228,7 +232,11 @@ export default function CustomerSelectionSheet({
     return dayjs().diff(dayjs(dob), 'year')
   }
 
-  const canConfirm = adultCount > 0 || minorCount > 0
+  // For minor pricing, we need at least one parent selected along with the minor
+  const needsParentForMinor = slots.minor > 0 && slots.adult === 0
+  const canConfirm = needsParentForMinor 
+    ? (adultCount > 0 && minorCount > 0) // Need both parent and minor
+    : (adultCount > 0 || minorCount > 0) // Need at least one of either
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -451,6 +459,16 @@ export default function CustomerSelectionSheet({
             </div>
           )}
 
+          {/* Helper message for minor pricing */}
+          {needsParentForMinor && minorCount > 0 && adultCount === 0 && (
+            <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
+              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
+              <span className="text-sm text-amber-700 dark:text-amber-400">
+                Please also select the parent/guardian (check the box next to their name)
+              </span>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
@@ -458,7 +476,7 @@ export default function CustomerSelectionSheet({
             </Button>
             <Button 
               onClick={handleConfirm}
-              disabled={!canConfirm || (!isShopOnly && (adultCount > slots.adult || minorCount > slots.minor))}
+              disabled={!canConfirm || (!isShopOnly && !needsParentForMinor && (adultCount > slots.adult || minorCount > slots.minor))}
               className="cursor-pointer"
             >
               Confirm Selection

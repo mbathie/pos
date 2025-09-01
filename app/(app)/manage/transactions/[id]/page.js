@@ -366,7 +366,10 @@ export default function TransactionDetailsPage() {
                         {price.customers?.map((customer, cIndex) => (
                           customer.customer && (
                             <div key={cIndex}>
-                              {customer.customer.name} ({price.name})
+                              {customer.dependent ? 
+                                `${customer.dependent.name} (${price.name})` : 
+                                `${customer.customer.name} (${price.name})`
+                              }
                             </div>
                           )
                         ))}

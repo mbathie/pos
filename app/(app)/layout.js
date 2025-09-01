@@ -12,14 +12,15 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { TooltipProvider } from "@/components/ui/tooltip"
 
 import { CartSheet } from '@/components/cart-sheet'
 
 export default function Page({children}) {
-  const { location, employee, setEmployee, resetCart, setLowStockData, clearLowStockData } = useGlobals()
+  const { location, employee, resetCart, setLowStockData, clearLowStockData } = useGlobals()
   const [ open, setOpen ] = useState(false)
   const [ isRedirecting, setIsRedirecting ] = useState(false)
+  const [ isInitializing, setIsInitializing ] = useState(true)
 
   const pathname = usePathname();
   const router = useRouter();
@@ -28,12 +29,33 @@ export default function Page({children}) {
     const d = Cookies.get("sidebar_state")
     const isOpen = d === "true"
     setOpen(isOpen)
+    
+    // Give Zustand time to hydrate the persisted state
+    const timer = setTimeout(() => {
+      setIsInitializing(false)
+    }, 100)
+    
+    return () => clearTimeout(timer)
   }, [])
 
   // Permission and lock checking effect
   useEffect(() => {
-    // console.log(employee)
-    if (!employee?._id || isRedirecting) return; // Wait for employee to load or skip if redirecting
+    // Don't check permissions until initialization is complete
+    if (isInitializing) {
+      console.log('[Layout] Still initializing, skipping permission check');
+      return;
+    }
+    
+    console.log('[Layout] Permission check starting for path:', pathname);
+    console.log('[Layout] Employee:', employee);
+    console.log('[Layout] Employee role:', employee?.role);
+
+    if (!employee?._id) {
+      console.log('[Layout] No employee ID found, redirecting to login');
+      router.replace("/login")
+      return
+    }
+
     // Check if account is locked
     const checkAccountLock = async () => {
       try {
@@ -72,21 +94,32 @@ export default function Page({children}) {
 
     // Check for locked account first
     checkAccountLock().then(isLocked => {
+      console.log('[Layout] Account lock check completed, isLocked:', isLocked);
       if (isLocked) return; // Don't proceed with permission checks if locked
       
       const userRole = employee?.role || 'STAFF';
+      console.log('[Layout] User role determined:', userRole);
+      console.log('[Layout] Checking if path requires auth:', pathname, requiresAuth(pathname));
       
       // Check if current path requires auth and if user has permission
       if (requiresAuth(pathname)) {
-        if (!hasPermission(userRole, pathname)) {
-          console.log(`Access denied to ${pathname} for role ${userRole}`);
+        const hasAccess = hasPermission(userRole, pathname);
+        console.log('[Layout] Permission check for', pathname, 'with role', userRole, ':', hasAccess);
+        
+        if (!hasAccess) {
+          console.log(`[Layout] Access denied to ${pathname} for role ${userRole}`);
           const defaultPath = getDefaultPath(userRole);
+          console.log('[Layout] Redirecting to default path:', defaultPath);
           router.replace(defaultPath);
           return;
+        } else {
+          console.log('[Layout] Access granted for', pathname);
         }
+      } else {
+        console.log('[Layout] Path does not require auth:', pathname);
       }
     });
-  }, [pathname, employee, router]);
+  }, [pathname, employee, router, isInitializing]);
 
 
 

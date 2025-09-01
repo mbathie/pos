@@ -93,8 +93,8 @@ export default function PinDialogEntry({ open, onOpenChange, onSuccess }) {
   // }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="w-72">
+    <Dialog open={open} onOpenChange={() => {}}>
+      <DialogContent className="w-72" onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Enter Employee PIN</DialogTitle>
           <DialogDescription>
@@ -127,18 +127,6 @@ export default function PinDialogEntry({ open, onOpenChange, onSuccess }) {
             <p className="text-xs text-destructive text-center">{error}</p>
           )}
           <div className="flex flex-col items-center gap-2">
-            <div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleClose}
-              disabled={loading}
-              className="w-52"
-            >
-              Cancel
-            </Button>
-            </div>
-            <div>
             <Button
               className="w-52"
               type="submit"
@@ -146,7 +134,6 @@ export default function PinDialogEntry({ open, onOpenChange, onSuccess }) {
             >
               {loading ? 'Processing...' : 'Verify PIN'}
             </Button>
-            </div>
           </div>
         </form>
       </DialogContent>

@@ -6,6 +6,9 @@ const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
 export async function middleware(req) {
   const { pathname } = req.nextUrl;
   const token = req.cookies.get("token")?.value;
+  
+  console.log('[Middleware] Processing path:', pathname);
+  console.log('[Middleware] Has token:', !!token);
 
   // Check if user is authenticated
   let isAuthenticated = false;
@@ -13,18 +16,23 @@ export async function middleware(req) {
     try {
       const { payload } = await jwtVerify(token, JWT_SECRET);
       isAuthenticated = !!(payload?.employeeId);
+      console.log('[Middleware] Token valid, employeeId:', payload?.employeeId);
     } catch (err) {
       // Token is invalid, user is not authenticated
+      console.log('[Middleware] Token invalid:', err.message);
       isAuthenticated = false;
     }
   }
 
   // Handle login/signup pages - redirect if already authenticated
   if (pathname === "/login" || pathname === "/signup") {
+    console.log(`isAuthenticated: ${isAuthenticated}`);
     if (isAuthenticated) {
+      console.log('[Middleware] User authenticated on login/signup page, redirecting to /shop');
       return NextResponse.redirect(new URL("/shop", req.url));
     }
     // Not authenticated, allow access to login/signup
+    console.log('[Middleware] User not authenticated, allowing access to:', pathname);
     return NextResponse.next();
   }
 
@@ -75,18 +83,20 @@ export async function middleware(req) {
     }
   }
 
-
-
-  // For all other routes, do nothing (let them through)
+  // For all other matched routes that aren't API routes, just let them through
+  // The layout.js will handle authentication and permission checks for app routes
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    "/api/:path*",
-    "/login",
-    "/signup",
-    "/employee/:path*",
-    "/c/:path*"
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

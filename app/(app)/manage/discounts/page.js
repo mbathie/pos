@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Edit, Trash2, Plus } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Edit, Trash2, Plus, MoreHorizontal, Percent, DollarSign, Calendar } from 'lucide-react';
 import dayjs from 'dayjs';
 
 export default function DiscountsPage() {
@@ -80,98 +80,162 @@ export default function DiscountsPage() {
   };
 
   return (
-    <Card className="mx-4">
-      <CardHeader>
+    <div className="container mx-auto px-4 max-w-7xl">
+      {/* Header */}
+      <div className="mb-6">
         <div className="flex justify-between items-center">
           <div>
-            <CardTitle className="text-lg">Discounts</CardTitle>
-            <CardDescription>Manage discount codes for your products and services</CardDescription>
+            <h1 className="text-xl font-semibold mb-1">Discounts</h1>
+            <p className="text-sm text-muted-foreground">Manage discount codes for your products and services</p>
           </div>
-          <Button onClick={() => router.push('/manage/discounts/create')} size="sm">
-            <Plus className="size-4"/> Add Discount
+          <Button onClick={() => router.push('/manage/discounts/create')} className="cursor-pointer">
+            <Plus className="h-4 w-4 mr-2"/> Add Discount
           </Button>
         </div>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="text-center py-4">Loading discounts...</div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Value</TableHead>
-                <TableHead>Products</TableHead>
-                <TableHead>Expiry</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {discounts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center">
-                    No discounts found. Add one to get started.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                discounts.map((discount) => {
-                  return (
-                    <TableRow key={discount._id}>
-                      <TableCell className="font-medium">{discount.name}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {/* <TypeIcon className="size-4 text-muted-foreground" /> */}
-                          {formatValue(discount.value, discount.type)}
+      </div>
+
+      {/* Table */}
+      <div className="rounded-md border">
+        <table className="w-full caption-bottom text-sm">
+            <thead className="[&_tr]:border-b">
+              <tr className="border-b bg-muted/50 hover:bg-muted/50">
+                <th scope="col" className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Name
+                </th>
+                <th scope="col" className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Value
+                </th>
+                <th scope="col" className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Products
+                </th>
+                <th scope="col" className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Expiry
+                </th>
+                <th scope="col" className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Description
+                </th>
+                <th scope="col" className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="[&_tr:last-child]:border-0">
+              {loading ? (
+                <tr className="border-b">
+                  <td colSpan={6} className="p-4">
+                    <div className="space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex items-center gap-4">
+                          <Skeleton className="h-8 w-32" />
+                          <Skeleton className="h-8 w-20" />
+                          <Skeleton className="h-8 w-24" />
+                          <Skeleton className="h-8 w-28" />
+                          <Skeleton className="h-8 flex-1" />
+                          <Skeleton className="h-8 w-8" />
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {discount.products?.length || 0} product{(discount.products?.length || 0) !== 1 ? 's' : ''}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {discount.expiry ? (
-                          <div className="flex items-center gap-1 text-sm">
-                            {/* <CalendarIcon className="size-3" /> */}
-                            {dayjs(discount.expiry).format('DD/MM/YYYY')}
-                          </div>
+                      ))}
+                    </div>
+                  </td>
+                </tr>
+              ) : discounts.length === 0 ? (
+                <tr className="border-b">
+                  <td colSpan={6} className="p-4 text-center py-8">
+                    <p className="text-muted-foreground">No discounts found. Add one to get started.</p>
+                  </td>
+                </tr>
+              ) : (
+                discounts.map((discount) => (
+                  <tr key={discount._id} className="border-b hover:bg-muted/50">
+                    <td className="px-4 py-3 font-medium align-middle">
+                      {discount.name}
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <div className="flex items-center gap-2">
+                        {discount.type === 'percent' ? (
+                          <Percent className="h-4 w-4 text-muted-foreground" />
                         ) : (
-                          <span className="text-muted-foreground">No expiry</span>
+                          <DollarSign className="h-4 w-4 text-muted-foreground" />
                         )}
-                      </TableCell>
-                      <TableCell>{discount.description || '-'}</TableCell>
-                      <TableCell className="text-right flex gap-2 justify-end">
-                        <Edit className="size-4 cursor-pointer" onClick={() => handleEdit(discount)}/>
-                        <Trash2 className="size-4 cursor-pointer" onClick={() => openDeleteDialog(discount)}/>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                        {formatValue(discount.value, discount.type)}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <Badge variant="secondary">
+                        {discount.products?.length || 0} product{(discount.products?.length || 0) !== 1 ? 's' : ''}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      {discount.expiry ? (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          <span>{dayjs(discount.expiry).format('DD/MM/YYYY')}</span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">No expiry</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <span className="text-muted-foreground">
+                        {discount.description || '-'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right align-middle">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="cursor-pointer h-8 w-8" 
+                            aria-label="Discount actions" 
+                            title="Discount actions"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="cursor-pointer" 
+                            onClick={() => handleEdit(discount)}
+                          >
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit discount
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="cursor-pointer" 
+                            onClick={() => openDeleteDialog(discount)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete discount
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))
               )}
-            </TableBody>
-          </Table>
-        )}
+            </tbody>
+          </table>
+      </div>
 
-
-
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This will permanently delete the discount "{currentDiscount?.name}".
-                This action cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </CardContent>
-    </Card>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the discount "{currentDiscount?.name}".
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 } 
