@@ -53,7 +53,7 @@ export async function GET(request) {
     const transactions = await Transaction.find(query)
       .populate('discount', 'name value type')
       .populate('employee', 'name')
-      .populate('customer', 'name phone')
+      .populate('customer', 'name email phone')
       .populate('location', 'name')
       .sort({ createdAt: -1 })
       .lean();

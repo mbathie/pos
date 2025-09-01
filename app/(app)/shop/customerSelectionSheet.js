@@ -8,9 +8,11 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Check, AlertCircle, ChevronsUpDown, X } from 'lucide-react'
+import { Check, AlertCircle, ChevronsUpDown, X, ChevronDown, ChevronUp, UserPlus } from 'lucide-react'
 import { cn } from "@/lib/utils"
 import dayjs from 'dayjs'
+import { Input } from "@/components/ui/input"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 export default function CustomerSelectionSheet({ 
   open, 
@@ -26,6 +28,9 @@ export default function CustomerSelectionSheet({
   const [selectedCustomers, setSelectedCustomers] = useState([])
   const [checkedItems, setCheckedItems] = useState({})
   const [comboboxOpen, setComboboxOpen] = useState(false)
+  const [showNewCustomer, setShowNewCustomer] = useState(false)
+  const [newCustomer, setNewCustomer] = useState({ name: '', email: '', phone: '' })
+  const [creatingCustomer, setCreatingCustomer] = useState(false)
 
   // Calculate needed slots and check if we have shop items
   const getNeededSlots = () => {
@@ -57,6 +62,9 @@ export default function CustomerSelectionSheet({
 
   const slots = getNeededSlots()
   const isShopOnly = slots.hasShopItems && slots.total === 0
+  
+  // Check if any products require waiver
+  const anyProductRequiresWaiver = cart.products?.some(product => product.waiverRequired) || false
 
   // Fetch recent customers (waiver in last 4 hours)
   useEffect(() => {
@@ -184,6 +192,39 @@ export default function CustomerSelectionSheet({
   }
 
   const { adultCount, minorCount } = getSelectionCount()
+
+  // Handle creating a new customer
+  const handleCreateCustomer = async () => {
+    if (!newCustomer.name || !newCustomer.email) {
+      return
+    }
+    
+    setCreatingCustomer(true)
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newCustomer)
+      })
+      
+      if (response.ok) {
+        const createdCustomer = await response.json()
+        // Add the new customer to selected customers
+        setSelectedCustomers(prev => [...prev, createdCustomer])
+        setCheckedItems(prev => ({
+          ...prev,
+          [createdCustomer._id]: { customer: true, dependents: {} }
+        }))
+        // Reset form
+        setNewCustomer({ name: '', email: '', phone: '' })
+        setShowNewCustomer(false)
+      }
+    } catch (error) {
+      console.error('Error creating customer:', error)
+    } finally {
+      setCreatingCustomer(false)
+    }
+  }
 
   // Handle confirmation
   const handleConfirm = () => {
@@ -355,6 +396,63 @@ export default function CustomerSelectionSheet({
             </Popover>
           </div>
 
+          {/* New Customer Form - Only show if no waiver required */}
+          {!anyProductRequiresWaiver && (
+            <Collapsible open={showNewCustomer} onOpenChange={setShowNewCustomer}>
+              <CollapsibleTrigger asChild>
+                <Button variant="outline" className="w-full justify-between cursor-pointer">
+                  <div className="flex items-center gap-2">
+                    <UserPlus className="h-4 w-4" />
+                    <span>New Customer</span>
+                  </div>
+                  {showNewCustomer ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-3 pt-3">
+                <div className="space-y-2">
+                  <Label htmlFor="new-customer-name">Name *</Label>
+                  <Input
+                    id="new-customer-name"
+                    placeholder="Enter customer name"
+                    value={newCustomer.name}
+                    onChange={(e) => setNewCustomer(prev => ({ ...prev, name: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-customer-email">Email *</Label>
+                  <Input
+                    id="new-customer-email"
+                    type="email"
+                    placeholder="Enter customer email"
+                    value={newCustomer.email}
+                    onChange={(e) => setNewCustomer(prev => ({ ...prev, email: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new-customer-phone">Phone</Label>
+                  <Input
+                    id="new-customer-phone"
+                    type="tel"
+                    placeholder="Enter customer phone (optional)"
+                    value={newCustomer.phone}
+                    onChange={(e) => setNewCustomer(prev => ({ ...prev, phone: e.target.value }))}
+                  />
+                </div>
+                <Button 
+                  className="w-full cursor-pointer"
+                  onClick={handleCreateCustomer}
+                  disabled={!newCustomer.name || !newCustomer.email || creatingCustomer}
+                >
+                  {creatingCustomer ? 'Creating...' : 'Add Customer'}
+                </Button>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
           {/* Selected Customer Details */}
           {selectedCustomers.length > 0 && (
             <div className="space-y-4">
@@ -391,10 +489,12 @@ export default function CustomerSelectionSheet({
                       >
                         <X className="h-4 w-4" />
                       </Button>
-                      <Badge variant="outline" className="text-xs">
-                        <Check className="h-3 w-3 mr-1" />
-                        Waiver
-                      </Badge>
+                      {customer.waiver?.agree && (
+                        <Badge variant="outline" className="text-xs">
+                          <Check className="h-3 w-3 mr-1" />
+                          Waiver
+                        </Badge>
+                      )}
                       <Badge variant="secondary" className="text-xs">
                         Adult
                       </Badge>

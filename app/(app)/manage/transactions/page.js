@@ -28,9 +28,12 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  User
+  User,
+  Mail
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ResendReceiptDialog } from "@/components/resend-receipt-dialog";
+import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -49,6 +52,7 @@ export default function TransactionsPage() {
   const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [resendReceiptDialog, setResendReceiptDialog] = useState({ open: false, transaction: null });
 
   // Fetch transactions when filters change
   useEffect(() => {
@@ -469,9 +473,51 @@ export default function TransactionsPage() {
                           >
                             View details
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer">
-                            Download receipt
-                          </DropdownMenuItem>
+                          {transaction.customer?.email ? (
+                            <DropdownMenuItem 
+                              className="cursor-pointer"
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                // Directly send the receipt without dialog
+                                try {
+                                  const response = await fetch('/api/send-receipt', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      email: transaction.customer.email,
+                                      transactionId: transaction._id
+                                    })
+                                  });
+                                  
+                                  if (response.ok) {
+                                    toast.success('Send sent', {
+                                      description: `Receipt has been sent to ${transaction.customer.email}`
+                                    });
+                                  } else {
+                                    const data = await response.json();
+                                    toast.error('Failed to send receipt', {
+                                      description: data.error || 'An error occurred'
+                                    });
+                                  }
+                                } catch (error) {
+                                  console.error('Error sending receipt:', error);
+                                  toast.error('Failed to send receipt');
+                                }
+                              }}
+                            >
+                              Send receipt
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem 
+                              className="cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setResendReceiptDialog({ open: true, transaction });
+                              }}
+                            >
+                              Send receipt
+                            </DropdownMenuItem>
+                          )}
                           {transaction.status === 'succeeded' && (
                             <>
                               <DropdownMenuSeparator />
@@ -548,6 +594,13 @@ export default function TransactionsPage() {
           )}
         </div>
       </div>
+      
+      {/* Resend Receipt Dialog - only for transactions without email */}
+      <ResendReceiptDialog
+        open={resendReceiptDialog.open}
+        onOpenChange={(open) => setResendReceiptDialog({ open, transaction: open ? resendReceiptDialog.transaction : null })}
+        transaction={resendReceiptDialog.transaction}
+      />
     </div>
   );
 }

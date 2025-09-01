@@ -13,7 +13,7 @@ import { useGlobals } from "@/lib/globals"
 import { useCard } from './useCard'
 import { useCash } from "./useCash";
 import { Separator } from "@radix-ui/react-separator";
-import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail, Plus, OctagonAlert } from "lucide-react";
+import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail, Plus, OctagonAlert, Check } from "lucide-react";
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -855,16 +855,20 @@ export default function Page() {
                         <div className="whitespace-nowrap flex items-center gap-1">
                           {cIdx + 1}. {price.name}
                           {p.waiverRequired && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <OctagonAlert className="h-4 w-4 text-chart-4" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Must connect a customer who's signed a waiver</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            c.customer ? (
+                              <Check className="h-4 w-4 text-primary" />
+                            ) : (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <OctagonAlert className="h-4 w-4 text-chart-4" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Must connect a customer who's signed a waiver</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )
                           )}
                         </div>
                         <div className="flex justify-end w-full text-right">
@@ -913,16 +917,20 @@ export default function Page() {
                         <div className="whitespace-nowrap flex items-center gap-1">
                           {cIdx + 1}. {price.name}
                           {p.waiverRequired && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <OctagonAlert className="h-4 w-4 text-chart-4" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Must connect a customer who's signed a waiver</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            c.customer ? (
+                              <Check className="h-4 w-4 text-primary" />
+                            ) : (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <OctagonAlert className="h-4 w-4 text-chart-4" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Must connect a customer who's signed a waiver</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )
                           )}
                         </div>
                         <div className="flex justify-end w-full text-right">

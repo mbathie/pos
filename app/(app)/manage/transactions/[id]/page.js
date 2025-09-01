@@ -5,7 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CreditCard, Banknote, CheckCircle, XCircle, Clock, Undo2 } from 'lucide-react';
+import { ArrowLeft, CreditCard, Banknote, CheckCircle, XCircle, Clock, Undo2, Mail, MoreHorizontal } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ResendReceiptDialog } from '@/components/resend-receipt-dialog';
+import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -16,6 +19,7 @@ export default function TransactionDetailsPage() {
   const router = useRouter();
   const [transaction, setTransaction] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [resendReceiptDialog, setResendReceiptDialog] = useState(false);
 
   useEffect(() => {
     if (params.id) {
@@ -421,15 +425,69 @@ export default function TransactionDetailsPage() {
     <div className="mx-4 mt-4- space-y-4">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="size-4 mr-2-" />
+        <Button variant="ghost" size="sm" onClick={() => router.back()} className="cursor-pointer">
+          <ArrowLeft className="size-4 mr-2" />
           Back
         </Button>
         <div className="flex-1" />
-          <Button variant="outline" size="sm">
-           <Undo2 className="size-4 mr-2" />
-           Refund
-         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="cursor-pointer">
+              <MoreHorizontal className="size-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {transaction?.customer?.email ? (
+              <DropdownMenuItem 
+                className="cursor-pointer"
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/send-receipt', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        email: transaction.customer.email,
+                        transactionId: transaction._id
+                      })
+                    });
+                    
+                    if (response.ok) {
+                      toast.success('Receipt sent', {
+                        description: `Receipt has been sent to ${transaction.customer.email}`
+                      });
+                    } else {
+                      const data = await response.json();
+                      toast.error('Failed to send receipt', {
+                        description: data.error || 'An error occurred'
+                      });
+                    }
+                  } catch (error) {
+                    console.error('Error sending receipt:', error);
+                    toast.error('Failed to send receipt');
+                  }
+                }}
+              >
+                Send receipt
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem 
+                className="cursor-pointer"
+                onClick={() => setResendReceiptDialog(true)}
+              >
+                <Mail className="mr-2 h-4 w-4" />
+                Send receipt
+              </DropdownMenuItem>
+            )}
+            {transaction?.status === 'succeeded' && (
+              <DropdownMenuItem className="cursor-pointer">
+                <Undo2 className="mr-2 h-4 w-4" />
+                Refund transaction
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Transaction Summary */}
@@ -500,9 +558,21 @@ export default function TransactionDetailsPage() {
                 <span>{formatCurrency(transaction.tax)}</span>
               </div>
               <div className="flex justify-between border-t pt-2">
-                <span>Total</span>
-                <span>{formatCurrency(transaction.total)}</span>
+                <span className="font-medium">Total</span>
+                <span className="font-medium">{formatCurrency(transaction.total)}</span>
               </div>
+              {transaction.paymentMethod === 'cash' && transaction.cash && (
+                <>
+                  <div className="flex justify-between">
+                    <span>Cash Tendered</span>
+                    <span>{formatCurrency(transaction.cash.received)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Change</span>
+                    <span>{formatCurrency(transaction.cash.change)}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </CardContent>
@@ -528,6 +598,13 @@ export default function TransactionDetailsPage() {
       {productGroups.membership && (
         <MembershipProductsCard products={productGroups.membership} />
       )}
+
+      {/* Resend Receipt Dialog - only for transactions without email */}
+      <ResendReceiptDialog
+        open={resendReceiptDialog}
+        onOpenChange={setResendReceiptDialog}
+        transaction={transaction}
+      />
     </div>
   );
 } 

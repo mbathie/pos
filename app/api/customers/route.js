@@ -17,7 +17,7 @@ export async function POST(req) {
   try {
     // const memberId = await generateCustomerId();
 
-    const customer = await Customer.create({
+    const customerData = {
       name, email, phone, assigned: false,
       // memberId,
       address: {
@@ -26,13 +26,19 @@ export async function POST(req) {
         state,
         postcode
       },
-      waiver: {
+      orgs: [employee.org._id],
+    };
+
+    // Only add waiver if signature and agree are provided
+    if (signature && agree) {
+      customerData.waiver = {
         signature,
         agree,
         signed: new Date()
-      },
-      orgs: [employee.org._id],
-    });
+      };
+    }
+
+    const customer = await Customer.create(customerData);
     return NextResponse.json(customer, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

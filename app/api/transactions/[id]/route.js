@@ -20,7 +20,7 @@ export async function GET(request, { params }) {
     })
       .populate('discount', 'name value type')
       .populate('employee', 'name')
-      .populate('customer', 'name phone')
+      .populate('customer', 'name email phone')
       .lean();
 
     if (!transaction) {
