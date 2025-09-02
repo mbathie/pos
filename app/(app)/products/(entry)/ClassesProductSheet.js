@@ -13,7 +13,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Loader2, CheckCircle, Save, Trash2, Plus, Info, Trash, CalendarIcon } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ProductIcon } from '@/components/product-icon';
-import ProductInstructions from '@/components/product-instructions';
+import ProductInstructions from '@/app/(app)/products/(entry)/ProductInstructions';
+import ProductTerms from '@/app/(app)/products/(entry)/ProductTerms';
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -358,9 +359,9 @@ export default function ClassesProductSheet({
               />
             </div>
 
-            <div className='flex flex-col gap-2'>
+            <div className='flex flex-col gap-2 w-48'>
               <div className='flex items-center gap-2'>
-                <Label>Duration (min)</Label>
+                <Label className='text-nowrap'>Duration (min)</Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -385,8 +386,16 @@ export default function ClassesProductSheet({
 
           <div>
             <ProductInstructions
-              value={product.instructions}
-              onChange={(content) => updateProduct({ instructions: content })}
+              value={product.instructionsContent}
+              onChange={(content) => updateProduct({ instructionsContent: content })}
+            />
+          </div>
+
+          <div>
+            <ProductTerms
+              value={product.tandcContent}
+              onChange={(content) => updateProduct({ tandcContent: content })}
+              productId={product._id}
             />
           </div>
 

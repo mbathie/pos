@@ -1,6 +1,6 @@
 25th Aug 2025
 DONE - todo: purchase for 2x adults class - customer selection widget Panel not ideal UX
-- email receipts not going out for shop items
+DONE - email receipts not going out for shop items
 - Product T&C
 - test location selection, make sure all pages filter for selected employee location
 DONE - memberships
@@ -9,9 +9,9 @@ DONE - class products setup, define different class times per day
   - discount editor via a Sheet as well as on settings page
     so you can pop it open during memebership product creation as well.
 DONE - attaching customers to transactions
-  - waiver required support
-- re-test Stripe payments after massive changes
-- re-test emails after massive changes
+DONE  - waiver required support
+DONE - re-test Stripe payments after massive changes
+DONE - re-test emails after massive changes
 
 
 

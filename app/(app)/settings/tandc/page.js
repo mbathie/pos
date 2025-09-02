@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { toast } from 'sonner'
 import WysiwygEditor from '@/components/wysiwyg-editor'
 
-export default function WaiverSettingsPage() {
+export default function TermsAndConditionsSettingsPage() {
   const [content, setContent] = useState('')
   const [originalContent, setOriginalContent] = useState('')
   const [loading, setLoading] = useState(false)
@@ -18,28 +18,28 @@ export default function WaiverSettingsPage() {
 
   // Content state is managed here and passed to the WYSIWYG editor
 
-  // Load existing waiver content
+  // Load existing terms and conditions content
   useEffect(() => {
-    const fetchWaiverContent = async () => {
+    const fetchTandCContent = async () => {
       setLoading(true)
       try {
-        const res = await fetch('/api/waiver/content')
+        const res = await fetch('/api/orgs/tandc')
         if (res.ok) {
           const data = await res.json()
-          const loadedContent = data.content || getDefaultWaiverContent()
+          const loadedContent = data.content || getDefaultTandCContent()
           setContent(loadedContent)
           setOriginalContent(loadedContent)
         } else {
-          // Set default content if no waiver exists
-          const defaultContent = getDefaultWaiverContent()
+          // Set default content if no terms and conditions exist
+          const defaultContent = getDefaultTandCContent()
           setContent(defaultContent)
           setOriginalContent(defaultContent)
         }
       } catch (error) {
-        console.error('Error fetching waiver content:', error)
-        toast.error('Failed to load waiver content')
+        console.error('Error fetching terms and conditions content:', error)
+        toast.error('Failed to load terms and conditions content')
         // Set default content on error
-        const defaultContent = getDefaultWaiverContent()
+        const defaultContent = getDefaultTandCContent()
         setContent(defaultContent)
         setOriginalContent(defaultContent)
       } finally {
@@ -47,28 +47,43 @@ export default function WaiverSettingsPage() {
       }
     }
 
-    fetchWaiverContent()
+    fetchTandCContent()
   }, [])
 
-  const getDefaultWaiverContent = () => {
+  const getDefaultTandCContent = () => {
     return `
-      <h2>Liability Waiver and Release Agreement</h2>
-      <p><strong>Please read this document carefully before signing.</strong></p>
+      <h2>Terms and Conditions</h2>
+      <p><strong>Effective Date: [Date]</strong></p>
       
-      <h3>Assumption of Risk</h3>
-      <p>I understand that participation in activities involves inherent risks, including but not limited to physical injury, property damage, or other harm. I voluntarily assume all risks associated with my participation.</p>
+      <h3>1. Acceptance of Terms</h3>
+      <p>By purchasing membership, classes, or services, you agree to be bound by these Terms and Conditions. If you do not agree with any part of these terms, please do not use our services.</p>
       
-      <h3>Release of Liability</h3>
-      <p>I hereby release, waive, discharge, and covenant not to sue the organization, its officers, employees, agents, and representatives from any and all liability, claims, demands, actions, or causes of action arising out of or related to any loss, damage, or injury that may be sustained by me during participation in activities.</p>
+      <h3>2. Membership</h3>
+      <p>Memberships are personal and non-transferable. Membership fees are non-refundable unless otherwise stated. Members must present valid identification upon request.</p>
       
-      <h3>Medical Treatment</h3>
-      <p>I authorize the organization to provide or arrange for emergency medical treatment if necessary. I understand that I am responsible for any medical expenses incurred.</p>
+      <h3>3. Payment Terms</h3>
+      <p>All fees must be paid in advance. We accept cash, credit cards, and other approved payment methods. Recurring memberships will be automatically charged according to the billing cycle selected.</p>
       
-      <h3>Photography Release</h3>
-      <p>I grant permission for photographs or videos taken during activities to be used for promotional purposes.</p>
+      <h3>4. Cancellation Policy</h3>
+      <p>Membership cancellations must be submitted in writing at least 30 days before the next billing cycle. Class bookings must be cancelled at least 24 hours in advance for a full refund.</p>
       
-      <h3>Agreement</h3>
-      <p>By signing below, I acknowledge that I have read and understood this waiver, and I agree to be bound by its terms.</p>
+      <h3>5. Code of Conduct</h3>
+      <p>All members and guests must behave respectfully towards staff and other members. We reserve the right to terminate membership for violations of our code of conduct without refund.</p>
+      
+      <h3>6. Facility Rules</h3>
+      <p>Members must follow all posted facility rules and regulations. Proper attire and hygiene standards must be maintained at all times.</p>
+      
+      <h3>7. Privacy Policy</h3>
+      <p>We respect your privacy and protect your personal information in accordance with applicable privacy laws. Your information will not be shared with third parties without your consent.</p>
+      
+      <h3>8. Limitation of Liability</h3>
+      <p>To the maximum extent permitted by law, we shall not be liable for any indirect, incidental, special, or consequential damages arising from the use of our services.</p>
+      
+      <h3>9. Modifications</h3>
+      <p>We reserve the right to modify these terms at any time. Changes will be effective immediately upon posting. Continued use of our services constitutes acceptance of modified terms.</p>
+      
+      <h3>10. Contact Information</h3>
+      <p>For questions about these Terms and Conditions, please contact us at [contact information].</p>
     `
   }
 
@@ -82,7 +97,7 @@ export default function WaiverSettingsPage() {
     const autoSaveTimer = setTimeout(async () => {
       setSaving(true)
       try {
-        const res = await fetch('/api/waiver/content', {
+        const res = await fetch('/api/orgs/tandc', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ content })
@@ -105,7 +120,7 @@ export default function WaiverSettingsPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const res = await fetch('/api/waiver/content', {
+      const res = await fetch('/api/tandc/content', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content })
@@ -114,18 +129,17 @@ export default function WaiverSettingsPage() {
       if (res.ok) {
         setOriginalContent(content)
         setLastSaved(Date.now())
-        toast.success('Waiver content saved successfully')
+        toast.success('Terms and conditions saved successfully')
       } else {
-        toast.error('Failed to save waiver content')
+        toast.error('Failed to save terms and conditions')
       }
     } catch (error) {
       console.error('Save error:', error)
-      toast.error('Failed to save waiver content')
+      toast.error('Failed to save terms and conditions')
     } finally {
       setSaving(false)
     }
   }
-
 
   return (
     <div className="w-full mx-auto px-4 mt-2 mb-12 space-y-6">
@@ -166,24 +180,18 @@ export default function WaiverSettingsPage() {
 
       {/* Header */}
       <div>
-        <TypographyLarge>Waiver Settings</TypographyLarge>
+        <TypographyLarge>Terms & Conditions Settings</TypographyLarge>
         <TypographyMuted>
-          Customize the legal waiver that customers must agree to when signing up for classes, courses, or activities. This content will be displayed to customers during the registration process.
+          Customize the terms and conditions that customers must agree to when making purchases or signing up for services. This content will be displayed during the checkout and registration process.
         </TypographyMuted>
       </div>
 
       {/* Content Editor */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      ) : (
-        <WysiwygEditor
-          value={content}
-          onChange={setContent}
-          placeholder="Enter waiver content here..."
-        />
-      )}
+      <WysiwygEditor 
+        value={content}
+        onChange={setContent}
+        placeholder="Enter your terms and conditions content here..."
+      />
     </div>
   )
 }

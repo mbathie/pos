@@ -12,7 +12,7 @@ import GeneralPricing from './GeneralPricing'
 import Delete from '../Delete'
 import AddProduct from './AddProduct'
 import IconSelect from '@/components/icon-select'
-import ProductInstructions from '@/components/product-instructions'
+import ProductInstructions from '@/app/(app)/products/(entry)/ProductInstructions'
 import { Label } from '@/components/ui/label'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 

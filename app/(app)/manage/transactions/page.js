@@ -259,7 +259,7 @@ export default function TransactionsPage() {
   };
 
   return (
-    <div className="container mr-auto px-4 pt-2 w-full h-full flex flex-col py-4">
+    <div className="px-4 pt-2 w-full h-full flex flex-col py-4">
       {/* Header */}
       <div className="mb-4 flex-shrink-0">
         <h1 className="text-xl font-semibold mb-1">Transactions</h1>

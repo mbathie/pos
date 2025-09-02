@@ -10,7 +10,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Loader2, CheckCircle, Save, Trash2, Plus, Trash, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ProductIcon } from '@/components/product-icon';
-import ProductInstructions from '@/components/product-instructions';
+import ProductInstructions from '@/app/(app)/products/(entry)/ProductInstructions';
+import ProductTerms from '@/app/(app)/products/(entry)/ProductTerms';
 import { NumberInput } from '@/components/ui/number-input';
 
 export default function MembershipsProductSheet({ 
@@ -260,8 +261,15 @@ export default function MembershipsProductSheet({
             
             {/* Instructions */}
             <ProductInstructions
-              value={product.instructions}
-              onChange={(content) => updateProduct({ instructions: content })}
+              value={product.instructionsContent}
+              onChange={(content) => updateProduct({ instructionsContent: content })}
+            />
+            
+            {/* Terms & Conditions */}
+            <ProductTerms
+              value={product.tandcContent}
+              onChange={(content) => updateProduct({ tandcContent: content })}
+              productId={product._id}
             />
             
             {/* Waiver Required */}

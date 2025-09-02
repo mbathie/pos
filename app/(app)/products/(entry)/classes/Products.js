@@ -15,7 +15,7 @@ import { useAutoSave } from '../../useAutoSave';
 
 import { Checkbox } from "@/components/ui/checkbox"
 import IconSelect from '@/components/icon-select'
-import ProductInstructions from '@/components/product-instructions'
+import ProductInstructions from '@/app/(app)/products/(entry)/ProductInstructions'
 import { Textarea } from '@/components/ui/textarea'
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -311,7 +311,7 @@ export default function Page({products, setProducts, categoryName, type}) {
 
                 <div className='flex flex-col gap-2'>
                   <div className='flex items-center gap-2'>
-                    <Label>Duration (min)</Label>
+                    <Label>Duration (m)</Label>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>

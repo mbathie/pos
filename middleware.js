@@ -46,12 +46,14 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
-  // Allow all /api/auth/*, /api/unauth/*, and /api/c/* routes through (customer endpoints)
+  // Allow all /api/auth/*, /api/unauth/*, /api/public/*, and /api/c/* routes through
   if (
     pathname.startsWith("/api/auth/") ||
     pathname === "/api/auth" ||
     pathname.startsWith("/api/unauth/") ||
     pathname === "/api/unauth" ||
+    pathname.startsWith("/api/public/") ||
+    pathname === "/api/public" ||
     pathname.startsWith("/api/c/") ||
     pathname === "/api/c"
   ) {

@@ -274,6 +274,22 @@ export default function Page() {
             <Separator className='border-t border-muted col-span-2' />
 
             <div>
+              <div>Terms & Conditions</div>
+              <TypographyMuted>
+                Manage the terms and conditions that customers must agree to when making purchases or signing up for services.
+              </TypographyMuted>
+            </div>
+            <div>
+              <Link href="/settings/tandc">
+                <Button>
+                  Edit Terms
+                </Button>
+              </Link>
+            </div>
+
+            <Separator className='border-t border-muted col-span-2' />
+
+            <div>
               <div>Waiver Signup Page</div>
               <TypographyMuted>
                 For new customers wanting to join, this is the URL to direct them to. You can also print the QR place it at a convenient location

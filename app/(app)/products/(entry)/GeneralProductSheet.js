@@ -9,7 +9,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { Loader2, CheckCircle, Save, Trash2, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ProductIcon } from '@/components/product-icon';
-import ProductInstructions from '@/components/product-instructions';
+import ProductInstructions from '@/app/(app)/products/(entry)/ProductInstructions';
 import GeneralPricing from './GeneralPricing';
 
 export default function GeneralProductSheet({ 
@@ -153,10 +153,10 @@ export default function GeneralProductSheet({
 
           <div>
             <ProductInstructions
-              value={product.instructions}
+              value={product.instructionsContent}
               onChange={(content) => {
                 setProducts(draft => {
-                  draft[pIdx].instructions = content;
+                  draft[pIdx].instructionsContent = content;
                 });
               }}
             />

@@ -17,8 +17,6 @@ export async function POST(req, { params }) {
     org: employee.org._id,
   });
 
-  console.log(folder)
-
   return NextResponse.json({ folder }, { status: 200 });
 }
 
@@ -51,8 +49,6 @@ export async function GET(req) {
   query.$or = [{ name: { $regex: regex } }]
   
   const folders = await Folder.find(query).sort({ name: 1 })
-
-  console.log(folders)
 
   return NextResponse.json(folders)
 }
