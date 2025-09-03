@@ -603,7 +603,7 @@ export default function Page() {
               </div>
               
             {/* Save status indicator (removed All changes saved) */}
-            {category._id && products.length > 0 && (
+            {/* {category._id && products.length > 0 && (
               <div className="pb-2">
                 {isAnySaving && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -618,7 +618,7 @@ export default function Page() {
                   </div>
                 )}
               </div>
-            )}
+            )} */}
 
 
 

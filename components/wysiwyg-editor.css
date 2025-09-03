@@ -3,6 +3,7 @@
   outline: none !important;
   border: none !important;
   min-height: 150px;
+  color: inherit; /* Inherit the default text color from parent */
 }
 
 .ProseMirror:focus {
@@ -35,6 +36,8 @@
 
 .ProseMirror p {
   margin: 0.5em 0;
+  font-size: inherit; /* Inherit font size from parent */
+  line-height: inherit; /* Inherit line height for consistency */
 }
 
 .ProseMirror ul {

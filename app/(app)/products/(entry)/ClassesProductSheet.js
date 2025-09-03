@@ -13,8 +13,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Loader2, CheckCircle, Save, Trash2, Plus, Info, Trash, CalendarIcon } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ProductIcon } from '@/components/product-icon';
-import ProductInstructions from '@/app/(app)/products/(entry)/ProductInstructions';
-import ProductTerms from '@/app/(app)/products/(entry)/ProductTerms';
+import ProductInstructions from './ProductInstructions';
+import ProductTerms from './ProductTerms';
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 

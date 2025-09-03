@@ -65,26 +65,6 @@ export default function Page() {
           <div className='text-sm text-muted-foreground'>General admission products for untimed events</div>
         </div>
         
-        {/* Overall save status */}
-        <div className="ml-4">
-          {isAnySaving ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              <span>Saving changes...</span>
-            </div>
-          ) : hasAnyUnsaved ? (
-            <div className="flex items-center gap-2 text-sm text-chart-4">
-              <Save className="h-3 w-3 animate-pulse" />
-              <span>Unsaved changes</span>
-            </div>
-          ) : products.some(p => p._id) && (
-            <div className="flex items-center gap-2 text-sm text-primary">
-              <CheckCircle className="h-3 w-3" />
-              <span>All changes saved</span>
-            </div>
-          )}
-        </div>
-        
         <Button size="sm" variant="outline" onClick={handleAddProduct}>
           <Plus className="h-4 w-4 mr-1" />
           New Product

@@ -49,7 +49,7 @@ export default function Page({products, setProducts, categoryName, type}) {
         <div className='text-lg- font-semibold mb-2'>Setup Class and Course Products</div>
         
         {/* Overall save status */}
-        <div className="ml-4 mb-2">
+        {/* <div className="ml-4 mb-2">
           {isAnySaving ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />
@@ -66,7 +66,7 @@ export default function Page({products, setProducts, categoryName, type}) {
               <span>All changes saved</span>
             </div>
           )}
-        </div>
+        </div> */}
         
         <div className='flex-1'/>
         <Button size="sm" className="mr-2" onClick={() => addProduct()}>

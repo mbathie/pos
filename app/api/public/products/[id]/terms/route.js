@@ -16,7 +16,7 @@ export async function GET(request, { params }) {
         select: 'org',
         populate: {
           path: 'org',
-          select: 'name logo tandcContent'
+          select: 'name logo tandcContent addressLine suburb state postcode phone email'
         }
       })
       .lean()
@@ -44,7 +44,13 @@ export async function GET(request, { params }) {
       org: {
         id: org?._id,
         name: org?.name,
-        logo: org?.logo
+        logo: org?.logo,
+        addressLine: org?.addressLine,
+        suburb: org?.suburb,
+        state: org?.state,
+        postcode: org?.postcode,
+        phone: org?.phone,
+        email: org?.email
       },
       terms,
       isProductSpecific

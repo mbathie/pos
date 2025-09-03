@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
 import { NumberInput } from "@/components/ui/number-input"
+import { z } from 'zod'
 
 import { useGlobals } from "@/lib/globals"
 import { useCard } from './useCard'
@@ -21,6 +22,9 @@ import CustomerSelectionSheet from './customerSelectionSheet'
 import DiscountPinDialog from '@/components/pin-dialog-discount'
 import { hasPermission } from '@/lib/permissions'
 // import { User } from "lucide-react";
+
+// Email validation schema
+const emailSchema = z.string().email('Please enter a valid email address');
 
 const keypad = ['1','2','3','4','5','6','7','8','9','.','0','AC'];
 
@@ -69,6 +73,7 @@ export default function Page() {
   // Email receipt state
   const [receiptEmail, setReceiptEmail] = useState('')
   const [sendingReceipt, setSendingReceipt] = useState(false)
+  const [isValidEmail, setIsValidEmail] = useState(false)
   
   // Check if cart contains membership products
   const hasMembershipProducts = cart.products.some(product => product.type === 'membership')
@@ -79,6 +84,20 @@ export default function Page() {
       pr.customers?.some(c => !c.customer?._id)
     )
   )
+
+  // Validate email whenever it changes
+  useEffect(() => {
+    if (receiptEmail) {
+      try {
+        emailSchema.parse(receiptEmail)
+        setIsValidEmail(true)
+      } catch {
+        setIsValidEmail(false)
+      }
+    } else {
+      setIsValidEmail(false)
+    }
+  }, [receiptEmail])
 
   // Auto-switch to card tab if membership products are present
   useEffect(() => {
@@ -374,7 +393,7 @@ export default function Page() {
 
     // Clear snapshot when user navigates away
     return () => {
-      if (pathname !== '/shop/retail/payment') {
+      if (pathname !== '/shop/payment') {
         handleRouteChange()
       }
     }
@@ -550,8 +569,11 @@ export default function Page() {
 
   // Handle sending receipt via email
   const handleSendReceipt = async () => {
-    if (!receiptEmail || !receiptEmail.includes('@')) {
-      toast.error('Please enter a valid email address')
+    // Validate email using Zod
+    try {
+      emailSchema.parse(receiptEmail)
+    } catch (error) {
+      toast.error(error.errors[0]?.message || 'Please enter a valid email address')
       return
     }
 
@@ -1037,7 +1059,8 @@ export default function Page() {
                   />
                   <Button
                     onClick={handleSendReceipt}
-                    disabled={sendingReceipt || !receiptEmail}
+                    disabled={sendingReceipt || !isValidEmail}
+                    className="cursor-pointer"
                   >
                     {sendingReceipt ? (
                       <Loader2 className="size-4 animate-spin" />

@@ -286,7 +286,8 @@ export async function POST(req, { params }) {
       'stripe.subscriptions': subscriptions,
       status: 'subscription_active'
     }, { new: true })
-      .populate('customer', 'name email phone memberId');
+      .populate('customer', 'name email phone memberId')
+      .populate('org', 'name email phone addressLine suburb state postcode logo');
 
     // Handle post-transaction success operations (only non-membership related)
     // We're not calling handleTransactionSuccess because it would create duplicate membership records
@@ -319,7 +320,7 @@ export async function POST(req, { params }) {
           await sendTransactionReceipt({
             transaction: updatedTransaction,
             recipientEmail: customerEmail,
-            org: employee.org
+            org: updatedTransaction.org || employee.org
           });
         }
         

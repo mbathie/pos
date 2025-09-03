@@ -240,7 +240,7 @@ export default function Cart({ asSheet = false, onClose }) {
         </div>
 
         <div className='flex flex-col gap-2 mt-2'>
-          <Link href="/shop/retail/payment" passHref>
+          <Link href="/shop/payment" passHref>
             <Button
               type="submit"
               className="w-full"

@@ -35,7 +35,7 @@ export async function POST(req) {
     const transaction = await Transaction.findById(transactionId)
       .populate('customer', 'name email phone memberId')
       .populate('employee', 'name')
-      .populate('org', 'name email phone')
+      .populate('org', 'name email phone addressLine suburb state postcode logo')
       .populate('location', 'name')
       .lean();
 

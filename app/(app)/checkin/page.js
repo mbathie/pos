@@ -43,7 +43,7 @@ export default function CheckInPage() {
   useEffect(() => {
     const fetchOrg = async () => {
       try {
-        const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/org')
+        const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/orgs')
         const data = await res.json()
         setOrg(data.org)
       } catch (error) {

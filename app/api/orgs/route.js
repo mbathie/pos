@@ -15,12 +15,22 @@ export async function GET() {
 export async function POST(req) {
   await connectDB();
 
-  const { name } = await req.json();
+  const data = await req.json();
   const { employee } = await getEmployee();
+
+  // Extract only the fields we want to update
+  const updateFields = {};
+  const allowedFields = ['name', 'phone', 'addressLine', 'suburb', 'state', 'postcode'];
+  
+  allowedFields.forEach(field => {
+    if (data[field] !== undefined) {
+      updateFields[field] = data[field];
+    }
+  });
 
   const updatedOrg = await Org.findByIdAndUpdate(
     employee.org._id,
-    { name },
+    updateFields,
     { new: true }
   );
 

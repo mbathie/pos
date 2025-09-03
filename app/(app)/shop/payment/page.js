@@ -1,6 +1,6 @@
 'use client'
 
-import Payment from '../../payment'
+import Payment from '../payment'
 
 export default function Page() {
 

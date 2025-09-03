@@ -61,7 +61,21 @@ export default function PublicInfoPage({
         {/* Footer */}
         <div className="mt-8 text-center text-sm text-muted-foreground">
           {org?.name && (
-            <p>© {new Date().getFullYear()} {org.name}. All rights reserved.</p>
+            <>
+              <p className="font-medium">{org.name}</p>
+              {org?.addressLine && <p>{org.addressLine}</p>}
+              {(org?.suburb || org?.state || org?.postcode) && (
+                <p>
+                  {org?.suburb && org.suburb}
+                  {org?.suburb && org?.state && ', '}
+                  {org?.state && org.state}
+                  {org?.state && org?.postcode && ' '}
+                  {org?.postcode && org.postcode}
+                </p>
+              )}
+              {org?.phone && <p>Phone: {org.phone}</p>}
+              <p className="mt-2">© {new Date().getFullYear()} {org.name}. All rights reserved.</p>
+            </>
           )}
         </div>
 

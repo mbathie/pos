@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useImmer } from 'use-immer';
 import { Button } from '@/components/ui/button';
-import { Plus, Loader2, CheckCircle, Save } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import ProductsTable from '../ProductsTable';
 import ClassesProductSheet from '../ClassesProductSheet';
 import IconSelect from '@/components/icon-select';
@@ -38,34 +38,14 @@ export default function Page() {
   }, []);
 
   return (
-    <div className="container mr-auto px-4 pt-2 w-full h-full flex flex-col py-4">
+    <div className="px-4 pt-2 w-full h-full flex flex-col py-4">
 
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-semibold mb-1">Setup Class and Course Products</h1>
           <p className='text-sm text-muted-foreground'>Configure class schedules and course offerings</p>
         </div>
-        
-        {/* Overall save status */}
-        <div className="ml-4">
-          {isAnySaving ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              <span>Saving changes...</span>
-            </div>
-          ) : hasAnyUnsaved ? (
-            <div className="flex items-center gap-2 text-sm text-orange-500">
-              <Save className="h-3 w-3 animate-pulse" />
-              <span>Unsaved changes</span>
-            </div>
-          ) : products.some(p => p._id) && (
-            <div className="flex items-center gap-2 text-sm text-green-500">
-              <CheckCircle className="h-3 w-3" />
-              <span>All changes saved</span>
-            </div>
-          )}
-        </div>
-        
+                
         <Button 
           size="sm" 
           onClick={() => {

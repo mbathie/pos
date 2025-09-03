@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -13,25 +13,36 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { Mail, Loader2 } from 'lucide-react'
+import { z } from 'zod'
+
+// Email validation schema
+const emailSchema = z.string().email('Please enter a valid email address')
 
 export function ResendReceiptDialog({ open, onOpenChange, transaction }) {
   const [email, setEmail] = useState(transaction?.customer?.email || '')
   const [sending, setSending] = useState(false)
+  const [isValidEmail, setIsValidEmail] = useState(false)
+
+  // Validate email whenever it changes
+  useEffect(() => {
+    if (email) {
+      try {
+        emailSchema.parse(email)
+        setIsValidEmail(true)
+      } catch {
+        setIsValidEmail(false)
+      }
+    } else {
+      setIsValidEmail(false)
+    }
+  }, [email])
 
   const handleSend = async () => {
-    if (!email) {
-      toast.error('Email required', {
-        description: 'Please enter an email address'
-      })
-      return
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      toast.error('Invalid email', {
-        description: 'Please enter a valid email address'
-      })
+    // Validate email using Zod
+    try {
+      emailSchema.parse(email)
+    } catch (error) {
+      toast.error(error.errors[0]?.message || 'Please enter a valid email address')
       return
     }
 
@@ -107,7 +118,7 @@ export function ResendReceiptDialog({ open, onOpenChange, transaction }) {
           </Button>
           <Button 
             onClick={handleSend} 
-            disabled={sending || !email}
+            disabled={sending || !isValidEmail}
             className="cursor-pointer"
           >
             {sending ? (

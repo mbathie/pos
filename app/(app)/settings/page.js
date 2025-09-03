@@ -8,16 +8,10 @@ import { useGlobals } from '@/lib/globals'
 
 import { TypographyLarge, TypographyMuted } from '@/components/ui/typography'
 import { Card, CardContent } from '@/components/ui/card'
-import { Loader, CheckCircle2, Calculator, Download, Link as LinkIcon, Upload, Trash2, Image } from 'lucide-react'
-import { useState, useEffect, useRef } from 'react'
+import { Loader, CheckCircle2, Calculator, Download, Link as LinkIcon } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { Separator } from '@radix-ui/react-separator'
 import { QRCode } from 'react-qrcode-logo'
-import ReactCrop from 'react-image-crop'
-import 'react-image-crop/dist/ReactCrop.css'
-import {
-  Dialog, DialogContent, DialogDescription,
-  DialogHeader, DialogTitle
-} from '@/components/ui/dialog'
 
 export default function Page() {
   const router = useRouter()
@@ -27,14 +21,6 @@ export default function Page() {
   const [ chargesEnabled, setChargesEnabled ] = useState(false)
   const [ hasFetched, setHasFetched ] = useState(false)
   const [ org, setOrg ] = useState({})
-  const [ orgCpy, setOrgCpy ] = useState({})
-  const [ showLogoModal, setShowLogoModal ] = useState(false)
-  const [ selectedImage, setSelectedImage ] = useState(null)
-  const [ crop, setCrop ] = useState({ unit: '%', width: 100, height: 33.33, x: 0, y: 33.33, aspect: 3 })
-  const [ completedCrop, setCompletedCrop ] = useState(null)
-  const [ uploadingLogo, setUploadingLogo ] = useState(false)
-  const imgRef = useRef(null)
-  const fileInputRef = useRef(null)
 
   useEffect(() => {
     const fetchStripeAccount = async () => {
@@ -48,10 +34,9 @@ export default function Page() {
 
   useEffect(() => {
     const fetchOrg = async () => {
-      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/org')
+      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/orgs')
       const data = await res.json()
       setOrg(data.org)
-      setOrgCpy(data.org)
     }
     fetchOrg()
   }, [])
@@ -63,116 +48,6 @@ export default function Page() {
     router.push(data.url)
   }
 
-  const saveOrg = async () => {
-    const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/org', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: org.name })
-    })
-  
-    const data = await res.json();
-    console.log(data)
-    setOrg(data.org);
-    setOrgCpy(data.org);
-  };
-
-  const handleImageSelect = (e) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        setSelectedImage(reader.result)
-        setCrop({ unit: '%', width: 100, height: 33.33, x: 0, y: 33.33, aspect: 3 })
-        setShowLogoModal(true)
-      }
-      reader.readAsDataURL(file)
-    }
-  }
-
-  const getCroppedImg = () => {
-    return new Promise((resolve) => {
-      const image = imgRef.current
-      const canvas = document.createElement('canvas')
-      const ctx = canvas.getContext('2d')
-
-      if (!completedCrop || !image) {
-        resolve(null)
-        return
-      }
-
-      const scaleX = image.naturalWidth / image.width
-      const scaleY = image.naturalHeight / image.height
-
-      // Set canvas size to desired crop dimensions (3:1 aspect ratio)
-      const pixelRatio = window.devicePixelRatio || 1
-      canvas.width = completedCrop.width * pixelRatio
-      canvas.height = completedCrop.height * pixelRatio
-      ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
-      ctx.imageSmoothingQuality = 'high'
-
-      ctx.drawImage(
-        image,
-        completedCrop.x * scaleX,
-        completedCrop.y * scaleY,
-        completedCrop.width * scaleX,
-        completedCrop.height * scaleY,
-        0,
-        0,
-        completedCrop.width,
-        completedCrop.height
-      )
-
-      canvas.toBlob((blob) => {
-        const reader = new FileReader()
-        reader.onloadend = () => {
-          resolve(reader.result)
-        }
-        reader.readAsDataURL(blob)
-      }, 'image/jpeg', 0.95)
-    })
-  }
-
-  const handleSaveLogo = async () => {
-    setUploadingLogo(true)
-    try {
-      const croppedImage = await getCroppedImg()
-      if (croppedImage) {
-        const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/org/logo', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ logo: croppedImage })
-        })
-        
-        if (res.ok) {
-          const data = await res.json()
-          setOrg(data.org)
-          setOrgCpy(data.org)
-          setShowLogoModal(false)
-          setSelectedImage(null)
-          setCompletedCrop(null)
-        }
-      }
-    } catch (error) {
-      console.error('Error saving logo:', error)
-    } finally {
-      setUploadingLogo(false)
-    }
-  }
-
-  const handleRemoveLogo = async () => {
-    try {
-      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/org/logo', {
-        method: 'DELETE'
-      })
-      
-      if (res.ok) {
-        const data = await res.json()
-        setOrg(data.org)
-        setOrgCpy(data.org)
-      }
-    } catch (error) {
-      console.error('Error removing logo:', error)
-    }
-  }
 
   const downloadWaiverPDF = async () => {
     try {
@@ -206,53 +81,17 @@ export default function Page() {
 
 
             <div>
-              <div>Organisation Name</div>
-            </div>
-            <div className='flex gap-2'>
-              <Input value={org?.name || ""} onChange={(e) => setOrg({...org, name: e.target.value})} />
-              <Button onClick={saveOrg} disabled={!org?.name?.trim() || org?.name === orgCpy?.name}>
-                Save
-              </Button>
-            </div>
-
-            <Separator className='border-t border-muted col-span-2' />
-
-            <div>
-              <div>Organisation Logo</div>
+              <div>Organization Settings</div>
               <TypographyMuted>
-                Upload your company logo for receipts and branding. Recommended size: 3:1 aspect ratio.
+                Manage your organization's information, logo, and address details.
               </TypographyMuted>
             </div>
-            <div className='flex gap-2 items-center'>
-              {org?.logo ? (
-                <div className='flex items-center gap-2'>
-                  <img 
-                    src={org.logo} 
-                    alt="Organization Logo" 
-                    className="h-12 w-36 object-contain cursor-pointer"
-                    onClick={() => fileInputRef.current?.click()}
-                  />
-                  <Button 
-                    variant="outline" 
-                    size="icon"
-                    onClick={handleRemoveLogo}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <Button onClick={() => fileInputRef.current?.click()}>
-                  <Upload className="mr-2 h-4 w-4" />
-                  Upload Logo
+            <div>
+              <Link href="/settings/org">
+                <Button>
+                  Manage Organization
                 </Button>
-              )}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleImageSelect}
-              />
+              </Link>
             </div>
 
             <Separator className='border-t border-muted col-span-2' />
@@ -453,64 +292,6 @@ export default function Page() {
         </CardContent>
       </Card>
 
-      {/* Logo Crop Modal */}
-      <Dialog open={showLogoModal} onOpenChange={setShowLogoModal}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Crop Logo</DialogTitle>
-            <DialogDescription>
-              Adjust the crop area to select your logo. The logo will be saved in a 3:1 aspect ratio.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedImage && (
-            <div className="flex flex-col gap-4">
-              <div className="max-h-[400px] overflow-auto">
-                <ReactCrop
-                  crop={crop}
-                  onChange={setCrop}
-                  onComplete={setCompletedCrop}
-                  aspect={3}
-                  minWidth={100}
-                >
-                  <img
-                    ref={imgRef}
-                    src={selectedImage}
-                    alt="Logo to crop"
-                    style={{ maxWidth: '100%' }}
-                  />
-                </ReactCrop>
-              </div>
-              
-              <div className="flex justify-end gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowLogoModal(false)
-                    setSelectedImage(null)
-                    setCompletedCrop(null)
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleSaveLogo}
-                  disabled={uploadingLogo || !completedCrop}
-                >
-                  {uploadingLogo ? (
-                    <>
-                      <Loader className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Logo'
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

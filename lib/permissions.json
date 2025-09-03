@@ -12,7 +12,7 @@
       "permissions": [
         "/shop",
         "/shop/retail",
-        "/shop/retail/payment",
+        "/shop/payment",
         "/shop/casual",
         "/shop/classes",
         "/checkin",
