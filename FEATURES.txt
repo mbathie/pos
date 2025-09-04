@@ -1,7 +1,11 @@
+Questions:
+  - how will membership expiry work, i.e. after 6 months
+
+
 25th Aug 2025
 DONE - todo: purchase for 2x adults class - customer selection widget Panel not ideal UX
 DONE - email receipts not going out for shop items
-- Product T&C
+DONE - Product T&C
 - test location selection, make sure all pages filter for selected employee location
 DONE - memberships
 DONE - class products setup, define different class times per day

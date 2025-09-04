@@ -275,15 +275,15 @@ export default function Page() {
             <Separator className='border-t border-muted col-span-2' />
 
             <div>
-              <div>Discounts</div>
+              <div>Adjustments (Discounts & Surcharges)</div>
               <TypographyMuted>
-                Create and manage discount codes for your products and services. Set up percentage or fixed amount discounts.
+                Create and manage adjustments for your products and services. Set up discounts, surcharges, and promotional codes.
               </TypographyMuted>
             </div>
             <div>
-              <Link href="/manage/discounts">
+              <Link href="/manage/adjustments">
                 <Button>
-                  Manage Discounts
+                  Manage Adjustments
                 </Button>
               </Link>
             </div>

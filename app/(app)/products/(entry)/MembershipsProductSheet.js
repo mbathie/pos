@@ -7,12 +7,18 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Loader2, CheckCircle, Save, Trash2, Plus, Trash, Info } from 'lucide-react';
+import { Loader2, CheckCircle, Save, Trash2, Plus, Trash, Info, Tag, MoreHorizontal, Check, ChevronsUpDown } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ProductIcon } from '@/components/product-icon';
 import ProductInstructions from '@/app/(app)/products/(entry)/ProductInstructions';
 import ProductTerms from '@/app/(app)/products/(entry)/ProductTerms';
 import { NumberInput } from '@/components/ui/number-input';
+import DiscountsSheet from '@/components/discounts/discounts-sheet';
+import { Badge } from '@/components/ui/badge';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 export default function MembershipsProductSheet({ 
   open, 
@@ -30,6 +36,10 @@ export default function MembershipsProductSheet({
   categoryName = "memberships"
 }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [discountsPanelOpen, setDiscountsPanelOpen] = React.useState(false);
+  const [currentPriceIndex, setCurrentPriceIndex] = React.useState(null);
+  const [activeDiscounts, setActiveDiscounts] = React.useState([]);
+  const [discountComboboxOpen, setDiscountComboboxOpen] = React.useState({});
   
   // Find product and index
   const productIdx = products?.findIndex(p => 
@@ -37,6 +47,32 @@ export default function MembershipsProductSheet({
   );
   const product = products?.[productIdx];
   
+  // Fetch active discounts - must be called before early return
+  React.useEffect(() => {
+    const fetchActiveDiscounts = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/discounts`);
+        if (response.ok) {
+          const data = await response.json();
+          // Filter for active discounts (not archived and within date range if specified)
+          const now = new Date();
+          const active = data.filter(discount => 
+            !discount.archivedAt && 
+            (!discount.start || new Date(discount.start) <= now) &&
+            (!discount.expiry || new Date(discount.expiry) >= now)
+          );
+          setActiveDiscounts(active);
+        }
+      } catch (error) {
+        console.error('Error fetching discounts:', error);
+      }
+    };
+
+    if (open && product) {
+      fetchActiveDiscounts();
+    }
+  }, [open, product]);
+
   if (!product || productIdx === -1) return null;
   
   const handleDelete = async () => {
@@ -61,6 +97,31 @@ export default function MembershipsProductSheet({
   const updateProduct = (updates) => {
     setProducts(draft => {
       Object.assign(draft[productIdx], updates);
+    });
+  };
+
+  // Helper function to add discount to price
+  const addDiscountToPrice = (priceIdx, discount) => {
+    setProducts((draft) => {
+      if (!draft[productIdx].prices[priceIdx].discounts) {
+        draft[productIdx].prices[priceIdx].discounts = [];
+      }
+      // Check if discount already exists
+      const exists = draft[productIdx].prices[priceIdx].discounts.some(d => d._id === discount._id);
+      if (!exists) {
+        draft[productIdx].prices[priceIdx].discounts.push(discount);
+      }
+    });
+  };
+
+  // Helper function to remove discount from price
+  const removeDiscountFromPrice = (priceIdx, discountId) => {
+    setProducts((draft) => {
+      if (draft[productIdx].prices[priceIdx].discounts) {
+        draft[productIdx].prices[priceIdx].discounts = draft[productIdx].prices[priceIdx].discounts.filter(
+          d => d._id !== discountId
+        );
+      }
     });
   };
   
@@ -148,7 +209,8 @@ export default function MembershipsProductSheet({
                     <Label className="w-32">Price Name</Label>
                     <Label className="w-24">Amount ($)</Label>
                     <Label className="w-32">Billing Frequency</Label>
-                    <Label className="flex items-center gap-2">
+                    <Label className="w-[200px]">Discount</Label>
+                    <Label className="flex items-center gap-2 w-[60px] justify-center">
                       Minor
                       <TooltipProvider>
                         <Tooltip>
@@ -165,7 +227,7 @@ export default function MembershipsProductSheet({
                   </div>
                   
                   {product.prices.map((price, priceIdx) => (
-                    <div key={priceIdx} className="flex items-center gap-2">
+                    <div key={priceIdx} className="flex items-center gap-2 w-full">
                       <Input
                         type="text"
                         placeholder="Adult"
@@ -209,6 +271,70 @@ export default function MembershipsProductSheet({
                           </SelectGroup>
                         </SelectContent>
                       </Select>
+                      {/* Discount Combobox */}
+                      <div className="flex items-center gap-1">
+                        <Popover 
+                          open={discountComboboxOpen[priceIdx] || false} 
+                          onOpenChange={(open) => setDiscountComboboxOpen(prev => ({ ...prev, [priceIdx]: open }))}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              aria-expanded={discountComboboxOpen[priceIdx] || false}
+                              className="w-[200px] justify-between text-sm"
+                            >
+                              {price.discounts && price.discounts.length > 0 
+                                ? price.discounts.length === 1 
+                                  ? price.discounts[0].name
+                                  : `${price.discounts.length} discounts selected`
+                                : "Add discount..."
+                              }
+                              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[200px] p-0">
+                            <Command>
+                              <CommandInput placeholder="Search discounts..." className="h-9" />
+                              <CommandList>
+                                <CommandEmpty>No discounts found.</CommandEmpty>
+                                <CommandGroup>
+                                  {activeDiscounts.map((discount) => {
+                                    const isSelected = price.discounts?.some(d => d._id === discount._id);
+                                    return (
+                                      <CommandItem
+                                        key={discount._id}
+                                        value={discount.name}
+                                        onSelect={() => {
+                                          if (isSelected) {
+                                            removeDiscountFromPrice(priceIdx, discount._id);
+                                          } else {
+                                            addDiscountToPrice(priceIdx, discount);
+                                          }
+                                        }}
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            isSelected ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                        <div className="flex flex-col">
+                                          <span className="text-sm">{discount.name}</span>
+                                          <span className="text-xs text-muted-foreground">
+                                            {discount.code} - {discount.type === 'percentage' ? `${discount.value}%` : `$${discount.value}`}
+                                          </span>
+                                        </div>
+                                      </CommandItem>
+                                    );
+                                  })}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
                       <div className="flex items-center justify-center w-[60px]">
                         <Checkbox
                           checked={price.minor || false}
@@ -219,18 +345,39 @@ export default function MembershipsProductSheet({
                           }}
                         />
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setProducts((draft) => {
-                            draft[productIdx].prices.splice(priceIdx, 1);
-                          });
-                        }}
-                        className="w-8 h-8 p-0 cursor-pointer"
-                      >
-                        <Trash className="size-4" />
-                      </Button>
+                      
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-8 h-8 p-0 cursor-pointer ml-auto"
+                          >
+                            <MoreHorizontal className="size-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setCurrentPriceIndex(priceIdx);
+                              setDiscountsPanelOpen(true);
+                            }}
+                          >
+                            <Tag className="mr-2 h-4 w-4" />
+                            Manage Adjustments
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setProducts((draft) => {
+                                draft[productIdx].prices.splice(priceIdx, 1);
+                              });
+                            }}
+                          >
+                            <Trash className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   ))}
                 </div>
@@ -322,6 +469,32 @@ export default function MembershipsProductSheet({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Discounts Sheet */}
+      {currentPriceIndex !== null && (
+        <DiscountsSheet
+          isOpen={discountsPanelOpen}
+          onClose={() => {
+            setDiscountsPanelOpen(false);
+            setCurrentPriceIndex(null);
+          }}
+          onSelect={(selectedDiscounts) => {
+            // Update the discounts for the selected price
+            setProducts((draft) => {
+              if (!draft[productIdx].prices[currentPriceIndex].discounts) {
+                draft[productIdx].prices[currentPriceIndex].discounts = [];
+              }
+              draft[productIdx].prices[currentPriceIndex].discounts = selectedDiscounts;
+            });
+            setDiscountsPanelOpen(false);
+            setCurrentPriceIndex(null);
+          }}
+          selectedDiscounts={product.prices[currentPriceIndex]?.discounts || []}
+          multiSelect={true}
+          title="Manage Adjustments"
+          subtitle="Discounts and Surcharges"
+        />
+      )}
     </>
   );
 }

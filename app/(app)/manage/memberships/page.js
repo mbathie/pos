@@ -329,9 +329,17 @@ export default function MembershipsPage() {
                   >
                     <td className="px-4 py-3 align-middle">
                       <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium flex-shrink-0">
-                          {getInitials(membership.dependent?.name || membership.customer?.name)}
-                        </div>
+                        {membership.customer?.photo ? (
+                          <img 
+                            src={membership.customer.photo} 
+                            alt={membership.dependent?.name || membership.customer?.name} 
+                            className="h-8 w-8 rounded-full object-cover flex-shrink-0"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium flex-shrink-0">
+                            {getInitials(membership.dependent?.name || membership.customer?.name)}
+                          </div>
+                        )}
                         <div className="flex flex-col min-w-0">
                           <div className="font-medium">
                             {membership.dependent?.name || membership.customer?.name || 'Unknown'}

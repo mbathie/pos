@@ -25,6 +25,7 @@ export async function GET(request, { params }) {
 
     console.log('Retrieved discount for editing:', discount);
     console.log('Discount products field:', discount.products);
+    console.log('Discount categories field:', discount.categories);
     return NextResponse.json(discount);
 
   } catch (error) {
@@ -47,19 +48,42 @@ export async function PUT(request, { params }) {
 
     const { id } = await params;
     const body = await request.json();
-    const { name, value, type, expiry, description, products } = body;
+    const {
+      name,
+      description,
+      mode,
+      code,
+      type,
+      value,
+      maxAmount,
+      bogo,
+      start,
+      expiry,
+      archivedAt,
+      limits,
+      products,
+      categories,
+    } = body;
 
-    console.log('Updating discount with data:', { name, value, type, expiry, description, products });
+    console.log('Updating discount with data:', { name, value, type, start, expiry, description, products, categories });
 
     const discount = await Discount.findOneAndUpdate(
       { _id: id, org: employee.org._id },
       {
         name,
-        value,
-        type,
-        expiry: expiry ? new Date(expiry) : null,
         description,
-        products: products || []
+        mode: mode || 'discount',
+        code,
+        type,
+        value,
+        maxAmount,
+        bogo,
+        start: start ? new Date(start) : null,
+        expiry: expiry ? new Date(expiry) : null,
+        archivedAt: archivedAt ? new Date(archivedAt) : null,
+        limits,
+        products: products || [],
+        categories: categories || []
       },
       { new: true }
     );

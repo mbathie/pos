@@ -362,10 +362,12 @@ export default function ProductSheet({
                 <MultiSelectGroup>
                   {availableModGroups.length > 0 ? (
                     availableModGroups.map(group => (
-                      <MultiSelectItem 
-                        key={group._id} 
+                      <MultiSelectItem
+                        key={group._id}
                         value={group._id}
                         badgeLabel={group.name}
+                        // Provide keywords so the Command search filters by the name
+                        keywords={[group.name]}
                       >
                         {group.name}
                       </MultiSelectItem>

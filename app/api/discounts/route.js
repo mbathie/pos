@@ -17,13 +17,13 @@ export async function GET(request) {
 
     let query = { org: employee.org._id };
 
-    // If current=true, only return discounts that haven't expired
+    // If current=true, only return discounts that are active now
     if (current === 'true') {
       const now = new Date();
-      query.$or = [
-        { expiry: { $gte: now } },
-        { expiry: { $exists: false } },
-        { expiry: null }
+      // Active when: (no start or start <= now) AND (no expiry or expiry >= now)
+      query.$and = [
+        { $or: [ { start: { $lte: now } }, { start: { $exists: false } }, { start: null } ] },
+        { $or: [ { expiry: { $gte: now } }, { expiry: { $exists: false } }, { expiry: null } ] }
       ];
     }
 
@@ -52,15 +52,38 @@ export async function POST(request) {
     }
 
     const body = await request.json();
-    const { name, value, type, expiry, description, products } = body;
+    const {
+      name,
+      description,
+      mode,
+      code,
+      type,
+      value,
+      maxAmount,
+      bogo,
+      start,
+      expiry,
+      archivedAt,
+      limits,
+      products,
+      categories,
+    } = body;
 
     const discount = new Discount({
       name,
-      value,
-      type,
-      expiry: expiry ? new Date(expiry) : null,
       description,
+      mode: mode || 'discount',
+      code,
+      type,
+      value,
+      maxAmount,
+      bogo,
+      start: start ? new Date(start) : null,
+      expiry: expiry ? new Date(expiry) : null,
+      archivedAt: archivedAt ? new Date(archivedAt) : null,
+      limits,
       products: products || [],
+      categories: categories || [],
       org: employee.org._id
     });
 

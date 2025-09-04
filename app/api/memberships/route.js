@@ -40,7 +40,7 @@ export async function GET(request) {
     
     // Find memberships with populated references
     const memberships = await Membership.find(query)
-      .populate('customer', 'name email phone')
+      .populate('customer', 'name email phone photo')
       .populate('product', 'name desc type')
       .populate('transaction') // Populate full transaction to get cart data
       .populate('org', 'name')
@@ -97,7 +97,7 @@ export async function POST(request) {
     
     // Populate references for response
     const populatedMembership = await Membership.findById(membership._id)
-      .populate('customer', 'name email')
+      .populate('customer', 'name email phone photo')
       .populate('product', 'name desc type')
       .populate('transaction', '_id')
       .populate('org', 'name')

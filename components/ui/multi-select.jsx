@@ -33,7 +33,8 @@ export function MultiSelect({
   children,
   values,
   defaultValues,
-  onValuesChange
+  onValuesChange,
+  modal = true,
 }) {
   const [open, setOpen] = useState(false)
   const [selectedValues, setSelectedValues] = useState(new Set(values ?? defaultValues))
@@ -70,7 +71,7 @@ export function MultiSelect({
         items,
         onItemAdded,
       }}>
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover open={open} onOpenChange={setOpen} modal={modal}>
         {children}
       </Popover>
     </MultiSelectContext>
@@ -210,9 +211,23 @@ export function MultiSelectValue({
 export function MultiSelectContent({
   search = true,
   children,
+  listMaxHeight = '60vh',
   ...props
 }) {
   const canSearch = typeof search === "object" ? true : search
+  // Strict substring matching to avoid fuzzy false positives from cmdk's default scoring
+  const strictContainsFilter = (value, search, keywords) => {
+    const q = (search ?? "").trim().toLowerCase()
+    if (!q) return 1
+    const v = (value ?? "").toString().toLowerCase()
+    if (v.includes(q)) return 1
+    if (Array.isArray(keywords)) {
+      for (const k of keywords) {
+        if ((k ?? "").toString().toLowerCase().includes(q)) return 1
+      }
+    }
+    return 0
+  }
 
   return (
     <>
@@ -221,8 +236,12 @@ export function MultiSelectContent({
           <CommandList>{children}</CommandList>
         </Command>
       </div>
-      <PopoverContent className="min-w-[var(--radix-popover-trigger-width)] p-0">
-        <Command {...props}>
+      <PopoverContent
+        className="min-w-[var(--radix-popover-trigger-width)] p-0"
+        onWheelCapture={(e) => e.stopPropagation()}
+        onTouchMoveCapture={(e) => e.stopPropagation()}
+      >
+        <Command filter={props.filter ?? strictContainsFilter} {...props}>
           {canSearch ? (
             <CommandInput
               placeholder={
@@ -231,7 +250,15 @@ export function MultiSelectContent({
           ) : (
             <button autoFocus className="sr-only" />
           )}
-          <CommandList>
+          <CommandList
+            style={{
+              maxHeight: listMaxHeight,
+              overflowY: 'auto',
+              overscrollBehavior: 'contain',
+            }}
+            onWheelCapture={(e) => e.stopPropagation()}
+            onTouchMoveCapture={(e) => e.stopPropagation()}
+          >
             {canSearch && (
               <CommandEmpty>
                 {typeof search === "object" ? search.emptyMessage : undefined}
@@ -262,10 +289,13 @@ export function MultiSelectItem({
   return (
     <CommandItem
       {...props}
-      value={value}
-      onSelect={v => {
-        toggleValue(v)
-        onSelect?.(v)
+      // Use human-readable label for searching, not the internal id
+      value={(badgeLabel ?? children)?.toString?.() || ""}
+      keywords={props.keywords || [children?.toString() || ""]}
+      onSelect={() => {
+        // Toggle using the actual item id passed in via `value` prop
+        toggleValue(value)
+        onSelect?.(value)
       }}>
       <CheckIcon className={cn("mr-2 size-4", isSelected ? "opacity-100" : "opacity-0")} />
       {children}

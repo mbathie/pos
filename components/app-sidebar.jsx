@@ -59,7 +59,7 @@ export function AppSidebar(props) {
         { title: "Membership", url: "/products/memberships" },
         { title: "Shop", url: "/products/shop" },
         { title: "Shop Mods", url: "/products/mods" },
-        { title: "Discounts", url: "/manage/discounts" },
+        { title: "Adjustments", url: "/manage/adjustments" },
         { title: "All Products", url: "/manage/products" },
       ]
     },
