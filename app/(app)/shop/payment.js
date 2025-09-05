@@ -11,6 +11,7 @@ import { NumberInput } from "@/components/ui/number-input"
 import { z } from 'zod'
 
 import { useGlobals } from "@/lib/globals"
+import { calcCartTotals } from '@/lib/cart'
 import { useCard } from './useCard'
 import { useCash } from "./useCash";
 import { Separator } from "@radix-ui/react-separator";
@@ -29,7 +30,7 @@ const emailSchema = z.string().email('Please enter a valid email address');
 const keypad = ['1','2','3','4','5','6','7','8','9','.','0','AC'];
 
 export default function Page() {
-  const { cart, resetCart, setCart, applyDiscount, removeDiscount, employee, setEmployee, getLastDiscountFeedback, clearDiscountFeedback } = useGlobals();
+  const { cart, resetCart, setCart, employee, setEmployee, appliedAdjustments, setAppliedAdjustments, clearAppliedAdjustments } = useGlobals();
   const [cashInput, setCashInput] = useState('0');
   const [tab, setTab] = useState('card');
   const router = useRouter();
@@ -207,6 +208,145 @@ export default function Page() {
     toast.success('Customers assigned successfully')
   }
 
+  // Apply adjustments to cart when discount is applied
+  const applyAdjustments = async (discountCode = null, discountId = null, customDiscountAmount = null, discountName = null) => {
+    try {
+      console.log('🎁 [UI] Requesting adjustments:', { discountCode, discountId, customDiscountAmount, discountName });
+      
+      const response = await fetch('/api/adjustments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cart,
+          customer: cart.customer,
+          discountCode,
+          discountId,
+          customDiscountAmount
+        })
+      });
+
+      if (response.ok) {
+        const updatedCart = await response.json();
+        
+        console.log('🎁 [UI] Received adjustments:', {
+          discounts: updatedCart.adjustments?.discounts?.length || 0,
+          surcharges: updatedCart.adjustments?.surcharges?.length || 0,
+          totalDiscount: updatedCart.adjustments?.totalDiscountAmount,
+          error: updatedCart.adjustments?.discountError
+        });
+        
+        // Handle discount application feedback
+        if (updatedCart.adjustments?.discountError) {
+          // Discount was not applied - show detailed error
+          toast.error(
+            <div>
+              <div className="font-semibold">Discount Not Applied</div>
+              <div className="text-sm mt-1">{updatedCart.adjustments.discountError}</div>
+            </div>,
+            { duration: 5000 }
+          );
+          
+          // Don't update cart if discount wasn't applied
+          return null;
+        } else if (updatedCart.adjustments?.discounts?.length > 0) {
+          // Discount was successfully applied
+          const discount = updatedCart.adjustments.discounts[0];
+          const affectedCount = discount.affectedProducts?.length || 0;
+          
+          toast.success(
+            <div>
+              <div className="font-semibold">Discount Applied</div>
+              <div className="text-sm mt-1">
+                {discount.name}: -${discount.totalAmount.toFixed(2)} on {affectedCount} item{affectedCount !== 1 ? 's' : ''}
+              </div>
+            </div>,
+            { duration: 4000 }
+          );
+          
+          // Update the cart with adjusted values
+          setCart(draft => {
+            draft.subtotal = updatedCart.subtotal;
+            draft.tax = updatedCart.tax;
+            draft.total = updatedCart.total;
+            draft.products = updatedCart.products;
+          });
+          
+          // Store adjustments for display
+          setAppliedAdjustments(updatedCart.adjustments);
+        } else if (discountName) {
+          // No discount was applied but one was attempted
+          toast.warning(
+            <div>
+              <div className="font-semibold">No Discount Applied</div>
+              <div className="text-sm mt-1">"${discountName}" doesn't apply to items in your cart</div>
+            </div>,
+            { duration: 4000 }
+          );
+          return null;
+        } else {
+          // Just surcharges or no adjustments at all
+          // Update the cart with adjusted values
+          setCart(draft => {
+            draft.subtotal = updatedCart.subtotal;
+            draft.tax = updatedCart.tax;
+            draft.total = updatedCart.total;
+            draft.products = updatedCart.products;
+          });
+          
+          // Store adjustments for display
+          setAppliedAdjustments(updatedCart.adjustments);
+        }
+        
+        return updatedCart;
+      } else {
+        const error = await response.json();
+        toast.error(
+          <div>
+            <div className="font-semibold">Failed to Apply Discount</div>
+            <div className="text-sm mt-1">{error.error || 'Please try again'}</div>
+          </div>,
+          { duration: 4000 }
+        );
+      }
+    } catch (error) {
+      console.error('❌ [UI] Error applying adjustments:', error);
+      toast.error(
+        <div>
+          <div className="font-semibold">Error</div>
+          <div className="text-sm mt-1">Failed to apply adjustments. Please try again.</div>
+        </div>
+      );
+    }
+  };
+
+  // Remove all adjustments
+  const removeAdjustments = () => {
+    console.log('🗑️ [UI] Removing all adjustments');
+    
+    // Reset cart to original values
+    const totals = calcCartTotals(cart.products);
+    setCart(draft => {
+      draft.subtotal = totals.subtotal;
+      draft.tax = totals.tax;
+      draft.total = totals.total;
+      draft.products.forEach(product => {
+        if (product.amount) {
+          product.amount.discount = 0;
+          product.amount.surcharge = 0;
+        }
+      });
+    });
+    clearAppliedAdjustments();
+    
+    toast.info(
+      <div>
+        <div className="font-semibold">Discount Removed</div>
+        <div className="text-sm mt-1">Cart totals have been reset</div>
+      </div>,
+      { duration: 3000 }
+    );
+  };
+
   // Check if Stripe is configured
   useEffect(() => {
     const checkStripeStatus = async () => {
@@ -257,10 +397,9 @@ export default function Page() {
         total: cart.total,
         subtotal: cart.subtotal,
         tax: cart.tax,
-        discount: cart.discount,
-        discountAmount: cart.discountAmount,
         products: productsCopy, // Deep copy to preserve nested customer objects
-        customer: cart.customer ? JSON.parse(JSON.stringify(cart.customer)) : null // Deep copy customer too
+        customer: cart.customer ? JSON.parse(JSON.stringify(cart.customer)) : null, // Deep copy customer too
+        adjustments: appliedAdjustments ? JSON.parse(JSON.stringify(appliedAdjustments)) : null
       })
       hasInitialSnapshot.current = true
     }
@@ -275,29 +414,13 @@ export default function Page() {
         total: cart.total,
         subtotal: cart.subtotal,
         tax: cart.tax,
-        discount: cart.discount,
-        discountAmount: cart.discountAmount
+        adjustments: appliedAdjustments ? JSON.parse(JSON.stringify(appliedAdjustments)) : null
         // Keep original products from snapshot
       }))
     }
-  }, [cart.discount, cart.discountAmount, cart.total, cart.subtotal, cart.tax])
+  }, [appliedAdjustments, cart.total, cart.subtotal, cart.tax])
 
 
-  // Watch for discount feedback and show toasts
-  useEffect(() => {
-    const feedback = getLastDiscountFeedback()
-    
-    if (feedback.success) {
-      toast.success(`Applied "${feedback.success.name}" to ${feedback.success.productCount} product${feedback.success.productCount > 1 ? 's' : ''}.`)
-      clearDiscountFeedback()
-    } else if (feedback.error) {
-      toast.warning(feedback.error)
-      clearDiscountFeedback()
-    } else if (feedback.removed) {
-      toast.info(`Removed "${feedback.removed}" discount from cart.`)
-      clearDiscountFeedback()
-    }
-  }, [cart.discount, getLastDiscountFeedback, clearDiscountFeedback])
 
   // Function to update snapshot with current customer data
   const updateSnapshotCustomers = () => {
@@ -381,7 +504,7 @@ export default function Page() {
   }, [paymentStatus, cardPaymentStatus, cart.products.length, resetCart])
 
 
-  // Clear snapshot when navigating away or when returning to shop
+  // Clear snapshot and adjustments when navigating away or when returning to shop
   useEffect(() => {
     const handleRouteChange = () => {
       if (cartSnapshot) {
@@ -389,6 +512,8 @@ export default function Page() {
         setCartSnapshot(null)
         hasInitialSnapshot.current = false
       }
+      // Clear adjustments when leaving payment page
+      clearAppliedAdjustments()
     }
 
     // Clear snapshot when user navigates away
@@ -397,7 +522,7 @@ export default function Page() {
         handleRouteChange()
       }
     }
-  }, [pathname, cartSnapshot])
+  }, [pathname, cartSnapshot, clearAppliedAdjustments])
 
   // Handle PIN auth removal when navigating away after successful payment
   useEffect(() => {
@@ -446,25 +571,41 @@ export default function Page() {
     }
   }, [employee, setEmployee])
 
-  // Fetch current discount codes for manual selection
+  // Fetch current discount codes for manual selection and apply surcharges
   useEffect(() => {
-    const fetchDiscounts = async () => {
+    const fetchDiscountsAndApplySurcharges = async () => {
+      console.log('📋 [UI] Fetching available discounts and checking for surcharges...')
       setLoadingDiscounts(true)
+      
+      // Fetch discounts
       try {
         const response = await fetch('/api/discounts?current=true')
         if (response.ok) {
           const data = await response.json()
+          console.log(`📋 [UI] Found ${data.length} available discount(s):`, data.map(d => ({
+            name: d.name,
+            code: d.code,
+            type: d.type,
+            value: d.value,
+            mode: d.mode
+          })))
           setDiscounts(data)
         }
       } catch (error) {
-        console.error('Error fetching discounts:', error)
+        console.error('❌ [UI] Error fetching discounts:', error)
       } finally {
         setLoadingDiscounts(false)
       }
+      
+      // Apply surcharges if cart has products
+      if (cart.products.length > 0) {
+        console.log('🔄 [UI] Checking for surcharges on cart...')
+        await applyAdjustments(); // This will apply any active surcharges
+      }
     }
 
-    fetchDiscounts()
-  }, [])
+    fetchDiscountsAndApplySurcharges()
+  }, []) // Only run once on mount
 
   useEffect(() => {
     const allAreShop = cart.products.length > 0 &&
@@ -491,7 +632,7 @@ export default function Page() {
   }, []);
 
   // Handle custom discount application
-  const applyCustomDiscount = () => {
+  const applyCustomDiscount = async () => {
     const amount = customDiscountDollar;
     if (!amount || amount <= 0) return;
     
@@ -514,22 +655,13 @@ export default function Page() {
     }
     
     // User has permission, apply discount directly
-    executeCustomDiscount(discountAmount);
+    await executeCustomDiscount(discountAmount);
   };
 
   // Execute the actual discount application (separated for reuse after PIN verification)
-  const executeCustomDiscount = (discountAmount) => {
-    // Remove any existing discount first
-    if (cart.discount || cart.discountAmount > 0) {
-      removeDiscount();
-    }
-    
-    // Apply custom discount amount directly to cart
-    setCart(draft => {
-      draft.discountAmount = discountAmount;
-      draft.discount = null; // No discount object for custom discounts
-      draft.total = Math.max(0, draft.subtotal + draft.tax - discountAmount);
-    });
+  const executeCustomDiscount = async (discountAmount) => {
+    // Apply custom discount through the adjustments API
+    await applyAdjustments(null, null, discountAmount);
     
     setCustomDiscountDollar(null);
     setCustomDiscountPercent(null);
@@ -561,9 +693,9 @@ export default function Page() {
   };
 
   // Handle successful PIN verification for custom discount
-  const handleDiscountPinSuccess = (data) => {
+  const handleDiscountPinSuccess = async (data) => {
     const discountAmount = parseFloat(pendingDiscountAmount);
-    executeCustomDiscount(discountAmount);
+    await executeCustomDiscount(discountAmount);
     setPendingDiscountAmount('');
   };
 
@@ -648,55 +780,43 @@ export default function Page() {
               <span>Subtotal</span>
               <span className="text-right">${displayCart.subtotal.toFixed(2)}</span>
             </div>
-            {/* Only show discount row if there's an applied discount with actual discount amount */}
-            {displayCart.discountAmount > 0 && (
+            {/* Show surcharges if any */}
+            {(displayCart.adjustments?.totalSurchargeAmount > 0 || appliedAdjustments?.totalSurchargeAmount > 0) && (
+              <div className="flex justify-between">
+                <span>Surcharges</span>
+                <span className="text-right">+${(displayCart.adjustments?.totalSurchargeAmount || appliedAdjustments?.totalSurchargeAmount || 0).toFixed(2)}</span>
+              </div>
+            )}
+            
+            {/* Show discounts if any */}
+            {(displayCart.adjustments?.totalDiscountAmount > 0 || appliedAdjustments?.totalDiscountAmount > 0) && (
               <div 
-                className={`flex justify-between px-2 -py-1 rounded -mx-2 ${
-                  displayCart.discount ? 'cursor-pointer hover:bg-muted/50' : ''
-                }`}
-                onClick={displayCart.discount ? () => setDiscountExpanded(!discountExpanded) : undefined}
+                className="flex justify-between px-2 -py-1 rounded -mx-2 cursor-pointer hover:bg-muted/50"
+                onClick={() => setDiscountExpanded(!discountExpanded)}
               >
                 <div className="flex items-center gap-1">
                   <span>
-                    {displayCart.discount 
-                      ? `${displayCart.discount.name} (${displayCart.discount.type === 'percent' ? `${displayCart.discount.value}%` : `$${displayCart.discount.value}`})`
-                      : 'Custom Discount'
-                    }
+                    {displayCart.adjustments?.discounts?.[0]?.name || appliedAdjustments?.discounts?.[0]?.name || 'Discount'}
                   </span>
-                  {displayCart.discount && (
-                    <>{discountExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}</>
-                  )}
+                  {discountExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
                 </div>
                 <span className="text-right">
-                  {!displayCart.discount && (
-                    <>
-                      ({((displayCart.discountAmount / (displayCart.subtotal + displayCart.tax)) * 100).toFixed(1)}%) 
-                    </>
-                  )}
-                  <span className="ml-2">
-                    -${displayCart.discountAmount.toFixed(2)}
-                  </span>
+                  -${(displayCart.adjustments?.totalDiscountAmount || appliedAdjustments?.totalDiscountAmount || 0).toFixed(2)}
                 </span>
               </div>
             )}
             
-                          {/* Expanded discount details - only for regular discounts */}
-              {discountExpanded && displayCart.discount && displayCart.discountAmount > 0 && (
-                <div className="space-y-1- text-sm-  -pl-3 mt-2-">
-                  {displayCart.products
-                    .filter(product => product.amount?.discount > 0)
-                    .map((product, index) => (
-                      <div key={index} className="flex justify-between">
-                        <span>{product.name}</span>
-                        <span>-${product.amount.discount.toFixed(2)}</span>
-                      </div>
-                    ))
-                  }
-                  {displayCart.products.filter(product => product.amount?.discount > 0).length === 0 && (
-                    <div className="text-center py-2">No individual product discounts</div>
-                  )}
-                </div>
-              )}
+            {/* Expanded adjustment details */}
+            {discountExpanded && (displayCart.adjustments?.discounts?.length > 0 || appliedAdjustments?.discounts?.length > 0) && (
+              <div className="space-y-1 text-sm pl-3 mt-2">
+                {(displayCart.adjustments?.discounts?.[0]?.affectedProducts || appliedAdjustments?.discounts?.[0]?.affectedProducts || []).map((product, index) => (
+                  <div key={index} className="flex justify-between">
+                    <span>{product.productName}</span>
+                    <span>-${product.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="flex justify-between">
               <span>Tax</span>
               <span className="text-right">${displayCart.tax.toFixed(2)}</span>
@@ -729,7 +849,7 @@ export default function Page() {
               <div className="">Discount</div>
               <div className="flex-1" />
               
-              {(cart.discountAmount > 0 || (cartSnapshot?.discountAmount > 0 && (paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'))) ? (
+              {(appliedAdjustments?.totalDiscountAmount > 0 || (cartSnapshot?.adjustments?.totalDiscountAmount > 0 && (paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'))) ? (
                 // Show applied discount with remove button (disabled after payment)
                 <div className="flex items-center gap-1">
                   <Trash2 
@@ -740,15 +860,15 @@ export default function Page() {
                     }`}
                     onClick={() => {
                       if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
-                        removeDiscount();
+                        removeAdjustments();
                       }
                     }}
                   />
                   <div className="text-sm">
                     {/* Show discount from snapshot if payment succeeded, otherwise from current cart */}
                     {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') 
-                      ? (cartSnapshot?.discount ? cartSnapshot.discount.name : 'Custom Discount')
-                      : (cart.discount ? cart.discount.name : 'Custom Discount')
+                      ? (cartSnapshot?.adjustments?.discounts?.[0]?.name || 'Custom Discount')
+                      : (appliedAdjustments?.discounts?.[0]?.name || 'Custom Discount')
                     }
                   </div>
                 </div>
@@ -756,13 +876,14 @@ export default function Page() {
                 // Show dropdown for manual selection
                 <Select
                   value="none"
-                  onValueChange={(value) => {
+                  onValueChange={async (value) => {
                     if (value === "none") {
-                      removeDiscount()
+                      removeAdjustments()
                     } else {
-                      const selectedDiscount = discounts.find(d => d._id === value)
+                      const selectedDiscount = discounts.find(d => d._id === value);
                       if (selectedDiscount) {
-                        applyDiscount(selectedDiscount)
+                        console.log('🎯 [UI] User selected discount:', selectedDiscount.name);
+                        await applyAdjustments(null, value, null, selectedDiscount.name);
                       }
                     }
                   }}
@@ -784,7 +905,7 @@ export default function Page() {
             </div>
 
             {/* Custom Discount Input */}
-            {cart.discountAmount === 0 && !(cartSnapshot?.discountAmount > 0 && (paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded')) && (
+            {(!appliedAdjustments?.totalDiscountAmount || appliedAdjustments?.totalDiscountAmount === 0) && !(cartSnapshot?.adjustments?.totalDiscountAmount > 0 && (paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded')) && (
               <div className="flex flex-row gap-4 items-center mt-2">
                 <div className="">Custom Discount</div>
                 <div className="flex-1" />

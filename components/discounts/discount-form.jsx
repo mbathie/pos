@@ -676,125 +676,13 @@ export default function DiscountForm({
               </CardContent>
             </Card>
 
-            {/* Limits */}
+            {/* Products Selection */}
             <Card>
               <CardHeader>
-                <CardTitle>Limits</CardTitle>
+                <CardTitle>Limit to Products & Categories</CardTitle>
+                <p className="text-sm text-muted-foreground">Choose categories and/or specific products this adjustment will be restricted to. Leave blank to apply to all products and categories.</p>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Start */}
-                  <FormField control={form.control} name="start" render={({ field }) => (
-                    <FormItem>
-                      <LabelWithInfo info="Optional. Adjustment becomes active on this date.">Start date</LabelWithInfo>
-                      <Popover open={startCalendarOpen} onOpenChange={setStartCalendarOpen}>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button variant="outline" className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}>
-                              {field.value ? dayjs(field.value).format('DD/MM/YYYY') : <span>Pick a date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={(date) => field.onChange(date)} initialFocus />
-                        </PopoverContent>
-                      </Popover>
-                    </FormItem>
-                  )} />
-                  {/* End */}
-                  <FormField control={form.control} name="expiry" render={({ field }) => (
-                    <FormItem>
-                      <LabelWithInfo info="Leave blank if it never expires.">End date</LabelWithInfo>
-                      <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                        <PopoverTrigger asChild>
-                          <FormControl>
-                            <Button variant="outline" className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}>
-                              {field.value ? dayjs(field.value).format('DD/MM/YYYY') : <span>Pick a date</span>}
-                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                            </Button>
-                          </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar mode="single" selected={field.value} onSelect={(date) => field.onChange(date)} initialFocus />
-                        </PopoverContent>
-                      </Popover>
-                      
-                    </FormItem>
-                  )} />
-                  {/* Usage */}
-                  <FormField control={form.control} name="usageLimit" render={({ field }) => (
-                    <FormItem>
-                      <LabelWithInfo info="Maximum times this can be used across all customers.">Usage limit (total)</LabelWithInfo>
-                      <FormControl>
-                        <NumberInput 
-                          min={1} 
-                          step={1} 
-                          value={field.value} 
-                          onChange={field.onChange} 
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )} />
-                  <FormField control={form.control} name="perCustomerLimit" render={({ field }) => (
-                    <FormItem>
-                      <LabelWithInfo info="Lifetime limit per customer.">Per-customer limit</LabelWithInfo>
-                      <FormControl>
-                        <NumberInput 
-                          min={1} 
-                          step={1} 
-                          value={field.value} 
-                          onChange={field.onChange} 
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )} />
-                  <div className="grid grid-cols-3 gap-2 md:col-span-2">
-                    <FormField control={form.control} name="frequencyCount" render={({ field }) => (
-                      <FormItem>
-                        <LabelWithInfo info="How many times the customer can use this adjustment within the specified period.">Frequency</LabelWithInfo>
-                        <FormControl>
-                          <NumberInput 
-                            min={1} 
-                            step={1} 
-                            placeholder="Count" 
-                            value={field.value} 
-                            onChange={field.onChange} 
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )} />
-                    <FormField control={form.control} name="frequencyPeriod" render={({ field }) => (
-                      <FormItem className="col-span-2">
-                        <FormLabel className="opacity-0">Period</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Period" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="day">Day</SelectItem>
-                            <SelectItem value="week">Week</SelectItem>
-                            <SelectItem value="month">Month</SelectItem>
-                            <SelectItem value="year">Year</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </ContentWrapper>
-
-          {/* Products Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Applicable Products & Categories</CardTitle>
-              <p className="text-sm text-muted-foreground">Choose categories and/or specific products this applies to. Leave blank to apply to all products and categories.</p>
-            </CardHeader>
-            <CardContent>
               <div className="max-w-3xl">
                 <FormField
                   control={form.control}
@@ -905,7 +793,119 @@ export default function DiscountForm({
             </CardContent>
           </Card>
 
-          {/* Inline Action Buttons (hidden when inside Sheet) */}
+          {/* Limits */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Limits</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Start */}
+                <FormField control={form.control} name="start" render={({ field }) => (
+                  <FormItem>
+                    <LabelWithInfo info="Optional. Adjustment becomes active on this date.">Start date</LabelWithInfo>
+                    <Popover open={startCalendarOpen} onOpenChange={setStartCalendarOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button variant="outline" className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}>
+                            {field.value ? dayjs(field.value).format('DD/MM/YYYY') : <span>Pick a date</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={field.value} onSelect={(date) => field.onChange(date)} initialFocus />
+                      </PopoverContent>
+                    </Popover>
+                  </FormItem>
+                )} />
+                {/* End */}
+                <FormField control={form.control} name="expiry" render={({ field }) => (
+                  <FormItem>
+                    <LabelWithInfo info="Leave blank if it never expires.">End date</LabelWithInfo>
+                    <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button variant="outline" className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}>
+                            {field.value ? dayjs(field.value).format('DD/MM/YYYY') : <span>Pick a date</span>}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar mode="single" selected={field.value} onSelect={(date) => field.onChange(date)} initialFocus />
+                      </PopoverContent>
+                    </Popover>
+                    
+                  </FormItem>
+                )} />
+                {/* Usage */}
+                <FormField control={form.control} name="usageLimit" render={({ field }) => (
+                  <FormItem>
+                    <LabelWithInfo info="Maximum times this can be used across all customers.">Usage limit (total)</LabelWithInfo>
+                    <FormControl>
+                      <NumberInput 
+                        min={1} 
+                        step={1} 
+                        value={field.value} 
+                        onChange={field.onChange} 
+                      />
+                    </FormControl>
+                  </FormItem>
+                )} />
+                <FormField control={form.control} name="perCustomerLimit" render={({ field }) => (
+                  <FormItem>
+                    <LabelWithInfo info="Lifetime limit per customer.">Per-customer limit</LabelWithInfo>
+                    <FormControl>
+                      <NumberInput 
+                        min={1} 
+                        step={1} 
+                        value={field.value} 
+                        onChange={field.onChange} 
+                      />
+                    </FormControl>
+                  </FormItem>
+                )} />
+                <div className="grid grid-cols-3 gap-2 md:col-span-2">
+                  <FormField control={form.control} name="frequencyCount" render={({ field }) => (
+                    <FormItem>
+                      <LabelWithInfo info="How many times the customer can use this adjustment within the specified period.">Frequency</LabelWithInfo>
+                      <FormControl>
+                        <NumberInput 
+                          min={1} 
+                          step={1} 
+                          placeholder="Count" 
+                          value={field.value} 
+                          onChange={field.onChange} 
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )} />
+                  <FormField control={form.control} name="frequencyPeriod" render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel className="opacity-0">Period</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Period" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="day">Day</SelectItem>
+                          <SelectItem value="week">Week</SelectItem>
+                          <SelectItem value="month">Month</SelectItem>
+                          <SelectItem value="year">Year</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </ContentWrapper>
+
+        {/* Inline Action Buttons (hidden when inside Sheet) */}
           {!isInSheet && (
             <div className="flex justify-end gap-2">
               {onCancel && (
