@@ -575,9 +575,16 @@ export default function TransactionDetailsPage() {
 
             <div>
               <p className="text-sm text-muted-foreground">Customer</p>
-              <p className="font-medium">
-                {transaction.customer ? transaction.customer.name : 'Guest'}
-              </p>
+              {transaction.customer ? (
+                <button
+                  onClick={() => router.push(`/manage/customers/${transaction.customer._id}`)}
+                  className="font-medium text-primary hover:underline cursor-pointer text-left"
+                >
+                  {transaction.customer.name}
+                </button>
+              ) : (
+                <p className="font-medium">Guest</p>
+              )}
             </div>
           </div>
 

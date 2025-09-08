@@ -10,6 +10,7 @@ import { Loader2, CheckCircle, Save, Trash2, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ProductIcon } from '@/components/product-icon';
 import ProductInstructions from '@/app/(app)/products/(entry)/ProductInstructions';
+import ProductTerms from '@/app/(app)/products/(entry)/ProductTerms';
 import GeneralPricing from './GeneralPricing';
 
 export default function GeneralProductSheet({ 
@@ -159,6 +160,18 @@ export default function GeneralProductSheet({
                   draft[pIdx].instructionsContent = content;
                 });
               }}
+            />
+          </div>
+
+          <div>
+            <ProductTerms
+              value={product.tandcContent}
+              onChange={(content) => {
+                setProducts(draft => {
+                  draft[pIdx].tandcContent = content;
+                });
+              }}
+              productId={product._id}
             />
           </div>
 

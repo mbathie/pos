@@ -143,6 +143,26 @@ export default function Page() {
       console.log('❌ Missing selectedCustomer or selectedSlot')
       return
     }
+
+    // Handle shop customer connection (no specific slot assignment)
+    if (selectedSlot.isShopCustomer) {
+      console.log('🛒 Connecting shop customer:', selectedCustomer?.customer?.name)
+      setCart(draft => {
+        draft.customer = selectedCustomer.customer
+      })
+      
+      // Clear the selected slot
+      setSelectedSlot(null)
+      setShowCustomerSelection(false)
+      
+      // Auto-apply eligible discounts when customer is assigned
+      if (selectedCustomer.customer) {
+        setTimeout(() => {
+          applyAdjustments(null, null, null, null, selectedCustomer.customer, true)
+        }, 120)
+      }
+      return
+    }
     
     const { priceId, slotIdx, isMinor } = selectedSlot
     
@@ -704,9 +724,9 @@ export default function Page() {
     setRequiresCustomerAssignment(hasWaiverProduct)
   }, [cart.products])
   
-  // Check if all products are shop items (customer is optional)
+  // Check if all products are shop or general items (customer is optional)
   const isShopOnly = cart.products.length > 0 && 
-    cart.products.every(p => p.type === 'shop' && !p.waiverRequired)
+    cart.products.every(p => (p.type === 'shop' || p.type === 'general') && !p.waiverRequired)
 
   // Initialize customer slots for products that need them
   useEffect(() => {
@@ -959,6 +979,7 @@ export default function Page() {
             {appliedAdjustments?.totalDiscountAmount > 0 ? (
                 // Show applied discount with remove button (disabled after payment)
                 <div className="flex items-center gap-1">
+                  <div className="text-sm">{appliedAdjustments?.discounts?.[0]?.name || 'Custom Discount'}</div>
                   <Trash2 
                     className={`size-4 ${
                       paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
@@ -971,7 +992,6 @@ export default function Page() {
                       }
                     }}
                   />
-                  <div className="text-sm">{appliedAdjustments?.discounts?.[0]?.name || 'Custom Discount'}</div>
                 </div>
               ) : (
                 // Show dropdown for manual selection
@@ -1068,7 +1088,7 @@ export default function Page() {
 
             {(requiresCustomerAssignment || isShopOnly) && (
               <div className="flex items-center justify-between mb-2">
-                <div>Customers</div>
+                <div></div>
               </div>
             )}
 
@@ -1079,8 +1099,8 @@ export default function Page() {
                   // Only show products that require waiver
                   if (!product.waiverRequired) return []
                   
-                  // For class, course, membership - show each customer slot based on quantity
-                  if (['class', 'course', 'membership'].includes(product.type)) {
+                  // For class, course, membership, general - show each customer slot based on quantity
+                  if (['class', 'course', 'membership', 'general'].includes(product.type)) {
                     return product.prices?.flatMap((price, priceIdx) => {
                       const qty = price.qty || 1
                       const isMinorPrice = (price.minor === true) && !(/adult/i.test(price.name || ''))
@@ -1278,32 +1298,48 @@ export default function Page() {
                 )}
               </div>
             )}
-            
-            {/* OPTIONAL CUSTOMER - Show for shop-only items without waiver requirement */}
-            {isShopOnly && cart.customer && (
-              <div className="flex items-center gap-2">
-                <div className="flex-1 flex items-center gap-2">
-                  <span className="text-sm font-medium">Customer</span>
-                  <span className="text-sm text-muted-foreground">(Optional)</span>
-                  <div className="flex-1 border-b border-dotted border-muted-foreground/30" />
-                </div>
+
+            {/* SHOP/GENERAL CUSTOMER CONNECTION - Show for shop/general products (no waiver required) */}
+            {isShopOnly && !requiresCustomerAssignment && (
+              <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm">{cart.customer.name}</span>
-                  <Trash2 
-                    className={`size-4 ${
-                      paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
-                        ? 'text-muted-foreground cursor-not-allowed opacity-50' 
-                        : 'cursor-pointer hover:text-destructive'
-                    }`}
-                    onClick={() => {
-                      if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
-                        setCart(draft => {
-                          draft.customer = null
-                        })
-                        // Snapshot removed
-                      }
-                    }}
-                  />
+                  <div className="flex-1 flex items-center gap-2">
+                    <span className="text-sm font-medium">Items</span>
+                    <div className="flex-1 border-b border-dotted border-muted-foreground/30" />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {cart.customer ? (
+                      <>
+                        <span className="text-sm">
+                          {cart.customer.name}
+                        </span>
+                        <Trash2
+                          className={`size-4 ${paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' ? 'text-muted-foreground cursor-not-allowed opacity-50' : 'cursor-pointer hover:text-destructive'}`}
+                          onClick={() => {
+                            if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
+                              setCart(draft => {
+                                draft.customer = null
+                              })
+                            }
+                          }}
+                        />
+                      </>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedSlot({ isShopCustomer: true })
+                          setShowCustomerSelection(true)
+                        }}
+                        disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                        className="cursor-pointer h-7 text-xs"
+                      >
+                        <Plus className="size-3" />
+                        Customer
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             )}

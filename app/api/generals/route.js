@@ -7,13 +7,27 @@ export async function GET(req) {
   await connectDB()
   const { employee } = await getEmployee()
   const orgId = employee.org._id
+  
+  // Get time filter from query params
+  const { searchParams } = new URL(req.url)
+  const hours = searchParams.get('hours') || '24'
+  
+  // Calculate date filter
+  const hoursAgo = new Date()
+  hoursAgo.setHours(hoursAgo.getHours() - parseInt(hours))
 
   console.log('🔍 Fetching generals with:', {
     org: orgId,
-    location: employee.selectedLocationId
+    location: employee.selectedLocationId,
+    hoursFilter: hours,
+    since: hoursAgo
   })
 
-  const generals = await General.find({ org: orgId, location: employee.selectedLocationId })
+  const generals = await General.find({ 
+    org: orgId, 
+    location: employee.selectedLocationId,
+    start: { $gte: hoursAgo }
+  })
     .populate("customer")
     .populate("product")
     .populate("location")
