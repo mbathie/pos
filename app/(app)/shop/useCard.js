@@ -1,18 +1,49 @@
 'use client'
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { loadStripeTerminal } from '@stripe/terminal-js';
+import { useGlobals } from '@/lib/globals';
 
 let terminalInstance = null;
 let discoveredReaders = [];
 let connecting = false
 
 export function useCard({ cart }) {
+  const { terminalConnection, setTerminalConnection, clearTerminalConnection, isTerminalConnectionValid } = useGlobals();
   const paymentIntentId = useRef()
   const transactionId = useRef()
   const clientSecret = useRef()
   const discoveredReaders = useRef([])
   const [terminalStatus, setTerminalStatus] = useState('disconnected') // disconnected, connecting, connected
   const [paymentStatus, setPaymentStatus] = useState(null) // null, collecting, processing, succeeded, failed
+
+  // Check for cached connection on mount
+  useEffect(() => {
+    const checkCachedConnection = async () => {
+      if (isTerminalConnectionValid()) {
+        console.log('🔄 Found valid cached terminal connection:', terminalConnection);
+        
+        // Initialize terminal if not already initialized
+        if (!terminalInstance) {
+          await initTerminal();
+        }
+        
+        // Check if the cached reader is still connected
+        if (terminalInstance) {
+          const connected = await terminalInstance.getConnectedReader();
+          if (connected && connected.id === terminalConnection.readerId) {
+            console.log('✅ Using cached terminal connection:', connected.label);
+            setTerminalStatus('connected');
+            return;
+          } else {
+            console.log('⚠️ Cached connection no longer valid, clearing...');
+            clearTerminalConnection();
+          }
+        }
+      }
+    };
+    
+    checkCachedConnection();
+  }, []); // Only run on mount
 
   const initTerminal = async () => {
     if (!terminalInstance && typeof window !== 'undefined') {
@@ -130,6 +161,14 @@ export function useCard({ cart }) {
         console.log('Connected to reader:', result.reader.label);
         connecting = false
         setTerminalStatus('connected')
+        
+        // Cache the connection in localStorage via globals
+        setTerminalConnection({
+          readerId: result.reader.id,
+          readerLabel: result.reader.label,
+          isSimulated: result.reader.simulated || false
+        });
+        console.log('💾 Terminal connection cached for future use');
       }
     } catch (error) {
       console.log('Terminal connection error:', error.message || 'Unknown error');
@@ -339,6 +378,26 @@ export function useCard({ cart }) {
     return intent
   };
 
+  const disconnectReader = async () => {
+    try {
+      if (terminalInstance) {
+        const connected = await terminalInstance.getConnectedReader();
+        if (connected) {
+          const result = await terminalInstance.disconnectReader();
+          if (result.error) {
+            console.error('Failed to disconnect reader:', result.error);
+          } else {
+            console.log('Reader disconnected successfully');
+            clearTerminalConnection();
+            setTerminalStatus('disconnected');
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error disconnecting reader:', error);
+    }
+  };
+
   const cancelPayment = async () => {
     // First try to cancel any active terminal collection
     if (terminalInstance) {
@@ -384,6 +443,7 @@ export function useCard({ cart }) {
   return {
     discoverReaders,
     connectReader,
+    disconnectReader,
     collectPayment,
     capturePayment,
     cancelPayment,
