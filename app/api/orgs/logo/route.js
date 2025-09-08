@@ -20,7 +20,7 @@ export async function POST(req) {
       { new: true }
     )
 
-    return NextResponse.json({ org: updatedOrg }, { status: 200 })
+    return NextResponse.json({ logo: updatedOrg.logo }, { status: 200 })
   } catch (error) {
     console.error("Error updating logo:", error)
     return NextResponse.json({ error: "Failed to update logo" }, { status: 500 })

@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { ArrowLeft, Upload, Trash2, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
+import IconSelect from '@/components/icon-select'
 
 const australianStates = [
   { value: 'NSW', label: 'New South Wales' },
@@ -23,10 +24,9 @@ const australianStates = [
 
 export default function OrganizationSettingsPage() {
   const router = useRouter()
-  const fileInputRef = useRef(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [logoDialogOpen, setLogoDialogOpen] = useState(false)
   const [orgData, setOrgData] = useState({
     name: '',
     phone: '',
@@ -99,45 +99,25 @@ export default function OrganizationSettingsPage() {
     }
   }
 
-  const handleLogoUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file')
-      return
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error('Image size should be less than 5MB')
-      return
-    }
-
-    setUploadingLogo(true)
-    const formData = new FormData()
-    formData.append('logo', file)
-
+  const handleLogoSelected = async (logoDataUrl) => {
     try {
       const response = await fetch('/api/orgs/logo', {
         method: 'POST',
-        body: formData
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logo: logoDataUrl })
       })
 
       if (response.ok) {
         const data = await response.json()
         setOrgData(prev => ({ ...prev, logo: data.logo }))
         setOriginalData(prev => ({ ...prev, logo: data.logo }))
-        toast.success('Logo uploaded successfully')
+        toast.success('Logo updated successfully')
       } else {
-        toast.error('Failed to upload logo')
+        toast.error('Failed to update logo')
       }
     } catch (error) {
-      console.error('Error uploading logo:', error)
-      toast.error('Failed to upload logo')
-    } finally {
-      setUploadingLogo(false)
+      console.error('Error updating logo:', error)
+      toast.error('Failed to update logo')
     }
   }
 
@@ -175,7 +155,7 @@ export default function OrganizationSettingsPage() {
   }
 
   return (
-    <div className="mx-4 mt-4 max-w-4xl">
+    <div className="mx-4 mt-2 max-w-4xl">
       <div className="flex items-center gap-4 mb-6">
         <Button 
           variant="ghost" 
@@ -196,7 +176,7 @@ export default function OrganizationSettingsPage() {
       </div>
 
       <Card>
-        <CardContent className="space-y-6 pt-6">
+        <CardContent className="space-y-6">
           {/* Organization Name */}
           <div className="space-y-2">
             <Label htmlFor="name">Organization Name</Label>
@@ -226,23 +206,18 @@ export default function OrganizationSettingsPage() {
                 </div>
               ) : (
                 <div className="w-48 h-16 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
-                  No logo uploaded
+                  No logo
                 </div>
               )}
               <div className="flex gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingLogo}
+                  onClick={() => setLogoDialogOpen(true)}
                   className="cursor-pointer"
                 >
-                  {uploadingLogo ? (
-                    <Loader2 className="size-4 mr-2 animate-spin" />
-                  ) : (
-                    <Upload className="size-4 mr-2" />
-                  )}
-                  Upload Logo
+                  <Upload className="size-4 mr-2" />
+                  {orgData.logo ? 'Change Logo' : 'Upload Logo'}
                 </Button>
                 {orgData.logo && (
                   <Button
@@ -256,13 +231,6 @@ export default function OrganizationSettingsPage() {
                   </Button>
                 )}
               </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleLogoUpload}
-                className="hidden"
-              />
             </div>
           </div>
 
@@ -300,15 +268,15 @@ export default function OrganizationSettingsPage() {
             />
           </div>
 
-          {/* State and Postcode */}
-          <div className="grid grid-cols-2 gap-4">
+          {/* State and Postcode - side by side on wider screens */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="state">State</Label>
               <Select
                 value={orgData.state}
                 onValueChange={(value) => setOrgData(prev => ({ ...prev, state: value }))}
               >
-                <SelectTrigger id="state">
+                <SelectTrigger id="state" className="w-full">
                   <SelectValue placeholder="Select state" />
                 </SelectTrigger>
                 <SelectContent>
@@ -329,6 +297,7 @@ export default function OrganizationSettingsPage() {
                 onChange={(e) => setOrgData(prev => ({ ...prev, postcode: e.target.value }))}
                 placeholder="Postcode"
                 maxLength={4}
+                className="w-full"
               />
             </div>
           </div>
@@ -352,6 +321,18 @@ export default function OrganizationSettingsPage() {
           </div>
         </CardContent>
       </Card>
+      
+      {/* Logo Selection Dialog */}
+      <IconSelect
+        open={logoDialogOpen}
+        setOpen={setLogoDialogOpen}
+        onIconSelected={handleLogoSelected}
+        title="Upload Organization Logo"
+        query=""
+        aspectRatio={3}
+        showIconLibrary={false}
+        showImageUpload={true}
+      />
     </div>
   )
 }

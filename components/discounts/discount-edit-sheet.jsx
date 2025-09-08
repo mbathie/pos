@@ -49,18 +49,7 @@ export default function DiscountEditSheet({
           onDelete={handleDelete}
           isInSheet={true}
           showHeader={false}
-          formId="discount-form-sheet"
         />
-        </div>
-
-        {/* Sheet footer with actions */}
-        <div className="border-t px-6 py-4 flex items-center justify-end gap-2">
-          <Button variant="outline" onClick={onClose} className="cursor-pointer">
-            Cancel
-          </Button>
-          <Button type="submit" form="discount-form-sheet" className="cursor-pointer">
-            {discount ? 'Update Discount' : 'Create Discount'}
-          </Button>
         </div>
       </SheetContent>
     </Sheet>

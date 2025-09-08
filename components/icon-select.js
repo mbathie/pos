@@ -22,6 +22,9 @@ import { cn } from '@/lib/utils';
  * @param {boolean} open - Dialog open state
  * @param {Function} setOpen - Dialog open state setter
  * @param {string} title - Dialog title (optional, defaults to "Select Icon")
+ * @param {number} aspectRatio - Aspect ratio for image cropping (optional, defaults to 1 for square)
+ * @param {boolean} showIconLibrary - Show icon library tab (optional, defaults to true)
+ * @param {boolean} showImageUpload - Show image upload tab (optional, defaults to true)
  */
 export default function IconSelect({
   onIconSelected,
@@ -30,7 +33,10 @@ export default function IconSelect({
   query = "",
   open,
   setOpen,
-  title = "Select Icon"
+  title = "Select Icon",
+  aspectRatio = 1, // Default to square
+  showIconLibrary = true,
+  showImageUpload = true
 }) {
   const [icons, setIcons] = useState([])
   const [loading, setLoading] = useState(false)
@@ -87,8 +93,17 @@ export default function IconSelect({
 
     const image = imgRef.current;
     const canvas = document.createElement('canvas');
-    canvas.width = 200;
-    canvas.height = 200;
+    
+    // Set canvas dimensions based on aspect ratio
+    if (aspectRatio >= 1) {
+      // Wider than tall (e.g., 3:1) or square
+      canvas.width = 300 * aspectRatio;
+      canvas.height = 300;
+    } else {
+      // Taller than wide
+      canvas.width = 300;
+      canvas.height = 300 / aspectRatio;
+    }
     
     const ctx = canvas.getContext('2d');
     
@@ -104,8 +119,8 @@ export default function IconSelect({
       completedCrop.height * scaleY,
       0,
       0,
-      200,
-      200
+      canvas.width,
+      canvas.height
     );
 
     return canvas.toDataURL('image/jpeg', 0.9);
@@ -125,15 +140,21 @@ export default function IconSelect({
           <DialogHeader className="mb-2">
             <DialogTitle>{title}</DialogTitle>
             <DialogDescription>
-              Choose from our icon library or upload your own image
+              {showIconLibrary && showImageUpload 
+                ? "Choose from our icon library or upload your own image"
+                : showIconLibrary 
+                ? "Choose from our icon library"
+                : "Upload your own image"}
             </DialogDescription>
           </DialogHeader>
 
-          <Tabs defaultValue="icon" className="flex flex-col h-full w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="icon">Icon Library</TabsTrigger>
-              <TabsTrigger value="image">Upload Image</TabsTrigger>
-            </TabsList>
+          {/* Show tabs only if both options are available */}
+          {showIconLibrary && showImageUpload ? (
+            <Tabs defaultValue="icon" className="flex flex-col h-full w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="icon">Icon Library</TabsTrigger>
+                <TabsTrigger value="image">Upload Image</TabsTrigger>
+              </TabsList>
 
             <TabsContent value="icon" className="mt-4 max-h-[50vh] overflow-auto">
               <div className="flex flex-col gap-4">
@@ -245,7 +266,7 @@ export default function IconSelect({
                       crop={crop}
                       onChange={(c) => setCrop(c)}
                       onComplete={(c, percentCrop) => setCompletedCrop(percentCrop)}
-                      aspect={1}
+                      aspect={aspectRatio}
                       className="max-h-[350px]"
                     >
                       <img
@@ -256,45 +277,72 @@ export default function IconSelect({
                         alt="Crop preview"
                         onLoad={(e) => {
                           const { width, height } = e.currentTarget;
-                          // Calculate the maximum square that fits in the image
-                          const minDimension = Math.min(width, height);
-                          const maxSquarePercent = (minDimension / Math.max(width, height)) * 100;
                           
-                          // Center the square crop
+                          // Calculate initial crop based on aspect ratio
                           let initialCrop;
                           
-                          if (width > height) {
-                            // Landscape image - center horizontally
-                            const xOffset = (100 - maxSquarePercent) / 2;
-                            initialCrop = {
-                              unit: '%',
-                              width: maxSquarePercent,
-                              height: 100,
-                              x: xOffset,
-                              y: 0,
-                              aspect: 1,
-                            };
-                          } else if (height > width) {
-                            // Portrait image - center vertically
-                            const yOffset = (100 - maxSquarePercent) / 2;
-                            initialCrop = {
-                              unit: '%',
-                              width: 100,
-                              height: maxSquarePercent,
-                              x: 0,
-                              y: yOffset,
-                              aspect: 1,
-                            };
+                          if (aspectRatio === 1) {
+                            // Square crop
+                            const minDimension = Math.min(width, height);
+                            const maxSquarePercent = (minDimension / Math.max(width, height)) * 100;
+                            
+                            if (width > height) {
+                              const xOffset = (100 - maxSquarePercent) / 2;
+                              initialCrop = {
+                                unit: '%',
+                                width: maxSquarePercent,
+                                height: 100,
+                                x: xOffset,
+                                y: 0,
+                                aspect: aspectRatio,
+                              };
+                            } else if (height > width) {
+                              const yOffset = (100 - maxSquarePercent) / 2;
+                              initialCrop = {
+                                unit: '%',
+                                width: 100,
+                                height: maxSquarePercent,
+                                x: 0,
+                                y: yOffset,
+                                aspect: aspectRatio,
+                              };
+                            } else {
+                              initialCrop = {
+                                unit: '%',
+                                width: 100,
+                                height: 100,
+                                x: 0,
+                                y: 0,
+                                aspect: aspectRatio,
+                              };
+                            }
                           } else {
-                            // Square image - use full image
-                            initialCrop = {
-                              unit: '%',
-                              width: 100,
-                              height: 100,
-                              x: 0,
-                              y: 0,
-                              aspect: 1,
-                            };
+                            // Non-square crop (e.g., 3:1 for logo)
+                            const imageAspect = width / height;
+                            
+                            if (imageAspect > aspectRatio) {
+                              // Image is wider than crop aspect
+                              const cropWidth = (aspectRatio * height / width) * 100;
+                              initialCrop = {
+                                unit: '%',
+                                width: cropWidth,
+                                height: 100,
+                                x: (100 - cropWidth) / 2,
+                                y: 0,
+                                aspect: aspectRatio,
+                              };
+                            } else {
+                              // Image is taller than crop aspect
+                              const cropHeight = (width / aspectRatio / height) * 100;
+                              initialCrop = {
+                                unit: '%',
+                                width: 100,
+                                height: cropHeight,
+                                x: 0,
+                                y: (100 - cropHeight) / 2,
+                                aspect: aspectRatio,
+                              };
+                            }
                           }
                           
                           setCrop(initialCrop);
@@ -323,6 +371,223 @@ export default function IconSelect({
               </div>
             </TabsContent>
           </Tabs>
+          ) : showIconLibrary ? (
+            // Only icon library
+            <div className="mt-4 max-h-[50vh] overflow-auto">
+              <div className="flex flex-col gap-4">
+                <div className='flex gap-2'>
+                  <Input 
+                    value={search} 
+                    onChange={(e) => setSearch(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        getIcons(search);
+                      }
+                    }}
+                    placeholder="Search for icons..."
+                    className="flex-1"
+                  />
+                  <Button 
+                    onClick={() => getIcons(search)}
+                    className="px-6"
+                    disabled={!search}
+                  >
+                    Search
+                  </Button>
+                </div>
+
+                {/* Loading state */}
+                {icons === null && search && (
+                  <div className="flex items-center justify-center p-10">
+                    <Loader className="animate-spin h-8 w-8 text-muted-foreground" />
+                  </div>
+                )}
+
+                {/* No results */}
+                {icons?.length === 0 && search && (
+                  <div className="text-center p-10 text-muted-foreground">
+                    <p>No icons found for "{search}"</p>
+                    <p className="text-sm mt-2">Try different keywords</p>
+                  </div>
+                )}
+
+                {/* Initial state */}
+                {!search && icons?.length === 0 && (
+                  <div className="text-center p-10 text-muted-foreground">
+                    <p>Enter a search term to find icons</p>
+                    <p className="text-sm mt-2">Try "coffee", "food", "drink", etc.</p>
+                  </div>
+                )}
+
+                {/* Results */}
+                {icons?.length > 0 && (
+                  <div className='grid grid-cols-4 sm:grid-cols-5 gap-3 p-2'>
+                    {icons.map((i) => (
+                      <button
+                        key={i.name}
+                        onClick={() => handleIconSelect(i.thumbnail_url)}
+                        className="cursor-pointer border-2 border-border hover:border-primary aspect-square rounded-lg flex items-center justify-center bg-background hover:bg-accent transition-colors"
+                      >
+                        <SvgIcon 
+                          src={i.thumbnail_url} 
+                          className="size-8 text-foreground" 
+                          alt={i.name || 'icon'} 
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : showImageUpload ? (
+            // Only image upload
+            <div className="h-full overflow-auto">
+              <div className="p-4 text-muted-foreground flex flex-col items-center gap-4">
+                {!selectedImage && (
+                  <label
+                    htmlFor="image-upload-only"
+                    onDragOver={(e) => e.preventDefault()}
+                    onDragEnter={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const file = e.dataTransfer.files?.[0];
+                      if (!file) return;
+                      const reader = new FileReader();
+                      reader.onload = () => setSelectedImage(reader.result);
+                      reader.readAsDataURL(file);
+                    }}
+                    className="p-4 aspect-square border border-dashed border-muted-foreground rounded-lg flex items-center justify-center text-sm text-muted-foreground cursor-pointer"
+                  >
+                    <div className="flex text-center flex-col items-center justify-center gap-2">
+                      <Plus className="w-6 h-6" />
+                      <span>Select file<br />or drag</span>
+                    </div>
+                    <input
+                      id="image-upload-only"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => setSelectedImage(reader.result);
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                )}
+
+                {selectedImage && (
+                  <div className="flex flex-col gap-4 w-full items-center">
+                    <ReactCrop
+                      crop={crop}
+                      onChange={(c) => setCrop(c)}
+                      onComplete={(c, percentCrop) => setCompletedCrop(percentCrop)}
+                      aspect={aspectRatio}
+                      className="max-h-[350px]"
+                    >
+                      <img
+                        ref={imgRef}
+                        src={selectedImage}
+                        className="max-w-full h-auto"
+                        style={{ maxHeight: '350px', width: 'auto', display: 'block' }}
+                        alt="Crop preview"
+                        onLoad={(e) => {
+                          const { width, height } = e.currentTarget;
+                          
+                          // Calculate initial crop based on aspect ratio
+                          let initialCrop;
+                          
+                          if (aspectRatio === 1) {
+                            // Square crop
+                            const minDimension = Math.min(width, height);
+                            const maxSquarePercent = (minDimension / Math.max(width, height)) * 100;
+                            
+                            if (width > height) {
+                              const xOffset = (100 - maxSquarePercent) / 2;
+                              initialCrop = {
+                                unit: '%',
+                                width: maxSquarePercent,
+                                height: 100,
+                                x: xOffset,
+                                y: 0,
+                                aspect: aspectRatio,
+                              };
+                            } else if (height > width) {
+                              const yOffset = (100 - maxSquarePercent) / 2;
+                              initialCrop = {
+                                unit: '%',
+                                width: 100,
+                                height: maxSquarePercent,
+                                x: 0,
+                                y: yOffset,
+                                aspect: aspectRatio,
+                              };
+                            } else {
+                              initialCrop = {
+                                unit: '%',
+                                width: 100,
+                                height: 100,
+                                x: 0,
+                                y: 0,
+                                aspect: aspectRatio,
+                              };
+                            }
+                          } else {
+                            // Non-square crop (e.g., 3:1 for logo)
+                            const imageAspect = width / height;
+                            
+                            if (imageAspect > aspectRatio) {
+                              // Image is wider than crop aspect
+                              const cropWidth = (aspectRatio * height / width) * 100;
+                              initialCrop = {
+                                unit: '%',
+                                width: cropWidth,
+                                height: 100,
+                                x: (100 - cropWidth) / 2,
+                                y: 0,
+                                aspect: aspectRatio,
+                              };
+                            } else {
+                              // Image is taller than crop aspect
+                              const cropHeight = (width / aspectRatio / height) * 100;
+                              initialCrop = {
+                                unit: '%',
+                                width: 100,
+                                height: cropHeight,
+                                x: 0,
+                                y: (100 - cropHeight) / 2,
+                                aspect: aspectRatio,
+                              };
+                            }
+                          }
+                          
+                          setCrop(initialCrop);
+                          setCompletedCrop(initialCrop);
+                        }}
+                      />
+                    </ReactCrop>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedImage(null);
+                          setCrop(null);
+                          setCompletedCrop(null);
+                        }}
+                      >
+                        Change Image
+                      </Button>
+                      <Button onClick={handleSaveCroppedImage}>
+                        Use This Image
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>
