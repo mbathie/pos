@@ -146,11 +146,11 @@ export async function GET(req) {
     });
   }
 
-  // Legacy behavior for existing endpoints - also return only basic fields
+  // Legacy behavior for existing endpoints - return essential fields
   // Include waiver status if specifically filtering for waivers
-  let selectFields = '_id name email phone';
+  let selectFields = '_id name email phone memberId dependents waiver';
   if (requiresWaiver === "true" || recentWaiver === "1") {
-    selectFields += ' waiver.agree assigned dependents';  // Include waiver status and dependents for waiver-specific queries
+    selectFields += ' assigned';  // Include assigned status for waiver-specific queries
   }
   
   const customers = await Customer.find(baseQuery)

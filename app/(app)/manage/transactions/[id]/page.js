@@ -125,7 +125,9 @@ export default function TransactionDetailsPage() {
               <TableHead>Variation</TableHead>
               <TableHead>Modifiers</TableHead>
               <TableHead>Qty</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right">Subtotal</TableHead>
+              <TableHead className="text-right">Discount</TableHead>
+              <TableHead className="text-right">Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -148,8 +150,14 @@ export default function TransactionDetailsPage() {
                   </div>
                 </TableCell>
                 <TableCell>{product.qty}</TableCell>
-                <TableCell className="text-right font-medium">
+                <TableCell className="text-right">
                   {formatCurrency(product.amount?.subtotal)}
+                </TableCell>
+                <TableCell className="text-right">
+                  {product.amount?.discount > 0 ? `-${formatCurrency(product.amount.discount)}` : '-'}
+                </TableCell>
+                <TableCell className="text-right font-medium">
+                  {formatCurrency((product.amount?.subtotal || 0) - (product.amount?.discount || 0))}
                 </TableCell>
               </TableRow>
             ))}
@@ -171,7 +179,9 @@ export default function TransactionDetailsPage() {
               <TableHead>Class</TableHead>
               <TableHead>Date</TableHead>
               <TableHead>Attendees</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right">Subtotal</TableHead>
+              <TableHead className="text-right">Discount</TableHead>
+              <TableHead className="text-right">Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -213,6 +223,12 @@ export default function TransactionDetailsPage() {
                 <TableCell className="text-right align-top">
                   {formatCurrency(product.amount?.subtotal)}
                 </TableCell>
+                <TableCell className="text-right align-top">
+                  {product.amount?.discount > 0 ? `-${formatCurrency(product.amount.discount)}` : '-'}
+                </TableCell>
+                <TableCell className="text-right align-top font-medium">
+                  {formatCurrency((product.amount?.subtotal || 0) - (product.amount?.discount || 0))}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -233,7 +249,9 @@ export default function TransactionDetailsPage() {
               <TableHead>Course</TableHead>
               <TableHead>Start Date</TableHead>
               <TableHead>Attendees</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right">Subtotal</TableHead>
+              <TableHead className="text-right">Discount</TableHead>
+              <TableHead className="text-right">Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -275,6 +293,12 @@ export default function TransactionDetailsPage() {
                 <TableCell className="text-right align-top">
                   {formatCurrency(product.amount?.subtotal)}
                 </TableCell>
+                <TableCell className="text-right align-top">
+                  {product.amount?.discount > 0 ? `-${formatCurrency(product.amount.discount)}` : '-'}
+                </TableCell>
+                <TableCell className="text-right align-top font-medium">
+                  {formatCurrency((product.amount?.subtotal || 0) - (product.amount?.discount || 0))}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -294,7 +318,9 @@ export default function TransactionDetailsPage() {
             <TableRow>
               <TableHead>Entry Pass</TableHead>
               <TableHead>Attendees</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right">Subtotal</TableHead>
+              <TableHead className="text-right">Discount</TableHead>
+              <TableHead className="text-right">Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -324,6 +350,12 @@ export default function TransactionDetailsPage() {
                 <TableCell className="text-right align-top">
                   {formatCurrency(product.amount?.subtotal)}
                 </TableCell>
+                <TableCell className="text-right align-top">
+                  {product.amount?.discount > 0 ? `-${formatCurrency(product.amount.discount)}` : '-'}
+                </TableCell>
+                <TableCell className="text-right align-top font-medium">
+                  {formatCurrency((product.amount?.subtotal || 0) - (product.amount?.discount || 0))}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -345,7 +377,9 @@ export default function TransactionDetailsPage() {
               <TableHead>Billing Period</TableHead>
               <TableHead>Subscribers</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right">Subtotal</TableHead>
+              <TableHead className="text-right">Discount</TableHead>
+              <TableHead className="text-right">Total</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -390,6 +424,12 @@ export default function TransactionDetailsPage() {
                 </TableCell>
                 <TableCell className="text-right align-top">
                   {formatCurrency(product.amount?.subtotal)}
+                </TableCell>
+                <TableCell className="text-right align-top">
+                  {product.amount?.discount > 0 ? `-${formatCurrency(product.amount.discount)}` : '-'}
+                </TableCell>
+                <TableCell className="text-right align-top font-medium">
+                  {formatCurrency((product.amount?.subtotal || 0) - (product.amount?.discount || 0))}
                 </TableCell>
               </TableRow>
             ))}

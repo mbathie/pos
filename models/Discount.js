@@ -11,39 +11,46 @@ const DiscountSchema = new mongoose.Schema({
   // Public code guests can enter (discounts only)
   code: { type: String },
 
-  // Value type and amount
-  type: { type: String, enum: ['percent', 'amount'], required: true },
-  value: { type: Number, required: true },
-
-  // Optional hard cap when using percent
-  maxAmount: { type: Number },
-
-  // 2-for-1 like promotions (discounts only)
-  bogo: {
-    enabled: { type: Boolean, default: false },
-    buyQty: { type: Number, default: 2 },
-    getQty: { type: Number, default: 1 },
-    discountPercent: { type: Number, default: 50 },
+  // Must have products/categories (customer must be purchasing these)
+  musts: {
+    products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+    categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }]
   },
+
+  // Multiple adjustments with their own products/categories
+  adjustments: [{
+    products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
+    categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
+    adjustment: {
+      type: { type: String, enum: ['percent', 'amount'], required: true },
+      value: { type: Number, required: true },
+      maxAmount: { type: Number }
+    }
+  }],
 
   // Limits and scheduling
   start: { type: Date },
   expiry: { type: Date },
   archivedAt: { type: Date },
+  daysOfWeek: {
+    monday: { type: Boolean, default: true },
+    tuesday: { type: Boolean, default: true },
+    wednesday: { type: Boolean, default: true },
+    thursday: { type: Boolean, default: true },
+    friday: { type: Boolean, default: true },
+    saturday: { type: Boolean, default: true },
+    sunday: { type: Boolean, default: true }
+  },
   limits: {
-    usageLimit: { type: Number }, // global usage cap
-    perCustomer: {
-      total: { type: Number }, // lifetime per customer
+    total: {
+      usageLimit: { type: Number }, // global usage cap
       frequency: {
         count: { type: Number },
-        period: { type: String, enum: ['day', 'week', 'month', 'year'] },
+        period: { type: String, enum: ['day', 'week', 'month', 'year'] }
       }
-    }
+    },
+    perCustomer: { type: Number } // lifetime per customer
   },
-
-  // Applicability
-  products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
-  categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
 
   // Ownership
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },

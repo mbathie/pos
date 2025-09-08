@@ -18,6 +18,7 @@ export default function DiscountsSheet({
   const [localSelectedDiscounts, setLocalSelectedDiscounts] = useState(selectedDiscounts);
   const [editSheetOpen, setEditSheetOpen] = useState(false);
   const [editingDiscount, setEditingDiscount] = useState(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Reset local state when selectedDiscounts prop changes
   useEffect(() => {
@@ -72,6 +73,14 @@ export default function DiscountsSheet({
     setEditingDiscount(null);
   };
 
+  const handleDelete = () => {
+    // Close the edit sheet and trigger refresh of the Discounts component
+    setEditSheetOpen(false);
+    setEditingDiscount(null);
+    // Trigger a refresh by incrementing the refresh trigger
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   return (
     <>
     <Sheet open={isOpen} onOpenChange={(open) => !open && handleCancel()}>
@@ -86,6 +95,7 @@ export default function DiscountsSheet({
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
           <Discounts
+            key={refreshTrigger}
             isPanel={true}
             onSelect={handleSelect}
             selectedDiscounts={localSelectedDiscounts}
@@ -129,6 +139,7 @@ export default function DiscountsSheet({
       }}
       discount={editingDiscount}
       onSuccess={handleEditSuccess}
+      onDelete={handleDelete}
     />
   </>
   );

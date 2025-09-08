@@ -30,7 +30,7 @@ const emailSchema = z.string().email('Please enter a valid email address');
 const keypad = ['1','2','3','4','5','6','7','8','9','.','0','AC'];
 
 export default function Page() {
-  const { cart, resetCart, setCart, employee, setEmployee, appliedAdjustments, setAppliedAdjustments, clearAppliedAdjustments } = useGlobals();
+  const { cart, resetCart, markCartAsStale, setCart, employee, setEmployee, appliedAdjustments, setAppliedAdjustments, clearAppliedAdjustments } = useGlobals();
   const [cashInput, setCashInput] = useState('0');
   const [tab, setTab] = useState('card');
   const router = useRouter();
@@ -56,11 +56,11 @@ export default function Page() {
   const [ paymentStatus, setPaymentStatus ] = useState("")
   const [ isCollectingPayment, setIsCollectingPayment ] = useState(false)
   const [ isProcessingCash, setIsProcessingCash ] = useState(false)
-  const [ cartSnapshot, setCartSnapshot ] = useState(null)
-  const hasInitialSnapshot = useRef(false)
+  // Snapshot removed
 
   const [ showCustomerSelection, setShowCustomerSelection ] = useState(false)
-  const [ requiresWaiver, setRequiresWaiver ] = useState(false)
+  const [ selectedSlot, setSelectedSlot ] = useState(null)
+  const [ requiresCustomerAssignment, setRequiresCustomerAssignment ] = useState(false)
   
   // Discount state
   const [discounts, setDiscounts] = useState([])
@@ -79,12 +79,24 @@ export default function Page() {
   // Check if cart contains membership products
   const hasMembershipProducts = cart.products.some(product => product.type === 'membership')
   
-  // Check if customer is required and connected for memberships
-  const membershipNeedsCustomer = hasMembershipProducts && cart.products.some(p => 
-    p.type === 'membership' && p.prices?.some(pr => 
-      pr.customers?.some(c => !c.customer?._id)
-    )
-  )
+  // Check if all required customers are assigned for products with waivers
+  const needsCustomerAssignment = cart.products.some(product => {
+    if (!product.waiverRequired) return false
+    
+    // For class, course, membership - check if all slots have customers
+    if (['class', 'course', 'membership'].includes(product.type)) {
+      return product.prices?.some(price => 
+        price.customers?.some(c => !c.customer?._id)
+      )
+    }
+    
+    // For shop items with waiver requirement, check if cart has a customer
+    if (product.type === 'shop') {
+      return !cart.customer?._id
+    }
+    
+    return false
+  })
 
   // Validate email whenever it changes
   useEffect(() => {
@@ -113,115 +125,276 @@ export default function Page() {
 
   // Update receive amount when card payment succeeds
   useEffect(() => {
-    if (cardPaymentStatus === 'succeeded' && tab === 'card' && cartSnapshot) {
-      const amountPaid = cartSnapshot.total.toFixed(2);
-      setChangeInfo({
-        received: amountPaid,
-        change: "0.00"
-      });
-      // Store card transaction ID
-      if (cardTransactionId) {
-        setTransactionId(cardTransactionId);
-      }
+    if (cardPaymentStatus === 'succeeded' && tab === 'card') {
+      const amountPaid = (cart.total || 0).toFixed(2)
+      setChangeInfo({ received: amountPaid, change: "0.00" })
+      if (cardTransactionId) setTransactionId(cardTransactionId)
     }
-  }, [cardPaymentStatus, tab, cartSnapshot, cardTransactionId])
+  }, [cardPaymentStatus, tab, cart.total, cardTransactionId])
 
-  // Handle customer selection and auto-assignment
-  const handleCustomerSelection = (assignments) => {
-    if (!assignments || assignments.length === 0) return
+  // Handle single customer selection for a specific slot
+  const handleCustomerSelection = async (selectedCustomer) => {
+    console.log('🎯 handleCustomerSelection called with:', {
+      selectedCustomer: selectedCustomer?.customer?.name,
+      selectedSlot: selectedSlot
+    })
     
-    // Separate adult and minor assignments
-    const adultAssignments = assignments.filter(a => !a.isMinor)
-    const minorAssignments = assignments.filter(a => a.isMinor)
+    if (!selectedSlot) {
+      console.log('❌ Missing selectedCustomer or selectedSlot')
+      return
+    }
+    
+    const { priceId, slotIdx, isMinor } = selectedSlot
+    
+    console.log('📍 Assigning to specific slot:', {
+      priceId: priceId,
+      slotIndex: slotIdx,
+      customerName: selectedCustomer.customer?.name,
+      customerId: selectedCustomer.customer?._id,
+      dependent: selectedCustomer.dependent?.name,
+      isMinor: selectedCustomer.isMinor
+    })
     
     setCart(draft => {
-      let adultIndex = 0
-      let minorIndex = 0
+      console.log('📦 Current cart products:', draft.products.length)
       
-      // Go through each product and assign customers
-      draft.products.forEach((product, pIdx) => {
-        if (['class', 'course', 'general'].includes(product.type)) {
-          product.prices?.forEach((price, priceIdx) => {
-            price.customers?.forEach((customer, cIdx) => {
-              // Skip if already assigned
-              if (draft.products[pIdx].prices[priceIdx].customers[cIdx].customer) return
-              
-              const isMinorPrice = price.minor || false
-              
-              if (isMinorPrice && minorIndex < minorAssignments.length) {
-                // Assign minor
-                const assignment = minorAssignments[minorIndex]
-                draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = assignment.customer
-                draft.products[pIdx].prices[priceIdx].customers[cIdx].dependent = assignment.dependent
-                minorIndex++
-              } else if (!isMinorPrice && adultIndex < adultAssignments.length) {
-                // Assign adult
-                const assignment = adultAssignments[adultIndex]
-                draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = assignment.customer
-                draft.products[pIdx].prices[priceIdx].customers[cIdx].dependent = null
-                adultIndex++
-              }
-            })
-          })
+      // Find the product and price by the unique price ID
+      let targetProductIdx = -1
+      let targetPriceIdx = -1
+      
+      console.log('🔍 Searching for price ID:', priceId)
+      console.log('🔍 Cart products:', draft.products.map((p, idx) => ({
+        idx,
+        name: p.name,
+        priceIds: p.prices?.map(pr => pr._id)
+      })))
+      
+      for (let pIdx = 0; pIdx < draft.products.length; pIdx++) {
+        const product = draft.products[pIdx]
+        if (product.prices) {
+          const priceIdx = product.prices.findIndex(p => p._id === priceId)
+          if (priceIdx !== -1) {
+            targetProductIdx = pIdx
+            targetPriceIdx = priceIdx
+            console.log(`✅ Found price at product[${pIdx}].prices[${priceIdx}]`)
+            break
+          }
         }
-        // Handle memberships (now using prices directly like classes)
-        else if (product.type === 'membership') {
-          product.prices?.forEach((price, priceIdx) => {
-            // Initialize customers array if it doesn't exist (for membership products)
-            if (!price.customers && price.qty > 0) {
-              draft.products[pIdx].prices[priceIdx].customers = Array(price.qty).fill(null).map(() => ({}))
+      }
+      
+      if (targetProductIdx === -1 || targetPriceIdx === -1) {
+        console.log('❌ Price not found in cart with ID:', priceId)
+        return
+      }
+      
+      console.log('📦 Target product index:', targetProductIdx)
+      console.log('📦 Target product:', draft.products[targetProductIdx]?.name)
+      console.log('📦 Target price ID:', priceId)
+      console.log('📦 Target price:', draft.products[targetProductIdx]?.prices?.[targetPriceIdx]?.name)
+      
+      // Initialize customers array if needed
+      if (!draft.products[targetProductIdx].prices[targetPriceIdx].customers) {
+        const qty = draft.products[targetProductIdx].prices[targetPriceIdx].qty || 0
+        console.log(`📦 Initializing customers array with ${qty} slots`)
+        draft.products[targetProductIdx].prices[targetPriceIdx].customers = Array(qty).fill(null).map(() => ({
+          customer: null,
+          dependent: null
+        }))
+      }
+      
+      console.log('📦 Before assignment - customers at this price:', 
+        draft.products[targetProductIdx].prices[targetPriceIdx].customers?.map((c, i) => 
+          `Slot ${i}: ${c?.customer?.name || 'empty'}`
+        )
+      )
+      
+      // Multi-minor selection handling
+      if (selectedCustomer?.minors && Array.isArray(selectedCustomer.minors) && selectedCustomer.minors.length > 0) {
+        let i = 0
+        const productRef = draft.products[targetProductIdx]
+        // Determine where to place minors: if current price is minor, fill here; else fill all sibling minor prices
+        const fillTargets = []
+        if (productRef.prices[targetPriceIdx].minor) {
+          fillTargets.push(productRef.prices[targetPriceIdx])
+        } else {
+          productRef.prices?.forEach(pr => { if (pr.minor) fillTargets.push(pr) })
+        }
+
+        for (const pr of fillTargets) {
+          if (!pr.customers) {
+            const qty = pr.qty || 0
+            pr.customers = Array(qty).fill(null).map(() => ({ customer: null, dependent: null }))
+          }
+          for (let s = 0; s < pr.customers.length; s++) {
+            const slot = pr.customers[s] || {}
+            if (!slot.customer && !slot.dependent && i < selectedCustomer.minors.length) {
+              const m = selectedCustomer.minors[i]
+              pr.customers[s] = { customer: m.customer, dependent: m.dependent }
+              i++
             }
-            
-            price.customers?.forEach((customer, cIdx) => {
-              // Skip if already assigned
-              if (draft.products[pIdx].prices[priceIdx].customers[cIdx].customer) return
-              
-              const isMinorPrice = price.minor || false
-              
-              if (isMinorPrice && minorIndex < minorAssignments.length) {
-                // Assign minor
-                const assignment = minorAssignments[minorIndex]
-                draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = assignment.customer
-                draft.products[pIdx].prices[priceIdx].customers[cIdx].dependent = assignment.dependent
-                minorIndex++
-              } else if (!isMinorPrice && adultIndex < adultAssignments.length) {
-                // Assign adult
-                const assignment = adultAssignments[adultIndex]
-                draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = assignment.customer
-                draft.products[pIdx].prices[priceIdx].customers[cIdx].dependent = null
-                adultIndex++
-              }
-            })
-          })
+          }
+          if (i >= selectedCustomer.minors.length) break
         }
-      })
+
+        // If this selection was started from an ADULT slot, also assign the adult there
+        if (!productRef.prices[targetPriceIdx].minor && typeof slotIdx === 'number') {
+          if (!productRef.prices[targetPriceIdx].customers) {
+            const qty = productRef.prices[targetPriceIdx].qty || 0
+            productRef.prices[targetPriceIdx].customers = Array(qty).fill(null).map(() => ({ customer: null, dependent: null }))
+          }
+          productRef.prices[targetPriceIdx].customers[slotIdx] = {
+            customer: selectedCustomer.customer,
+            dependent: null
+          }
+        }
+      } else {
+        // Single assignment (adult or single dependent)
+        draft.products[targetProductIdx].prices[targetPriceIdx].customers[slotIdx] = {
+          customer: selectedCustomer.customer,
+          dependent: selectedCustomer.dependent || null
+        }
+      }
       
-      // Handle main cart customer if we have at least one adult assignment
-      if (adultAssignments.length > 0) {
-        draft.customer = adultAssignments[0].customer
+      console.log('📦 After assignment - customers at this price:', 
+        draft.products[targetProductIdx].prices[targetPriceIdx].customers?.map((c, i) => 
+          `Slot ${i}: ${c?.customer?.name || 'empty'}`
+        )
+      )
+      
+      // Set main cart customer for discount eligibility if this is the first customer
+      if (!draft.customer && selectedCustomer.customer) {
+        draft.customer = selectedCustomer.customer
       }
     })
     
-    // Update snapshot after assignment
-    setTimeout(updateSnapshotCustomers, 100)
+    // Log the entire cart state after assignment
+    setCart(draft => {
+      console.log('🔍 Final cart state check:')
+      draft.products.forEach((product, pIdx) => {
+        if (product.prices) {
+          product.prices.forEach((price, priceIdx) => {
+            if (price.customers) {
+              console.log(`  Product ${pIdx} (${product.name}), Price ${priceIdx} (${price.name}):`)
+              price.customers.forEach((cust, slotIdx) => {
+                console.log(`    Slot ${slotIdx}: ${cust?.customer?.name || 'empty'} (ID: ${cust?.customer?._id || 'none'})`)
+              })
+            }
+          })
+        }
+      })
+      return draft
+    })
     
-    toast.success('Customers assigned successfully')
+    // Snapshot removed – nothing else to update here
+    
+    toast.success('Customer assigned successfully')
+    
+    // Clear the selected slot
+    setSelectedSlot(null)
+    setShowCustomerSelection(false)
+    
+    // Auto-apply eligible discounts when customer is assigned (adult or first minor guardian)
+    if (selectedCustomer.customer) {
+      // Defer to allow the state update to commit so merge uses latest customers
+      setTimeout(() => {
+        applyAdjustments(null, null, null, null, selectedCustomer.customer, true)
+      }, 120)
+    }
   }
 
-  // Apply adjustments to cart when discount is applied
-  const applyAdjustments = async (discountCode = null, discountId = null, customDiscountAmount = null, discountName = null) => {
+  // Helper: merge previously assigned customers back into updated products
+  const mergeCustomersIntoProducts = (prevProducts, nextProducts) => {
     try {
-      console.log('🎁 [UI] Requesting adjustments:', { discountCode, discountId, customDiscountAmount, discountName });
+      // Build a lookup map from unique price ID -> customers array
+      const priceIdToCustomers = new Map();
+
+      prevProducts.forEach((prod) => {
+        // Prices at root
+        prod.prices?.forEach((price) => {
+          if (price?._id) {
+            priceIdToCustomers.set(price._id, Array.isArray(price.customers) ? JSON.parse(JSON.stringify(price.customers)) : undefined);
+          }
+        });
+        // Legacy variations support
+        prod.variations?.forEach((variation) => {
+          variation.prices?.forEach((price) => {
+            if (price?._id) {
+              priceIdToCustomers.set(price._id, Array.isArray(price.customers) ? JSON.parse(JSON.stringify(price.customers)) : undefined);
+            }
+          });
+        });
+      });
+
+      // Walk nextProducts and inject customers by matching price IDs
+      return nextProducts.map((nextProd) => {
+        // Prices at root level
+        if (Array.isArray(nextProd.prices)) {
+          nextProd.prices = nextProd.prices.map((nextPrice) => {
+            const prevCustomers = priceIdToCustomers.get(nextPrice?._id);
+            if (!prevCustomers) return nextPrice;
+
+            const expectedLen = (typeof nextPrice.qty === 'number')
+              ? nextPrice.qty
+              : (Array.isArray(nextPrice.customers) ? nextPrice.customers.length : prevCustomers.length);
+
+            const mergedCustomers = Array.from({ length: expectedLen }, (_, i) => {
+              const prevCust = prevCustomers?.[i];
+              const nextCust = nextPrice.customers?.[i];
+              return prevCust ? JSON.parse(JSON.stringify(prevCust)) : (nextCust ? JSON.parse(JSON.stringify(nextCust)) : {});
+            });
+
+            return { ...nextPrice, customers: mergedCustomers };
+          });
+        }
+
+        // Legacy variations support
+        if (Array.isArray(nextProd.variations)) {
+          nextProd.variations = nextProd.variations.map((nextVar) => {
+            if (Array.isArray(nextVar.prices)) {
+              nextVar.prices = nextVar.prices.map((nextPrice) => {
+                const prevCustomers = priceIdToCustomers.get(nextPrice?._id);
+                if (!prevCustomers) return nextPrice;
+
+                const expectedLen = (typeof nextPrice.qty === 'number')
+                  ? nextPrice.qty
+                  : (Array.isArray(nextPrice.customers) ? nextPrice.customers.length : prevCustomers.length);
+
+                const mergedCustomers = Array.from({ length: expectedLen }, (_, i) => {
+                  const prevCust = prevCustomers?.[i];
+                  const nextCust = nextPrice.customers?.[i];
+                  return prevCust ? JSON.parse(JSON.stringify(prevCust)) : (nextCust ? JSON.parse(JSON.stringify(nextCust)) : {});
+                });
+
+                return { ...nextPrice, customers: mergedCustomers };
+              });
+            }
+            return nextVar;
+          });
+        }
+
+        return nextProd;
+      });
+    } catch (e) {
+      console.error('mergeCustomersIntoProducts failed:', e);
+      return nextProducts;
+    }
+  };
+
+  // Apply adjustments to cart when discount is applied
+  const applyAdjustments = async (discountCode = null, discountId = null, customDiscountAmount = null, discountName = null, explicitCustomer = null, autoApply = false) => {
+    try {
+      console.log('🎁 [UI] Requesting adjustments:', { discountCode, discountId, customDiscountAmount, discountName, hasExplicitCustomer: !!explicitCustomer, autoApply });
       
       const response = await fetch('/api/adjustments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cart,
-          customer: cart.customer,
+          customer: explicitCustomer || cart.customer,
           discountCode,
           discountId,
-          customDiscountAmount
+          customDiscountAmount,
+          autoApply
         })
       });
 
@@ -263,12 +436,16 @@ export default function Page() {
             { duration: 4000 }
           );
           
-          // Update the cart with adjusted values
+          // Update the cart with adjusted values (preserve customer assignments)
           setCart(draft => {
             draft.subtotal = updatedCart.subtotal;
             draft.tax = updatedCart.tax;
             draft.total = updatedCart.total;
-            draft.products = updatedCart.products;
+            const merged = mergeCustomersIntoProducts(draft.products, JSON.parse(JSON.stringify(updatedCart.products)));
+            draft.products = merged;
+            // Store applied discount for persistence
+            draft.appliedDiscountId = updatedCart.appliedDiscountId;
+            draft.appliedDiscountCode = updatedCart.appliedDiscountCode;
           });
           
           // Store adjustments for display
@@ -285,12 +462,16 @@ export default function Page() {
           return null;
         } else {
           // Just surcharges or no adjustments at all
-          // Update the cart with adjusted values
+          // Update the cart with adjusted values (preserve customer assignments)
           setCart(draft => {
             draft.subtotal = updatedCart.subtotal;
             draft.tax = updatedCart.tax;
             draft.total = updatedCart.total;
-            draft.products = updatedCart.products;
+            const merged = mergeCustomersIntoProducts(draft.products, JSON.parse(JSON.stringify(updatedCart.products)));
+            draft.products = merged;
+            // Store applied discount for persistence
+            draft.appliedDiscountId = updatedCart.appliedDiscountId;
+            draft.appliedDiscountCode = updatedCart.appliedDiscountCode;
           });
           
           // Store adjustments for display
@@ -387,106 +568,8 @@ export default function Page() {
     }
   }, [stripeEnabled]);
 
-  // Take initial snapshot of cart on page load (only once)
-  useEffect(() => {
-    if (!hasInitialSnapshot.current && cart.products.length > 0) {
-      console.log('📸 Taking initial cart snapshot on page load')
-      // Deep copy products to preserve all nested customer data
-      const productsCopy = JSON.parse(JSON.stringify(cart.products));
-      setCartSnapshot({
-        total: cart.total,
-        subtotal: cart.subtotal,
-        tax: cart.tax,
-        products: productsCopy, // Deep copy to preserve nested customer objects
-        customer: cart.customer ? JSON.parse(JSON.stringify(cart.customer)) : null, // Deep copy customer too
-        adjustments: appliedAdjustments ? JSON.parse(JSON.stringify(appliedAdjustments)) : null
-      })
-      hasInitialSnapshot.current = true
-    }
-  }, [cart.products.length])
-
-  // Update snapshot when discounts change (but keep the same products)
-  useEffect(() => {
-    if (hasInitialSnapshot.current && cartSnapshot && cart.products.length > 0) {
-      console.log('📸 Updating cart snapshot due to discount change')
-      setCartSnapshot(prev => ({
-        ...prev,
-        total: cart.total,
-        subtotal: cart.subtotal,
-        tax: cart.tax,
-        adjustments: appliedAdjustments ? JSON.parse(JSON.stringify(appliedAdjustments)) : null
-        // Keep original products from snapshot
-      }))
-    }
-  }, [appliedAdjustments, cart.total, cart.subtotal, cart.tax])
-
-
-
-  // Function to update snapshot with current customer data
-  const updateSnapshotCustomers = () => {
-    if (hasInitialSnapshot.current && cartSnapshot) {
-      console.log('📸 Updating cart snapshot due to customer change')
-      // Deep copy products to preserve all nested customer data
-      const productsCopy = JSON.parse(JSON.stringify(cart.products));
-      setCartSnapshot(prev => ({
-        ...prev,
-        products: productsCopy, // Deep copy to preserve nested customer objects
-        customer: cart.customer ? JSON.parse(JSON.stringify(cart.customer)) : null // Deep copy customer too
-      }))
-    }
-  }
-  
-  // Watch for customer changes in cart and update snapshot
-  useEffect(() => {
-    if (hasInitialSnapshot.current && cartSnapshot && cart.products.length > 0) {
-      // Check if any customers have changed
-      let hasCustomerChange = false;
-      
-      cart.products.forEach((product, pIdx) => {
-        // All products now use prices directly
-        if (['class', 'course', 'general', 'membership'].includes(product.type)) {
-          product.prices?.forEach((price, prIdx) => {
-            price.customers?.forEach((customer, cIdx) => {
-              const snapshotCustomer = cartSnapshot.products?.[pIdx]?.prices?.[prIdx]?.customers?.[cIdx]?.customer;
-              if (customer.customer?._id !== snapshotCustomer?._id) {
-                hasCustomerChange = true;
-              }
-            });
-          });
-        } else {
-          // Legacy support for products that might still use variations
-          product.variations?.forEach((variation, vIdx) => {
-            variation.prices?.forEach((price, prIdx) => {
-              price.customers?.forEach((customer, cIdx) => {
-                const snapshotCustomer = cartSnapshot.products?.[pIdx]?.variations?.[vIdx]?.prices?.[prIdx]?.customers?.[cIdx]?.customer;
-                if (customer.customer?._id !== snapshotCustomer?._id) {
-                  hasCustomerChange = true;
-                }
-              });
-            });
-          });
-        }
-      });
-      
-      // Also check main customer
-      if (cart.customer?._id !== cartSnapshot.customer?._id) {
-        hasCustomerChange = true;
-      }
-      
-      if (hasCustomerChange && paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
-        console.log('📸 Auto-updating snapshot due to customer change detected')
-        const productsCopy = JSON.parse(JSON.stringify(cart.products));
-        setCartSnapshot(prev => ({
-          ...prev,
-          products: productsCopy,
-          customer: cart.customer ? JSON.parse(JSON.stringify(cart.customer)) : null
-        }))
-      }
-    }
-  }, [cart.products, cart.customer, cartSnapshot, paymentStatus, cardPaymentStatus]) // Watch for changes
-
-  // Always use snapshot for display (updated when discounts change or on page load)
-  const displayCart = cartSnapshot || cart
+  // Always use live cart for display
+  const displayCart = cart
 
   // Reset cart when payment succeeds (but keep UI in completed state)
   useEffect(() => {
@@ -494,24 +577,19 @@ export default function Page() {
       // Stop the collecting/loading state
       setIsCollectingPayment(false)
       
-      // Reset cart after successful card payment (similar to cash payments)
+      // Mark cart as stale after successful card payment (keep totals visible for POS operator)
       if ((paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') && cart.products.length > 0) {
-        console.log('✅ Card payment succeeded, resetting cart')
-        resetCart()
-        // Keep the snapshot so the payment summary stays visible
+        console.log('✅ Card payment succeeded, marking cart as stale')
+        markCartAsStale()
+        // Keep the cart data so the payment summary stays visible for double-checking
       }
     }
-  }, [paymentStatus, cardPaymentStatus, cart.products.length, resetCart])
+  }, [paymentStatus, cardPaymentStatus, cart.products.length, markCartAsStale])
 
 
-  // Clear snapshot and adjustments when navigating away or when returning to shop
+  // Clear adjustments when navigating away or when returning to shop
   useEffect(() => {
     const handleRouteChange = () => {
-      if (cartSnapshot) {
-        console.log('🗑️ Clearing cart snapshot on navigation')
-        setCartSnapshot(null)
-        hasInitialSnapshot.current = false
-      }
       // Clear adjustments when leaving payment page
       clearAppliedAdjustments()
     }
@@ -522,7 +600,7 @@ export default function Page() {
         handleRouteChange()
       }
     }
-  }, [pathname, cartSnapshot, clearAppliedAdjustments])
+  }, [pathname, clearAppliedAdjustments])
 
   // Handle PIN auth removal when navigating away after successful payment
   useEffect(() => {
@@ -597,39 +675,68 @@ export default function Page() {
         setLoadingDiscounts(false)
       }
       
-      // Apply surcharges if cart has products
+      // Apply surcharges and re-apply any existing discount if cart has products
       if (cart.products.length > 0) {
-        console.log('🔄 [UI] Checking for surcharges on cart...')
-        await applyAdjustments(); // This will apply any active surcharges
+        console.log('🔄 [UI] Checking for adjustments on cart...')
+        
+        // Check if cart has a previously applied discount
+        if (cart.appliedDiscountId) {
+          console.log(`🔄 [UI] Re-applying previous discount: ${cart.appliedDiscountId}`)
+          await applyAdjustments(null, cart.appliedDiscountId);
+        } else if (cart.customer) {
+          // If customer is already set, check for auto-applicable discounts
+          console.log('🔄 [UI] Customer found, checking for auto-applicable discounts...')
+          await applyAdjustments(null, null, null, null, cart.customer, true);
+        } else {
+          // Just check for surcharges
+          await applyAdjustments();
+        }
       }
     }
 
     fetchDiscountsAndApplySurcharges()
   }, []) // Only run once on mount
 
+  // Check if customer assignment is required
   useEffect(() => {
-    const allAreShop = cart.products.length > 0 &&
-      cart.products.every(p => p.type === 'shop');
-    setRequiresWaiver(!allAreShop);
-  }, []);
+    // Check if any product requires a waiver
+    const hasWaiverProduct = cart.products.some(p => p.waiverRequired === true)
+    setRequiresCustomerAssignment(hasWaiverProduct)
+  }, [cart.products])
+  
+  // Check if all products are shop items (customer is optional)
+  const isShopOnly = cart.products.length > 0 && 
+    cart.products.every(p => p.type === 'shop' && !p.waiverRequired)
 
+  // Initialize customer slots for products that need them
   useEffect(() => {
     setCart(draft => {
-      draft.products.forEach((p) => {
-        if (['class', 'course', 'general', 'membership'].includes(p.type)) {
-          // All these types now use prices directly on product
-          p.prices?.forEach((pr) => {
-            const qty = pr.qty ?? 0;
-            if (!pr.customers || pr.customers.length !== qty) {
-              pr.customers = Array.from({ length: qty }, (_, i) => ({
-                customer: pr.customers?.[i]?.customer || null
-              }));
+      draft.products.forEach((product, pIdx) => {
+        if (['class', 'course', 'membership'].includes(product.type)) {
+          product.prices?.forEach((price, priceIdx) => {
+            const qty = price.qty || 0
+            
+            if (!draft.products[pIdx].prices[priceIdx].customers) {
+              draft.products[pIdx].prices[priceIdx].customers = []
             }
-          });
+            
+            const currentLength = draft.products[pIdx].prices[priceIdx].customers.length
+            
+            if (currentLength < qty) {
+              // Add empty slots
+              for (let i = currentLength; i < qty; i++) {
+                draft.products[pIdx].prices[priceIdx].customers.push({customer: null, dependent: null})
+              }
+            } else if (currentLength > qty) {
+              // Remove excess slots
+              draft.products[pIdx].prices[priceIdx].customers = 
+                draft.products[pIdx].prices[priceIdx].customers.slice(0, qty)
+            }
+          })
         }
-      });
-    });
-  }, []);
+      })
+    })
+  }, [])
 
   // Handle custom discount application
   const applyCustomDiscount = async () => {
@@ -849,7 +956,7 @@ export default function Page() {
               <div className="">Discount</div>
               <div className="flex-1" />
               
-              {(appliedAdjustments?.totalDiscountAmount > 0 || (cartSnapshot?.adjustments?.totalDiscountAmount > 0 && (paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'))) ? (
+            {appliedAdjustments?.totalDiscountAmount > 0 ? (
                 // Show applied discount with remove button (disabled after payment)
                 <div className="flex items-center gap-1">
                   <Trash2 
@@ -864,18 +971,12 @@ export default function Page() {
                       }
                     }}
                   />
-                  <div className="text-sm">
-                    {/* Show discount from snapshot if payment succeeded, otherwise from current cart */}
-                    {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') 
-                      ? (cartSnapshot?.adjustments?.discounts?.[0]?.name || 'Custom Discount')
-                      : (appliedAdjustments?.discounts?.[0]?.name || 'Custom Discount')
-                    }
-                  </div>
+                  <div className="text-sm">{appliedAdjustments?.discounts?.[0]?.name || 'Custom Discount'}</div>
                 </div>
               ) : (
                 // Show dropdown for manual selection
                 <Select
-                  value="none"
+                  value={appliedAdjustments?.discounts?.[0]?.discountId || "none"}
                   onValueChange={async (value) => {
                     if (value === "none") {
                       removeAdjustments()
@@ -905,7 +1006,7 @@ export default function Page() {
             </div>
 
             {/* Custom Discount Input */}
-            {(!appliedAdjustments?.totalDiscountAmount || appliedAdjustments?.totalDiscountAmount === 0) && !(cartSnapshot?.adjustments?.totalDiscountAmount > 0 && (paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded')) && (
+            {(!appliedAdjustments?.totalDiscountAmount || appliedAdjustments?.totalDiscountAmount === 0) && (
               <div className="flex flex-row gap-4 items-center mt-2">
                 <div className="">Custom Discount</div>
                 <div className="flex-1" />
@@ -965,200 +1066,252 @@ export default function Page() {
 
             <Separator orientation="vertical" className="h-[1px] bg-muted my-2" />
 
-            <div className="flex items-center justify-between mb-2">
-              <div>Customers</div>
-              {/* Add All Customers Button */}
-              {cart.products?.some(p => 
-                ['class', 'course', 'general', 'membership'].includes(p.type) && 
-                p.prices?.some(price => 
-                  price.customers?.some(c => !c.customer)
-                )
-              ) && (
-                <Button
-                  size="sm"
-                  onClick={() => setShowCustomerSelection(true)}
-                  disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
-                  className="cursor-pointer"
-                >
-                  <Plus className="size-4" />
-                  Select
-                </Button>
-              )}
-            </div>
+            {(requiresCustomerAssignment || isShopOnly) && (
+              <div className="flex items-center justify-between mb-2">
+                <div>Customers</div>
+              </div>
+            )}
 
-            {/* CUSTOMERS */}
-            {requiresWaiver &&
-            <div className="flex flex-col gap-1">
-              {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' ? cartSnapshot?.products : cart.products)?.map((p, pIdx) => {
-                // Classes, courses, and general products have prices directly on product
-                if (['class', 'course', 'general'].includes(p.type)) {
-                  return p.prices?.map((price, priceIdx) =>
-                    price.customers?.map((c, cIdx) => (
-                      <div className="flex items-center gap-4" key={`${pIdx}-${priceIdx}-${cIdx}`}>
-                        <div className="whitespace-nowrap flex items-center gap-1">
-                          {cIdx + 1}. {price.name}
-                          {p.waiverRequired && (
-                            c.customer ? (
-                              <Check className="h-4 w-4 text-primary" />
+            {/* CUSTOMER ASSIGNMENTS - Show for products requiring waiver */}
+            {requiresCustomerAssignment && (
+              <div className="flex flex-col gap-2">
+                {(cart.products || []).flatMap((product, pIdx) => {
+                  // Only show products that require waiver
+                  if (!product.waiverRequired) return []
+                  
+                  // For class, course, membership - show each customer slot based on quantity
+                  if (['class', 'course', 'membership'].includes(product.type)) {
+                    return product.prices?.flatMap((price, priceIdx) => {
+                      const qty = price.qty || 1
+                      const isMinorPrice = (price.minor === true) && !(/adult/i.test(price.name || ''))
+                      if (isMinorPrice) {
+                        const assigned = price.customers || []
+                        const remaining = Math.max(0, qty - assigned.filter(s => s && s.customer && s.dependent).length)
+
+                      const assignedEntries = (price.customers || []).filter(c => c?.customer && c?.dependent)
+                      const headerRow = (
+                        <div className="flex items-center gap-2" key={`${pIdx}-${priceIdx}-minor-header`}>
+                          <div className="flex-1 flex items-center gap-2">
+                            <span className="text-sm font-medium">{product.name}</span>
+                            <span className="text-sm text-muted-foreground">({price.name})</span>
+                            <div className="flex-1 border-b border-dotted border-muted-foreground/30" />
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {assignedEntries.length > 0 ? (
+                              <>
+                                <span className="text-sm">
+                                  {assignedEntries.map((e, idx) => (
+                                    <span key={idx}>
+                                      {idx > 0 ? ', ' : ''}{e.dependent?.name}
+                                    </span>
+                                  ))}
+                                  {assignedEntries.length > 0 && assignedEntries[0]?.customer?.name && (
+                                    <span className="text-xs text-muted-foreground ml-1">
+                                      (via {assignedEntries[0].customer.name})
+                                    </span>
+                                  )}
+                                </span>
+                                <Trash2
+                                  className={`size-4 ${paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' ? 'text-muted-foreground cursor-not-allowed opacity-50' : 'cursor-pointer hover:text-destructive'}`}
+                                  onClick={() => {
+                                    if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
+                                      setCart(draft => {
+                                        for (let prodIdx = 0; prodIdx < draft.products.length; prodIdx++) {
+                                          const dProd = draft.products[prodIdx]
+                                          const dPriceIndex = dProd.prices?.findIndex(p => p._id === price._id)
+                                          if (dPriceIndex !== -1) {
+                                            const count = dProd.prices[dPriceIndex].customers?.length || 0
+                                            dProd.prices[dPriceIndex].customers = Array(count).fill(null).map(() => ({}))
+                                            break
+                                          }
+                                        }
+                                      })
+                                    }
+                                  }}
+                                />
+                              </>
                             ) : (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <OctagonAlert className="h-4 w-4 text-chart-4" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Must connect a customer who's signed a waiver</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )
-                          )}
+                              <span
+                                className={`text-sm ${paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' ? 'text-muted-foreground' : 'text-muted-foreground cursor-pointer hover:underline'}`}
+                                onClick={() => {
+                                  if (paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') return
+                                  setSelectedSlot({ priceId: price._id, isMinor: true, multi: true, remaining })
+                                  setShowCustomerSelection(true)
+                                }}
+                              >
+                                {remaining > 0 ? `${remaining} to assign` : 'All assigned'}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex justify-end w-full text-right">
-                          {c.customer ? (
-                            <div className="flex items-center gap-1">
-                              <div>
-                                {c.dependent ? (
-                                  <span>{c.dependent.name} <span className="text-xs text-muted-foreground">(via {c.customer.name})</span></span>
-                                ) : (
-                                  c.customer.name
-                                )}
-                              </div>
-                              <Trash2 
-                                className={`size-4 ${
-                                  paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
-                                    ? 'text-muted-foreground cursor-not-allowed opacity-50' 
-                                    : 'cursor-pointer hover:text-destructive'
-                                }`}
+                      )
+
+                      const slotRows = Array.from({ length: qty }, (_, slotIdx) => {
+                        const customerSlot = price.customers && price.customers[slotIdx] ? price.customers[slotIdx] : {}
+                        const customerData = customerSlot.customer || null
+                        const dependentData = customerSlot.dependent || null
+                        if (!(customerData && dependentData)) return null // hide unassigned rows
+                        return (
+                          <div className="flex items-center gap-2" key={`${pIdx}-${priceIdx}-minor-${slotIdx}`}>
+                            <div className="flex-1 flex items-center gap-2">
+                              <span className="text-sm text-muted-foreground">Minor {slotIdx + 1}</span>
+                              <div className="flex-1 border-b border-dotted border-muted-foreground/30" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">{dependentData.name}<span className="text-xs text-muted-foreground ml-1">(via {customerData.name})</span></span>
+                              <Trash2
+                                className={`size-4 ${paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' ? 'text-muted-foreground cursor-not-allowed opacity-50' : 'cursor-pointer hover:text-destructive'}`}
                                 onClick={() => {
                                   if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
                                     setCart(draft => {
-                                      draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = null;
-                                      draft.products[pIdx].prices[priceIdx].customers[cIdx].dependent = null;
-                                    });
-                                    // Update snapshot after removing customer
-                                    setTimeout(updateSnapshotCustomers, 50);
+                                      for (let prodIdx = 0; prodIdx < draft.products.length; prodIdx++) {
+                                        const dProd = draft.products[prodIdx]
+                                        const dPriceIndex = dProd.prices?.findIndex(p => p._id === price._id)
+                                        if (dPriceIndex !== -1) {
+                                          draft.products[prodIdx].prices[dPriceIndex].customers[slotIdx] = {}
+                                          break
+                                        }
+                                      }
+                                    })
                                   }
                                 }}
                               />
                             </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">
-                              Not assigned
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  );
-                }
-                // Memberships now use prices directly like other products
-                else if (p.type === 'membership') {
-                  return p.prices?.map((price, priceIdx) => 
-                    price.customers?.map((c, cIdx) => (
-                      <div className="flex items-center gap-4" key={`${pIdx}-${priceIdx}-${cIdx}`}>
-                        <div className="whitespace-nowrap flex items-center gap-1">
-                          {cIdx + 1}. {price.name}
-                          {p.waiverRequired && (
-                            c.customer ? (
-                              <Check className="h-4 w-4 text-primary" />
-                            ) : (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <OctagonAlert className="h-4 w-4 text-chart-4" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Must connect a customer who's signed a waiver</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )
-                          )}
-                        </div>
-                        <div className="flex justify-end w-full text-right">
-                          {c.customer ? (
-                            <div className="flex items-center gap-1">
-                              <div>
-                                {c.dependent ? (
-                                  <span>{c.dependent.name} <span className="text-xs text-muted-foreground">(via {c.customer.name})</span></span>
-                                ) : (
-                                  c.customer.name
-                                )}
-                              </div>
-                              <Trash2 
-                                className={`size-4 ${
-                                  paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
-                                    ? 'text-muted-foreground cursor-not-allowed opacity-50' 
-                                    : 'cursor-pointer hover:text-destructive'
-                                }`}
-                                onClick={() => {
-                                  if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
-                                    setCart(draft => {
-                                      draft.products[pIdx].prices[priceIdx].customers[cIdx].customer = null;
-                                      draft.products[pIdx].prices[priceIdx].customers[cIdx].dependent = null;
-                                    });
-                                    // Update snapshot after removing customer
-                                    setTimeout(updateSnapshotCustomers, 50);
-                                  }
-                                }}
-                              />
+                          </div>
+                        )
+                      }).filter(Boolean)
+
+                      // Only show the single youth line; hide per-slot rows
+                      return [headerRow]
+                      }
+
+                      // Adult slots stay with + Customer
+                      return Array.from({ length: qty }, (_, slotIdx) => {
+                        const customerSlot = price.customers && price.customers[slotIdx] ? price.customers[slotIdx] : {}
+                        const customerData = customerSlot.customer || null
+                        return (
+                          <div className="flex items-center gap-2" key={`${pIdx}-${priceIdx}-${slotIdx}`}>
+                            <div className="flex-1 flex items-center gap-2">
+                              <span className="text-sm font-medium">{product.name}</span>
+                              <span className="text-sm text-muted-foreground">({price.name}{qty > 1 ? ` - Slot ${slotIdx + 1}` : ''})</span>
+                              <div className="flex-1 border-b border-dotted border-muted-foreground/30" />
                             </div>
-                          ) : (
-                            <span className="text-sm text-muted-foreground">
-                              Not assigned
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  )
-                }
-                return null;
-              })}
-            </div>
-            }
-            {!requiresWaiver &&
-              <div className="flex items-center gap-4">
-                <div className="whitespace-nowrap">Customer</div>
-                <div className="flex justify-end w-full text-right">
-                {((paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') ? cartSnapshot?.customer : cart.customer) ? (
-                  <div className="flex items-center gap-1">
-                    <div>{(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') ? cartSnapshot?.customer?.name : cart.customer.name}</div>
-                    <Trash2 
-                      className={`size-4 ${
-                        paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
-                          ? 'text-muted-foreground cursor-not-allowed opacity-50' 
-                          : 'cursor-pointer hover:text-destructive'
-                      }`}
-                      onClick={() => {
-                        if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
-                          setCart(draft => {
-                            draft.customer = null;
-                          });
-                          // Update snapshot after removing customer
-                          setTimeout(updateSnapshotCustomers, 50);
-                        }
-                      }}
-                    />
+                            <div className="flex items-center gap-2">
+                              {customerData ? (
+                                <>
+                                  <span className="text-sm">{customerData.name}</span>
+                                  <Trash2
+                                    className={`size-4 ${paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' ? 'text-muted-foreground cursor-not-allowed opacity-50' : 'cursor-pointer hover:text-destructive'}`}
+                                    onClick={() => {
+                                      if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
+                                        setCart(draft => {
+                                          for (let prodIdx = 0; prodIdx < draft.products.length; prodIdx++) {
+                                            const dProd = draft.products[prodIdx]
+                                            const dPriceIndex = dProd.prices?.findIndex(p => p._id === price._id)
+                                            if (dPriceIndex !== -1) {
+                                              draft.products[prodIdx].prices[dPriceIndex].customers[slotIdx] = {}
+                                              break
+                                            }
+                                          }
+                                        })
+                                      }
+                                    }}
+                                  />
+                                </>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedSlot({ priceId: price._id, slotIdx, isMinor: false })
+                                    setShowCustomerSelection(true)
+                                  }}
+                                  disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                                  className="cursor-pointer h-7 text-xs"
+                                >
+                                  <Plus className="size-3" />
+                                  Customer
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })
+                    })
+                  }
+                  return []
+                })}
+                
+                {/* Show main customer if there are shop items with waiver requirement */}
+                {cart.products.some(p => p.type === 'shop' && p.waiverRequired) && (
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 flex items-center gap-2">
+                      <span className="text-sm font-medium">Shop Items</span>
+                      <span className="text-sm text-muted-foreground">(Customer)</span>
+                      <div className="flex-1 border-b border-dotted border-muted-foreground/30" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {cart.customer ? (
+                        <>
+                          <span className="text-sm">{cart.customer.name}</span>
+                          <Trash2 
+                            className={`size-4 ${
+                              paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
+                                ? 'text-muted-foreground cursor-not-allowed opacity-50' 
+                                : 'cursor-pointer hover:text-destructive'
+                            }`}
+                            onClick={() => {
+                              if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
+                                setCart(draft => {
+                                  draft.customer = null
+                                })
+                                // Snapshot removed
+                              }
+                            }}
+                          />
+                        </>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Not assigned</span>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <Button
-                    size="sm" variant="outline"
-                    disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
-                    onClick={() => setShowCustomerSelection(true)}
-                  >
-                    Connect Customer
-                  </Button>
                 )}
+              </div>
+            )}
+            
+            {/* OPTIONAL CUSTOMER - Show for shop-only items without waiver requirement */}
+            {isShopOnly && cart.customer && (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 flex items-center gap-2">
+                  <span className="text-sm font-medium">Customer</span>
+                  <span className="text-sm text-muted-foreground">(Optional)</span>
+                  <div className="flex-1 border-b border-dotted border-muted-foreground/30" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">{cart.customer.name}</span>
+                  <Trash2 
+                    className={`size-4 ${
+                      paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
+                        ? 'text-muted-foreground cursor-not-allowed opacity-50' 
+                        : 'cursor-pointer hover:text-destructive'
+                    }`}
+                    onClick={() => {
+                      if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
+                        setCart(draft => {
+                          draft.customer = null
+                        })
+                        // Snapshot removed
+                      }
+                    }}
+                  />
                 </div>
               </div>
-            }
+            )}
             
             {/* Email Receipt Section - Show when payment succeeds and no customer email */}
             {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') && 
-             !((cartSnapshot?.customer || cart.customer)?.email) &&
-             !requiresWaiver && (
+             !(cart.customer?.email) &&
+             !requiresCustomerAssignment && (
               <div className="mt-4 space-y-2">
                 <Separator orientation="vertical" className="h-[1px] bg-muted" />
                 <div className="flex items-center gap-2">
@@ -1292,7 +1445,7 @@ export default function Page() {
                       cardPaymentStatus === 'succeeded' || 
                       isCollectingPayment || 
                       cart.products.length === 0 || 
-                      membershipNeedsCustomer
+                      needsCustomerAssignment
                     )
                   }
                   onClick={async () => {
@@ -1370,9 +1523,6 @@ export default function Page() {
                 <Button
                   variant="outline"
                   onClick={() => {
-                    console.log('🗑️ Clearing cart snapshot - returning to shop')
-                    setCartSnapshot(null)
-                    hasInitialSnapshot.current = false
                     router.push('/shop')
                   }}
                 >
@@ -1394,10 +1544,10 @@ export default function Page() {
                     // Mark that we have a successful payment (PIN will be removed on navigation)
                     if (intent.status === 'succeeded') {
                       hasSuccessfulPayment.current = true
-                      // Reset cart after successful manual capture
+                      // Mark cart as stale after successful manual capture
                       if (cart.products.length > 0) {
-                        console.log('✅ Manual capture succeeded, resetting cart')
-                        resetCart()
+                        console.log('✅ Manual capture succeeded, marking cart as stale')
+                        markCartAsStale()
                       }
                     }
                     } catch (error) {
@@ -1453,30 +1603,7 @@ export default function Page() {
                       parseFloat(changeInfo.received) < cart.total ||
                       paymentStatus === 'succeeded' ||
                       isProcessingCash ||
-                      cart.products.some(p =>
-                        p.variations?.some(v =>
-                          v.prices?.some(pr =>
-                            pr.customers?.some(c => !c.customer?._id)
-                          )
-                        )
-                      ) ||
-                      // Check for products requiring waivers that don't have all customers assigned
-                      cart.products.some(p =>
-                        p.waiverRequired && (
-                          // For class/course/general products, check prices directly on product
-                          (['class', 'course', 'general'].includes(p.type) && 
-                            p.prices?.some(price =>
-                              price.customers?.some(c => !c.customer?._id)
-                            )
-                          ) ||
-                          // For other products, check variations
-                          (p.variations?.some(v =>
-                            v.prices?.some(pr =>
-                              pr.customers?.some(c => !c.customer?._id)
-                            )
-                          ))
-                        )
-                      )
+                      needsCustomerAssignment
                     }
                     onClick={async () => {
                       setIsProcessingCash(true);
@@ -1496,7 +1623,7 @@ export default function Page() {
                           toast.success('Payment processed successfully!');
                         }
                         
-                        resetCart();
+                        markCartAsStale();
                       } catch (error) {
                         console.error('Cash payment failed:', error);
                         toast.error(`Payment failed: ${error.message}`);
@@ -1520,9 +1647,6 @@ export default function Page() {
                      variant="outline"
                      className="w-full h-12"
                      onClick={() => {
-                       console.log('🗑️ Clearing cart snapshot - returning to shop')
-                       setCartSnapshot(null)
-                       hasInitialSnapshot.current = false
                        router.push('/shop')
                      }}
                    >
@@ -1539,8 +1663,8 @@ export default function Page() {
         open={showCustomerSelection}
         onOpenChange={setShowCustomerSelection}
         onConfirm={handleCustomerSelection}
-        cart={cart}
-        requiresWaiver={requiresWaiver}
+        selectedSlot={selectedSlot}
+        singleSelection={true}
       />
 
       <DiscountPinDialog

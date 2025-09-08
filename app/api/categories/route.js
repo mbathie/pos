@@ -14,8 +14,6 @@ export async function GET(req) {
   
   const { employee } = result;
 
-  console.log('Employee in categories route:', employee)
-
   const { searchParams } = new URL(req.url);
   const menu = searchParams.get("menu");
   const includeProducts = searchParams.get("includeProducts");

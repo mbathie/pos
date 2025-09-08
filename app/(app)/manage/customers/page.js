@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
+import { useGlobals } from '@/lib/globals';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
@@ -26,6 +27,7 @@ const ITEMS_PER_PAGE = 25;
 
 export default function CustomersPage() {
   const router = useRouter();
+  const { employee } = useGlobals();
   const [customers, setCustomers] = useState([]);
   const [totalCustomers, setTotalCustomers] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -38,12 +40,17 @@ export default function CustomersPage() {
 
   // Fetch customers when search, page, or sort changes
   useEffect(() => {
+    // Don't fetch if user is not authenticated
+    if (!employee?._id) {
+      return;
+    }
+
     const delayedSearch = setTimeout(() => {
       fetchCustomers();
     }, searchQuery ? 300 : 0); // Debounce search by 300ms
 
     return () => clearTimeout(delayedSearch);
-  }, [searchQuery, currentPage, sortConfig]);
+  }, [searchQuery, currentPage, sortConfig, employee?._id]);
 
   const fetchCustomers = async () => {
     setLoading(true);
@@ -62,8 +69,12 @@ export default function CustomersPage() {
         const data = await response.json();
         setCustomers(data.customers || []);
         setTotalCustomers(data.total || 0);
+      } else if (response.status === 401) {
+        // User is not authenticated, let the layout handle the redirect
+        console.log('User not authenticated, layout will handle redirect');
+        return;
       } else {
-        console.error('Failed to fetch customers');
+        console.error('Failed to fetch customers:', response.status, response.statusText);
         setCustomers([]);
         setTotalCustomers(0);
       }
@@ -149,6 +160,18 @@ export default function CustomersPage() {
     return pages;
   };
 
+
+  // Show loading while authentication is being checked
+  if (!employee?._id) {
+    return (
+      <div className="h-[calc(100vh-65px)] flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mr-auto px-4 pt-2 w-full h-full flex flex-col py-4">

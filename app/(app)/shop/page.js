@@ -109,7 +109,7 @@ export default function Page() {
         </div>
       </div>
       
-      {cart?.products?.length > 0 && <Cart />}
+      {cart?.products?.length > 0 && !cart?.stale && <Cart />}
     </div>
   )
 }

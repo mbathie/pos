@@ -194,9 +194,15 @@ export function useCard({ cart }) {
         const collectResult = await terminalInstance.collectPaymentMethod(intent.clientSecret);
         
         if (collectResult.error) {
+          const msg = collectResult.error.message || ''
+          const isCancelled = !msg || /cancel(l)?ed/i.test(msg)
           console.error('❌ Payment collection failed:', collectResult.error)
+          if (isCancelled) {
+            setPaymentStatus('cancelled')
+            throw new Error('PAYMENT_CANCELLED')
+          }
           setPaymentStatus('failed')
-          throw new Error(collectResult.error.message || 'Payment collection failed')
+          throw new Error(msg || 'Payment collection failed')
         }
         
         console.log('✅ Payment method collected successfully for membership')
@@ -206,9 +212,15 @@ export function useCard({ cart }) {
         const processResult = await terminalInstance.processPayment(collectResult.paymentIntent);
         
         if (processResult.error) {
+          const msg = processResult.error.message || ''
+          const isCancelled = /cancel(l)?ed/i.test(msg)
           console.error('❌ Payment processing failed:', processResult.error)
+          if (isCancelled) {
+            setPaymentStatus('cancelled')
+            throw new Error('PAYMENT_CANCELLED')
+          }
           setPaymentStatus('failed')
-          throw new Error(processResult.error.message || 'Payment processing failed')
+          throw new Error(msg || 'Payment processing failed')
         }
         
         console.log('✅ Membership first period payment processed successfully')
@@ -259,9 +271,15 @@ export function useCard({ cart }) {
       const collectResult = await terminalInstance.collectPaymentMethod(intent.clientSecret);
       
       if (collectResult.error) {
+        const msg = collectResult.error.message || ''
+        const isCancelled = !msg || /cancel(l)?ed/i.test(msg)
         console.error('❌ Payment collection failed:', collectResult.error)
+        if (isCancelled) {
+          setPaymentStatus('cancelled')
+          throw new Error('PAYMENT_CANCELLED')
+        }
         setPaymentStatus('failed')
-        throw new Error(collectResult.error.message || 'Payment collection failed')
+        throw new Error(msg || 'Payment collection failed')
       }
       
       console.log('✅ Payment method collected successfully')
@@ -271,9 +289,15 @@ export function useCard({ cart }) {
       const processResult = await terminalInstance.processPayment(collectResult.paymentIntent);
       
       if (processResult.error) {
+        const msg = processResult.error.message || ''
+        const isCancelled = /cancel(l)?ed/i.test(msg)
         console.error('❌ Payment processing failed:', processResult.error)
+        if (isCancelled) {
+          setPaymentStatus('cancelled')
+          throw new Error('PAYMENT_CANCELLED')
+        }
         setPaymentStatus('failed')
-        throw new Error(processResult.error.message || 'Payment processing failed')
+        throw new Error(msg || 'Payment processing failed')
       }
       
       console.log('🎉 Payment processed successfully!')

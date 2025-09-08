@@ -335,6 +335,30 @@ export default function Page() {
       return;
     }
     
+    // Check if customer is 18 or older
+    if (customer.dob) {
+      const birthDate = new Date(customer.dob);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      if (age < 18) {
+        toast.error("You must be 18 years or older to sign this waiver. Minors must be added as dependents under a parent or guardian.", {
+          style: {
+            background: 'rgb(239 68 68 / 0.9)', // red-500 with opacity
+            color: 'white',
+            border: '1px solid rgb(239 68 68)',
+          },
+          duration: 5000,
+        });
+        return;
+      }
+    }
+    
     const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/api/unauth/customers", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongoose';
 import { getEmployee } from '@/lib/auth';
-import { calculateAdjustments, calculateCustomDiscount } from '@/lib/adjustments';
+import { calculateAdjustments, calculateCustomDiscount, findBestAutoDiscount } from '@/lib/adjustments';
 import { Discount } from '@/models';
 
 export async function POST(request) {
@@ -19,7 +19,8 @@ export async function POST(request) {
       customer, 
       discountCode, 
       discountId, 
-      customDiscountAmount 
+      customDiscountAmount,
+      autoApply = false // Flag to indicate if we should auto-find a discount
     } = body;
     
     // Fetch discount details if discountId is provided
@@ -100,20 +101,44 @@ export async function POST(request) {
     }
 
     let updatedCart;
+    let finalDiscountId = discountId;
+    let finalDiscountCode = discountCode;
 
     // Handle custom discount amount (manual discount)
     if (customDiscountAmount && customDiscountAmount > 0) {
       console.log(`💵 [API] Applying custom discount of $${customDiscountAmount}`);
       updatedCart = calculateCustomDiscount(cart, customDiscountAmount);
     } else {
+      // Auto-find best discount if requested and no discount specified
+      if (autoApply && !discountId && !discountCode && customer) {
+        console.log('🔍 [API] Auto-finding best discount for customer...');
+        const bestDiscount = await findBestAutoDiscount({
+          cart,
+          customer,
+          orgId: employee.org._id
+        });
+        
+        if (bestDiscount) {
+          console.log(`🎯 [API] Auto-selected discount: "${bestDiscount.name}" (${bestDiscount._id})`);
+          finalDiscountId = bestDiscount._id;
+          finalDiscountCode = bestDiscount.code;
+        }
+      }
+      
       // Calculate adjustments with discounts and surcharges
       updatedCart = await calculateAdjustments({
         cart,
         customer,
-        discountCode,
-        discountId,
+        discountCode: finalDiscountCode,
+        discountId: finalDiscountId,
         orgId: employee.org._id
       });
+      
+      // Store the applied discount in the cart for persistence
+      if (finalDiscountId && updatedCart.adjustments?.discounts?.length > 0) {
+        updatedCart.appliedDiscountId = finalDiscountId;
+        updatedCart.appliedDiscountCode = finalDiscountCode;
+      }
     }
     
     console.log('🎁 [API] Adjustment calculation complete:', {

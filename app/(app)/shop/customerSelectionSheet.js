@@ -4,200 +4,86 @@ import React, { useState, useEffect } from 'react'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Check, AlertCircle, ChevronsUpDown, X, ChevronDown, ChevronUp, UserPlus } from 'lucide-react'
+import { X, UserPlus } from 'lucide-react'
+import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import dayjs from 'dayjs'
 import { Input } from "@/components/ui/input"
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
 export default function CustomerSelectionSheet({ 
   open, 
   onOpenChange, 
   onConfirm,
-  cart,
-  requiresWaiver = false
+  selectedSlot,
+  singleSelection = true
 }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [customers, setCustomers] = useState([])
-  const [recentCustomers, setRecentCustomers] = useState([])
   const [loading, setLoading] = useState(false)
-  const [selectedCustomers, setSelectedCustomers] = useState([])
-  const [checkedItems, setCheckedItems] = useState({})
-  const [comboboxOpen, setComboboxOpen] = useState(false)
+  const [selectedCustomer, setSelectedCustomer] = useState(null)
+  const [selectedDependent, setSelectedDependent] = useState(null)
+  const [selectedMinors, setSelectedMinors] = useState([]) // [{ customer, dependent }]
   const [showNewCustomer, setShowNewCustomer] = useState(false)
   const [newCustomer, setNewCustomer] = useState({ name: '', email: '', phone: '' })
   const [creatingCustomer, setCreatingCustomer] = useState(false)
 
-  // Calculate needed slots and check if we have shop items
-  const getNeededSlots = () => {
-    const slots = {
-      adult: 0,
-      minor: 0,
-      total: 0,
-      hasShopItems: false
-    }
-    
-    cart.products?.forEach(product => {
-      if (['class', 'course', 'general', 'membership'].includes(product.type)) {
-        product.prices?.forEach(price => {
-          const qty = price.qty || price.customers?.length || 0
-          if (price.minor) {
-            slots.minor += qty
-          } else {
-            slots.adult += qty
-          }
-          slots.total += qty
-        })
-      } else if (product.type === 'shop' || !product.type) {
-        slots.hasShopItems = true
-      }
-    })
-    
-    return slots
-  }
+  // Get slot type (minor or adult)
+  const isMinorSlot = selectedSlot?.isMinor || false
 
-  const slots = getNeededSlots()
-  const isShopOnly = slots.hasShopItems && slots.total === 0
-  
-  // Check if any products require waiver
-  const anyProductRequiresWaiver = cart.products?.some(product => product.waiverRequired) || false
-
-  // Fetch recent customers (waiver in last 4 hours)
+  // Reset state when sheet closes
   useEffect(() => {
     if (!open) {
-      // Reset state when closed
       setSearchQuery('')
       setCustomers([])
-      setSelectedCustomers([])
-      setCheckedItems({})
-      setComboboxOpen(false)
-      return
+      setSelectedCustomer(null)
+      setSelectedDependent(null)
+      setSelectedMinors([])
+      setShowNewCustomer(false)
+      setNewCustomer({ name: '', email: '', phone: '' })
     }
+  }, [open])
 
-    const fetchRecentCustomers = async () => {
-      setLoading(true)
-      try {
-        const params = new URLSearchParams()
-        if (requiresWaiver) {
-          params.append('recentWaiver', '1')
-        }
-        
-        const res = await fetch(`/api/customers?${params}`)
-        if (res.ok) {
-          const data = await res.json()
-          setRecentCustomers(data.customers || data || [])
-        }
-      } catch (error) {
-        console.error('Error fetching recent customers:', error)
-        setRecentCustomers([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchRecentCustomers()
-  }, [open, requiresWaiver])
-
-  // Search for customers when query changes
+  // Fetch customers when search changes
   useEffect(() => {
-    if (!searchQuery || searchQuery.length < 2) {
+    if (!open || !searchQuery) {
       setCustomers([])
       return
     }
 
-    const searchCustomers = async () => {
+    const fetchCustomers = async () => {
       setLoading(true)
       try {
         const params = new URLSearchParams()
-        params.append('search', searchQuery.trim())
-        if (requiresWaiver) {
-          params.append('requiresWaiver', 'true')
-        }
+        params.append('search', searchQuery)
         
         const res = await fetch(`/api/customers?${params}`)
         if (res.ok) {
           const data = await res.json()
-          setCustomers(data.customers || data || [])
+          // Handle both response formats - array or object with customers property
+          const customerList = Array.isArray(data) ? data : (data.customers || data || [])
+          setCustomers(customerList)
         }
       } catch (error) {
-        console.error('Error searching customers:', error)
+        console.error('Error fetching customers:', error)
         setCustomers([])
       } finally {
         setLoading(false)
       }
     }
 
-    const delayedSearch = setTimeout(searchCustomers, 300)
-    return () => clearTimeout(delayedSearch)
-  }, [searchQuery, requiresWaiver])
+    // Debounce search
+    const timer = setTimeout(() => {
+      fetchCustomers()
+    }, 300)
 
-  // Handle customer selection - append to list instead of replace
-  const handleCustomerSelect = (customerId) => {
-    const customer = [...recentCustomers, ...customers].find(c => c._id === customerId)
-    if (customer && !selectedCustomers.find(c => c._id === customerId)) {
-      setSelectedCustomers(prev => [...prev, customer])
-      // Initialize checkbox state for this customer
-      setCheckedItems(prev => ({
-        ...prev,
-        [customerId]: { customer: true, dependents: {} }
-      }))
-      setComboboxOpen(false)
-      setSearchQuery('')
-    }
-  }
+    return () => clearTimeout(timer)
+  }, [open, searchQuery])
 
-  // Remove a customer from selection
-  const handleRemoveCustomer = (customerId) => {
-    setSelectedCustomers(prev => prev.filter(c => c._id !== customerId))
-    setCheckedItems(prev => {
-      const updated = { ...prev }
-      delete updated[customerId]
-      return updated
-    })
-  }
-
-  // Handle checkbox changes
-  const handleCustomerCheck = (customerId, checked) => {
-    setCheckedItems(prev => ({
-      ...prev,
-      [customerId]: { ...prev[customerId], customer: checked }
-    }))
-  }
-
-  const handleDependentCheck = (customerId, dependentId, checked) => {
-    setCheckedItems(prev => ({
-      ...prev,
-      [customerId]: {
-        ...prev[customerId],
-        dependents: { ...prev[customerId].dependents, [dependentId]: checked }
-      }
-    }))
-  }
-
-  // Calculate what's been selected across all customers
-  const getSelectionCount = () => {
-    let adultCount = 0
-    let minorCount = 0
-    
-    Object.entries(checkedItems).forEach(([customerId, items]) => {
-      if (items.customer) adultCount++
-      minorCount += Object.values(items.dependents || {}).filter(Boolean).length
-    })
-    
-    return { adultCount, minorCount }
-  }
-
-  const { adultCount, minorCount } = getSelectionCount()
-
-  // Handle creating a new customer
+  // Create new customer
   const handleCreateCustomer = async () => {
-    if (!newCustomer.name || !newCustomer.email) {
-      return
-    }
+    if (!newCustomer.name || !newCustomer.email) return
     
     setCreatingCustomer(true)
     try {
@@ -209,15 +95,11 @@ export default function CustomerSelectionSheet({
       
       if (response.ok) {
         const createdCustomer = await response.json()
-        // Add the new customer to selected customers
-        setSelectedCustomers(prev => [...prev, createdCustomer])
-        setCheckedItems(prev => ({
-          ...prev,
-          [createdCustomer._id]: { customer: true, dependents: {} }
-        }))
-        // Reset form
-        setNewCustomer({ name: '', email: '', phone: '' })
+        // Select the new customer
+        handleSelectCustomer(createdCustomer)
+        // Hide the new customer form
         setShowNewCustomer(false)
+        setNewCustomer({ name: '', email: '', phone: '' })
       }
     } catch (error) {
       console.error('Error creating customer:', error)
@@ -226,45 +108,35 @@ export default function CustomerSelectionSheet({
     }
   }
 
+  // Handle customer selection
+  const handleSelectCustomer = (customer, dependent = null) => {
+    setSelectedCustomer(customer)
+    setSelectedDependent(dependent)
+    // Clear search to hide dropdown
+    setSearchQuery('')
+    setCustomers([])
+  }
+
   // Handle confirmation
   const handleConfirm = () => {
-    if (selectedCustomers.length === 0) return
+    // Multi-minor selection flow
+    if ((selectedSlot?.isMinor && selectedSlot?.multi) && selectedMinors.length > 0) {
+      onConfirm({ minors: selectedMinors })
+      onOpenChange(false)
+      return
+    }
 
-    // Build assignments array for auto-assignment
-    const assignments = []
-    
-    selectedCustomers.forEach(customer => {
-      const items = checkedItems[customer._id]
-      if (!items) return
-      
-      // For minor-only pricing, don't add the parent as an assignment
-      // They're just the guardian/payer, not a participant
-      const isMinorOnlyPricing = slots.minor > 0 && slots.adult === 0
-      
-      // Add customer if selected (but not for minor-only pricing)
-      if (items.customer && !isMinorOnlyPricing) {
-        assignments.push({
-          customer: customer,
-          dependent: null,
-          isMinor: false
-        })
-      }
-      
-      // Add selected dependents
-      if (items.dependents) {
-        customer.dependents?.forEach(dep => {
-          if (items.dependents[dep._id]) {
-            assignments.push({
-              customer: customer, // This is the parent/guardian who will be stored
-              dependent: dep, // This is the minor who is actually taking the class
-              isMinor: true
-            })
-          }
-        })
-      }
-    })
-
-    onConfirm(assignments)
+    if (!selectedCustomer) return
+    const minors = selectedMinors.length > 0 
+      ? selectedMinors 
+      : (selectedDependent ? [{ customer: selectedCustomer, dependent: selectedDependent }] : [])
+    const selection = {
+      customer: selectedCustomer,
+      dependent: selectedDependent,
+      isMinor: !!selectedDependent,
+      minors
+    }
+    onConfirm(selection)
     onOpenChange(false)
   }
 
@@ -273,315 +145,301 @@ export default function CustomerSelectionSheet({
     return dayjs().diff(dayjs(dob), 'year')
   }
 
-  // For minor pricing, we need at least one parent selected along with the minor
-  const needsParentForMinor = slots.minor > 0 && slots.adult === 0
-  const canConfirm = needsParentForMinor 
-    ? (adultCount > 0 && minorCount > 0) // Need both parent and minor
-    : (adultCount > 0 || minorCount > 0) // Need at least one of either
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[600px] sm:max-w-[600px]">
+      <SheetContent className="w-[600px] sm:max-w-[600px] flex flex-col">
         <SheetHeader>
           <SheetTitle>
-            Select Customer{slots.total > 1 ? 's' : ''}
+            Select Customer
           </SheetTitle>
           <SheetDescription>
-            {isShopOnly ? (
-              'Select a customer for this purchase'
-            ) : slots.total === 0 ? (
-              'Select a customer'
-            ) : slots.total === 1 && slots.minor > 0 ? (
-              'Select a parent/guardian for the minor pricing'
-            ) : (
-              'Select a customer for this purchase'
-            )}
+            {isMinorSlot 
+              ? 'Select a minor (dependent) for this slot'
+              : 'Select a customer for this slot'
+            }
           </SheetDescription>
         </SheetHeader>
 
-        <div className="p-4 pt-0 gap-4 flex flex-col">
-          {/* Customer Selection Combobox */}
-          <div className="space-y-2">
+        <div className="flex-1 overflow-y-auto px-4 py-4-">
+          {/* Add Customer Section */}
+          <div className="space-y-4">
             <Label>Add Customer</Label>
-            <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={comboboxOpen}
-                  className="w-full justify-between cursor-pointer"
-                >
-                  {"Search or select a customer..."}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[550px] p-0" align="start">
-                <Command shouldFilter={false}>
-                  <CommandInput 
-                    placeholder="Search by name, email, or member ID..." 
-                    value={searchQuery}
-                    onValueChange={setSearchQuery}
-                  />
-                  <CommandList>
-                    <CommandEmpty>
-                      {searchQuery.length < 2 
-                        ? "Type at least 2 characters to search..."
-                        : loading 
-                        ? "Searching..." 
-                        : "No customers found."}
-                    </CommandEmpty>
-                    
-                    {/* Recent customers */}
-                    {recentCustomers.length > 0 && !searchQuery && (
-                      <CommandGroup heading="Recent (last 4 hours)">
-                        {recentCustomers.map((customer) => (
-                          <CommandItem
-                            key={customer._id}
-                            value={customer._id}
-                            onSelect={() => handleCustomerSelect(customer._id)}
-                            className="cursor-pointer"
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedCustomers.find(c => c._id === customer._id) ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <div className="flex-1">
-                              <div className="font-medium">{customer.name}</div>
-                              <div className="text-xs text-muted-foreground">{customer.email}</div>
-                            </div>
-                            {customer.dependents?.length > 0 && (
-                              <Badge variant="secondary" className="text-xs ml-2">
-                                {customer.dependents.length} dependent{customer.dependents.length !== 1 ? 's' : ''}
-                              </Badge>
-                            )}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    )}
-                    
-                    {/* Search results */}
-                    {customers.length > 0 && searchQuery && (
-                      <CommandGroup heading="Search results">
-                        {customers.map((customer) => (
-                          <CommandItem
-                            key={customer._id}
-                            value={customer._id}
-                            onSelect={() => handleCustomerSelect(customer._id)}
-                            className="cursor-pointer"
-                          >
-                            <Check
-                              className={cn(
-                                "mr-2 h-4 w-4",
-                                selectedCustomers.find(c => c._id === customer._id) ? "opacity-100" : "opacity-0"
-                              )}
-                            />
-                            <div className="flex-1">
-                              <div className="font-medium">{customer.name}</div>
-                              <div className="text-xs text-muted-foreground">{customer.email}</div>
-                            </div>
-                            {customer.dependents?.length > 0 && (
-                              <Badge variant="secondary" className="text-xs ml-2">
-                                {customer.dependents.length} dependent{customer.dependents.length !== 1 ? 's' : ''}
-                              </Badge>
-                            )}
-                          </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    )}
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
+            <Command className="rounded-lg border">
+              <CommandInput 
+                placeholder="Search or select a customer..." 
+                value={searchQuery}
+                onValueChange={setSearchQuery}
+              />
+              <CommandList>
+                {loading ? (
+                  <CommandEmpty>Loading...</CommandEmpty>
+                ) : searchQuery && customers.length === 0 ? (
+                  <CommandEmpty>
+                    No customers found.
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 w-full"
+                      onClick={() => {
+                        setNewCustomer({ ...newCustomer, name: searchQuery })
+                        setShowNewCustomer(true)
+                      }}
+                    >
+                      <UserPlus className="mr-2 size-4" />
+                      Create "{searchQuery}"
+                    </Button>
+                  </CommandEmpty>
+                ) : customers.length > 0 ? (
+                  <CommandGroup>
+                    {customers.map((customer) => {
+                      const age = getAge(customer.dob)
+                      const hasValidDependents = customer.dependents?.some(dep => {
+                        const depAge = getAge(dep.dob)
+                        return depAge && depAge < 18
+                      })
 
-          {/* New Customer Form - Only show if no waiver required */}
-          {!anyProductRequiresWaiver && (
-            <Collapsible open={showNewCustomer} onOpenChange={setShowNewCustomer}>
-              <CollapsibleTrigger asChild>
-                <Button variant="outline" className="w-full justify-between cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <UserPlus className="h-4 w-4" />
-                    <span>New Customer</span>
-                  </div>
-                  {showNewCustomer ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-3 pt-3">
-                <div className="space-y-2">
-                  <Label htmlFor="new-customer-name">Name *</Label>
-                  <Input
-                    id="new-customer-name"
-                    placeholder="Enter customer name"
-                    value={newCustomer.name}
-                    onChange={(e) => setNewCustomer(prev => ({ ...prev, name: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="new-customer-email">Email *</Label>
-                  <Input
-                    id="new-customer-email"
-                    type="email"
-                    placeholder="Enter customer email"
-                    value={newCustomer.email}
-                    onChange={(e) => setNewCustomer(prev => ({ ...prev, email: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="new-customer-phone">Phone</Label>
-                  <Input
-                    id="new-customer-phone"
-                    type="tel"
-                    placeholder="Enter customer phone (optional)"
-                    value={newCustomer.phone}
-                    onChange={(e) => setNewCustomer(prev => ({ ...prev, phone: e.target.value }))}
-                  />
-                </div>
-                <Button 
-                  className="w-full cursor-pointer"
-                  onClick={handleCreateCustomer}
-                  disabled={!newCustomer.name || !newCustomer.email || creatingCustomer}
-                >
-                  {creatingCustomer ? 'Creating...' : 'Add Customer'}
-                </Button>
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-
-          {/* Selected Customer Details */}
-          {selectedCustomers.length > 0 && (
-            <div className="space-y-4">
-              <Label className="text-sm font-medium">Selected Customers</Label>
-              
-              {selectedCustomers.map((customer) => (
-                <div key={customer._id} className="space-y-3 border rounded-lg p-4">
-                  {/* Customer info with checkbox */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3 flex-1">
-                      <Checkbox
-                        id={`customer-${customer._id}`}
-                        checked={checkedItems[customer._id]?.customer || false}
-                        onCheckedChange={(checked) => handleCustomerCheck(customer._id, checked)}
-                        disabled={!isShopOnly && slots.adult === 0}
-                      />
-                      <div className="space-y-1">
-                        <Label htmlFor={`customer-${customer._id}`} className="font-medium cursor-pointer">
-                          {customer.name}
-                        </Label>
-                        <div className="text-sm text-muted-foreground space-y-0.5">
-                          <div>{customer.email}</div>
-                          {customer.phone && <div>{customer.phone}</div>}
-                          {customer.memberId && <div>ID: {customer.memberId}</div>}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon"
-                        onClick={() => handleRemoveCustomer(customer._id)}
-                        className="cursor-pointer h-6 w-6"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                      {customer.waiver?.agree && (
-                        <Badge variant="outline" className="text-xs">
-                          <Check className="h-3 w-3 mr-1" />
-                          Waiver
-                        </Badge>
-                      )}
-                      <Badge variant="secondary" className="text-xs">
-                        Adult
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Dependents with checkboxes */}
-                  {customer.dependents && customer.dependents.length > 0 && (
-                    <div className="space-y-3">
-                      <Label className="text-xs text-muted-foreground">Dependents</Label>
-                      {customer.dependents.map((dependent, index) => {
-                        const age = getAge(dependent.dob)
-                        // Use the dependent's _id if available, otherwise use index as fallback
-                        const depId = dependent._id || `dep-${index}`
-                        
+                      if (isMinorSlot) {
+                        if (!hasValidDependents) return null
+                        const parentChecked = selectedCustomer?._id === customer._id
                         return (
-                          <div key={depId} className="flex items-center gap-3">
-                            <Checkbox
-                              id={`${customer._id}-${depId}`}
-                              checked={checkedItems[customer._id]?.dependents?.[depId] || false}
-                              onCheckedChange={(checked) => handleDependentCheck(customer._id, depId, checked)}
-                              disabled={!isShopOnly && slots.minor === 0}
-                            />
-                            <div className="flex items-center justify-between flex-1">
-                              <Label 
-                                htmlFor={`${customer._id}-${depId}`} 
-                                className="flex items-center gap-2 cursor-pointer text-sm"
-                              >
-                                <span>{dependent.name}</span>
-                                {dependent.gender && (
-                                  <span className="text-xs text-muted-foreground capitalize">
-                                    ({dependent.gender})
-                                  </span>
-                                )}
-                                {age !== null && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {age} yr{age !== 1 ? 's' : ''} old
-                                  </span>
-                                )}
-                              </Label>
-                              <Badge variant="secondary" className="text-xs">
-                                Minor
-                              </Badge>
+                          <div key={customer._id} className="px-3 py-2 border-b">
+                            {/* Parent row with checkbox */}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  checked={parentChecked}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) setSelectedCustomer(customer)
+                                    else {
+                                      setSelectedCustomer(null)
+                                      setSelectedMinors([])
+                                    }
+                                  }}
+                                />
+                                <div className="flex flex-col">
+                                  <span className="font-medium">{customer.name}</span>
+                                  <span className="text-xs text-muted-foreground">{customer.email}</span>
+                                </div>
+                              </div>
+                              {customer.waiver?.signed && (
+                                <Badge variant="outline" className="text-xs">Waiver ✓</Badge>
+                              )}
                             </div>
+
+                            {/* Dependents for this parent */}
+                            {customer.dependents?.map((dependent) => {
+                              const depAge = getAge(dependent.dob)
+                              if (!depAge || depAge >= 18) return null
+                              const checked = selectedMinors.some(m => m.dependent?._id === dependent._id)
+                              const disabled = selectedSlot?.multi && typeof selectedSlot.remaining === 'number'
+                                ? (!checked && selectedMinors.length >= selectedSlot.remaining)
+                                : false
+
+                              return (
+                                <div key={dependent._id} className="flex items-center justify-between pl-8 py-1">
+                                  <div className="flex items-center gap-2">
+                                    <span>{dependent.name}</span>
+                                    <Badge variant="secondary" className="text-xs">Minor ({depAge}y)</Badge>
+                                  </div>
+                                  <Checkbox
+                                    checked={checked}
+                                    disabled={disabled || !parentChecked}
+                                    onCheckedChange={(isChecked) => {
+                                      setSelectedCustomer(customer) // ensure parent set when selecting
+                                      setSelectedMinors(prev => {
+                                        if (isChecked) {
+                                          if (disabled) return prev
+                                          return [...prev, { customer, dependent }]
+                                        } else {
+                                          return prev.filter(m => m.dependent?._id !== dependent._id)
+                                        }
+                                      })
+                                    }}
+                                  />
+                                </div>
+                              )
+                            })}
                           </div>
                         )
-                      })}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                      }
 
-          {/* No customer selected message */}
-          {selectedCustomers.length === 0 && !loading && (
-            <div className="text-center py-8">
-              <AlertCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-muted-foreground">
-                Search and add customers to continue
-              </p>
-            </div>
-          )}
-
-          {/* Helper message for minor pricing */}
-          {needsParentForMinor && minorCount > 0 && adultCount === 0 && (
-            <div className="flex items-center gap-2 p-3 bg-amber-50 dark:bg-amber-950/20 rounded-lg">
-              <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-              <span className="text-sm text-amber-700 dark:text-amber-400">
-                Please also select the parent/guardian (check the box next to their name)
-              </span>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleConfirm}
-              disabled={!canConfirm || (!isShopOnly && !needsParentForMinor && (adultCount > slots.adult || minorCount > slots.minor))}
-              className="cursor-pointer"
-            >
-              Confirm Selection
-            </Button>
+                      // Adult slot search item (unchanged)
+                      return (
+                        <CommandItem
+                          key={customer._id}
+                          value={customer.name}
+                          onSelect={() => handleSelectCustomer(customer)}
+                        >
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{customer.name}</span>
+                              {customer.waiver?.signed && (
+                                <Badge variant="" className="text-xs">Waiver</Badge>
+                              )}
+                            </div>
+                            <span className="text-sm text-muted-foreground">
+                              {customer.email} • {customer.memberId ? `#${customer.memberId}` : 'No ID'}
+                            </span>
+                          </div>
+                        </CommandItem>
+                      )
+                    })}
+                  </CommandGroup>
+                ) : null}
+              </CommandList>
+            </Command>
           </div>
+
+          {/* New Customer Form */}
+          {showNewCustomer && (
+            <div className="space-y-4 rounded-lg border p-4">
+              <h4 className="font-medium">Create New Customer</h4>
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={newCustomer.name}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                  placeholder="Customer name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={newCustomer.email}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                  placeholder="customer@example.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone (optional)</Label>
+                <Input
+                  id="phone"
+                  value={newCustomer.phone}
+                  onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                  placeholder="(555) 555-5555"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={handleCreateCustomer}
+                  disabled={!newCustomer.name || !newCustomer.email || creatingCustomer}
+                  className="cursor-pointer"
+                >
+                  {creatingCustomer ? 'Creating...' : 'Create Customer'}
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowNewCustomer(false)
+                    setNewCustomer({ name: '', email: '', phone: '' })
+                  }}
+                  className="cursor-pointer"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Selected Customer Display */}
+          {selectedCustomer && (
+            <div className="space-y-4 rounded-lg border p-4 mt-4">
+              {/* <h4 className="font-medium">Selected Customer</h4> */}
+              
+              {/* Main Customer */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Checkbox 
+                    checked={true}
+                    disabled
+                  />
+                  <div>
+                    <p className="font-medium">{selectedCustomer.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedCustomer.email} • {selectedCustomer.memberId ? `#${selectedCustomer.memberId}` : 'No ID'}
+                    </p>
+                  </div>
+                </div>
+                {selectedCustomer.waiver?.signed && (
+                  <Badge variant="outline" className="text-xs">
+                    Waiver ✓
+                  </Badge>
+                )}
+              </div>
+
+              {/* Dependents */}
+              {selectedCustomer.dependents?.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-muted-foreground">Dependents</p>
+                  {selectedCustomer.dependents.map((dep) => {
+                    const depAge = getAge(dep.dob)
+                    const isMinor = depAge && depAge < 18
+                    
+                    if (!isMinor && isMinorSlot) return null // hide adult dependents if in minor-only sheet
+
+                    // In adult mode, allow multi-select minors here to attach dependents too
+                    const checked = selectedMinors.some(m => m.dependent?._id === dep._id)
+                    return (
+                      <div key={dep._id} className="flex items-center gap-3">
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(isChecked) => {
+                            setSelectedMinors(prev => {
+                              if (isChecked) {
+                                return [...prev, { customer: selectedCustomer, dependent: dep }]
+                              } else {
+                                return prev.filter(m => m.dependent?._id !== dep._id)
+                              }
+                            })
+                          }}
+                        />
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{dep.name}</span>
+                          {isMinor && (
+                            <Badge variant="secondary" className="text-xs">Minor ({depAge}y)</Badge>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {/* <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setSelectedCustomer(null)
+                  setSelectedDependent(null)
+                }}
+                className="cursor-pointer w-full"
+              >
+                <X className="size-4 mr-2" />
+                Clear Selection
+              </Button> */}
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex justify-end gap-2 border-t p-4">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="cursor-pointer"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirm}
+            disabled={isMinorSlot ? selectedMinors.length === 0 : !selectedCustomer}
+            className="cursor-pointer"
+          >
+            Confirm Selection
+          </Button>
         </div>
       </SheetContent>
     </Sheet>

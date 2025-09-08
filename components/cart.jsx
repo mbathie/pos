@@ -16,8 +16,16 @@ export default function Cart({ asSheet = false, onClose }) {
   if (cart.products.length < 1 && !asSheet)
     return null
 
+  // Show visual indicator for stale carts
+  const isStale = cart.stale
+
   return (
     <div className="flex flex-col h-full text-sm bg-muted w-[380px] rounded-tl-lg">
+      {isStale && (
+        <div className="bg-green-100 text-green-800 text-xs px-4 py-2 border-b border-green-200">
+          ✅ Transaction completed - Cart available for review
+        </div>
+      )}
       <div className="space-y-1 w-full flex-1 overflow-y-auto p-4">
         {cart?.products?.map((p, pIdx) => {
 
@@ -244,12 +252,12 @@ export default function Cart({ asSheet = false, onClose }) {
             <Button
               type="submit"
               className="w-full"
-              disabled={!cart.products.length}
+              disabled={!cart.products.length || isStale}
               onClick={() => {
                 if (asSheet && onClose) onClose()
               }}
             >
-              Payment
+              {isStale ? 'Transaction Completed' : 'Payment'}
             </Button>
           </Link>
 
@@ -263,7 +271,7 @@ export default function Cart({ asSheet = false, onClose }) {
               if (asSheet && onClose) onClose()
             }}
           >
-            Clear Cart
+            {isStale ? 'Clear Transaction' : 'Clear Cart'}
           </Button>
         </div>
       </div>

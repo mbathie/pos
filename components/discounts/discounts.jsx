@@ -129,13 +129,6 @@ export default function Discounts({
     return selectedDiscounts.some(d => d._id === discount._id);
   };
 
-  const formatValue = (value, type) => {
-    if (type === 'percent') {
-      return `${value}%`;
-    } else {
-      return `$${value}`;
-    }
-  };
 
   // Utility functions for table functionality
   const handleSort = (key) => {
@@ -349,12 +342,10 @@ export default function Discounts({
                 </th>
                 <th 
                   scope="col"
-                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
-                  onClick={() => handleSort('value')}
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground"
                 >
                   <div className="flex items-center">
-                    Value
-                    {getSortIcon('value')}
+                    Adjustments
                   </div>
                 </th>
                 <th 
@@ -429,12 +420,9 @@ export default function Discounts({
                     </td>
                     <td className="px-4 py-3 align-middle">
                       <div className="flex items-center gap-2">
-                        {discount.type === 'percent' ? (
-                          <Percent className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        {formatValue(discount.value, discount.type)}
+                        <span className="text-sm">
+                          {discount.adjustments?.length || 0} adjustment{discount.adjustments?.length !== 1 ? 's' : ''}
+                        </span>
                       </div>
                     </td>
                     <td className="px-4 py-3 align-middle">
@@ -592,6 +580,12 @@ export default function Discounts({
             ));
             // Refresh the discounts list
             fetchDiscounts();
+          }}
+          onDelete={() => {
+            // Remove the discount from the list
+            if (editingDiscount) {
+              setDiscounts(prev => prev.filter(discount => discount._id !== editingDiscount._id));
+            }
           }}
         />
       )}

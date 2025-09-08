@@ -60,33 +60,56 @@ export async function POST(request) {
       type,
       value,
       maxAmount,
-      bogo,
       start,
       expiry,
       archivedAt,
+      daysOfWeek,
       limits,
       products,
       categories,
+      musts,
+      adjustments
     } = body;
 
-    const discount = new Discount({
+    // Build the discount object with new schema support
+    const discountData = {
       name,
       description,
       mode: mode || 'discount',
       code,
-      type,
-      value,
-      maxAmount,
-      bogo,
       start: start ? new Date(start) : null,
       expiry: expiry ? new Date(expiry) : null,
       archivedAt: archivedAt ? new Date(archivedAt) : null,
-      limits,
-      products: products || [],
-      categories: categories || [],
+      daysOfWeek,
       org: employee.org._id
-    });
+    };
 
+    // Handle new schema with musts and adjustments
+    if (musts || adjustments) {
+      discountData.musts = musts || { products: [], categories: [] };
+      discountData.adjustments = adjustments || [];
+      
+      // Keep legacy fields for backwards compatibility if provided
+      if (type && value !== undefined) {
+        discountData.type = type;
+        discountData.value = value;
+        discountData.maxAmount = maxAmount;
+      }
+    } else {
+      // Legacy schema support
+      discountData.type = type;
+      discountData.value = value;
+      discountData.maxAmount = maxAmount;
+      discountData.products = products || [];
+      discountData.categories = categories || [];
+    }
+
+    // Handle limits with new structure
+    if (limits) {
+      discountData.limits = limits;
+    }
+
+    const discount = new Discount(discountData);
     await discount.save();
 
     return NextResponse.json(discount, { status: 201 });

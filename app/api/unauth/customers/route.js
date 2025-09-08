@@ -9,6 +9,25 @@ export async function POST(req) {
 
   const { name, email, phone, dob, gender, address1, city, state, postcode, agree, signature, org, photo, dependents } = await req.json();
 
+  // Validate age - customer must be 18 or older
+  if (dob) {
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    if (age < 18) {
+      return NextResponse.json({ 
+        error: 'You must be 18 years or older to create an account. Minors should be added as dependents under a parent or guardian account.', 
+        field: "dob" 
+      }, { status: 400 });
+    }
+  }
+
   if (await Customer.findOne({ email }))
     return NextResponse.json({ error: 'email exists', exists: true, field: "email" }, { status: 400 });
 

@@ -8,11 +8,19 @@ export default function DiscountEditSheet({
   isOpen, 
   onClose, 
   discount = null,
-  onSuccess = null
+  onSuccess = null,
+  onDelete = null
 }) {
   const handleSuccess = (savedDiscount) => {
     if (onSuccess) {
       onSuccess(savedDiscount);
+    }
+    onClose();
+  };
+
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete();
     }
     onClose();
   };
@@ -38,6 +46,7 @@ export default function DiscountEditSheet({
           discountId={discount?._id}
           onSuccess={handleSuccess}
           onCancel={onClose}
+          onDelete={handleDelete}
           isInSheet={true}
           showHeader={false}
           formId="discount-form-sheet"

@@ -7,8 +7,8 @@ export async function middleware(req) {
   const { pathname } = req.nextUrl;
   const token = req.cookies.get("token")?.value;
   
-  console.log('[Middleware] Processing path:', pathname);
-  console.log('[Middleware] Has token:', !!token);
+  // console.log('[Middleware] Processing path:', pathname);
+  // console.log('[Middleware] Has token:', !!token);
 
   // Check if user is authenticated
   let isAuthenticated = false;
@@ -16,23 +16,23 @@ export async function middleware(req) {
     try {
       const { payload } = await jwtVerify(token, JWT_SECRET);
       isAuthenticated = !!(payload?.employeeId);
-      console.log('[Middleware] Token valid, employeeId:', payload?.employeeId);
+      // console.log('[Middleware] Token valid, employeeId:', payload?.employeeId);
     } catch (err) {
       // Token is invalid, user is not authenticated
-      console.log('[Middleware] Token invalid:', err.message);
+      // console.log('[Middleware] Token invalid:', err.message);
       isAuthenticated = false;
     }
   }
 
   // Handle login/signup pages - redirect if already authenticated
   if (pathname === "/login" || pathname === "/signup") {
-    console.log(`isAuthenticated: ${isAuthenticated}`);
+    // console.log(`isAuthenticated: ${isAuthenticated}`);
     if (isAuthenticated) {
-      console.log('[Middleware] User authenticated on login/signup page, redirecting to /shop');
+      // console.log('[Middleware] User authenticated on login/signup page, redirecting to /shop');
       return NextResponse.redirect(new URL("/shop", req.url));
     }
     // Not authenticated, allow access to login/signup
-    console.log('[Middleware] User not authenticated, allowing access to:', pathname);
+    // console.log('[Middleware] User not authenticated, allowing access to:', pathname);
     return NextResponse.next();
   }
 

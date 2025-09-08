@@ -12,8 +12,8 @@ export function CartSheet() {
   const { cart } = useGlobals()
   const [open, setOpen] = useState(false)
   
-  // Don't show cart icon if empty
-  if (!cart?.products?.length) return null
+  // Don't show cart icon if empty or stale
+  if (!cart?.products?.length || cart?.stale) return null
 
   const itemCount = cart.products.reduce((sum, p) => {
     if (p.type === 'shop') return sum + (p.qty || 1)

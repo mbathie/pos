@@ -21,8 +21,8 @@ export async function POST(req, { params }) {
   // Create the cash transaction (cleanup happens in createCashTransaction)
   const transaction = await createCashTransaction({ cart, employee, received, change });
 
-  // Handle post-transaction success operations
-  await handleTransactionSuccess({ transaction, cart: transaction.cart, employee });
+  // Handle post-transaction success operations (use original cart for pendingDiscountUsage)
+  await handleTransactionSuccess({ transaction, cart, employee });
 
   return NextResponse.json({ transaction }, { status: 200 });
 }

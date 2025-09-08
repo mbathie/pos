@@ -56,35 +56,73 @@ export async function PUT(request, { params }) {
       type,
       value,
       maxAmount,
-      bogo,
       start,
       expiry,
       archivedAt,
+      daysOfWeek,
       limits,
       products,
       categories,
+      musts,
+      adjustments
     } = body;
 
-    console.log('Updating discount with data:', { name, value, type, start, expiry, description, products, categories });
+    console.log('Updating discount with data:', { 
+      name, 
+      musts, 
+      adjustments, 
+      daysOfWeek,
+      // Legacy fields
+      type, 
+      value, 
+      products, 
+      categories 
+    });
+
+    // Build update object with new schema support
+    const updateData = {
+      name,
+      description,
+      mode: mode || 'discount',
+      code,
+      start: start ? new Date(start) : null,
+      expiry: expiry ? new Date(expiry) : null,
+      archivedAt: archivedAt ? new Date(archivedAt) : null,
+      daysOfWeek
+    };
+
+    // Handle new schema with musts and adjustments
+    if (musts || adjustments) {
+      updateData.musts = musts || { products: [], categories: [] };
+      updateData.adjustments = adjustments || [];
+      
+      // Clear legacy fields when using new schema
+      updateData.products = [];
+      updateData.categories = [];
+      
+      // Keep legacy fields for backwards compatibility if provided
+      if (type && value !== undefined) {
+        updateData.type = type;
+        updateData.value = value;
+        updateData.maxAmount = maxAmount;
+      }
+    } else {
+      // Legacy schema support
+      updateData.type = type;
+      updateData.value = value;
+      updateData.maxAmount = maxAmount;
+      updateData.products = products || [];
+      updateData.categories = categories || [];
+    }
+
+    // Handle limits with new structure
+    if (limits) {
+      updateData.limits = limits;
+    }
 
     const discount = await Discount.findOneAndUpdate(
       { _id: id, org: employee.org._id },
-      {
-        name,
-        description,
-        mode: mode || 'discount',
-        code,
-        type,
-        value,
-        maxAmount,
-        bogo,
-        start: start ? new Date(start) : null,
-        expiry: expiry ? new Date(expiry) : null,
-        archivedAt: archivedAt ? new Date(archivedAt) : null,
-        limits,
-        products: products || [],
-        categories: categories || []
-      },
+      updateData,
       { new: true }
     );
 

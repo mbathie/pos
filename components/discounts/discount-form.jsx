@@ -21,11 +21,12 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { ArrowLeft, Calendar as CalendarIcon, Loader2, Info, Save, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Loader2, Info, Save, CheckCircle, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import dayjs from 'dayjs';
 import { Switch } from '@/components/ui/switch';
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
 // radio-group no longer used here
 
 function LabelWithInfo({ children, info }) {
@@ -88,6 +89,7 @@ export default function DiscountForm({
   discountId = null,
   onSuccess = null,
   onCancel = null,
+  onDelete = null,
   isInSheet = false,
   showHeader = true,
   formId = 'discount-form'
@@ -99,6 +101,7 @@ export default function DiscountForm({
   const [startCalendarOpen, setStartCalendarOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [selectedCategories, setSelectedCategories] = useState(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   // Auto-save state management
   const [isDirty, setIsDirty] = useState(false);
@@ -333,6 +336,31 @@ export default function DiscountForm({
   };
 
 
+
+  const handleDelete = async () => {
+    if (!discountId) return;
+    
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/discounts/${discountId}`, {
+        method: 'DELETE'
+      });
+      
+      if (res.ok) {
+        if (onDelete) {
+          onDelete();
+        }
+      } else {
+        const error = await res.json();
+        console.error('Delete error:', error);
+        alert(error.error || 'Failed to delete discount');
+      }
+    } catch (error) {
+      console.error('Error deleting discount:', error);
+      alert('Failed to delete discount');
+    } finally {
+      setDeleteDialogOpen(false);
+    }
+  };
 
   const onSubmit = async (data) => {
     setLoading(true);
@@ -903,7 +931,23 @@ export default function DiscountForm({
               </div>
             </CardContent>
           </Card>
+
         </ContentWrapper>
+
+        {/* Delete Discount Button - only show in edit mode */}
+        {mode === 'edit' && discountId && (
+          <div className="w-54">
+            <Button
+              variant="destructive"
+              className="w-full cursor-pointer"
+              onClick={() => setDeleteDialogOpen(true)}
+              type="button"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete Discount
+            </Button>
+          </div>
+        )}
 
         {/* Inline Action Buttons (hidden when inside Sheet) */}
           {!isInSheet && (
@@ -937,6 +981,25 @@ export default function DiscountForm({
           )}
         </form>
       </Form>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogTitle>Delete Discount</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete "{form.watch('name')}"? This action cannot be undone.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

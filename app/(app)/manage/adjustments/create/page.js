@@ -1,13 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import DiscountForm from '@/components/discounts/discount-form';
+import DiscountFormV2 from '@/components/discounts/discount-form-v2';
 
 export default function CreateDiscountPage() {
   const router = useRouter();
   
   return (
-    <DiscountForm 
+    <DiscountFormV2 
       mode="create"
       onSuccess={() => router.push('/manage/adjustments')}
       onCancel={() => router.back()}
