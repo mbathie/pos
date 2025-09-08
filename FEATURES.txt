@@ -9,9 +9,9 @@ DONE - Product T&C
 - test location selection, make sure all pages filter for selected employee location
 DONE - memberships
 DONE - class products setup, define different class times per day
-- discounts
-  - discount editor via a Sheet as well as on settings page
-    so you can pop it open during memebership product creation as well.
+DONE - discounts
+DONE  - discount editor via a Sheet as well as on settings page
+DONE    so you can pop it open during memebership product creation as well.
 DONE - attaching customers to transactions
 DONE  - waiver required support
 DONE - re-test Stripe payments after massive changes

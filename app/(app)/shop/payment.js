@@ -430,7 +430,7 @@ export default function Page() {
             <div>
               <div className="font-semibold">Discount Applied</div>
               <div className="text-sm mt-1">
-                {discount.name}: -${discount.totalAmount.toFixed(2)} on {affectedCount} item{affectedCount !== 1 ? 's' : ''}
+                {discount.name}: -${discount.totalDiscountAmount.toFixed(2)} on {affectedCount} item{affectedCount !== 1 ? 's' : ''}
               </div>
             </div>,
             { duration: 4000 }

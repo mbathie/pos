@@ -13,11 +13,12 @@ export default function Cart({ asSheet = false, onClose }) {
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState(null)
 
-  if (cart.products.length < 1 && !asSheet)
-    return null
-
   // Show visual indicator for stale carts
   const isStale = cart.stale
+
+  // Don't show cart if empty or if it's stale (unless it's being used as a sheet)
+  if ((cart.products.length < 1 || isStale) && !asSheet)
+    return null
 
   return (
     <div className="flex flex-col h-full text-sm bg-muted w-[380px] rounded-tl-lg">
