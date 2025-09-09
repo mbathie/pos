@@ -5,8 +5,25 @@ const TransactionSchema = new mongoose.Schema({
   total: Number,
   subtotal: Number,
   tax: Number,
-  discountAmount: Number,
-  discount: { type: mongoose.Schema.Types.ObjectId, ref: 'Discount' },
+  // Unified adjustments structure
+  adjustments: {
+    discounts: {
+      items: [{
+        id: { type: mongoose.Schema.Types.ObjectId, ref: 'Discount' },
+        name: String,
+        amount: Number
+      }],
+      total: Number
+    },
+    surcharges: {
+      items: [{
+        id: { type: mongoose.Schema.Types.ObjectId, ref: 'Discount' },
+        name: String,
+        amount: Number
+      }],
+      total: Number
+    }
+  },
   stripe: mongoose.Schema.Types.Mixed,
   cash: mongoose.Schema.Types.Mixed,
   paymentMethod: String,

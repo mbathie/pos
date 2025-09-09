@@ -11,6 +11,9 @@ const DiscountSchema = new mongoose.Schema({
   // Public code guests can enter (discounts only)
   code: { type: String },
 
+  // Auto-assignment flag for cart checkout
+  autoAssign: { type: Boolean, default: false },
+
   // Must have products/categories (customer must be purchasing these)
   musts: {
     products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],

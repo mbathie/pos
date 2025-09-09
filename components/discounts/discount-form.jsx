@@ -59,6 +59,7 @@ const discountSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   description: z.string().optional(),
   archivedAt: z.date().optional().nullable(),
+  autoAssign: z.boolean().default(false),
   
   // Type
   mode: z.enum(["discount", "surcharge"]).default("discount"),
@@ -135,6 +136,7 @@ export default function DiscountForm({
       name: '',
       description: '',
       archivedAt: null,
+      autoAssign: false,
       mode: 'discount',
       mustProducts: [],
       mustCategories: [],
@@ -164,6 +166,23 @@ export default function DiscountForm({
       fetchCategoriesAndProducts();
     }
   }, [mode, discountId]);
+
+  // Watch for mode changes and update autoAssign accordingly
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'mode') {
+        if (value.mode === 'surcharge') {
+          // Surcharges should always be auto-assigned
+          form.setValue('autoAssign', true);
+        } else if (value.mode === 'discount') {
+          // Reset to false when switching back to discount
+          form.setValue('autoAssign', false);
+        }
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   // Watch for form changes and trigger auto-save
   useEffect(() => {
@@ -259,6 +278,7 @@ export default function DiscountForm({
           name: discount.name,
           description: discount.description || '',
           archivedAt: discount.archivedAt ? new Date(discount.archivedAt) : null,
+          autoAssign: discount.mode === 'surcharge' ? true : (discount.autoAssign === true), // Surcharges always auto-assign
           mode: discount.mode || 'discount',
           mustProducts: discount.musts?.products || [],
           mustCategories: discount.musts?.categories || [],
@@ -359,6 +379,7 @@ export default function DiscountForm({
         name: data.name,
         description: data.description || '',
         archivedAt: data.archivedAt ? data.archivedAt.toISOString() : null,
+        autoAssign: data.autoAssign,
         mode: data.mode,
         musts: {
           products: Array.from(mustProducts),
@@ -431,6 +452,7 @@ export default function DiscountForm({
         name: data.name,
         description: data.description || '',
         archivedAt: data.archivedAt ? data.archivedAt.toISOString() : null,
+        autoAssign: data.autoAssign,
         mode: data.mode,
         musts: {
           products: Array.from(mustProducts),
@@ -660,6 +682,37 @@ export default function DiscountForm({
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={form.control}
+                  name="autoAssign"
+                  render={({ field }) => {
+                    const mode = form.watch('mode');
+                    const isSurcharge = mode === 'surcharge';
+                    
+                    return (
+                      <FormItem className="md:col-span-2">
+                        <div className="flex items-center justify-between">
+                          <div className="space-y-0.5">
+                            <FormLabel>Auto-assignment</FormLabel>
+                            <FormDescription>
+                              {isSurcharge 
+                                ? 'Surcharges are always automatically applied when eligible'
+                                : 'Automatically apply this discount when eligible customers are added to cart'
+                              }
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={isSurcharge ? true : field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={isSurcharge}
+                            />
+                          </FormControl>
+                        </div>
+                      </FormItem>
+                    );
+                  }}
+                />
               </div>
             </CardContent>
           </Card>
@@ -866,7 +919,7 @@ export default function DiscountForm({
                                 <div className="flex items-center gap-1">
                                   <Checkbox
                                     checked={allChecked}
-                                    indeterminate={someChecked ? true : undefined}
+                                    {...(someChecked ? { 'data-state': 'indeterminate' } : {})}
                                     onCheckedChange={(checked) => {
                                       const newValue = {};
                                       daysOfWeek.forEach(day => {

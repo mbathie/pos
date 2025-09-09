@@ -71,6 +71,9 @@ export default function Page() {
   const [showDiscountPinDialog, setShowDiscountPinDialog] = useState(false)
   const [pendingDiscountAmount, setPendingDiscountAmount] = useState('')
   
+  // Surcharge state  
+  const [surchargeExpanded, setSurchargeExpanded] = useState(false)
+  
   // Email receipt state
   const [receiptEmail, setReceiptEmail] = useState('')
   const [sendingReceipt, setSendingReceipt] = useState(false)
@@ -401,9 +404,9 @@ export default function Page() {
   };
 
   // Apply adjustments to cart when discount is applied
-  const applyAdjustments = async (discountCode = null, discountId = null, customDiscountAmount = null, discountName = null, explicitCustomer = null, autoApply = false) => {
+  const applyAdjustments = async (discountCode = null, discountId = null, customDiscountAmount = null, discountName = null, explicitCustomer = null, autoApply = false, isManualSelection = false) => {
     try {
-      console.log('🎁 [UI] Requesting adjustments:', { discountCode, discountId, customDiscountAmount, discountName, hasExplicitCustomer: !!explicitCustomer, autoApply });
+      console.log('🎁 [UI] Requesting adjustments:', { discountCode, discountId, customDiscountAmount, discountName, hasExplicitCustomer: !!explicitCustomer, autoApply, isManualSelection });
       
       const response = await fetch('/api/adjustments', {
         method: 'POST',
@@ -414,7 +417,8 @@ export default function Page() {
           discountCode,
           discountId,
           customDiscountAmount,
-          autoApply
+          autoApply,
+          isManualSelection
         })
       });
 
@@ -422,9 +426,9 @@ export default function Page() {
         const updatedCart = await response.json();
         
         console.log('🎁 [UI] Received adjustments:', {
-          discounts: updatedCart.adjustments?.discounts?.length || 0,
-          surcharges: updatedCart.adjustments?.surcharges?.length || 0,
-          totalDiscount: updatedCart.adjustments?.totalDiscountAmount,
+          discounts: updatedCart.adjustments?.discounts?.items?.length || 0,
+          surcharges: updatedCart.adjustments?.surcharges?.items?.length || 0,
+          totalDiscount: updatedCart.adjustments?.discounts?.total,
           error: updatedCart.adjustments?.discountError
         });
         
@@ -441,16 +445,16 @@ export default function Page() {
           
           // Don't update cart if discount wasn't applied
           return null;
-        } else if (updatedCart.adjustments?.discounts?.length > 0) {
+        } else if (updatedCart.adjustments?.discounts?.items?.length > 0) {
           // Discount was successfully applied
-          const discount = updatedCart.adjustments.discounts[0];
+          const discount = updatedCart.adjustments.discounts.items[0];
           const affectedCount = discount.affectedProducts?.length || 0;
           
           toast.success(
             <div>
               <div className="font-semibold">Discount Applied</div>
               <div className="text-sm mt-1">
-                {discount.name}: -${discount.totalDiscountAmount.toFixed(2)} on {affectedCount} item{affectedCount !== 1 ? 's' : ''}
+                {discount.name}: -${discount.amount.toFixed(2)} on {affectedCount} item{affectedCount !== 1 ? 's' : ''}
               </div>
             </div>,
             { duration: 4000 }
@@ -461,11 +465,9 @@ export default function Page() {
             draft.subtotal = updatedCart.subtotal;
             draft.tax = updatedCart.tax;
             draft.total = updatedCart.total;
+            draft.adjustments = updatedCart.adjustments; // Store the adjustments in cart
             const merged = mergeCustomersIntoProducts(draft.products, JSON.parse(JSON.stringify(updatedCart.products)));
             draft.products = merged;
-            // Store applied discount for persistence
-            draft.appliedDiscountId = updatedCart.appliedDiscountId;
-            draft.appliedDiscountCode = updatedCart.appliedDiscountCode;
           });
           
           // Store adjustments for display
@@ -487,11 +489,9 @@ export default function Page() {
             draft.subtotal = updatedCart.subtotal;
             draft.tax = updatedCart.tax;
             draft.total = updatedCart.total;
+            draft.adjustments = updatedCart.adjustments; // Store the adjustments in cart
             const merged = mergeCustomersIntoProducts(draft.products, JSON.parse(JSON.stringify(updatedCart.products)));
             draft.products = merged;
-            // Store applied discount for persistence
-            draft.appliedDiscountId = updatedCart.appliedDiscountId;
-            draft.appliedDiscountCode = updatedCart.appliedDiscountCode;
           });
           
           // Store adjustments for display
@@ -520,29 +520,20 @@ export default function Page() {
     }
   };
 
-  // Remove all adjustments
-  const removeAdjustments = () => {
-    console.log('🗑️ [UI] Removing all adjustments');
+  // Remove discount only (preserve surcharges)
+  const removeAdjustments = async () => {
+    console.log('🗑️ [UI] Removing discount (preserving surcharges)');
     
-    // Reset cart to original values
-    const totals = calcCartTotals(cart.products);
-    setCart(draft => {
-      draft.subtotal = totals.subtotal;
-      draft.tax = totals.tax;
-      draft.total = totals.total;
-      draft.products.forEach(product => {
-        if (product.amount) {
-          product.amount.discount = 0;
-          product.amount.surcharge = 0;
-        }
-      });
-    });
-    clearAppliedAdjustments();
+    // Recalculate adjustments without any discount (but keep surcharges)
+    // This will update the appliedAdjustments state with just surcharges
+    await applyAdjustments(null, null, null, null, cart.customer || null, false, false);
+    
+    // Don't clear appliedAdjustments - it now contains the surcharges
     
     toast.info(
       <div>
         <div className="font-semibold">Discount Removed</div>
-        <div className="text-sm mt-1">Cart totals have been reset</div>
+        <div className="text-sm mt-1">Surcharges still apply if applicable</div>
       </div>,
       { duration: 3000 }
     );
@@ -565,28 +556,32 @@ export default function Page() {
 
   // Simple terminal initialization like the working version
   useEffect(() => {
-    // Only initialize terminal if Stripe is enabled
-    if (stripeEnabled) {
-      const init = async () => {
-        try {
-          await discoverReaders();
-          setTimeout(async () => {
-            try {
-              await connectReader();
-            } catch (error) {
-              console.error('Terminal connection error:', error);
-              toast.error('Failed to connect to payment terminal. Please check the terminal and try again.');
-            }
-          }, 2000)
-        } catch (error) {
-          console.error('Terminal discovery error:', error);
-          toast.error('Failed to discover payment terminal. Please check the terminal and try again.');
+    // Only try to initialize if stripe is enabled and we're actually disconnected
+    // Skip if we're checking cache or already connected
+    if (stripeEnabled && terminalStatus === 'disconnected') {
+      const timer = setTimeout(async () => {
+        // Double-check we're still disconnected after timeout
+        if (terminalStatus === 'disconnected') {
+          try {
+            await discoverReaders();
+            setTimeout(async () => {
+              try {
+                await connectReader();
+              } catch (error) {
+                console.error('Terminal connection error:', error);
+                toast.error('Failed to connect to payment terminal. Please check the terminal and try again.');
+              }
+            }, 2000)
+          } catch (error) {
+            console.error('Terminal discovery error:', error);
+            toast.error('Failed to discover payment terminal. Please check the terminal and try again.');
+          }
         }
-      };
+      }, 1000); // Wait a second to ensure cache check is complete
 
-      init();
+      return () => clearTimeout(timer);
     }
-  }, [stripeEnabled]);
+  }, [stripeEnabled, terminalStatus]);
 
   // Always use live cart for display
   const displayCart = cart
@@ -680,14 +675,16 @@ export default function Page() {
         const response = await fetch('/api/discounts?current=true')
         if (response.ok) {
           const data = await response.json()
-          console.log(`📋 [UI] Found ${data.length} available discount(s):`, data.map(d => ({
+          // Filter out surcharges - only show discounts in the dropdown
+          const discountsOnly = data.filter(d => d.mode !== 'surcharge')
+          console.log(`📋 [UI] Found ${discountsOnly.length} available discount(s) (filtered out surcharges):`, discountsOnly.map(d => ({
             name: d.name,
             code: d.code,
             type: d.type,
             value: d.value,
             mode: d.mode
           })))
-          setDiscounts(data)
+          setDiscounts(discountsOnly)
         }
       } catch (error) {
         console.error('❌ [UI] Error fetching discounts:', error)
@@ -700,9 +697,10 @@ export default function Page() {
         console.log('🔄 [UI] Checking for adjustments on cart...')
         
         // Check if cart has a previously applied discount
-        if (cart.appliedDiscountId) {
-          console.log(`🔄 [UI] Re-applying previous discount: ${cart.appliedDiscountId}`)
-          await applyAdjustments(null, cart.appliedDiscountId);
+        if (cart.adjustments?.discounts?.items?.length > 0) {
+          const discountId = cart.adjustments.discounts.items[0].id;
+          console.log(`🔄 [UI] Re-applying previous discount: ${discountId}`)
+          await applyAdjustments(null, discountId);
         } else if (cart.customer) {
           // If customer is already set, check for auto-applicable discounts
           console.log('🔄 [UI] Customer found, checking for auto-applicable discounts...')
@@ -908,42 +906,85 @@ export default function Page() {
               <span className="text-right">${displayCart.subtotal.toFixed(2)}</span>
             </div>
             {/* Show surcharges if any */}
-            {(displayCart.adjustments?.totalSurchargeAmount > 0 || appliedAdjustments?.totalSurchargeAmount > 0) && (
-              <div className="flex justify-between">
-                <span>Surcharges</span>
-                <span className="text-right">+${(displayCart.adjustments?.totalSurchargeAmount || appliedAdjustments?.totalSurchargeAmount || 0).toFixed(2)}</span>
-              </div>
+            {(displayCart.adjustments?.surcharges?.total > 0 || appliedAdjustments?.surcharges?.total > 0) && (
+              <>
+                <div 
+                  className="flex justify-between px-2 -py-1 rounded -mx-2 cursor-pointer hover:bg-muted/50"
+                  onClick={() => setSurchargeExpanded(!surchargeExpanded)}
+                >
+                  <div className="flex items-center gap-1">
+                    <span>
+                      {displayCart.adjustments?.surcharges?.items?.[0]?.name || appliedAdjustments?.surcharges?.items?.[0]?.name || 'Surcharges'}
+                    </span>
+                    {surchargeExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                  </div>
+                  <span className="text-right">
+                    +${(displayCart.adjustments?.surcharges?.total || appliedAdjustments?.surcharges?.total || 0).toFixed(2)}
+                  </span>
+                </div>
+                
+                {/* Expanded surcharge details */}
+                {surchargeExpanded && (
+                  <div className="text-sm text-muted-foreground pl-4 mt-1 space-y-1">
+                    {displayCart.products?.map((product, index) => {
+                      if (product.adjustments?.surcharges?.total > 0) {
+                        const surchargePercent = (displayCart.adjustments?.surcharges?.items?.[0]?.type === 'percent' || appliedAdjustments?.surcharges?.items?.[0]?.type === 'percent') 
+                          ? `${displayCart.adjustments?.surcharges?.items?.[0]?.value || appliedAdjustments?.surcharges?.items?.[0]?.value}% ` 
+                          : '';
+                        return (
+                          <div key={index} className="flex justify-between">
+                            <span>{surchargePercent}{product.name}</span>
+                            <span>+${product.adjustments.surcharges.total.toFixed(2)}</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                )}
+              </>
             )}
             
             {/* Show discounts if any */}
-            {(displayCart.adjustments?.totalDiscountAmount > 0 || appliedAdjustments?.totalDiscountAmount > 0) && (
-              <div 
-                className="flex justify-between px-2 -py-1 rounded -mx-2 cursor-pointer hover:bg-muted/50"
-                onClick={() => setDiscountExpanded(!discountExpanded)}
-              >
-                <div className="flex items-center gap-1">
-                  <span>
-                    {displayCart.adjustments?.discounts?.[0]?.name || appliedAdjustments?.discounts?.[0]?.name || 'Discount'}
+            {(displayCart.adjustments?.discounts?.total > 0 || appliedAdjustments?.discounts?.total > 0) && (
+              <>
+                <div 
+                  className="flex justify-between px-2 -py-1 rounded -mx-2 cursor-pointer hover:bg-muted/50"
+                  onClick={() => setDiscountExpanded(!discountExpanded)}
+                >
+                  <div className="flex items-center gap-1">
+                    <span>
+                      {displayCart.adjustments?.discounts?.items?.[0]?.name || appliedAdjustments?.discounts?.items?.[0]?.name || 'Discount'}
+                    </span>
+                    {discountExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                  </div>
+                  <span className="text-right">
+                    -${(displayCart.adjustments?.discounts?.total || appliedAdjustments?.discounts?.total || 0).toFixed(2)}
                   </span>
-                  {discountExpanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
                 </div>
-                <span className="text-right">
-                  -${(displayCart.adjustments?.totalDiscountAmount || appliedAdjustments?.totalDiscountAmount || 0).toFixed(2)}
-                </span>
-              </div>
+                
+                {/* Expanded discount details */}
+                {discountExpanded && (
+                  <div className="text-sm text-muted-foreground pl-4 mt-1 space-y-1">
+                    {displayCart.products?.map((product, index) => {
+                      if (product.adjustments?.discounts?.total > 0) {
+                        const discountPercent = (displayCart.adjustments?.discounts?.items?.[0]?.type === 'percent' || appliedAdjustments?.discounts?.items?.[0]?.type === 'percent') 
+                          ? `${displayCart.adjustments?.discounts?.items?.[0]?.value || appliedAdjustments?.discounts?.items?.[0]?.value}% ` 
+                          : '';
+                        return (
+                          <div key={index} className="flex justify-between">
+                            <span>{discountPercent}{product.name}</span>
+                            <span>-${product.adjustments.discounts.total.toFixed(2)}</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                )}
+              </>
             )}
             
-            {/* Expanded adjustment details */}
-            {discountExpanded && (displayCart.adjustments?.discounts?.length > 0 || appliedAdjustments?.discounts?.length > 0) && (
-              <div className="space-y-1 text-sm pl-3 mt-2">
-                {(displayCart.adjustments?.discounts?.[0]?.affectedProducts || appliedAdjustments?.discounts?.[0]?.affectedProducts || []).map((product, index) => (
-                  <div key={index} className="flex justify-between">
-                    <span>{product.productName}</span>
-                    <span>-${product.amount.toFixed(2)}</span>
-                  </div>
-                ))}
-              </div>
-            )}
             <div className="flex justify-between">
               <span>Tax</span>
               <span className="text-right">${displayCart.tax.toFixed(2)}</span>
@@ -976,19 +1017,19 @@ export default function Page() {
               <div className="">Discount</div>
               <div className="flex-1" />
               
-            {appliedAdjustments?.totalDiscountAmount > 0 ? (
+            {appliedAdjustments?.discounts?.total > 0 ? (
                 // Show applied discount with remove button (disabled after payment)
                 <div className="flex items-center gap-1">
-                  <div className="text-sm">{appliedAdjustments?.discounts?.[0]?.name || 'Custom Discount'}</div>
+                  <div className="text-sm">{appliedAdjustments?.discounts?.items?.[0]?.name || 'Custom Discount'}</div>
                   <Trash2 
                     className={`size-4 ${
                       paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
                         ? 'text-muted-foreground cursor-not-allowed opacity-50' 
                         : 'cursor-pointer hover:text-destructive'
                     }`}
-                    onClick={() => {
+                    onClick={async () => {
                       if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
-                        removeAdjustments();
+                        await removeAdjustments();
                       }
                     }}
                   />
@@ -996,15 +1037,15 @@ export default function Page() {
               ) : (
                 // Show dropdown for manual selection
                 <Select
-                  value={appliedAdjustments?.discounts?.[0]?.discountId || "none"}
+                  value={appliedAdjustments?.discounts?.items?.[0]?.id || "none"}
                   onValueChange={async (value) => {
                     if (value === "none") {
-                      removeAdjustments()
+                      await removeAdjustments()
                     } else {
                       const selectedDiscount = discounts.find(d => d._id === value);
                       if (selectedDiscount) {
                         console.log('🎯 [UI] User selected discount:', selectedDiscount.name);
-                        await applyAdjustments(null, value, null, selectedDiscount.name);
+                        await applyAdjustments(null, value, null, selectedDiscount.name, null, false, true); // isManualSelection = true
                       }
                     }
                   }}
@@ -1026,7 +1067,7 @@ export default function Page() {
             </div>
 
             {/* Custom Discount Input */}
-            {(!appliedAdjustments?.totalDiscountAmount || appliedAdjustments?.totalDiscountAmount === 0) && (
+            {(!appliedAdjustments?.discounts?.total || appliedAdjustments?.discounts?.total === 0) && (
               <div className="flex flex-row gap-4 items-center mt-2">
                 <div className="">Custom Discount</div>
                 <div className="flex-1" />
@@ -1457,11 +1498,12 @@ export default function Page() {
                         <span className="text-xs text-destructive">Disconnected</span>
                       </>
                     )}
-                    {(terminalStatus === 'discovering' || terminalStatus === 'connecting') && (
+                    {(terminalStatus === 'checking' || terminalStatus === 'discovering' || terminalStatus === 'connecting') && (
                       <>
                         <Loader2 className="size-4 animate-spin text-chart-4" />
                         <span className="text-xs text-chart-4">
-                          {terminalStatus === 'discovering' ? 'Discovering...' : 'Connecting...'}
+                          {terminalStatus === 'checking' ? 'Checking...' : 
+                           terminalStatus === 'discovering' ? 'Discovering...' : 'Connecting...'}
                         </span>
                       </>
                     )}
@@ -1474,15 +1516,19 @@ export default function Page() {
               <div className="flex flex-col gap-2">
                 <Button
                   disabled={
+                    // Disable during checking, discovering, or connecting
+                    terminalStatus === 'checking' ||
+                    terminalStatus === 'discovering' ||
+                    terminalStatus === 'connecting' ||
                     // Only disable if not disconnected AND one of these conditions is true
-                    terminalStatus !== 'disconnected' && (
+                    (terminalStatus !== 'disconnected' && (
                       terminalStatus !== 'connected' || 
                       paymentStatus === 'succeeded' || 
                       cardPaymentStatus === 'succeeded' || 
                       isCollectingPayment || 
                       cart.products.length === 0 || 
                       needsCustomerAssignment
-                    )
+                    ))
                   }
                   onClick={async () => {
                     // If terminal is disconnected, retry connection
@@ -1529,6 +1575,7 @@ export default function Page() {
                        cardPaymentStatus === 'processing' ? 'Processing...' :
                        cardPaymentStatus === 'creating' ? 'Creating Payment...' :
                        isCollectingPayment ? 'Starting...' : 'Collect Payment') : 
+                      terminalStatus === 'checking' ? 'Checking...' :
                       terminalStatus === 'connecting' ? 'Connecting...' :
                       terminalStatus === 'discovering' ? 'Discovering...' :
                       'Retry Connection'

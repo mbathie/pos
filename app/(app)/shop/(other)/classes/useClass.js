@@ -58,6 +58,15 @@ export function useClass({product, setProduct}) {
     const res = await fetch(`/api/products/${product._id}/schedules`);
     const scheduleData = res.ok ? await res.json() : { classes: [] };
 
+    // Get current time for filtering
+    const now = new Date();
+    const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+    
+    // Check if the selected date is today
+    const selectedDateStr = format(date, 'yyyy-MM-dd');
+    const todayStr = format(now, 'yyyy-MM-dd');
+    const isToday = selectedDateStr === todayStr;
+
     // Add all selected times for this day
     dayConfig.times.forEach(timeItem => {
       if (!timeItem.selected) return; // Skip unselected times
@@ -69,6 +78,11 @@ export function useClass({product, setProduct}) {
         const [hours, minutes] = timeStr.split(':');
         const classDateTime = new Date(date);
         classDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+        
+        // If it's today, filter out times that are more than 30 minutes in the past
+        if (isToday && classDateTime < thirtyMinutesAgo) {
+          return; // Skip this time
+        }
         
         const iso = classDateTime.toISOString();
         // Find matching scheduled class to get actual availability

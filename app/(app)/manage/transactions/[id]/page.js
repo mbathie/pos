@@ -126,7 +126,8 @@ export default function TransactionDetailsPage() {
               <TableHead>Modifiers</TableHead>
               <TableHead>Qty</TableHead>
               <TableHead className="text-right">Subtotal</TableHead>
-              <TableHead className="text-right">Discount</TableHead>
+              <TableHead className="text-right">Surcharges</TableHead>
+              <TableHead className="text-right">Discounts</TableHead>
               <TableHead className="text-right">Total</TableHead>
             </TableRow>
           </TableHeader>
@@ -154,10 +155,15 @@ export default function TransactionDetailsPage() {
                   {formatCurrency(product.amount?.subtotal)}
                 </TableCell>
                 <TableCell className="text-right">
-                  {product.amount?.discount > 0 ? `-${formatCurrency(product.amount.discount)}` : '-'}
+                  {product.adjustments?.surcharges?.total > 0 ? 
+                    `+${formatCurrency(product.adjustments.surcharges.total)}` : '-'}
+                </TableCell>
+                <TableCell className="text-right">
+                  {product.adjustments?.discounts?.total > 0 ? 
+                    `-${formatCurrency(product.adjustments.discounts.total)}` : '-'}
                 </TableCell>
                 <TableCell className="text-right font-medium">
-                  {formatCurrency((product.amount?.subtotal || 0) - (product.amount?.discount || 0))}
+                  {formatCurrency((product.amount?.subtotal || 0) + (product.adjustments?.surcharges?.total || 0) - (product.adjustments?.discounts?.total || 0))}
                 </TableCell>
               </TableRow>
             ))}
@@ -224,10 +230,10 @@ export default function TransactionDetailsPage() {
                   {formatCurrency(product.amount?.subtotal)}
                 </TableCell>
                 <TableCell className="text-right align-top">
-                  {product.amount?.discount > 0 ? `-${formatCurrency(product.amount.discount)}` : '-'}
+                  {product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'}
                 </TableCell>
                 <TableCell className="text-right align-top font-medium">
-                  {formatCurrency((product.amount?.subtotal || 0) - (product.amount?.discount || 0))}
+                  {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
                 </TableCell>
               </TableRow>
             ))}
@@ -294,10 +300,10 @@ export default function TransactionDetailsPage() {
                   {formatCurrency(product.amount?.subtotal)}
                 </TableCell>
                 <TableCell className="text-right align-top">
-                  {product.amount?.discount > 0 ? `-${formatCurrency(product.amount.discount)}` : '-'}
+                  {product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'}
                 </TableCell>
                 <TableCell className="text-right align-top font-medium">
-                  {formatCurrency((product.amount?.subtotal || 0) - (product.amount?.discount || 0))}
+                  {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
                 </TableCell>
               </TableRow>
             ))}
@@ -351,10 +357,10 @@ export default function TransactionDetailsPage() {
                   {formatCurrency(product.amount?.subtotal)}
                 </TableCell>
                 <TableCell className="text-right align-top">
-                  {product.amount?.discount > 0 ? `-${formatCurrency(product.amount.discount)}` : '-'}
+                  {product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'}
                 </TableCell>
                 <TableCell className="text-right align-top font-medium">
-                  {formatCurrency((product.amount?.subtotal || 0) - (product.amount?.discount || 0))}
+                  {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
                 </TableCell>
               </TableRow>
             ))}
@@ -426,10 +432,10 @@ export default function TransactionDetailsPage() {
                   {formatCurrency(product.amount?.subtotal)}
                 </TableCell>
                 <TableCell className="text-right align-top">
-                  {product.amount?.discount > 0 ? `-${formatCurrency(product.amount.discount)}` : '-'}
+                  {product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'}
                 </TableCell>
                 <TableCell className="text-right align-top font-medium">
-                  {formatCurrency((product.amount?.subtotal || 0) - (product.amount?.discount || 0))}
+                  {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
                 </TableCell>
               </TableRow>
             ))}
@@ -594,10 +600,16 @@ export default function TransactionDetailsPage() {
                 <span>Subtotal</span>
                 <span>{formatCurrency(transaction.subtotal)}</span>
               </div>
-              {transaction.discountAmount > 0 && (
+              {transaction.adjustments?.surcharges?.total > 0 && (
                 <div className="flex justify-between">
-                <span>Discount ({transaction.discount?.name})</span>
-                  <span>-{formatCurrency(transaction.discountAmount)}</span>
+                  <span>Surcharge{transaction.adjustments.surcharges.items?.length > 0 && transaction.adjustments.surcharges.items[0]?.name ? ` (${transaction.adjustments.surcharges.items[0].name})` : ''}</span>
+                  <span>+{formatCurrency(transaction.adjustments.surcharges.total)}</span>
+                </div>
+              )}
+              {transaction.adjustments?.discounts?.total > 0 && (
+                <div className="flex justify-between">
+                  <span>Discount{transaction.adjustments.discounts.items?.length > 0 && transaction.adjustments.discounts.items[0]?.name ? ` (${transaction.adjustments.discounts.items[0].name})` : ''}</span>
+                  <span>-{formatCurrency(transaction.adjustments.discounts.total)}</span>
                 </div>
               )}
               <div className="flex justify-between">

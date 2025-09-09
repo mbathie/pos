@@ -13,7 +13,8 @@ export function useCard({ cart }) {
   const transactionId = useRef()
   const clientSecret = useRef()
   const discoveredReaders = useRef([])
-  const [terminalStatus, setTerminalStatus] = useState('disconnected') // disconnected, connecting, connected
+  // Start with 'checking' status to prevent premature initialization
+  const [terminalStatus, setTerminalStatus] = useState('checking') // checking, disconnected, discovering, connecting, connected
   const [paymentStatus, setPaymentStatus] = useState(null) // null, collecting, processing, succeeded, failed
 
   // Check for cached connection on mount
@@ -21,6 +22,7 @@ export function useCard({ cart }) {
     const checkCachedConnection = async () => {
       if (isTerminalConnectionValid()) {
         console.log('🔄 Found valid cached terminal connection:', terminalConnection);
+        setTerminalStatus('connecting'); // Show connecting status while checking
         
         // Initialize terminal if not already initialized
         if (!terminalInstance) {
@@ -37,8 +39,13 @@ export function useCard({ cart }) {
           } else {
             console.log('⚠️ Cached connection no longer valid, clearing...');
             clearTerminalConnection();
+            setTerminalStatus('disconnected');
+            // Will trigger the auto-reconnect in payment.js since status is now disconnected
           }
         }
+      } else {
+        // No cached connection or expired
+        setTerminalStatus('disconnected');
       }
     };
     

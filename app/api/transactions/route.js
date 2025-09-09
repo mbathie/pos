@@ -51,7 +51,8 @@ export async function GET(request) {
     }
 
     const transactions = await Transaction.find(query)
-      .populate('discount', 'name value type')
+      .populate('adjustments.discounts.items.id', 'name value type mode')
+      .populate('adjustments.surcharges.items.id', 'name value type mode')
       .populate('employee', 'name')
       .populate('customer', 'name email phone')
       .populate('location', 'name')

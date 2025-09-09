@@ -36,11 +36,12 @@ export default function Page({ schedule, setSchedule }) {
           if (classDate !== filterDate) return false;
         }
 
-        // Search filter (customer name or member ID)
+        // Search filter (customer name, dependent name, or member ID)
         if (searchQuery) {
           const query = searchQuery.toLowerCase();
           const hasMatchingCustomer = cls.customers?.some(cust => 
             cust.customer?.name?.toLowerCase().includes(query) ||
+            cust.dependent?.name?.toLowerCase().includes(query) ||
             cust.customer?.memberId?.toString().includes(query)
           );
           if (!hasMatchingCustomer) return false;
@@ -214,7 +215,7 @@ export default function Page({ schedule, setSchedule }) {
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground size-4" />
           <Input
-            placeholder="Search by name or member ID..."
+            placeholder="Search by name, dependent, or member ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -376,7 +377,28 @@ function ManageCustomer({ schedule, customer, classId, scheduleId, setSchedule }
 
   const handleUpdateStatus = async (newStatus) => {
     console.log('Updating status to:', newStatus);
-    console.log('Current schedule before update:', schedule);
+    
+    // Optimistically update the UI
+    setSchedule(prevSchedule => {
+      const updatedSchedule = { ...prevSchedule };
+      if (updatedSchedule.classes) {
+        updatedSchedule.classes = updatedSchedule.classes.map(cls => {
+          if (cls._id === classId) {
+            return {
+              ...cls,
+              customers: cls.customers.map(cust => {
+                if (cust._id === customer._id) {
+                  return { ...cust, status: newStatus === 'checkin' ? 'checked in' : newStatus };
+                }
+                return cust;
+              })
+            };
+          }
+          return cls;
+        });
+      }
+      return updatedSchedule;
+    });
     
     const res = await fetch(`/api/schedules/${scheduleId}/classes/${classId}/customers/${customer._id}`, {
       method: 'PUT',
@@ -386,12 +408,14 @@ function ManageCustomer({ schedule, customer, classId, scheduleId, setSchedule }
 
     if (!res.ok) {
       console.error('Failed to update status');
+      // Revert the optimistic update by fetching fresh data
+      const refreshRes = await fetch(`/api/schedules/${scheduleId}`);
+      if (refreshRes.ok) {
+        const refreshedData = await refreshRes.json();
+        setSchedule(refreshedData);
+      }
       return;
     }
-
-    const updated = await res.json();
-    console.log('Updated schedule from API:', updated);
-    setSchedule(updated);
   };
 
   return (

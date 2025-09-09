@@ -53,6 +53,7 @@ export async function PUT(request, { params }) {
       description,
       mode,
       code,
+      autoAssign,
       type,
       value,
       maxAmount,
@@ -85,6 +86,7 @@ export async function PUT(request, { params }) {
       description,
       mode: mode || 'discount',
       code,
+      autoAssign: mode === 'surcharge' ? true : (autoAssign === true), // Surcharges always auto-assign
       start: start ? new Date(start) : null,
       expiry: expiry ? new Date(expiry) : null,
       archivedAt: archivedAt ? new Date(archivedAt) : null,

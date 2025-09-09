@@ -436,11 +436,11 @@ export default function TransactionsPage() {
                       </Badge>
                     </td>
                     <td className="px-4 py-3 align-middle">
-                      {transaction.discount ? (
+                      {transaction.adjustments?.discounts?.total > 0 ? (
                         <div>
-                          <div className="text-sm">{transaction.discount.name}</div>
+                          <div className="text-sm">{transaction.adjustments.discounts.items[0]?.name || 'Discount'}</div>
                           <div className="text-sm text-muted-foreground">
-                            -{formatCurrency(transaction.discountAmount)}
+                            -{formatCurrency(transaction.adjustments.discounts.total)}
                           </div>
                         </div>
                       ) : (

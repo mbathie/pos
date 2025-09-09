@@ -20,7 +20,8 @@ export async function POST(request) {
       discountCode, 
       discountId, 
       customDiscountAmount,
-      autoApply = false // Flag to indicate if we should auto-find a discount
+      autoApply = false, // Flag to indicate if we should auto-find a discount
+      isManualSelection = false // Flag to indicate if discount was manually selected from dropdown
     } = body;
     
     // Fetch discount details if discountId is provided
@@ -33,6 +34,7 @@ export async function POST(request) {
             id: discount._id,
             name: discount.name,
             code: discount.code || 'no code',
+            autoAssign: discount.autoAssign !== undefined ? discount.autoAssign : 'not set',
             type: discount.type,
             value: `${discount.value}${discount.type === 'percent' ? '%' : '$'}`,
             mode: discount.mode || 'discount',
@@ -82,6 +84,8 @@ export async function POST(request) {
       discountId,
       discountDetails,
       customDiscountAmount,
+      autoApply,
+      isManualSelection,
       cartProductCount: cart?.products?.length,
       cartTotal: cart?.total,
       cartProducts: cart?.products?.map(p => ({
@@ -131,19 +135,16 @@ export async function POST(request) {
         customer,
         discountCode: finalDiscountCode,
         discountId: finalDiscountId,
-        orgId: employee.org._id
+        orgId: employee.org._id,
+        isManualSelection: isManualSelection || (discountId && !autoApply) // Manual if ID provided and not auto-applying
       });
       
-      // Store the applied discount in the cart for persistence
-      if (finalDiscountId && updatedCart.adjustments?.discounts?.length > 0) {
-        updatedCart.appliedDiscountId = finalDiscountId;
-        updatedCart.appliedDiscountCode = finalDiscountCode;
-      }
+      // No longer store legacy discount fields
     }
     
     console.log('🎁 [API] Adjustment calculation complete:', {
-      totalDiscounts: updatedCart.adjustments?.totalDiscountAmount || 0,
-      totalSurcharges: updatedCart.adjustments?.totalSurchargeAmount || 0,
+      totalDiscounts: updatedCart.adjustments?.discounts?.total || 0,
+      totalSurcharges: updatedCart.adjustments?.surcharges?.total || 0,
       error: updatedCart.adjustments?.discountError,
       finalTotal: updatedCart.total
     });

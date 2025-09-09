@@ -33,7 +33,7 @@ export function CartSheet() {
         {itemCount > 0 && (
           <Badge 
             className="h-5 px-1.5 flex items-center justify-center"
-            variant="primary"
+            variant="default"
           >
             {itemCount}
           </Badge>
@@ -54,7 +54,7 @@ export function CartSheet() {
             <div><ShoppingCart className="size-5" /></div>
             <Badge 
               className="h-5 px-1.5 flex items-center justify-center"
-              variant="primary"
+              variant="default"
             >
               {itemCount}
             </Badge>
