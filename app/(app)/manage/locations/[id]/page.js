@@ -3,7 +3,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import LocationForm from '../location'
+import LocationForm from '@/app/(app)/manage/locations/location'
 import { useGlobals } from '@/lib/globals'
 
 export default function Page() {
