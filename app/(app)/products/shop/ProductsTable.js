@@ -20,7 +20,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from '@/components/ui/button';
 import { Tag, ChevronRight, Check, GripVertical, ChevronsUpDown } from 'lucide-react';
-import colors from 'tailwindcss/colors';
+import colors from '@/lib/tailwind-colors';
 
 // Sortable row component
 function SortableRow({ product, pIdx, onProductClick }) {

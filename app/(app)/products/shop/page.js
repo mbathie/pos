@@ -20,7 +20,7 @@ import ProductsTable from './ProductsTable'
 import ProductSheet from './ProductSheet'
 import { FolderManagementSheet } from './FolderManagementSheet'
 import IconSelect from '@/components/icon-select'
-import colors from 'tailwindcss/colors';
+import colors from '@/lib/tailwind-colors';
 import { useAutoSave } from '../useAutoSave';
 import { CategoryFolderMenu } from './CategoryFolderMenu';
 import { SvgIcon } from '@/components/ui/svg-icon';

@@ -8,7 +8,7 @@ import { useHandler } from './useHandler'
 import { useImmer } from 'use-immer'
 import { useGlobals } from '@/lib/globals'
 // import { calcCartValueShop } from '@/lib/product'
-import colors from 'tailwindcss/colors';
+import colors from '@/lib/tailwind-colors';
 import ProductDetail from './productDetail'
 import { useRouter } from 'next/navigation';
 import { SvgIcon } from '@/components/ui/svg-icon';

@@ -21,7 +21,7 @@ import {
   MultiSelectItem,
   MultiSelectGroup
 } from '@/components/ui/multi-select';
-import colors from 'tailwindcss/colors';
+import colors from '@/lib/tailwind-colors';
 import { actions } from './actions';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
 

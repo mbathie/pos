@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import Colors from '@/components/colors';
-import colors from 'tailwindcss/colors';
+import colors from '@/lib/tailwind-colors';
 
 export function FolderManagementSheet({ open, onOpenChange, onFolderUpdated, onFolderDeleted, initialFolder, category }) {
   const [folders, setFolders] = useState([]);

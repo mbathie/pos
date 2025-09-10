@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Search, X, ChevronsUpDown, Edit, Warehouse, Image, Tag } from 'lucide-react';
-import colors from 'tailwindcss/colors';
+import colors from '@/lib/tailwind-colors';
 import AccountingSelect from '@/app/(app)/products/shop/accounting-select';
 
 export default function ManageProductsPage() {

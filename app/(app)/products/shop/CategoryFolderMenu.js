@@ -13,7 +13,7 @@ import {
   GripVertical
 } from 'lucide-react';
 import { SvgIcon } from '@/components/ui/svg-icon';
-import colors from 'tailwindcss/colors';
+import colors from '@/lib/tailwind-colors';
 import { cn } from '@/lib/utils';
 import {
   DndContext,

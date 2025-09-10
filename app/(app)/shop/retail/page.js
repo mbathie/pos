@@ -6,7 +6,7 @@ import ProductDetail from './productDetail'
 import Categories from './cats'
 import Product from '../product'
 import { useRouter } from 'next/navigation';
-import colors from 'tailwindcss/colors';
+import colors from '@/lib/tailwind-colors';
 import { Plus, Minus } from 'lucide-react'
 import Cart from '@/components/cart'
 

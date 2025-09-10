@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useRef, useEffect } from 'react';
-import colors from 'tailwindcss/colors';
+import colors from '@/lib/tailwind-colors';
 
 const tailwindColors = [
   'red', 'orange', 'amber', 'yellow', 'lime',

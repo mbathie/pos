@@ -8,7 +8,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from '@/components/ui/button';
-import colors from 'tailwindcss/colors';
+import colors from '@/lib/tailwind-colors';
 
 export function FolderSelect({ product, pIdx, setFolder, onManageFolders, refreshTrigger, category }) {
   const [folders, setFolders] = useState([]);
