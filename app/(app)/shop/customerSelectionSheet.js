@@ -183,6 +183,8 @@ export default function CustomerSelectionSheet({
                       onClick={() => {
                         setNewCustomer({ ...newCustomer, name: searchQuery })
                         setShowNewCustomer(true)
+                        setSearchQuery('') // Clear search to collapse input
+                        setCustomers([]) // Clear customers list
                       }}
                     >
                       <UserPlus className="mr-2 size-4" />
@@ -288,11 +290,26 @@ export default function CustomerSelectionSheet({
                 ) : null}
               </CommandList>
             </Command>
+            
+            {/* Explicit New Customer Button - only show for shop items or no waiver required */}
+            {!isMinorSlot && (
+              <Button
+                className="ml-auto flex cursor-pointer"
+                onClick={() => {
+                  setShowNewCustomer(true)
+                  setSearchQuery('') // Clear search to collapse input
+                  setCustomers([]) // Clear customers list
+                }}
+              >
+                <UserPlus className="size-4" />
+                New Customer
+              </Button>
+            )}
           </div>
 
-          {/* New Customer Form */}
+          {/* New Customer Form - no gap when shown */}
           {showNewCustomer && (
-            <div className="space-y-4 rounded-lg border p-4">
+            <div className="space-y-4 rounded-lg border p-4 mt-4">
               <h4 className="font-medium">Create New Customer</h4>
               <div className="space-y-2">
                 <Label htmlFor="name">Name</Label>
@@ -319,7 +336,7 @@ export default function CustomerSelectionSheet({
                   id="phone"
                   value={newCustomer.phone}
                   onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
-                  placeholder="(555) 555-5555"
+                  placeholder="0400 111 222"
                 />
               </div>
               <div className="flex gap-2">
