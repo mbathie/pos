@@ -17,7 +17,7 @@ fi
 # Create JSON string for environment variables
 ENV_VARS='{
   "NODE_ENV": "production",
-  "MONGODB_URI": "mongodb+srv://pos:857v1O03zVbR94Hf@db-bath-mongo-35cc9574.mongo.ondigitalocean.com/staging?authSource=admin",
+  "MONGODB_URI": "mongodb+srv://mbathie_db_user:2Vfgq5fPQs8jNxHq@cultchacluster.uigqlce.mongodb.net/pos?retryWrites=true&w=majority&appName=cultchaCluster",
   "JWT_SECRET": "9+xiwSSxdCm+KBttrfeGlbnizZTWYPJswDhsj/d/+wY=",
   "HOST": "https://cultcha.app",
   "STRIPE_PUB_KEY": "pk_test_51RXCG6H0DYvVUxcGn1kQRQJDYb5iUwAbP9jUZC0YqmyZ9BcW3unA7HE4sBc0TE5QbH0Cxx3o1mkL6dFGn0f4teQ4jCx00cInaNoH3",
