@@ -10,7 +10,5 @@ module.exports = {
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL,
     NEXT_PUBLIC_DOMAIN: process.env.NEXT_PUBLIC_DOMAIN,
-    GOOGLE_APP_PASS: process.env.GOOGLE_APP_PASS,
-    GOOGLE_APP_USER: process.env.GOOGLE_APP_USER,
   }
 }

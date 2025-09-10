@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -504,24 +505,19 @@ export default function ModsPage() {
             <div className="space-y-2">
               <Label htmlFor="mod-price">Price</Label>
               <div className="relative">
-                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
+                <DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none z-10" />
+                <NumberInput
                   id="mod-price"
-                  type="text"
-                  value={modForm.price === 0 ? '' : modForm.price}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '' || value === '0') {
-                      setModForm({ ...modForm, price: 0 });
-                    } else {
-                      const numValue = parseFloat(value);
-                      if (!isNaN(numValue)) {
-                        setModForm({ ...modForm, price: numValue });
-                      }
-                    }
-                  }}
+                  value={modForm.price === 0 ? null : modForm.price}
+                  onChange={(value) => setModForm({ ...modForm, price: value ?? 0 })}
                   className="pl-9"
                   placeholder="0.00"
+                  min={0}
+                  step={0.01}
+                  formatOptions={{
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2
+                  }}
                 />
               </div>
             </div>
