@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import LocationForm from '@/components/location-form'
+import LocationForm from '../location'
 import { toast } from 'sonner'
 
 export default function CreateLocationPage() {
