@@ -8,9 +8,10 @@ applications:
         build:
           commands:
             - echo "Building Next.js application..."
+            - env | grep -E "MONGODB_URI|JWT_SECRET|NODE_ENV" || echo "No env vars found"
             - npm run build
       artifacts:
-        baseDirectory: .next
+        baseDirectory: .
         files:
           - '**/*'
       cache:
