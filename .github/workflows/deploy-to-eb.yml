@@ -42,7 +42,10 @@ jobs:
             -x ".env.development" \
             -x "*.log" \
             -x ".DS_Store" \
-            -x "deploy.zip"
+            -x "deploy.zip" \
+            -x ".github/*" \
+            -x "scripts/*" \
+            -x "docs/*"
 
       - name: Deploy to Elastic Beanstalk
         uses: einaregilsson/beanstalk-deploy@v22

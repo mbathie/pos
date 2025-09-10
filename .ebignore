@@ -9,9 +9,8 @@ coverage/
 .nyc_output/
 
 # Next.js
-.next/
+# .next/ is needed for production!
 out/
-build/
 
 # Production
 dist/
