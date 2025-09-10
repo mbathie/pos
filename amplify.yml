@@ -1,22 +1,21 @@
 version: 1
-applications:
-  - frontend:
-      phases:
-        preBuild:
-          commands:
-            - npm ci --cache .npm --prefer-offline
-        build:
-          commands:
-            - echo "Building Next.js application..."
-            - env | grep -E "MONGODB_URI|JWT_SECRET|NODE_ENV" || echo "No env vars found"
-            - npm run build
-      artifacts:
-        baseDirectory: .
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - .next/cache/**/*
-          - .npm/**/*
-          - node_modules/**/*
-    appRoot: .
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci --cache .npm --prefer-offline
+    build:
+      commands:
+        - echo "Building Next.js application..."
+        - echo "Environment variables available during build:"
+        - env | grep -E "MONGODB_URI|JWT_SECRET|NODE_ENV" || echo "No env vars found"
+        - npm run build
+  artifacts:
+    baseDirectory: .next
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - .next/cache/**/*
+      - .npm/**/*
+      - node_modules/**/*
