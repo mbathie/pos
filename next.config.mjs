@@ -1,9 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   "devIndicators": false,
   "reactStrictMode": false,
   images: {
-    domains: ['static.thenounproject.com', 'images.unsplash.com'],
+    domains: ['static.thenounproject.com', 'images.unsplash.com', 'localhost', 'cultcha.app'],
   },
   serverExternalPackages: ['mongoose', 'bcrypt'],
   webpack: (config) => {
