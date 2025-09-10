@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge"
 import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt, Users } from "lucide-react";
 import TransactionsTable from '@/components/transactions-table';
+import { CustomerAvatar } from '@/components/customer-avatar';
 import dayjs from 'dayjs';
 
 export default function CustomerDetailPage({ params }) {
@@ -74,15 +75,6 @@ export default function CustomerDetailPage({ params }) {
     } catch (error) {
       console.error('Error fetching memberships:', error);
     }
-  };
-
-  const getInitials = (name) => {
-    if (!name) return 'UN';
-    return name
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase())
-      .join('')
-      .substring(0, 2);
   };
 
   const formatPhone = (phone) => {
@@ -176,17 +168,11 @@ export default function CustomerDetailPage({ params }) {
           <CardContent className="space-y-4">
             <div className="flex gap-4">
               {/* Left side: Photo */}
-              {customer.photo ? (
-                <img 
-                  src={customer.photo} 
-                  alt={customer.name} 
-                  className="size-24 rounded-lg object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="size-24 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-2xl font-medium flex-shrink-0">
-                  {getInitials(customer.name)}
-                </div>
-              )}
+              <CustomerAvatar 
+                customer={customer} 
+                size="xl" 
+                shape="square"
+              />
               
               {/* Right side: Grid of fields */}
               <div className="flex-grow">
@@ -294,9 +280,10 @@ export default function CustomerDetailPage({ params }) {
                     <div key={index} className="space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
-                            {getInitials(dependent.name)}
-                          </div>
+                          <CustomerAvatar 
+                            customer={dependent} 
+                            size="sm" 
+                          />
                           <div>
                             <p className="font-medium text-sm">{dependent.name}</p>
                             <p className="text-xs text-muted-foreground capitalize">{dependent.gender || 'Not specified'}</p>

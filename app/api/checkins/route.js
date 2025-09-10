@@ -19,6 +19,7 @@ export async function GET(request) {
     const limit = parseInt(searchParams.get('limit') || '100')
     const search = searchParams.get('search') || ''
     const method = searchParams.get('method') || ''
+    const successFilter = searchParams.get('success') || ''
     
     // Build date query based on filter
     let dateQuery = {}
@@ -95,12 +96,29 @@ export async function GET(request) {
       methodQuery = { method }
     }
     
+    // Build success query
+    let successQuery = {}
+    if (successFilter === 'success') {
+      // Show only successful check-ins (default behavior for backward compatibility)
+      successQuery = { 
+        $or: [
+          { 'success.status': true },
+          { 'success.status': { $exists: false } } // Handle old records without success field
+        ]
+      }
+    } else if (successFilter === 'failed') {
+      // Show only failed check-ins
+      successQuery = { 'success.status': false }
+    }
+    // If 'all', no filter needed
+    
     // Combine all queries
     const query = {
       org: employee.org._id,
       ...dateQuery,
       ...searchQuery,
-      ...methodQuery
+      ...methodQuery,
+      ...successQuery
     }
     
     // Calculate pagination

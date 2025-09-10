@@ -13,7 +13,7 @@ export async function GET(req, { params }) {
     .populate("product")
     .populate({
       path: "locations.classes.customers.customer",
-      select: "name email phone memberId dependents"
+      select: "name email phone memberId dependents photo"
     })
 
   if (!schedule) {
@@ -30,7 +30,7 @@ export async function GET(req, { params }) {
     new Date(a.datetime) - new Date(b.datetime)
   );
   
-  // Process classes to extract dependent details
+  // Process classes to extract dependent details (including photo)
   allClasses = allClasses.map(cls => ({
     ...cls,
     customers: cls.customers?.map(cust => {
@@ -41,6 +41,7 @@ export async function GET(req, { params }) {
         );
         return {
           ...cust,
+          // Ensure dependent has photo field if it exists
           dependent: dependentDetails || { _id: cust.dependent }
         };
       }

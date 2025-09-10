@@ -33,6 +33,17 @@ const checkinSchema = new mongoose.Schema({
     enum: ['qr-code', 'manual', 'staff'],
     default: 'qr-code'
   },
+  success: {
+    status: {
+      type: Boolean,
+      default: true
+    },
+    reason: {
+      type: String,
+      enum: ['success', 'membership-expired', 'no-scheduled-classes', 'no-class-in-window', 'invalid-status'],
+      default: 'success'
+    }
+  },
   org: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Org',

@@ -16,6 +16,7 @@ import { Calendar } from "@/components/ui/calendar"
 import { Ellipsis, Check, Clock, CheckCircle, XCircle, User, CalendarIcon, Search, ArrowLeft } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import ProductIcon from '@/components/icon';
+import { CustomerAvatar } from '@/components/customer-avatar';
 import { format } from "date-fns"
 
 export default function Page({ schedule, setSchedule }) {
@@ -75,14 +76,6 @@ export default function Page({ schedule, setSchedule }) {
       default:
         return <Clock className="size-4 text-muted-foreground" />;
     }
-  };
-
-  const getInitials = (name) => {
-    if (!name) return 'UN';
-    return name
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase())
-      .join('');
   };
 
   return (
@@ -318,9 +311,10 @@ export default function Page({ schedule, setSchedule }) {
                               >
                                 <TableCell className="w-1/5">
                                   <div className="flex items-center gap-2">
-                                    <div className="size-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium">
-                                      {getInitials(cust.dependent?.name || cust.customer?.name)}
-                                    </div>
+                                    <CustomerAvatar 
+                                      customer={cust.dependent || cust.customer} 
+                                      size="sm" 
+                                    />
                                     <div className="flex flex-col">
                                       <span>{cust.dependent?.name || cust.customer?.name || 'Unknown'}</span>
                                       {cust.dependent && (

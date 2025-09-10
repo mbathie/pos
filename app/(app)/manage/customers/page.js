@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/pagination"
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, User, Mail, Phone, IdCard, Check, CreditCard, MoreHorizontal, Users } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { CustomerAvatar } from '@/components/customer-avatar';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -113,15 +114,6 @@ export default function CustomersPage() {
   const clearSearch = () => {
     setSearchQuery('');
     setCurrentPage(1);
-  };
-
-  const getInitials = (name) => {
-    if (!name) return 'UN';
-    return name
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase())
-      .join('')
-      .substring(0, 2);
   };
 
   const formatPhone = (phone) => {
@@ -292,17 +284,7 @@ export default function CustomersPage() {
                   >
                     <td className="px-4 py-3 align-middle">
                       <div className="flex items-center gap-3">
-                        {customer.photo ? (
-                          <img 
-                            src={customer.photo} 
-                            alt={customer.name} 
-                            className="h-8 w-8 rounded-full object-cover flex-shrink-0"
-                          />
-                        ) : (
-                          <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium flex-shrink-0">
-                            {getInitials(customer.name)}
-                          </div>
-                        )}
+                        <CustomerAvatar customer={customer} size="sm" />
                         <div className="flex flex-col min-w-0">
                           <div className="font-medium">
                             {customer.name || 'Unnamed Customer'}

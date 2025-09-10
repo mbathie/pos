@@ -75,8 +75,34 @@ export async function POST(request) {
         status: 'active'
       }).populate('product').populate('location');
       
+      // Validate membership is not expired
+      let isMembershipValid = false;
       if (activeMembership) {
-        console.log('Active membership found (no schedules):', activeMembership.product?.name);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (activeMembership.nextBillingDate) {
+          const nextBilling = new Date(activeMembership.nextBillingDate);
+          nextBilling.setHours(0, 0, 0, 0);
+          
+          // Membership is valid if today is not past the next billing date
+          isMembershipValid = today <= nextBilling && activeMembership.status === 'active';
+          
+          console.log('Membership validation:', {
+            product: activeMembership.product?.name,
+            status: activeMembership.status,
+            nextBillingDate: activeMembership.nextBillingDate,
+            today: today,
+            isValid: isMembershipValid
+          });
+        } else {
+          // If no nextBillingDate, only check status
+          isMembershipValid = activeMembership.status === 'active';
+        }
+      }
+      
+      if (activeMembership && isMembershipValid) {
+        console.log('Valid active membership found (no schedules):', activeMembership.product?.name);
         
         // Check for recent duplicate check-in (within last 10 seconds)
         const tenSecondsAgo = new Date(now.getTime() - 10 * 1000);
@@ -139,6 +165,47 @@ export async function POST(request) {
           status: 'membership-checked-in',
           message: 'Membership check-in successful',
           testMode: false
+        });
+      }
+      
+      // Check if there's an expired membership
+      if (activeMembership && !isMembershipValid) {
+        // Create a failed check-in record for expired membership
+        const failedCheckinRecord = new Checkin({
+          customer: customerId,
+          product: activeMembership.product._id,
+          class: {
+            datetime: now,
+            location: activeMembership.location?._id || null
+          },
+          status: 'no-show',
+          method: 'qr-code',
+          success: {
+            status: false,
+            reason: 'membership-expired'
+          },
+          org: employee.org._id
+        });
+        
+        await failedCheckinRecord.save();
+        
+        return NextResponse.json({ 
+          success: false,
+          status: 'membership-expired',
+          message: 'Membership has expired',
+          customer: {
+            _id: customer._id,
+            name: customer.name,
+            email: customer.email,
+            memberId: customer.memberId,
+            photo: customer.photo
+          },
+          membershipDetails: {
+            product: activeMembership.product?.name,
+            nextBillingDate: activeMembership.nextBillingDate,
+            status: activeMembership.status
+          },
+          checkinId: failedCheckinRecord._id
         });
       }
       
@@ -231,8 +298,34 @@ export async function POST(request) {
         status: 'active'
       }).populate('product').populate('location');
       
-      if (activeMembership && !test) {
-        console.log('Active membership found for general check-in:', activeMembership.product?.name);
+      // Validate membership is not expired
+      let isMembershipValid = false;
+      if (activeMembership) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (activeMembership.nextBillingDate) {
+          const nextBilling = new Date(activeMembership.nextBillingDate);
+          nextBilling.setHours(0, 0, 0, 0);
+          
+          // Membership is valid if today is not past the next billing date
+          isMembershipValid = today <= nextBilling && activeMembership.status === 'active';
+          
+          console.log('Membership validation (no class in window):', {
+            product: activeMembership.product?.name,
+            status: activeMembership.status,
+            nextBillingDate: activeMembership.nextBillingDate,
+            today: today,
+            isValid: isMembershipValid
+          });
+        } else {
+          // If no nextBillingDate, only check status
+          isMembershipValid = activeMembership.status === 'active';
+        }
+      }
+      
+      if (activeMembership && isMembershipValid && !test) {
+        console.log('Valid active membership found for general check-in:', activeMembership.product?.name);
         
         // Check for recent duplicate check-in (within last 10 seconds)
         const tenSecondsAgo = new Date(now.getTime() - 10 * 1000);
@@ -321,6 +414,52 @@ export async function POST(request) {
         }
       }
       
+      // Check if there's an expired membership
+      if (activeMembership && !isMembershipValid) {
+        // Create a failed check-in record for expired membership
+        const failedCheckinRecord = new Checkin({
+          customer: customerId,
+          product: activeMembership.product._id,
+          class: {
+            datetime: now,
+            location: activeMembership.location?._id || null
+          },
+          status: 'no-show',
+          method: 'qr-code',
+          success: {
+            status: false,
+            reason: 'membership-expired'
+          },
+          org: employee.org._id
+        });
+        
+        await failedCheckinRecord.save();
+        
+        return NextResponse.json({ 
+          success: false,
+          status: 'membership-expired',
+          message: 'Membership has expired',
+          customer: {
+            _id: customer._id,
+            name: customer.name,
+            email: customer.email,
+            memberId: customer.memberId,
+            photo: customer.photo
+          },
+          membershipDetails: {
+            product: activeMembership.product?.name,
+            nextBillingDate: activeMembership.nextBillingDate,
+            status: activeMembership.status
+          },
+          nextClass: nextClassTime ? {
+            datetime: nextClassTime,
+            productName: nextClassProduct?.name || 'Class/Course',
+            timeUntil: Math.round((nextClassTime - now) / 1000 / 60) // minutes until class
+          } : null,
+          checkinId: failedCheckinRecord._id
+        });
+      }
+      
       return NextResponse.json({ 
         success: false,
         status: 'no-class-in-window',
@@ -337,7 +476,7 @@ export async function POST(request) {
           productName: nextClassProduct?.name || 'Class/Course',
           timeUntil: Math.round((nextClassTime - now) / 1000 / 60) // minutes until class
         } : null,
-        hasActiveMembership: !!activeMembership
+        hasActiveMembership: false
       });
     }
     
@@ -384,8 +523,26 @@ export async function POST(request) {
         status: 'active'
       }).populate('product');
       
+      // Validate membership is not expired for class check-in
+      let isMembershipValid = false;
       if (activeMembership) {
-        console.log('Active membership found:', activeMembership.product?.name);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        if (activeMembership.nextBillingDate) {
+          const nextBilling = new Date(activeMembership.nextBillingDate);
+          nextBilling.setHours(0, 0, 0, 0);
+          
+          // Membership is valid if today is not past the next billing date
+          isMembershipValid = today <= nextBilling && activeMembership.status === 'active';
+        } else {
+          // If no nextBillingDate, only check status
+          isMembershipValid = activeMembership.status === 'active';
+        }
+      }
+      
+      if (activeMembership && isMembershipValid) {
+        console.log('Valid active membership found:', activeMembership.product?.name);
         
         // Create a SEPARATE membership check-in record
         const membershipCheckinRecord = new Checkin({

@@ -1602,12 +1602,20 @@ export default function Page() {
                   </Button>
                 )}
 
-                {/* Return to Shop Button - always visible */}
+                {/* Return to Shop Button - disabled during transactions */}
                 <Button
                   variant="outline"
                   onClick={() => {
                     router.push('/shop')
                   }}
+                  disabled={
+                    isCollectingPayment ||
+                    cardPaymentStatus === 'collecting' ||
+                    cardPaymentStatus === 'processing' ||
+                    cardPaymentStatus === 'creating' ||
+                    paymentStatus === 'processing' ||
+                    (cardPaymentStatus === 'succeeded' && !transactionId) // Still finalizing
+                  }
                 >
                   Return to Shop
                 </Button>
@@ -1732,6 +1740,11 @@ export default function Page() {
                      onClick={() => {
                        router.push('/shop')
                      }}
+                     disabled={
+                       isProcessingCash ||
+                       paymentStatus === 'processing' ||
+                       (paymentStatus === 'succeeded' && !transactionId) // Still finalizing
+                     }
                    >
                      Return to Shop
                    </Button>

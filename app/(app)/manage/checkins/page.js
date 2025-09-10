@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination'
-import { Loader2, QrCode, Edit, Users, Clock, UserCircle, CheckCircle, Search } from 'lucide-react'
+import { Loader2, QrCode, Edit, Users, Clock, UserCircle, CheckCircle, Search, XCircle } from 'lucide-react'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 
@@ -19,6 +19,7 @@ export default function CheckinsPage() {
   const [loading, setLoading] = useState(true)
   const [filterMethod, setFilterMethod] = useState('all')
   const [filterDate, setFilterDate] = useState('today')
+  const [filterSuccess, setFilterSuccess] = useState('success')
   const [searchTerm, setSearchTerm] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -35,7 +36,7 @@ export default function CheckinsPage() {
   // Fetch checkins when filters change
   useEffect(() => {
     fetchCheckins()
-  }, [filterDate, filterMethod, currentPage, searchTerm])
+  }, [filterDate, filterMethod, filterSuccess, currentPage, searchTerm])
 
   const fetchCheckins = async () => {
     setLoading(true)
@@ -46,6 +47,7 @@ export default function CheckinsPage() {
       params.append('limit', itemsPerPage.toString())
       if (searchTerm) params.append('search', searchTerm)
       if (filterMethod !== 'all') params.append('method', filterMethod)
+      if (filterSuccess !== 'all') params.append('success', filterSuccess)
       
       const res = await fetch(`/api/checkins?${params}`)
       const data = await res.json()
@@ -111,6 +113,7 @@ export default function CheckinsPage() {
   const clearFilters = () => {
     setFilterMethod('all')
     setFilterDate('today')
+    setFilterSuccess('success')
     setSearchTerm('')
     setCurrentPage(1)
   }
@@ -168,7 +171,7 @@ export default function CheckinsPage() {
 
       {/* Filters and Search */}
       <div className="flex gap-2 items-end mb-4 flex-shrink-0">
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             placeholder="Search by name, email, phone, or product..."
@@ -178,8 +181,19 @@ export default function CheckinsPage() {
           />
         </div>
         
+        <Select value={filterSuccess} onValueChange={setFilterSuccess}>
+          <SelectTrigger className="w-[110px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="success">Success</SelectItem>
+            <SelectItem value="failed">Failed</SelectItem>
+          </SelectContent>
+        </Select>
+        
         <Select value={filterMethod} onValueChange={setFilterMethod}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[120px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -191,7 +205,7 @@ export default function CheckinsPage() {
         </Select>
         
         <Select value={filterDate} onValueChange={setFilterDate}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-[110px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -307,12 +321,22 @@ export default function CheckinsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="w-1/8">
-                          <div className="flex items-center gap-2">
-                            {getStatusIcon(checkin.status)}
-                            <span className="capitalize text-sm">
+                          {checkin.success?.status === false ? (
+                            <div className="flex flex-col gap-1">
+                              <Badge variant="destructive" className="w-fit">
+                                Failed
+                              </Badge>
+                              {checkin.success?.reason && (
+                                <span className="text-xs text-muted-foreground">
+                                  {checkin.success.reason.replace(/-/g, ' ')}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <Badge variant="default" className="w-fit capitalize">
                               {checkin.status.replace('-', ' ')}
-                            </span>
-                          </div>
+                            </Badge>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))

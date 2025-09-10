@@ -358,16 +358,6 @@ export default function Discounts({
                     {getSortIcon('mode')}
                   </div>
                 </th>
-                <th 
-                  scope="col"
-                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
-                  onClick={() => handleSort('active')}
-                >
-                  <div className="flex items-center">
-                    Active
-                    {getSortIcon('active')}
-                  </div>
-                </th>
                 {showActions && (
                   <th scope="col" className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
                     Actions
@@ -378,7 +368,7 @@ export default function Discounts({
             <tbody className="[&_tr:last-child]:border-0">
               {loading ? (
                 <tr className="border-b">
-                  <td colSpan={6} className="p-4">
+                  <td colSpan={5} className="p-4">
                     <div className="space-y-3">
                       {[1, 2, 3].map((i) => (
                         <div key={i} className="flex items-center gap-4">
@@ -386,7 +376,6 @@ export default function Discounts({
                           <Skeleton className="h-8 w-20" />
                           <Skeleton className="h-8 w-24" />
                           <Skeleton className="h-8 w-28" />
-                          <Skeleton className="h-8 w-16" />
                           {showActions && <Skeleton className="h-8 w-8" />}
                         </div>
                       ))}
@@ -395,7 +384,7 @@ export default function Discounts({
                 </tr>
               ) : currentData.length === 0 ? (
                 <tr className="border-b">
-                  <td colSpan={6} className="p-4 text-center py-8">
+                  <td colSpan={5} className="p-4 text-center py-8">
                     <p className="text-muted-foreground">
                       {searchQuery || archivedFilter !== 'all' 
                         ? 'No adjustments found matching your criteria' 
@@ -428,11 +417,6 @@ export default function Discounts({
                     <td className="px-4 py-3 align-middle">
                       <Badge variant={discount.mode === 'discount' ? 'default' : 'secondary'} className="capitalize">
                         {discount.mode}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3 align-middle">
-                      <Badge variant={isActive(discount) ? 'default' : 'secondary'}>
-                        {isActive(discount) ? 'Active' : 'Inactive'}
                       </Badge>
                     </td>
                     {showActions && (

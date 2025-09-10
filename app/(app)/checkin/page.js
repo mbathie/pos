@@ -593,6 +593,26 @@ export default function CheckInPage() {
                         </AlertDescription>
                       </Alert>
                     )}
+                    {alertData.status === 'membership-expired' && (
+                      <Alert className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900">
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                        <AlertDescription className="text-red-900 dark:text-red-100">
+                          <div className="space-y-1">
+                            <div className="font-semibold">Membership Expired</div>
+                            {alertData.membershipDetails && (
+                              <div className="text-sm">
+                                <div>{alertData.membershipDetails.product}</div>
+                                {alertData.membershipDetails.nextBillingDate && (
+                                  <div className="text-xs mt-1">
+                                    Expired: {new Date(alertData.membershipDetails.nextBillingDate).toLocaleDateString()}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                   </div>
                 )}
                 

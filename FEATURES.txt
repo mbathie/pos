@@ -3,10 +3,13 @@ Questions:
 
 8th Sep 2025
 - test out surcharges
-- /manage/adjustments/[id]/edit adjusments / discounts need switch (inside the adjustment details card) to enable/disable auto assignment, for use in the cart during checkout. If the switch 
-is off it won't be automatically assigned when a customer is connected in the cart. It can however
-be selected from the discounts dropdown select and assigned that way.
+DONE - /manage/adjustments/[id]/edit adjustments / discounts need switch (inside the adjustment details card) to enable/disable auto assignment, for use in the cart during checkout. If the switch 
+        is off it won't be automatically assigned when a customer is connected in the cart. It can however
+        be selected from the discounts dropdown select and assigned that way.
 - hook up products/prices to adjustments
+- http://localhost:3000/manage/checkins - need to know if they've cancelled membership
+  - checked in, cancelled, failed payment, membership on hold
+  - also needs to be mobile friendly
 
 25th Aug 2025
 DONE - todo: purchase for 2x adults class - customer selection widget Panel not ideal UX
@@ -25,13 +28,11 @@ DONE - re-test emails after massive changes
 
 
 
-- apply a custom discount - update to use new api endpoints
-- Look into when signing up as an adult on behalf of a child, the transaction
+DONE - apply a custom discount - update to use new api endpoints
+DONE - Look into when signing up as an adult on behalf of a child, the transaction
   should be tied to the adult
   needs to be a transaction account (person paying) and for children, still needs separate accounts
-- http://localhost:3000/manage/checkins - need to know if they've cancelled membership
-  - checked in, cancelled, failed payment, membership on hold
-  - also needs to be mobile friendly
+
 
 
 - Mobile app for customers
