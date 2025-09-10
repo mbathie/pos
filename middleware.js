@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
-
 export async function middleware(req) {
+  const JWT_SECRET = process.env.JWT_SECRET ? new TextEncoder().encode(process.env.JWT_SECRET) : null;
   const { pathname } = req.nextUrl;
   const token = req.cookies.get("token")?.value;
   
@@ -12,7 +11,7 @@ export async function middleware(req) {
 
   // Check if user is authenticated
   let isAuthenticated = false;
-  if (token) {
+  if (token && JWT_SECRET) {
     try {
       const { payload } = await jwtVerify(token, JWT_SECRET);
       isAuthenticated = !!(payload?.employeeId);
@@ -55,7 +54,10 @@ export async function middleware(req) {
     pathname.startsWith("/api/public/") ||
     pathname === "/api/public" ||
     pathname.startsWith("/api/c/") ||
-    pathname === "/api/c"
+    pathname === "/api/c" ||
+    pathname === "/api/health" ||
+    pathname === "/api/health/db" ||
+    pathname === "/api/test-env"
   ) {
     // Add CORS headers for customer API endpoints
     if (pathname.startsWith("/api/c/")) {
