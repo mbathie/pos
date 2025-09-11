@@ -20,7 +20,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { CalendarIcon } from "lucide-react"
-import { format } from "date-fns"
+import dayjs from 'dayjs'
 import { cn } from "@/lib/utils"
 
 export default function Page({products, setProducts, categoryName, type}) {
@@ -399,7 +399,7 @@ export default function Page({products, setProducts, categoryName, type}) {
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {p.schedule?.startDate ? format(new Date(p.schedule.startDate), "PPP") : <span>Pick a date</span>}
+                          {p.schedule?.startDate ? dayjs(p.schedule.startDate).format('MMM D, YYYY') : <span>Pick a date</span>}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
@@ -430,7 +430,7 @@ export default function Page({products, setProducts, categoryName, type}) {
                           )}
                         >
                           <CalendarIcon className="mr-2 h-4 w-4" />
-                          {p.schedule?.endDate ? format(new Date(p.schedule.endDate), "PPP") : <span>Pick a date</span>}
+                          {p.schedule?.endDate ? dayjs(p.schedule.endDate).format('MMM D, YYYY') : <span>Pick a date</span>}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">

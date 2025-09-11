@@ -17,7 +17,6 @@ import { Ellipsis, Check, Clock, CheckCircle, XCircle, User, CalendarIcon, Searc
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import ProductIcon from '@/components/icon';
 import { CustomerAvatar } from '@/components/customer-avatar';
-import { format } from "date-fns"
 
 export default function Page({ schedule, setSchedule }) {
   const router = useRouter();

@@ -15,7 +15,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescript
 import { ProductIcon } from '@/components/product-icon';
 import ProductInstructions from './ProductInstructions';
 import ProductTerms from './ProductTerms';
-import { format } from "date-fns";
+import dayjs from 'dayjs';
 import { cn } from "@/lib/utils";
 
 // Helper function to migrate old schedule format to new format
@@ -456,7 +456,7 @@ export default function ClassesProductSheet({
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {product.schedule?.startDate ? format(new Date(product.schedule.startDate), "PPP") : <span>Pick a date</span>}
+                      {product.schedule?.startDate ? dayjs(product.schedule.startDate).format('MMM D, YYYY') : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -487,7 +487,7 @@ export default function ClassesProductSheet({
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {product.schedule?.endDate ? format(new Date(product.schedule.endDate), "PPP") : <span>Pick a date</span>}
+                      {product.schedule?.endDate ? dayjs(product.schedule.endDate).format('MMM D, YYYY') : <span>Pick a date</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">

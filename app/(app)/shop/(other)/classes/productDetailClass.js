@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { useClass } from './useClass'
-import { format } from 'date-fns'
+import dayjs from 'dayjs'
 
 export default function ProductDetail({ product, setProduct, setOpen, open }) {
   
@@ -149,7 +149,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, "PPP") : "Select date"}
+                        {selectedDate ? dayjs(selectedDate).format('MMM D, YYYY') : "Select date"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0" align="start">
@@ -162,7 +162,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
                         }}
                         disabled={(date) => {
                           // Disable dates that don't have classes
-                          const dateStr = format(date, 'yyyy-MM-dd');
+                          const dateStr = dayjs(date).format('YYYY-MM-DD');
                           return !availableDates.includes(dateStr);
                         }}
                         initialFocus
@@ -181,7 +181,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
                 {selectedDate && timesForSelectedDate.length > 0 && (
                   <div>
                     <h3 className="text-sm font-medium mb-2">
-                      Available Times for {format(selectedDate, 'EEEE, MMMM d')}
+                      Available Times for {dayjs(selectedDate).format('dddd, MMMM D')}
                     </h3>
                     <ScrollArea className="h-[200px] border rounded-md p-3">
                       <div className="space-y-2">
@@ -240,7 +240,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
                           className="pr-1 flex items-center gap-1 cursor-pointer"
                         >
                           <span>
-                            {format(new Date(time.datetime), 'MMM d, h:mm a')}
+                            {dayjs(time.datetime).format('MMM D, h:mm A')}
                             {time.label && ` - ${time.label}`}
                           </span>
                           <Button

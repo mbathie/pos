@@ -7,7 +7,7 @@ DONE - /manage/adjustments/[id]/edit adjustments / discounts need switch (inside
         is off it won't be automatically assigned when a customer is connected in the cart. It can however
         be selected from the discounts dropdown select and assigned that way.
 - hook up products/prices to adjustments
-- http://localhost:3000/manage/checkins - need to know if they've cancelled membership
+DONE - http://localhost:3000/manage/checkins - need to know if they've cancelled membership
   - checked in, cancelled, failed payment, membership on hold
   - also needs to be mobile friendly
 

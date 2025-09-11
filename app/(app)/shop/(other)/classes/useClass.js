@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import dayjs from 'dayjs'
 
 export function useClass({product, setProduct}) {
 
@@ -26,7 +26,7 @@ export function useClass({product, setProduct}) {
       // Check if this day has any selected times in the new structure
       const dayConfig = schedule.daysOfWeek.find(d => d.dayIndex === adjustedDayOfWeek);
       if (dayConfig && dayConfig.times?.some(t => t.selected)) {
-        dates.push(format(current, 'yyyy-MM-dd'));
+        dates.push(dayjs(current).format('YYYY-MM-DD'));
       }
       
       current.setDate(current.getDate() + 1);
@@ -63,8 +63,8 @@ export function useClass({product, setProduct}) {
     const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
     
     // Check if the selected date is today
-    const selectedDateStr = format(date, 'yyyy-MM-dd');
-    const todayStr = format(now, 'yyyy-MM-dd');
+    const selectedDateStr = dayjs(date).format('YYYY-MM-DD');
+    const todayStr = dayjs(now).format('YYYY-MM-DD');
     const isToday = selectedDateStr === todayStr;
 
     // Add all selected times for this day
@@ -94,7 +94,7 @@ export function useClass({product, setProduct}) {
         
         times.push({
           datetime: iso,
-          time: format(classDateTime, 'h:mm a'),
+          time: dayjs(classDateTime).format('h:mm A'),
           label: timeLabel,
           available: available
         });
