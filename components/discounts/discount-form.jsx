@@ -108,6 +108,7 @@ export default function DiscountForm({
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [startCalendarOpen, setStartCalendarOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [initialDataLoaded, setInitialDataLoaded] = useState(false);
   
   // Tracking adjustments
   const [adjustments, setAdjustments] = useState([{
@@ -160,6 +161,10 @@ export default function DiscountForm({
   });
 
   useEffect(() => {
+    // Reset initial data loaded flag when mode or discountId changes
+    setInitialDataLoaded(false);
+    setIsDirty(false);
+    
     if (mode === 'edit' && discountId) {
       fetchDiscountAndProducts();
     } else {
@@ -187,20 +192,20 @@ export default function DiscountForm({
   // Watch for form changes and trigger auto-save
   useEffect(() => {
     const subscription = form.watch((value, { name, type }) => {
-      if (mode === 'edit' && !fetching) {
+      if (mode === 'edit' && initialDataLoaded) {
         setIsDirty(true);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [form, mode, fetching]);
+  }, [form, mode, initialDataLoaded]);
 
   // Watch for adjustment and must-have changes
   useEffect(() => {
-    if (mode === 'edit' && !fetching) {
+    if (mode === 'edit' && initialDataLoaded) {
       setIsDirty(true);
     }
-  }, [adjustments, mustProducts, mustCategories, mode, fetching]);
+  }, [adjustments, mustProducts, mustCategories, mode, initialDataLoaded]);
 
   // Auto-save when dirty
   useEffect(() => {
@@ -306,6 +311,11 @@ export default function DiscountForm({
         console.log('Categories API response:', data);
         setCategoriesWithProducts(data.categories || []);
       }
+      
+      // Mark initial data as loaded after a brief delay to ensure form.reset has completed
+      setTimeout(() => {
+        setInitialDataLoaded(true);
+      }, 100);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
