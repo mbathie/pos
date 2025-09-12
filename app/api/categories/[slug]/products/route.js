@@ -66,7 +66,10 @@ export async function GET(req, { params }) {
     return NextResponse.json({ error: "Category not found" }, { status: 404 });
   }
 
-  const products = await Product.find({ category: category._id })
+  const products = await Product.find({ 
+      category: category._id,
+      deleted: { $ne: true }
+    })
     .populate('folder')
     .populate({ path: 'accounting', strictPopulate: false })
     .sort({ order: 1, createdAt: -1 });  // Sort by order field first, then by creation date

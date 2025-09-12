@@ -620,16 +620,8 @@ export default function Page() {
               </div>
             )} */}
 
-
-
-              {/* {categories.map((c, i) => (
-                <Tabs.Content
-                  key={c._id}
-                  value={c.name}
-                  className="flex flex-col space-y-4 w-full"
-                > */}
-
-                  {/* Products Table */}
+              <div className="mt-6">
+                {/* Products Table */}
                   {products && products.length > 0 ? (
                     <div className="">
                       <ProductsTable
@@ -658,6 +650,7 @@ export default function Page() {
                       No products found. Click "New Product" to add one.
                     </div>
                   )}
+              </div>
                   
                   {/* Product Details Sheet */}
                   <ProductSheet

@@ -34,7 +34,6 @@ export async function GET(req) {
       categories.map(async (category) => {
         const products = await Product.find({ 
           category: category._id,
-          org: employee.org._id,
           deleted: { $ne: true }
         })
           .populate('folder')

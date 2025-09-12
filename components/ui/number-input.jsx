@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input"
 export function NumberInput({
   onChange,
   value,
+  formatOptions,
   ...props
 }) {
   return (

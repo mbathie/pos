@@ -14,7 +14,6 @@ export async function GET() {
 
     // Find products where qty <= par and qty > 0 (low stock but not out of stock)
     const lowStockCount = await Product.countDocuments({
-      org: employee.org._id,
       qty: { $exists: true, $ne: null, $gt: 0 },
       par: { $exists: true, $ne: null },
       $expr: { $lte: ["$qty", "$par"] }

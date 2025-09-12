@@ -13,10 +13,7 @@ export async function GET(req, { params }) {
   
   const { id } = await params;
   
-  const product = await Product.findOne({ 
-    _id: id,
-    org: employee.org._id 
-  })
+  const product = await Product.findById(id)
     .populate({ path: 'accounting', strictPopulate: false })
     .populate('category')
     .populate('folder');
@@ -41,10 +38,7 @@ export async function PUT(req, { params }) {
   console.log('PUT product received:', product)
 
   const updatedProduct = await Product.findOneAndUpdate(
-    { 
-      _id: id,
-      org: employee.org._id 
-    },
+    { _id: id },
     product,
     { new: true }
   )
@@ -69,10 +63,7 @@ export async function DELETE(req, { params }) {
 
   const { id } = await params;
 
-  const product = await Product.findOne({
-    _id: id,
-    org: employee.org._id
-  });
+  const product = await Product.findById(id);
 
   if (!product) {
     return NextResponse.json({ error: "Product not found or unauthorized" }, { status: 404 });
