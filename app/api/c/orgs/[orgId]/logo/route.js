@@ -21,8 +21,10 @@ export async function GET(req, { params }) {
         status: 200,
         headers: {
           'Content-Type': 'image/png',
-          'Cache-Control': 'public, max-age=3600',
+          'Cache-Control': 'public, max-age=3600, s-maxage=3600',
           'Access-Control-Allow-Origin': '*',
+          'CDN-Cache-Control': 'max-age=3600',
+          'Surrogate-Control': 'max-age=3600',
         }
       });
     }
@@ -43,8 +45,10 @@ export async function GET(req, { params }) {
         status: 200,
         headers: {
           'Content-Type': mimeType,
-          'Cache-Control': 'public, max-age=86400', // 24 hours instead of 1 year
+          'Cache-Control': 'public, max-age=3600, s-maxage=3600', // 1 hour cache, including CDN
           'Access-Control-Allow-Origin': '*',
+          'CDN-Cache-Control': 'max-age=3600', // CloudFlare specific
+          'Surrogate-Control': 'max-age=3600', // CloudFlare/Fastly
         }
       });
     } else if (org.logo.startsWith('http')) {
@@ -65,8 +69,10 @@ export async function GET(req, { params }) {
         status: 200,
         headers: {
           'Content-Type': 'image/png',
-          'Cache-Control': 'public, max-age=3600',
+          'Cache-Control': 'public, max-age=3600, s-maxage=3600',
           'Access-Control-Allow-Origin': '*',
+          'CDN-Cache-Control': 'max-age=3600',
+          'Surrogate-Control': 'max-age=3600',
         }
       });
     } catch (fallbackError) {
