@@ -15,10 +15,11 @@ export async function GET(req, { params }) {
     }
 
     // Check if logo is base64
-    if (org.logo.startsWith('data:image')) {
-      // Extract base64 data
-      const matches = org.logo.match(/^data:image\/(\w+);base64,(.+)$/);
+    if (org.logo.startsWith('data:')) {
+      // Extract base64 data - more flexible regex to handle various formats
+      const matches = org.logo.match(/^data:([^;]+);base64,(.+)$/);
       if (!matches) {
+        console.error('Invalid logo format for org:', orgId);
         return new NextResponse(null, { status: 400 });
       }
       
@@ -28,7 +29,7 @@ export async function GET(req, { params }) {
       return new NextResponse(imageBuffer, {
         status: 200,
         headers: {
-          'Content-Type': `image/${mimeType}`,
+          'Content-Type': mimeType,
           'Cache-Control': 'public, max-age=31536000, immutable',
           'Access-Control-Allow-Origin': '*',
         }
