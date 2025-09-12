@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { Org } from "@/models";
+import fs from 'fs';
+import path from 'path';
 
 export async function GET(req, { params }) {
   await connectDB();
@@ -11,7 +13,18 @@ export async function GET(req, { params }) {
     const org = await Org.findById(orgId).select('logo');
     
     if (!org || !org.logo) {
-      return new NextResponse(null, { status: 404 });
+      // Serve the default Cultcha logo as fallback
+      const logoPath = path.join(process.cwd(), 'public', 'cultcha-logo-dark.png');
+      const logoBuffer = fs.readFileSync(logoPath);
+      
+      return new NextResponse(logoBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=3600',
+          'Access-Control-Allow-Origin': '*',
+        }
+      });
     }
 
     // Check if logo is base64
@@ -42,7 +55,24 @@ export async function GET(req, { params }) {
     return new NextResponse(null, { status: 400 });
   } catch (error) {
     console.error("Error serving logo:", error);
-    return new NextResponse(null, { status: 500 });
+    
+    // Serve default Cultcha logo as fallback on any error
+    try {
+      const logoPath = path.join(process.cwd(), 'public', 'cultcha-logo-dark.png');
+      const logoBuffer = fs.readFileSync(logoPath);
+      
+      return new NextResponse(logoBuffer, {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=3600',
+          'Access-Control-Allow-Origin': '*',
+        }
+      });
+    } catch (fallbackError) {
+      console.error("Error serving fallback logo:", fallbackError);
+      return new NextResponse(null, { status: 500 });
+    }
   }
 }
 
