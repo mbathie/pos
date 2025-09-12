@@ -14,7 +14,7 @@ export async function GET(req, { params }) {
     
     if (!org || !org.logo) {
       // Serve the default Cultcha logo as fallback
-      const logoPath = path.join(process.cwd(), 'public', 'cultcha-logo-dark.png');
+      const logoPath = path.join(process.cwd(), 'public', 'cultcha-logo-light.png');
       const logoBuffer = fs.readFileSync(logoPath);
       
       return new NextResponse(logoBuffer, {

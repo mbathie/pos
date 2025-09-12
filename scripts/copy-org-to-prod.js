@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 
 // Configuration
 const DEV_URI = 'mongodb://localhost:27017/pos';
-const PROD_URI = 'mongodb+srv://doadmin:03a5t74dNzS892PA@cultcha-db-mongodb-syd1-0956ff2f.mongo.ondigitalocean.com/pos?tls=true&authSource=admin';
+const PROD_URI = 'mongodb+srv://cultcha:Gy412W7P60ajJ59p@cultcha-db-mongodb-syd1-0956ff2f.mongo.ondigitalocean.com/pos?tls=true&authSource=admin&replicaSet=cultcha-db-mongodb-syd1';
 const ORG_ID = '689f13f0cb0754341e093d78'; // Replace with your org ID
 
 async function copyOrgToProduction() {
