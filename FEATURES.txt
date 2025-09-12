@@ -2,6 +2,7 @@ Questions:
   - how will membership expiry work, i.e. after 6 months
 
 8th Sep 2025
+- manual discounts, not authorizing a STAFF properly
 DONE - test out surcharges
 DONE - /manage/adjustments/[id]/edit adjustments / discounts need switch (inside the adjustment details card) to enable/disable auto assignment, for use in the cart during checkout. If the switch 
         is off it won't be automatically assigned when a customer is connected in the cart. It can however
