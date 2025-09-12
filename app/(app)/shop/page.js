@@ -9,34 +9,32 @@ import Cart from '@/components/cart'
 
 export default function Page() {
   const { cart } = useGlobals()
-  const [products, setProducts] = useState([])
+  const [productSummary, setProductSummary] = useState({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchProducts()
+    fetchProductSummary()
   }, []);
 
-  const fetchProducts = async () => {
+  const fetchProductSummary = async () => {
     try {
-      const response = await fetch('/api/products')
+      const response = await fetch('/api/products/summary')
       if (response.ok) {
         const data = await response.json()
-        // Ensure data is an array - it might be an object with a products property
-        const productsArray = Array.isArray(data) ? data : (data.products || [])
-        setProducts(productsArray)
+        setProductSummary(data.summary || {})
       } else {
-        setProducts([])
+        setProductSummary({})
       }
     } catch (error) {
-      console.error('Error fetching products:', error)
-      setProducts([])
+      console.error('Error fetching product summary:', error)
+      setProductSummary({})
     } finally {
       setLoading(false)
     }
   }
 
-  const hasProductsOfType = (type) => {
-    return Array.isArray(products) && products.some(product => product.type === type)
+  const hasProductsInMenu = (menu) => {
+    return productSummary[menu]?.totalProducts > 0
   }
 
   const shopItems = [
@@ -45,28 +43,28 @@ export default function Page() {
       icon: Ticket, 
       href: "/shop/general", 
       setupHref: "/products/general",
-      type: "general"
+      menu: "general"
     },
     { 
       title: "Classes & Courses", 
       icon: Dumbbell, 
       href: "/shop/classes", 
       setupHref: "/products/classes",
-      type: "class"
+      menu: "classes"
     },
     { 
       title: "Membership", 
       icon: IdCard, 
       href: "/shop/memberships", 
       setupHref: "/products/memberships",
-      type: "membership"
+      menu: "memberships"
     },
     { 
       title: "Food, Bev & Shop", 
       icon: Coffee, 
       href: "/shop/retail", 
       setupHref: "/products/shop",
-      type: "shop"
+      menu: "shop"
     }
   ];
 
@@ -75,7 +73,7 @@ export default function Page() {
       <div className={`flex-1 ${cart?.products?.length > 0 ? '' : 'text-center'}`}>
         <div className='flex gap-4 justify-center flex-wrap p-4'>
           {shopItems.map((item, i) => {
-            const hasProducts = hasProductsOfType(item.type)
+            const hasProducts = hasProductsInMenu(item.menu)
             
             const content = (
               <Card key={item.title} className="aspect-square size-50 text-center">
