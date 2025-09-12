@@ -43,7 +43,7 @@ export async function GET(req, { params }) {
         status: 200,
         headers: {
           'Content-Type': mimeType,
-          'Cache-Control': 'public, max-age=31536000, immutable',
+          'Cache-Control': 'public, max-age=86400', // 24 hours instead of 1 year
           'Access-Control-Allow-Origin': '*',
         }
       });
