@@ -129,6 +129,7 @@ export default function DiscountForm({
   const [saving, setSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
   const saveTimeoutRef = useRef(null);
+  const isInitialMount = useRef(true);
 
   const form = useForm({
     resolver: zodResolver(discountSchema),
@@ -161,9 +162,10 @@ export default function DiscountForm({
   });
 
   useEffect(() => {
-    // Reset initial data loaded flag when mode or discountId changes
+    // Reset flags when mode or discountId changes
     setInitialDataLoaded(false);
     setIsDirty(false);
+    isInitialMount.current = true;
     
     if (mode === 'edit' && discountId) {
       fetchDiscountAndProducts();
@@ -202,7 +204,12 @@ export default function DiscountForm({
 
   // Watch for adjustment and must-have changes
   useEffect(() => {
-    if (mode === 'edit' && initialDataLoaded) {
+    // Skip if this is the initial mount or data hasn't loaded yet
+    if (isInitialMount.current || !initialDataLoaded) {
+      return;
+    }
+    
+    if (mode === 'edit') {
       setIsDirty(true);
     }
   }, [adjustments, mustProducts, mustCategories, mode, initialDataLoaded]);
@@ -315,6 +322,7 @@ export default function DiscountForm({
       // Mark initial data as loaded after a brief delay to ensure form.reset has completed
       setTimeout(() => {
         setInitialDataLoaded(true);
+        isInitialMount.current = false;
       }, 100);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -332,6 +340,11 @@ export default function DiscountForm({
         const data = await res.json();
         console.log('Categories API response (create mode):', data);
         setCategoriesWithProducts(data.categories || []);
+      }
+      
+      // For create mode, we don't need to track initial data loaded
+      if (mode === 'create') {
+        isInitialMount.current = false;
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
