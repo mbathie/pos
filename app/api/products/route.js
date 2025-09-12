@@ -16,8 +16,11 @@ export async function GET(request) {
     const categoryFilter = searchParams.get('category');
     const searchQuery = searchParams.get('search');
 
-    // Build the query
-    let query = { deleted: { $ne: true } };
+    // Build the query - filter by organization
+    let query = { 
+      org: employee.org._id,
+      deleted: { $ne: true } 
+    };
     
     // Add category filter
     if (categoryFilter) {
