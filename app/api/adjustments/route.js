@@ -28,7 +28,10 @@ export async function POST(request) {
     let discountDetails = null;
     if (discountId) {
       try {
-        const discount = await Discount.findById(discountId).lean();
+        const discount = await Discount.findOne({ 
+          _id: discountId,
+          org: employee.org._id 
+        }).lean();
         if (discount) {
           discountDetails = {
             id: discount._id,
