@@ -89,3 +89,40 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Failed to create mod group' }, { status: 500 });
   }
 }
+
+// PUT update multiple mod groups (for reordering)
+export async function PUT(request) {
+  try {
+    await connectDB();
+    
+    const { employee } = await getEmployee();
+    if (!employee) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { groups } = await request.json();
+    
+    if (!groups || !Array.isArray(groups)) {
+      return NextResponse.json({ error: 'Invalid groups data' }, { status: 400 });
+    }
+
+    // Update order for each group
+    await Promise.all(
+      groups.map(group => 
+        ModGroup.findOneAndUpdate(
+          { 
+            _id: group._id,
+            org: employee.org._id 
+          },
+          { order: group.order },
+          { new: true }
+        )
+      )
+    );
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error updating mod groups order:', error);
+    return NextResponse.json({ error: 'Failed to update mod groups order' }, { status: 500 });
+  }
+}

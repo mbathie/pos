@@ -112,8 +112,42 @@ function SortableMod({ mod, onEdit, onDelete }) {
   );
 }
 
+// Sortable ModGroup Card Component
+function SortableModGroupCard({ modGroup, onModsReorder, onModEdit, onModDelete, onModAdd, onGroupEdit, onGroupDelete }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: modGroup._id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <ModGroupCard
+        modGroup={modGroup}
+        onModsReorder={onModsReorder}
+        onModEdit={onModEdit}
+        onModDelete={onModDelete}
+        onModAdd={onModAdd}
+        onGroupEdit={onGroupEdit}
+        onGroupDelete={onGroupDelete}
+        dragHandleProps={{ ...attributes, ...listeners }}
+        isDragging={isDragging}
+      />
+    </div>
+  );
+}
+
 // ModGroup Card Component
-function ModGroupCard({ modGroup, onModsReorder, onModEdit, onModDelete, onModAdd, onGroupEdit, onGroupDelete }) {
+function ModGroupCard({ modGroup, onModsReorder, onModEdit, onModDelete, onModAdd, onGroupEdit, onGroupDelete, dragHandleProps, isDragging }) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -137,18 +171,26 @@ function ModGroupCard({ modGroup, onModsReorder, onModEdit, onModDelete, onModAd
   };
 
   return (
-    <Card className="relative">
+    <Card className={cn("relative", isDragging && "shadow-lg")}>
       <CardHeader>
         <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <CardTitle className="text">{modGroup.name}</CardTitle>
-            <div className="flex gap-2">
-              {modGroup.allowMultiple && (
-                <Badge variant="secondary">Multiple</Badge>
-              )}
-              {modGroup.required && (
-                <Badge variant="secondary">Required</Badge>
-              )}
+          <div className="flex items-center gap-3">
+            <div
+              {...dragHandleProps}
+              className="cursor-grab active:cursor-grabbing"
+            >
+              <GripVertical className="h-4 w-4 text-muted-foreground" />
+            </div>
+            <div className="space-y-2">
+              <CardTitle className="text">{modGroup.name}</CardTitle>
+              <div className="flex gap-2">
+                {modGroup.allowMultiple && (
+                  <Badge variant="secondary">Multiple</Badge>
+                )}
+                {modGroup.required && (
+                  <Badge variant="secondary">Required</Badge>
+                )}
+              </div>
             </div>
           </div>
           <DropdownMenu>
@@ -218,6 +260,18 @@ export default function ModsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
+  // DndKit sensors for group dragging
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+  
   // Dialog states
   const [modDialogOpen, setModDialogOpen] = useState(false);
   const [groupDialogOpen, setGroupDialogOpen] = useState(false);
@@ -255,6 +309,38 @@ export default function ModsPage() {
       console.error('Error fetching mod groups:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGroupsReorder = async (event) => {
+    const { active, over } = event;
+
+    if (active.id !== over.id) {
+      const oldIndex = modGroups.findIndex((group) => group._id === active.id);
+      const newIndex = modGroups.findIndex((group) => group._id === over.id);
+      
+      const reorderedGroups = arrayMove(modGroups, oldIndex, newIndex);
+      
+      // Update local state immediately
+      setModGroups(reorderedGroups.map((group, idx) => ({ ...group, order: idx })));
+
+      // Save to backend
+      try {
+        await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/modgroups`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            groups: reorderedGroups.map((group, idx) => ({
+              _id: group._id,
+              order: idx
+            }))
+          })
+        });
+      } catch (error) {
+        console.error('Error saving group order:', error);
+        // Revert on error
+        fetchModGroups();
+      }
     }
   };
 
@@ -450,32 +536,43 @@ export default function ModsPage() {
         </Button>
       </div>
 
-      <div className="space-y-4">
-        {modGroups.map((group) => (
-          <ModGroupCard
-            key={group._id}
-            modGroup={group}
-            onModsReorder={handleModsReorder}
-            onModEdit={handleModEdit}
-            onModDelete={handleModDelete}
-            onModAdd={handleModAdd}
-            onGroupEdit={handleGroupEdit}
-            onGroupDelete={handleGroupDelete}
-          />
-        ))}
-        
-        {modGroups.length === 0 && (
-          <Card className="col-span-full">
-            <CardContent className="text-center py-12">
-              <p className="text-muted-foreground mb-4">No modification groups yet</p>
-              <Button onClick={handleGroupAdd}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Group
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleGroupsReorder}
+      >
+        <SortableContext
+          items={modGroups.map(g => g._id)}
+          strategy={rectSortingStrategy}
+        >
+          <div className="space-y-4">
+            {modGroups.map((group) => (
+              <SortableModGroupCard
+                key={group._id}
+                modGroup={group}
+                onModsReorder={handleModsReorder}
+                onModEdit={handleModEdit}
+                onModDelete={handleModDelete}
+                onModAdd={handleModAdd}
+                onGroupEdit={handleGroupEdit}
+                onGroupDelete={handleGroupDelete}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+      
+      {modGroups.length === 0 && (
+        <Card className="col-span-full">
+          <CardContent className="text-center py-12">
+            <p className="text-muted-foreground mb-4">No modification groups yet</p>
+            <Button onClick={handleGroupAdd}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Your First Group
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Mod Dialog */}
       <Dialog open={modDialogOpen} onOpenChange={setModDialogOpen}>
