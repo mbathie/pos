@@ -54,6 +54,9 @@ const DiscountSchema = new mongoose.Schema({
     },
     perCustomer: { type: Number } // lifetime per customer
   },
+  
+  // Require customer identification for this discount
+  requireCustomer: { type: Boolean, default: false },
 
   // Ownership
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
