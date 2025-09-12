@@ -16,14 +16,28 @@ export async function GET(request) {
     const categoryFilter = searchParams.get('category');
     const searchQuery = searchParams.get('search');
 
-    // Build the query
+    // First, get all categories for this org
+    const orgCategories = await Category.find({ 
+      org: employee.org._id 
+    }).select('_id');
+    
+    const categoryIds = orgCategories.map(cat => cat._id);
+
+    // Build the query - filter by categories that belong to this org
     let query = { 
+      category: { $in: categoryIds },
       deleted: { $ne: true } 
     };
     
-    // Add category filter
+    // Add specific category filter if provided
     if (categoryFilter) {
-      query.category = categoryFilter;
+      // Verify the category belongs to this org
+      if (categoryIds.some(id => id.toString() === categoryFilter)) {
+        query.category = categoryFilter;
+      } else {
+        // Category doesn't belong to this org, return empty
+        return NextResponse.json({ products: [], total: 0 });
+      }
     }
 
     // Add search filter
