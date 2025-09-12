@@ -86,7 +86,8 @@ const discountSchema = z.object({
   totalUsageLimit: z.number().int().positive().optional(),
   totalFrequencyCount: z.number().int().positive().optional(),
   totalFrequencyPeriod: z.enum(["day", "week", "month", "year"]).optional(),
-  perCustomerLimit: z.number().int().positive().optional()
+  perCustomerLimit: z.number().int().positive().optional(),
+  requireCustomer: z.boolean().default(false)
 }).refine((data) => {
   if (data.start && data.expiry) return data.start <= data.expiry;
   return true;
@@ -157,7 +158,8 @@ export default function DiscountForm({
       totalUsageLimit: undefined,
       totalFrequencyCount: undefined,
       totalFrequencyPeriod: undefined,
-      perCustomerLimit: undefined
+      perCustomerLimit: undefined,
+      requireCustomer: false
     },
   });
 
@@ -309,7 +311,8 @@ export default function DiscountForm({
           totalUsageLimit: discount.limits?.total?.usageLimit,
           totalFrequencyCount: discount.limits?.total?.frequency?.count,
           totalFrequencyPeriod: discount.limits?.total?.frequency?.period,
-          perCustomerLimit: discount.limits?.perCustomer
+          perCustomerLimit: discount.limits?.perCustomer,
+          requireCustomer: discount.requireCustomer || false
         });
       }
 
@@ -421,7 +424,11 @@ export default function DiscountForm({
             } : undefined
           },
           perCustomer: data.perCustomerLimit
-        }
+        },
+        // Auto-enable requireCustomer if any tracking fields are set
+        requireCustomer: (data.totalUsageLimit > 0 || data.perCustomerLimit > 0 || data.totalFrequencyCount > 0) 
+          ? true 
+          : data.requireCustomer
       };
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/discounts/${discountId}`, {
@@ -494,7 +501,11 @@ export default function DiscountForm({
             } : undefined
           },
           perCustomer: data.perCustomerLimit
-        }
+        },
+        // Auto-enable requireCustomer if any tracking fields are set
+        requireCustomer: (data.totalUsageLimit > 0 || data.perCustomerLimit > 0 || data.totalFrequencyCount > 0) 
+          ? true 
+          : data.requireCustomer
       };
 
       const url = mode === 'edit' 
@@ -1070,6 +1081,37 @@ export default function DiscountForm({
                     </FormItem>
                   )} />
                 </div>
+
+                {/* Require Customer Switch */}
+                <FormField control={form.control} name="requireCustomer" render={({ field }) => {
+                  // Check if any customer tracking fields are set
+                  const watchedValues = form.watch(['totalUsageLimit', 'perCustomerLimit', 'totalFrequencyCount']);
+                  const hasCustomerTrackingFields = watchedValues.some(v => v && v > 0);
+                  
+                  // Auto-enable and lock if customer tracking fields are used
+                  const isLocked = hasCustomerTrackingFields;
+                  const effectiveValue = isLocked ? true : field.value;
+                  
+                  return (
+                    <FormItem className="flex flex-row items-center justify-between space-x-2">
+                      <div className="space-y-0.5 flex-1">
+                        <LabelWithInfo info="When enabled, this discount will only apply when a customer is identified. Automatically enabled when using usage limits or frequency restrictions.">
+                          Require Customer
+                        </LabelWithInfo>
+                        <FormDescription>
+                          Discount will only apply when a customer is selected
+                        </FormDescription>
+                      </div>
+                      <FormControl>
+                        <Switch
+                          checked={effectiveValue}
+                          onCheckedChange={isLocked ? undefined : field.onChange}
+                          disabled={isLocked}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  );
+                }} />
               </div>
             </CardContent>
           </Card>
