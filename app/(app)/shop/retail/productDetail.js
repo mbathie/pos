@@ -45,21 +45,25 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
         const fetchedGroups = await Promise.all(modGroupPromises)
         
         // Deep clone the groups to avoid read-only issues and initialize selected: false
-        const groupsWithSelection = fetchedGroups.map(group => ({
-          _id: group._id,
-          name: group.name,
-          allowMultiple: group.allowMultiple || false,
-          required: group.required || false,
-          order: group.order || 0,
-          mods: (group.mods || []).map(mod => ({
-            _id: mod._id,
-            name: mod.name,
-            price: mod.price || 0,
-            isDefault: mod.isDefault || false,
-            order: mod.order || 0,
-            selected: false
+        const groupsWithSelection = fetchedGroups
+          .map(group => ({
+            _id: group._id,
+            name: group.name,
+            allowMultiple: group.allowMultiple || false,
+            required: group.required || false,
+            order: group.order || 0,
+            mods: (group.mods || [])
+              .map(mod => ({
+                _id: mod._id,
+                name: mod.name,
+                price: mod.price || 0,
+                isDefault: mod.isDefault || false,
+                order: mod.order || 0,
+                selected: false
+              }))
+              .sort((a, b) => a.order - b.order) // Sort mods by order
           }))
-        }))
+          .sort((a, b) => a.order - b.order) // Sort groups by order
         
         setModGroups(groupsWithSelection)
         
