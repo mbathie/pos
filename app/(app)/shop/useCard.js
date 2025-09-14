@@ -82,52 +82,41 @@ export function useCard({ cart }) {
       setTerminalStatus('discovering')
       const terminal = await initTerminal();
 
-      // First try to discover physical readers
-      console.log('🔍 Looking for physical readers...')
-      let config = { simulated: false };
-      let result = await terminal.discoverReaders(config);
+      // Try to discover readers - physical by default, simulated for development
+      const isDevMode = process.env.NEXT_PUBLIC_IS_DEV === 'true';
+      const config = { simulated: isDevMode };
+      
+      console.log(`🔍 Discovering ${isDevMode ? 'simulated' : 'physical'} readers...`);
+      const result = await terminal.discoverReaders(config);
 
       if (result.error) {
-        console.log('Failed to discover physical readers:', result.error);
-      } else if (result.discoveredReaders.length > 0) {
-        console.log('📡 Found physical readers:', result.discoveredReaders.length)
-        discoveredReaders.current = result.discoveredReaders;
-        console.log('Discovered Physical Readers:', result.discoveredReaders.map(r => ({
-          id: r.id,
-          label: r.label,
-          device_type: r.device_type,
-          status: r.status
-        })));
-        setTerminalStatus('disconnected') // Ready to connect
-        return;
-      }
-
-      // If no physical readers found, fall back to simulated
-      console.log('📱 No physical readers found, trying simulated...')
-      config = { simulated: true };
-      result = await terminal.discoverReaders(config);
-
-      if (result.error) {
-        console.log('Failed to discover simulated readers:', result.error);
-        setTerminalStatus('disconnected')
+        console.log('Failed to discover readers:', result.error);
+        
+        // If in production and physical readers fail, try simulated as fallback
+        if (!isDevMode) {
+          console.log('📱 Falling back to simulated readers...');
+          const simResult = await terminal.discoverReaders({ simulated: true });
+          
+          if (!simResult.error && simResult.discoveredReaders.length > 0) {
+            discoveredReaders.current = simResult.discoveredReaders;
+            console.log('📡 Found simulated readers:', simResult.discoveredReaders.length);
+            setTerminalStatus('disconnected');
+            return;
+          }
+        }
+        
+        setTerminalStatus('disconnected');
       } else if (result.discoveredReaders.length === 0) {
-        console.log('No available readers (physical or simulated).');
-        setTerminalStatus('disconnected')
+        console.log('No readers found');
+        setTerminalStatus('disconnected');
       } else {
         discoveredReaders.current = result.discoveredReaders;
-        console.log('📡 Discovered Simulated Readers:', result.discoveredReaders.map(r => ({
-          id: r.id,
-          label: r.label,
-          device_type: r.device_type,
-          status: r.status
-        })));
-        setTerminalStatus('disconnected') // Ready to connect
+        console.log(`📡 Found ${result.discoveredReaders.length} reader(s)`);
+        setTerminalStatus('disconnected'); // Ready to connect
       }
     } catch (error) {
       console.log('Terminal discovery error:', error.message || 'Unknown error');
-      setTerminalStatus('disconnected')
-      // Don't throw the error, handle it gracefully
-      return;
+      setTerminalStatus('disconnected');
     }
   };
 

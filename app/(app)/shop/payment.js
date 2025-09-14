@@ -590,32 +590,28 @@ export default function Page() {
     // 2. Terminals are configured in the system
     // 3. Terminal is currently disconnected
     if (stripeEnabled && hasTerminals && terminalStatus === 'disconnected') {
-      const timer = setTimeout(async () => {
-        // Double-check we're still disconnected after timeout
-        if (terminalStatus === 'disconnected' && hasTerminals) {
-          try {
-            await discoverReaders();
-            setTimeout(async () => {
-              try {
-                await connectReader();
-              } catch (error) {
-                console.error('Terminal connection error:', error);
-                // Only show error if terminals are supposed to exist
-                if (hasTerminals) {
-                  toast.error('Failed to connect to payment terminal. Please check the terminal and try again.');
-                }
-              }
-            }, 2000)
-          } catch (error) {
-            console.error('Terminal discovery error:', error);
-            // Only show error if terminals are supposed to exist
-            if (hasTerminals) {
-              toast.error('Failed to discover payment terminal. Please check the terminal and try again.');
-            }
+      // Single async function to handle both discovery and connection
+      const initializeTerminal = async () => {
+        try {
+          // Discover readers
+          await discoverReaders();
+          
+          // Minimal delay to ensure discovery completes
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Connect to the discovered reader
+          await connectReader();
+        } catch (error) {
+          console.error('Terminal initialization error:', error);
+          // Only show error if terminals are supposed to exist
+          if (hasTerminals) {
+            toast.error('Failed to connect to payment terminal. Please check the terminal and try again.');
           }
         }
-      }, 1000); // Wait a second to ensure cache check is complete
+      };
 
+      // Minimal initial delay to ensure state is ready
+      const timer = setTimeout(initializeTerminal, 200);
       return () => clearTimeout(timer);
     }
   }, [stripeEnabled, hasTerminals, terminalStatus]);
