@@ -1132,9 +1132,9 @@ export default function DiscountForm({
           )}
 
           {/* Action Buttons */}
-          {!isInSheet && mode === 'create' && (
+          {mode === 'create' && (
             <div className="flex justify-end gap-2">
-              {onCancel && (
+              {!isInSheet && onCancel && (
                 <Button 
                   type="button" 
                   variant="outline" 
