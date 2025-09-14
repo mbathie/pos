@@ -526,13 +526,23 @@ export default function DiscountForm({
           onSuccess(savedDiscount);
         }
       } else {
-        const error = await res.json();
-        console.error('Save error:', error);
-        alert(error.error || 'Something went wrong');
+        const errorData = await res.json();
+        console.error('Save error:', errorData);
+        
+        // Handle specific MongoDB duplicate key errors
+        if (res.status === 500 && errorData.error) {
+          if (errorData.error.includes('duplicate key') || errorData.error.includes('E11000')) {
+            toast.error('A discount with this name already exists in your organization');
+          } else {
+            toast.error(errorData.error);
+          }
+        } else {
+          toast.error(errorData.error || 'Something went wrong');
+        }
       }
     } catch (error) {
       console.error('Error saving discount:', error);
-      alert('Failed to save discount');
+      toast.error('Failed to save discount. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -551,13 +561,13 @@ export default function DiscountForm({
           onDelete();
         }
       } else {
-        const error = await res.json();
-        console.error('Delete error:', error);
-        alert(error.error || 'Failed to delete discount');
+        const errorData = await res.json();
+        console.error('Delete error:', errorData);
+        toast.error(errorData.error || 'Failed to delete discount');
       }
     } catch (error) {
       console.error('Error deleting discount:', error);
-      alert('Failed to delete discount');
+      toast.error('Failed to delete discount. Please try again.');
     } finally {
       setDeleteDialogOpen(false);
     }

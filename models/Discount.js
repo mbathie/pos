@@ -64,8 +64,10 @@ const DiscountSchema = new mongoose.Schema({
 
 // Index for org reference
 DiscountSchema.index({ org: 1 });
-// Optional uniqueness for codes within an org
-DiscountSchema.index({ org: 1, code: 1 }, { unique: true, sparse: true });
+// Unique constraint on org + name to prevent duplicate discount names within an organization
+DiscountSchema.index({ org: 1, name: 1 }, { unique: true });
+// Optional index for code lookups (non-unique since code is optional)
+DiscountSchema.index({ org: 1, code: 1 }, { sparse: true });
 
 const Discount = mongoose.models.Discount || mongoose.model('Discount', DiscountSchema);
 

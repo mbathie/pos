@@ -126,8 +126,20 @@ export async function POST(request) {
 
   } catch (error) {
     console.error('Error creating discount:', error);
+    
+    // Handle MongoDB duplicate key error
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      if (field === 'name') {
+        return NextResponse.json(
+          { error: 'A discount with this name already exists' },
+          { status: 400 }
+        );
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to create discount' },
+      { error: error.message || 'Failed to create discount' },
       { status: 500 }
     );
   }

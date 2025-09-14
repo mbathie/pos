@@ -149,8 +149,20 @@ export async function PUT(request, { params }) {
 
   } catch (error) {
     console.error('Error updating discount:', error);
+    
+    // Handle MongoDB duplicate key error
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      if (field === 'name') {
+        return NextResponse.json(
+          { error: 'A discount with this name already exists' },
+          { status: 400 }
+        );
+      }
+    }
+    
     return NextResponse.json(
-      { error: 'Failed to update discount' },
+      { error: error.message || 'Failed to update discount' },
       { status: 500 }
     );
   }
