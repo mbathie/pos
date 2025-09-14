@@ -71,6 +71,8 @@ export default function DiscountsSheet({
     // The Discounts component will handle fetching fresh data
     setEditSheetOpen(false);
     setEditingDiscount(null);
+    // Trigger a refresh by incrementing the refresh trigger
+    setRefreshTrigger(prev => prev + 1);
   };
 
   const handleDelete = () => {
