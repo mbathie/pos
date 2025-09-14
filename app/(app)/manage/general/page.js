@@ -139,12 +139,12 @@ export default function Page() {
         <div className="flex-1 flex flex-col overflow-hidden bg-card rounded-lg border">
           <div className="overflow-y-auto flex-1">
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-card z-10 border-b font-medium">
+              <thead className="sticky top-0 bg-card z-10 border-b">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm text-muted-foreground">Member</th>
-                  <th className="px-6 py-4 text-left text-sm text-muted-foreground">Member #</th>
-                  <th className="px-6 py-4 text-left text-sm text-muted-foreground">Product</th>
-                  <th className="px-6 py-4 text-left text-sm text-muted-foreground">Date</th>
+                  <th className="px-6 py-4 text-left text-sm text-muted-foreground font-medium">Member</th>
+                  <th className="px-6 py-4 text-left text-sm text-muted-foreground font-medium">Member #</th>
+                  <th className="px-6 py-4 text-left text-sm text-muted-foreground font-medium">Product</th>
+                  <th className="px-6 py-4 text-left text-sm text-muted-foreground font-medium">Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -163,9 +163,9 @@ export default function Page() {
                     <tr key={entry._id} className="hover:bg-muted/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
-                          <div className="text-foreground">{entry.customer?.name || 'Walk-in'}</div>
+                          {/* <div className="text-foreground">{entry.customer?.name || 'Walk-in'}</div> */}
                           {entry.customer?.email && (
-                            <div className="text-sm text-muted-foreground">{entry.customer?.email}</div>
+                            <div className="text-sm text-muted-foreground-">{entry.customer?.email}</div>
                           )}
                           {entry.customer?.phone && (
                             <div className="text-sm text-muted-foreground">{entry.customer?.phone}</div>
