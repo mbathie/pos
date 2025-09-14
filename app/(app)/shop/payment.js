@@ -37,6 +37,7 @@ export default function Page() {
   const pathname = usePathname();
   const hasSuccessfulPayment = useRef(false);
   const [stripeEnabled, setStripeEnabled] = useState(null);
+  const [hasTerminals, setHasTerminals] = useState(false);
   const { 
     discoverReaders, 
     connectReader, 
@@ -556,29 +557,42 @@ export default function Page() {
     );
   };
 
-  // Check if Stripe is configured
+  // Check if Stripe is configured and terminals exist
   useEffect(() => {
-    const checkStripeStatus = async () => {
+    const checkStripeAndTerminals = async () => {
       try {
-        const res = await fetch('/api/payments');
-        const data = await res.json();
-        setStripeEnabled(data.charges_enabled || false);
+        // Check Stripe status
+        const stripeRes = await fetch('/api/payments');
+        const stripeData = await stripeRes.json();
+        setStripeEnabled(stripeData.charges_enabled || false);
+        
+        // Check if any terminals are configured
+        if (stripeData.charges_enabled) {
+          const terminalsRes = await fetch('/api/terminals');
+          const terminals = await terminalsRes.json();
+          setHasTerminals(terminals && terminals.length > 0);
+        } else {
+          setHasTerminals(false);
+        }
       } catch (error) {
-        console.error('Error checking Stripe status:', error);
+        console.error('Error checking Stripe/terminal status:', error);
         setStripeEnabled(false);
+        setHasTerminals(false);
       }
     };
-    checkStripeStatus();
+    checkStripeAndTerminals();
   }, []);
 
-  // Simple terminal initialization like the working version
+  // Only attempt terminal connection if terminals are actually configured
   useEffect(() => {
-    // Only try to initialize if stripe is enabled and we're actually disconnected
-    // Skip if we're checking cache or already connected
-    if (stripeEnabled && terminalStatus === 'disconnected') {
+    // Only try to initialize if:
+    // 1. Stripe is enabled
+    // 2. Terminals are configured in the system
+    // 3. Terminal is currently disconnected
+    if (stripeEnabled && hasTerminals && terminalStatus === 'disconnected') {
       const timer = setTimeout(async () => {
         // Double-check we're still disconnected after timeout
-        if (terminalStatus === 'disconnected') {
+        if (terminalStatus === 'disconnected' && hasTerminals) {
           try {
             await discoverReaders();
             setTimeout(async () => {
@@ -586,19 +600,25 @@ export default function Page() {
                 await connectReader();
               } catch (error) {
                 console.error('Terminal connection error:', error);
-                toast.error('Failed to connect to payment terminal. Please check the terminal and try again.');
+                // Only show error if terminals are supposed to exist
+                if (hasTerminals) {
+                  toast.error('Failed to connect to payment terminal. Please check the terminal and try again.');
+                }
               }
             }, 2000)
           } catch (error) {
             console.error('Terminal discovery error:', error);
-            toast.error('Failed to discover payment terminal. Please check the terminal and try again.');
+            // Only show error if terminals are supposed to exist
+            if (hasTerminals) {
+              toast.error('Failed to discover payment terminal. Please check the terminal and try again.');
+            }
           }
         }
       }, 1000); // Wait a second to ensure cache check is complete
 
       return () => clearTimeout(timer);
     }
-  }, [stripeEnabled, terminalStatus]);
+  }, [stripeEnabled, hasTerminals, terminalStatus]);
 
   // Always use live cart for display
   const displayCart = cart
@@ -1559,8 +1579,12 @@ export default function Page() {
                     ))
                   }
                   onClick={async () => {
-                    // If terminal is disconnected, retry connection
+                    // If terminal is disconnected and terminals exist, retry connection
                     if (terminalStatus === 'disconnected') {
+                      if (!hasTerminals) {
+                        toast.info('No payment terminals configured. Please set up a terminal first.');
+                        return;
+                      }
                       try {
                         await discoverReaders();
                         setTimeout(async () => {
@@ -1606,6 +1630,7 @@ export default function Page() {
                       terminalStatus === 'checking' ? 'Checking...' :
                       terminalStatus === 'connecting' ? 'Connecting...' :
                       terminalStatus === 'discovering' ? 'Discovering...' :
+                      !hasTerminals ? 'No Terminal Configured' :
                       'Retry Connection'
                   }
                 </Button>
