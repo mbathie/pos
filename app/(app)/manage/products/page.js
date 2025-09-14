@@ -19,6 +19,7 @@ export default function ManageProductsPage() {
   const [filters, setFilters] = useState({
     category: 'all',
     search: '',
+    publish: 'all',
   });
   const [sort, setSort] = useState({
     field: null,
@@ -281,7 +282,10 @@ export default function ManageProductsPage() {
       const matchesCategory = filters.category === 'all' || product.category?._id === filters.category;
       const matchesSearch = !filters.search || 
         product.name.toLowerCase().includes(filters.search.toLowerCase());
-      return matchesCategory && matchesSearch;
+      const matchesPublish = filters.publish === 'all' || 
+        (filters.publish === 'published' && product.publish !== false) ||
+        (filters.publish === 'unpublished' && product.publish === false);
+      return matchesCategory && matchesSearch && matchesPublish;
     })
     .sort((a, b) => {
       if (!sort.field) return 0;
@@ -334,7 +338,7 @@ export default function ManageProductsPage() {
       return 0;
     });
 
-  const hasActiveFilters = (filters.category && filters.category !== 'all') || filters.search;
+  const hasActiveFilters = (filters.category && filters.category !== 'all') || filters.search || (filters.publish && filters.publish !== 'all');
 
   return (
     <div className="mx-auto px-4 max-w-7xl h-screen flex flex-col py-4">
@@ -360,6 +364,19 @@ export default function ManageProductsPage() {
                   {category.name}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="max-w-xs">
+          <Select value={filters.publish} onValueChange={(value) => handleFilterChange('publish', value)}>
+            <SelectTrigger>
+              <SelectValue placeholder="All products" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All products</SelectItem>
+              <SelectItem value="published">Published</SelectItem>
+              <SelectItem value="unpublished">Unpublished</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -399,7 +416,7 @@ export default function ManageProductsPage() {
               <thead className="sticky top-0 z-10 bg-muted/50 border-b">
                 <tr>
                   <th 
-                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-1/5"
+                    className="h-12 px-4 text-left align-middle text-muted-foreground cursor-pointer hover:bg-muted w-1/4"
                     onClick={() => handleSort('name')}
                   >
                     <div className="flex items-center">
@@ -408,7 +425,7 @@ export default function ManageProductsPage() {
                     </div>
                   </th>
                   <th 
-                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-1/8"
+                    className="h-12 px-4 text-left align-middle text-muted-foreground cursor-pointer hover:bg-muted w-1/6"
                     onClick={() => handleSort('category')}
                   >
                     <div className="flex items-center">
@@ -417,7 +434,7 @@ export default function ManageProductsPage() {
                     </div>
                   </th>
                   <th 
-                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-1/6"
+                    className="h-12 px-4 text-left align-middle text-muted-foreground cursor-pointer hover:bg-muted w-1/6"
                     onClick={() => handleSort('accounting')}
                   >
                     <div className="flex items-center">
@@ -426,16 +443,7 @@ export default function ManageProductsPage() {
                     </div>
                   </th>
                   <th 
-                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-1/8"
-                    onClick={() => handleSort('menu')}
-                  >
-                    <div className="flex items-center">
-                      Menu
-                      <ChevronsUpDown className="ml-2 h-4 w-4" />
-                    </div>
-                  </th>
-                  <th 
-                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-1/8"
+                    className="h-12 px-4 text-left align-middle text-muted-foreground cursor-pointer hover:bg-muted w-1/6"
                     onClick={() => handleSort('folder')}
                   >
                     <div className="flex items-center">
@@ -444,7 +452,7 @@ export default function ManageProductsPage() {
                     </div>
                   </th>
                   <th 
-                    className="h-12 px-4 text-center align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-16"
+                    className="h-12 px-4 text-center align-middle text-muted-foreground cursor-pointer hover:bg-muted w-16"
                     onClick={() => handleSort('qty')}
                   >
                     <div className="flex items-center justify-center">
@@ -453,7 +461,7 @@ export default function ManageProductsPage() {
                     </div>
                   </th>
                   <th 
-                    className="h-12 px-4 text-center align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-16"
+                    className="h-12 px-4 text-center align-middle text-muted-foreground cursor-pointer hover:bg-muted w-16"
                     onClick={() => handleSort('par')}
                   >
                     <div className="flex items-center justify-center">
@@ -462,7 +470,7 @@ export default function ManageProductsPage() {
                     </div>
                   </th>
                   <th 
-                    className="h-12 px-4 text-center align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-16"
+                    className="h-12 px-4 text-center align-middle text-muted-foreground cursor-pointer hover:bg-muted w-16"
                     onClick={() => handleSort('bump')}
                   >
                     <div className="flex items-center justify-center">
@@ -471,7 +479,7 @@ export default function ManageProductsPage() {
                     </div>
                   </th>
                     <th 
-                      className="h-12 px-4 text-center align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-20"
+                      className="h-12 px-4 text-center align-middle text-muted-foreground cursor-pointer hover:bg-muted w-20"
                       onClick={() => handleSort('publish')}
                     >
                       <div className="flex items-center justify-center">
@@ -479,7 +487,7 @@ export default function ManageProductsPage() {
                         <ChevronsUpDown className="ml-2 h-4 w-4" />
                       </div>
                     </th>
-                    <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground w-18">
+                    <th className="h-12 px-4 text-right align-middle text-muted-foreground w-24">
                       
                     </th>
                   </tr>
@@ -487,7 +495,7 @@ export default function ManageProductsPage() {
                 <tbody>
                   {filteredProducts.length === 0 ? (
                     <tr>
-                        <td colSpan={10} className="text-center py-8 text-muted-foreground">
+                        <td colSpan={9} className="text-center py-8 text-muted-foreground">
                           {hasActiveFilters ? 'No products match your filters.' : 
                            allProducts.length === 0 ? 'No products found.' : 'No products match your filters.'}
                         </td>
@@ -495,7 +503,7 @@ export default function ManageProductsPage() {
                     ) : (
                       filteredProducts.map((product) => (
                         <tr key={product._id} className="hover:bg-muted/50 border-b">
-                          <td className="px-4 py-3 font-medium align-middle w-1/5">
+                          <td className="px-4 py-3 align-middle w-1/4">
                             <div className="flex items-center gap-2">
                               {product.thumbnail ? (
                                 <img 
@@ -511,8 +519,8 @@ export default function ManageProductsPage() {
                               <span>{product.name}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 align-middle w-1/8">
-                            <div className="flex items-center gap-2">
+                          <td className="px-4 py-3 align-middle w-1/6">
+                            <div className="flex items-start gap-2">
                               {product.category?.thumbnail ? (
                                 <img 
                                   src={product.category.thumbnail} 
@@ -522,23 +530,20 @@ export default function ManageProductsPage() {
                               ) : (
                                 <div className="w-5 h-5 flex-shrink-0"></div>
                               )}
-                              <span className="text-sm">{product.category?.name || ''}</span>
+                              <span>{product.category?.name || ''}</span>
                             </div>
                           </td>
                           <td className="px-4 py-3 align-middle w-1/6">
                             {product.accounting ? (
                               <div className="flex flex-col">
-                                <span className="text-sm">{product.accounting.name}</span>
+                                <span>{product.accounting.name}</span>
                                 <span className="text-xs text-muted-foreground">({product.accounting.code})</span>
                               </div>
                             ) : (
                               <span></span>
                             )}
                           </td>
-                          <td className="px-4 py-3 align-middle w-1/8">
-                            {product.category?.menu || ''}
-                          </td>
-                          <td className="px-4 py-3 align-middle w-1/8">
+                          <td className="px-4 py-3 align-middle w-1/6">
                             {product.folder ? (
                               <div className="flex items-center gap-2">
                                 <div 
@@ -561,7 +566,7 @@ export default function ManageProductsPage() {
                               product.par !== undefined && 
                               product.qty <= product.par && 
                               product.qty > 0
-                                ? 'text-destructive font-medium' 
+                                ? 'text-destructive' 
                                 : ''
                             }>
                               {product.qty || 0}
@@ -586,8 +591,8 @@ export default function ManageProductsPage() {
                               }}
                             />
                           </td>
-                          <td className="px-4 py-3 align-middle text-right w-18">
-                            <div className="flex gap-2 pl-2">
+                          <td className="px-4 py-3 align-middle text-right w-24">
+                            <div className="flex gap-2 justify-end pr-2">
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -615,9 +620,7 @@ export default function ManageProductsPage() {
                 </table>
               </div>
             </div>
-          )
-        </div>
-      )}
+          )}
 
       {/* Edit Product Dialog */}
       <Dialog open={editDialog.open} onOpenChange={(open) => {
