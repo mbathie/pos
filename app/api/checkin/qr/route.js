@@ -26,51 +26,59 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Customer ID is required' }, { status: 400 });
     }
     
-    // Parse the QR code data if it's JSON
+    // Parse the QR code data - it must be JSON
     let customer;
     try {
-      // Check if customerId is a JSON string
-      if (typeof customerId === 'string' && customerId.startsWith('{')) {
-        const qrData = JSON.parse(customerId);
-        console.log('Parsed QR data:', qrData);
-        
-        // Find customer by memberId
-        if (qrData.memberId) {
-          // First try to find by memberId and org
-          customer = await Customer.findOne({ 
-            memberId: qrData.memberId,
-            orgs: employee.org._id 
-          });
-          
-          // If not found in this org, find by memberId alone (customer might belong to multiple orgs)
-          if (!customer) {
-            customer = await Customer.findOne({ 
-              memberId: qrData.memberId
-            });
-            
-            // Verify customer belongs to this org
-            if (customer && customer.orgs) {
-              const belongsToOrg = customer.orgs.some(orgId => 
-                orgId.toString() === employee.org._id.toString()
-              );
-              if (!belongsToOrg) {
-                console.log('Customer found but not in this org:', customer.name);
-                customer = null; // Reset if not in org
-              }
-            }
-          }
-          
-          console.log('Customer found by memberId:', customer ? customer.name : 'Not found');
-        }
-      } else {
-        // Fallback to direct ID lookup (for backwards compatibility)
-        customer = await Customer.findById(customerId);
-        console.log('Customer found by ID:', customer ? customer.name : 'Not found');
+      // QR code data must be a JSON string
+      if (typeof customerId !== 'string' || !customerId.startsWith('{')) {
+        return NextResponse.json({ 
+          error: 'Invalid QR code format. Expected JSON data.' 
+        }, { status: 400 });
       }
+      
+      const qrData = JSON.parse(customerId);
+      console.log('Parsed QR data:', qrData);
+      
+      // Validate required fields
+      if (!qrData.memberId) {
+        return NextResponse.json({ 
+          error: 'Invalid QR code data. Missing memberId.' 
+        }, { status: 400 });
+      }
+      
+      // Find customer by memberId
+      // First try to find by memberId and org
+      customer = await Customer.findOne({ 
+        memberId: qrData.memberId,
+        orgs: employee.org._id 
+      });
+      
+      // If not found in this org, find by memberId alone (customer might belong to multiple orgs)
+      if (!customer) {
+        customer = await Customer.findOne({ 
+          memberId: qrData.memberId
+        });
+        
+        // Verify customer belongs to this org
+        if (customer && customer.orgs) {
+          const belongsToOrg = customer.orgs.some(orgId => 
+            orgId.toString() === employee.org._id.toString()
+          );
+          if (!belongsToOrg) {
+            console.log('Customer found but not in this org:', customer.name);
+            customer = null; // Reset if not in org
+          }
+        }
+      }
+      
+      console.log('Customer found by memberId:', customer ? customer.name : 'Not found');
+      
     } catch (parseError) {
       console.error('Error parsing QR data:', parseError);
-      // If JSON parse fails, try as direct ID
-      customer = await Customer.findById(customerId);
+      return NextResponse.json({ 
+        error: 'Invalid QR code format. Could not parse JSON data.',
+        details: parseError.message 
+      }, { status: 400 });
     }
     
     if (!customer) {
