@@ -86,13 +86,20 @@ export async function PUT(request, { params }) {
       name,
       description,
       mode: mode || 'discount',
-      code,
       autoAssign: mode === 'surcharge' ? true : (autoAssign === true), // Surcharges always auto-assign
       start: start ? new Date(start) : null,
       expiry: expiry ? new Date(expiry) : null,
       archivedAt: archivedAt ? new Date(archivedAt) : null,
       daysOfWeek
     };
+
+    // Only set code if it has a value (to avoid unique constraint issues with null)
+    if (code && code.trim()) {
+      updateData.code = code.trim();
+    } else if (code === '') {
+      // Explicitly remove code if empty string is provided
+      updateData.code = undefined;
+    }
 
     // Handle new schema with musts and adjustments
     if (musts || adjustments) {

@@ -78,7 +78,6 @@ export async function POST(request) {
       name,
       description,
       mode: mode || 'discount',
-      code,
       autoAssign: mode === 'surcharge' ? true : (autoAssign === true), // Surcharges always auto-assign
       start: start ? new Date(start) : null,
       expiry: expiry ? new Date(expiry) : null,
@@ -86,6 +85,11 @@ export async function POST(request) {
       daysOfWeek,
       org: employee.org._id
     };
+
+    // Only set code if it has a value (to avoid unique constraint issues with null)
+    if (code && code.trim()) {
+      discountData.code = code.trim();
+    }
 
     // Handle new schema with musts and adjustments
     if (musts || adjustments) {
