@@ -176,7 +176,19 @@ export default function ProductSheet({
         
         <div className="flex flex-col space-y-6 mt-4">
           <div className="flex flex-col gap-2">
-            <Label>Product Name</Label>
+            <div className="flex items-center justify-between">
+              <Label>Product Name</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor={`publish-${product._id}`} className="text-sm font-normal">Publish</Label>
+                <Switch
+                  id={`publish-${product._id}`}
+                  checked={product.publish !== undefined ? product.publish : true}
+                  onCheckedChange={(checked) => {
+                    updateProduct({pIdx, key: "publish", value: checked});
+                  }}
+                />
+              </div>
+            </div>
             <Input
               type="text"
               placeholder="Flat White"

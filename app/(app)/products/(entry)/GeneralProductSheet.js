@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Loader2, CheckCircle, Save, Trash2, Info } from 'lucide-react';
@@ -108,7 +109,21 @@ export default function GeneralProductSheet({
         
         <div className="flex flex-col space-y-6 mt-4">
           <div className="flex flex-col gap-2">
-            <Label>Product Name</Label>
+            <div className="flex items-center justify-between">
+              <Label>Product Name</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor={`publish-${product._id}`} className="text-sm font-normal">Publish</Label>
+                <Switch
+                  id={`publish-${product._id}`}
+                  checked={product.publish !== undefined ? product.publish : true}
+                  onCheckedChange={(checked) => {
+                    setProducts(draft => {
+                      draft[pIdx].publish = checked;
+                    });
+                  }}
+                />
+              </div>
+            </div>
             <Input
               type="text"
               placeholder="Product Name"

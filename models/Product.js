@@ -12,6 +12,7 @@ const ProductSchema = new mongoose.Schema({
   capacity: Number,
   bump: { type: Boolean, default: false },
   waiverRequired: { type: Boolean, default: false },
+  publish: { type: Boolean, default: true },
   order: { type: Number, default: 0 },
 }, {
   timestamps: true,
