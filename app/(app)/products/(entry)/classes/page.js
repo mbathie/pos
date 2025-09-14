@@ -22,8 +22,21 @@ export default function Page() {
   
   const { updateProduct, updateProductKey, addProduct, createProduct } = useProduct(setProducts);
   
-  // Use the auto-save hook
-  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(products, updateProduct, 3000);
+  // Use the auto-save hook with create support for new products
+  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(
+    products, 
+    setProducts,
+    updateProduct, 
+    createProduct, 
+    categoryName, 
+    3000,
+    (oldId, newId) => {
+      // Update selectedProductId when a new product is created
+      if (selectedProductId === oldId) {
+        setSelectedProductId(newId);
+      }
+    }
+  );
 
   const getProducts = async () => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${categoryName}/products`);

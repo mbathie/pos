@@ -177,7 +177,7 @@ export default function Page({ schedule, setSchedule }) {
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-[200px] justify-start text-left font-normal">
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+              {selectedDate ? dayjs(selectedDate).format("MMM D, YYYY") : "Pick a date"}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">

@@ -45,6 +45,8 @@ export async function middleware(req) {
     return NextResponse.next();
   }
 
+  // Note: Test mode removed - tests should use proper auth token instead
+
   // Allow all /api/auth/*, /api/unauth/*, /api/public/*, and /api/c/* routes through
   if (
     pathname.startsWith("/api/auth/") ||

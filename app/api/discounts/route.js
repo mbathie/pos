@@ -69,7 +69,8 @@ export async function POST(request) {
       products,
       categories,
       musts,
-      adjustments
+      adjustments,
+      requireCustomer
     } = body;
 
     // Build the discount object with new schema support
@@ -110,6 +111,9 @@ export async function POST(request) {
     if (limits) {
       discountData.limits = limits;
     }
+
+    // Add requireCustomer field
+    discountData.requireCustomer = requireCustomer || false;
 
     const discount = new Discount(discountData);
     await discount.save();

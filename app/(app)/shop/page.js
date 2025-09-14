@@ -50,7 +50,7 @@ export default function Page() {
       icon: Dumbbell, 
       href: "/shop/classes", 
       setupHref: "/products/classes",
-      menu: "classes"
+      menu: "class"
     },
     { 
       title: "Membership", 

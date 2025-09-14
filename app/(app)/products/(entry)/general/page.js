@@ -22,8 +22,21 @@ export default function Page() {
   
   const { updateProduct, updateProductKey, addProduct, createProduct } = useProduct(setProducts);
   
-  // Use the auto-save hook
-  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(products, updateProduct, 3000);
+  // Use the auto-save hook with create support for new products
+  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(
+    products,
+    setProducts,
+    updateProduct,
+    createProduct,
+    categoryName,
+    3000,
+    (oldId, newId) => {
+      // Update selectedProductId when a new product is created
+      if (selectedProductId === oldId) {
+        setSelectedProductId(newId);
+      }
+    }
+  );
 
   const getProducts = async () => {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${categoryName}/products`);
@@ -37,26 +50,6 @@ export default function Page() {
     getProducts();
   }, []);
 
-  const handleAddProduct = () => {
-    const newProduct = {
-      name: 'New Product',
-      type: 'general',
-      category: categoryName,
-      desc: '',
-      instructions: '',
-      waiverRequired: false,
-      prices: []
-    };
-    
-    setProducts(draft => {
-      draft.push(newProduct);
-    });
-    
-    // Select the new product and open sheet
-    setSelectedProductId(products.length); // Use index as temporary ID
-    setSheetOpen(true);
-  };
-
   return (
     <div className='px-4 pb-4'>
       <div className="flex items-center justify-between mb-4">
@@ -65,7 +58,18 @@ export default function Page() {
           <div className='text-sm text-muted-foreground'>General admission products for untimed events</div>
         </div>
         
-        <Button size="sm" variant="outline" onClick={handleAddProduct}>
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={() => {
+            const newProductId = addProduct('New Product', 'general');
+            if (newProductId) {
+              setSelectedProductId(newProductId);
+              setSheetOpen(true);
+            }
+          }}
+          className="cursor-pointer"
+        >
           <Plus className="h-4 w-4 mr-1" />
           New Product
         </Button>

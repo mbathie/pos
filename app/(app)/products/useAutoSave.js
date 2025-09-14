@@ -3,11 +3,15 @@ import { useState, useEffect, useRef } from 'react';
 /**
  * Custom hook for auto-saving products with a 3-second delay
  * @param {Array} products - Array of products to monitor
+ * @param {Function} setProducts - Function to update products state
  * @param {Function} updateProduct - Function to update a product on the server
+ * @param {Function} createProduct - Function to create a product on the server (optional)
+ * @param {string} categoryName - Category name for creating products (optional)
  * @param {number} delay - Delay in milliseconds before auto-saving (default: 3000)
+ * @param {Function} onProductCreated - Callback when a new product is created (optional)
  * @returns {Object} - Contains isDirty, saving, isAnySaving, hasAnyUnsaved, and markAsSaved
  */
-export function useAutoSave(products, updateProduct, delay = 3000) {
+export function useAutoSave(products, setProducts, updateProduct, createProduct = null, categoryName = null, delay = 3000, onProductCreated = null) {
   const originalProducts = useRef({});
   const [isDirty, setIsDirty] = useState({});
   const [saving, setSaving] = useState({});
@@ -37,10 +41,10 @@ export function useAutoSave(products, updateProduct, delay = 3000) {
 
   // Auto-save effect for each dirty product
   useEffect(() => {
-    products.forEach((product) => {
+    products.forEach((product, index) => {
       const productId = product._id;
       
-      // Skip if product is new (no ID yet) or not dirty
+      // Skip if not dirty
       if (!productId || !isDirty[productId]) {
         // Clear any existing timer for this product
         if (autoSaveTimers.current[productId]) {
@@ -60,10 +64,36 @@ export function useAutoSave(products, updateProduct, delay = 3000) {
         setSaving(prev => ({ ...prev, [productId]: true }));
         
         try {
-          const updated = await updateProduct(product);
+          let updated;
+          
+          // If product is new, create it; otherwise update it
+          if (product.isNew && createProduct && categoryName) {
+            // Remove the isNew flag and temporary _id before creating
+            const { isNew, _id, ...productToCreate } = product;
+            updated = await createProduct(categoryName, productToCreate);
+            
+            // Update the product in the array with the server response
+            if (updated && updated._id) {
+              // Replace the temporary product with the created one
+              setProducts(draft => {
+                const idx = draft.findIndex(p => p._id === productId);
+                if (idx !== -1) {
+                  draft[idx] = updated;
+                }
+              });
+              
+              // Notify parent component about the new product ID
+              if (onProductCreated) {
+                onProductCreated(productId, updated._id);
+              }
+            }
+          } else {
+            updated = await updateProduct(product);
+          }
+          
           if (updated) {
-            originalProducts.current[productId] = JSON.parse(JSON.stringify(updated));
-            setIsDirty(prev => ({ ...prev, [productId]: false }));
+            originalProducts.current[updated._id] = JSON.parse(JSON.stringify(updated));
+            setIsDirty(prev => ({ ...prev, [productId]: false, [updated._id]: false }));
           }
         } catch (error) {
           console.error('Auto-save error:', error);
@@ -77,7 +107,7 @@ export function useAutoSave(products, updateProduct, delay = 3000) {
     return () => {
       Object.values(autoSaveTimers.current).forEach(timer => clearTimeout(timer));
     };
-  }, [products, isDirty, updateProduct, delay]);
+  }, [products, isDirty, updateProduct, createProduct, categoryName, delay, setProducts, onProductCreated]);
 
   // Check if any product is being saved or has unsaved changes
   const isAnySaving = Object.values(saving).some(s => s);

@@ -1,0 +1,136 @@
+{
+  "organization": {
+    "email": "mbathie@gmail.com",
+    "password": "test",
+    "name": "Marks Gyms",
+    "employeeName": "Mark Bathie",
+    "phone": "0407148264"
+  },
+  "modGroups": {
+    "milk": {
+      "name": "Milk",
+      "multiple": false,
+      "mods": [
+        { "name": "Regular", "amount": 0, "isDefault": true },
+        { "name": "Oat", "amount": 0.75 },
+        { "name": "Almond", "amount": 0.75 },
+        { "name": "Coconut", "amount": 0.75 },
+        { "name": "Soy", "amount": 0.50 },
+        { "name": "Skim", "amount": 0 },
+        { "name": "2%", "amount": 0 }
+      ]
+    },
+    "syrups": {
+      "name": "Syrups",
+      "multiple": true,
+      "mods": [
+        { "name": "Caramel", "amount": 0.50 },
+        { "name": "Vanilla", "amount": 0.50 },
+        { "name": "Hazelnut", "amount": 0.50 },
+        { "name": "Chocolate", "amount": 0.50 },
+        { "name": "Sugar Free Vanilla", "amount": 0.50 },
+        { "name": "Sugar Free Caramel", "amount": 0.50 },
+        { "name": "Peppermint", "amount": 0.40 },
+        { "name": "Toffee Nut", "amount": 0.50 }
+      ]
+    },
+    "strength": {
+      "name": "Strength + Fullness",
+      "multiple": true,
+      "mods": [
+        { "name": "Extra Shot", "amount": 1.00 },
+        { "name": "Decaf", "amount": 0 },
+        { "name": "Half Caff", "amount": 0 },
+        { "name": "1/2 strength", "amount": 0 },
+        { "name": "1/2 Full", "amount": 0 },
+        { "name": "2/3 Full", "amount": 0 }
+      ]
+    },
+    "sugars": {
+      "name": "Sugars",
+      "multiple": true,
+      "mods": [
+        { "name": "Sugar", "amount": 0 },
+        { "name": "Raw Sugar", "amount": 0 },
+        { "name": "Honey", "amount": 0.75 },
+        { "name": "Stevia", "amount": 0 },
+        { "name": "Equal", "amount": 0 },
+        { "name": "Splenda", "amount": 0 },
+        { "name": "1/2 Sugar", "amount": 0 },
+        { "name": "1/2 Sweetener", "amount": 0 }
+      ]
+    },
+    "temperature": {
+      "name": "Temperature",
+      "multiple": false,
+      "mods": [
+        { "name": "Hot", "amount": 0, "isDefault": true },
+        { "name": "Iced", "amount": 0 },
+        { "name": "Extra Hot", "amount": 0 },
+        { "name": "Warm", "amount": 0 },
+        { "name": "Kids Temp", "amount": 0 },
+        { "name": "Volcanic", "amount": 1.00 }
+      ]
+    },
+    "extras": {
+      "name": "Extras",
+      "multiple": true,
+      "mods": [
+        { "name": "Whipped Cream", "amount": 0.50 },
+        { "name": "Extra Foam", "amount": 0 },
+        { "name": "No Foam", "amount": 0 },
+        { "name": "Light Foam", "amount": 0 },
+        { "name": "Extra Ice", "amount": 0 },
+        { "name": "Light Ice", "amount": 0 },
+        { "name": "No Ice", "amount": 0 },
+        { "name": "Cinnamon", "amount": 0 },
+        { "name": "Nutmeg", "amount": 0 },
+        { "name": "Chocolate Drizzle", "amount": 0.50 },
+        { "name": "Caramel Drizzle", "amount": 0.50 }
+      ]
+    }
+  },
+  "folders": {
+    "milky": {
+      "name": "Milky",
+      "color": "green-500",
+      "category": "coffees"
+    },
+    "sweet": {
+      "name": "Sweet",
+      "color": "blue-500",
+      "category": "pastries"
+    }
+  },
+  "categories": {
+    "coffees": {
+      "name": "Coffees",
+      "icon": "☕",
+      "color": "#8B4513"
+    },
+    "pastries": {
+      "name": "Pastries",
+      "icon": "🥐",
+      "color": "#D2691E"
+    }
+  },
+  "products": {
+    "flatWhite": {
+      "name": "Flat White",
+      "category": "coffees",
+      "folder": "milky",
+      "type": "shop",
+      "description": "A smooth and velvety coffee with microfoam",
+      "variations": [
+        { "name": "Small", "value": "", "amount": 4.50 },
+        { "name": "Medium", "value": "", "amount": 5.00 },
+        { "name": "Large", "value": "", "amount": 5.50 }
+      ],
+      "modGroups": ["milk", "syrups", "strength", "sugars", "temperature", "extras"],
+      "defaultMods": {
+        "milk": "Regular",
+        "temperature": "Hot"
+      }
+    }
+  }
+}

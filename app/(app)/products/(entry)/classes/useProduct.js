@@ -83,9 +83,34 @@ export function useProduct({setProducts, categoryName}) {
     const start = new Date(Math.round(now.getTime() / (1000 * 60 * 5)) * (1000 * 60 * 5));
 
     setProducts(draft => {
-      const variation = draft[productIdx].variations[variationIdx];
-      if (!variation.times) variation.times = [];
-      variation.times.push({ _id: generateObjectId(), start: start.toISOString(), value: "" });
+      const product = draft[productIdx];
+      if (!product || !product.variations) return;
+      
+      const variation = product.variations[variationIdx];
+      if (!variation) return;
+      
+      // Create new time object
+      const newTime = { 
+        _id: generateObjectId(), 
+        start: start.toISOString(), 
+        value: "" 
+      };
+      
+      // Handle times array - create new array if it doesn't exist or is frozen
+      if (!Array.isArray(variation.times)) {
+        // Create a new times array
+        draft[productIdx].variations[variationIdx] = {
+          ...variation,
+          times: [newTime]
+        };
+      } else {
+        // Create a new array with existing times plus the new one
+        // This avoids mutating a potentially frozen array
+        draft[productIdx].variations[variationIdx] = {
+          ...variation,
+          times: [...variation.times, newTime]
+        };
+      }
     });
   }
 

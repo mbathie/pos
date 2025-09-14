@@ -83,8 +83,16 @@ export default function Page() {
     }
   };
 
-  // Use the auto-save hook
-  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(products, autoSaveProduct, 3000);
+  // Use the auto-save hook - shop products don't support creating new products via auto-save
+  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(
+    products,
+    setProducts,
+    autoSaveProduct,
+    null, // createProduct - not needed for shop products
+    null, // categoryName - not needed for shop products
+    3000,
+    null  // onProductCreated - not needed for shop products
+  );
 
   // Drag and drop sensors - NO LONGER USED
   // const sensors = useSensors(

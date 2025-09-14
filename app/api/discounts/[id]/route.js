@@ -65,7 +65,8 @@ export async function PUT(request, { params }) {
       products,
       categories,
       musts,
-      adjustments
+      adjustments,
+      requireCustomer
     } = body;
 
     console.log('Updating discount with data:', { 
@@ -121,6 +122,9 @@ export async function PUT(request, { params }) {
     if (limits) {
       updateData.limits = limits;
     }
+    
+    // Add requireCustomer field
+    updateData.requireCustomer = requireCustomer || false;
 
     const discount = await Discount.findOneAndUpdate(
       { _id: id, org: employee.org._id },

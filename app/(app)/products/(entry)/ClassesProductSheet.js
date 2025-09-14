@@ -142,7 +142,7 @@ export default function ClassesProductSheet({
               <h2 className="text-xl font-semibold">{product.name}</h2>
             </div>
             
-            {/* Auto-save indicator */}
+            {/* Auto-save indicator - works for both new and existing products */}
             {product._id && (
               <TooltipProvider>
                 <Tooltip>
@@ -159,31 +159,13 @@ export default function ClassesProductSheet({
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
-                      {saving[product._id] ? 'Saving...' : 
+                      {saving[product._id] ? (product.isNew ? 'Creating...' : 'Saving...') : 
                        isDirty[product._id] ? 'Unsaved changes (auto-saves in 3s)' : 
                        'All changes saved'}
                     </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            )}
-            
-            {/* Manual save for new products */}
-            {(product.isNew || !product._id) && (
-              <Button
-                size="sm"
-                onClick={async () => {
-                  // Remove the isNew flag and temporary _id before creating
-                  const { isNew, _id, ...productToCreate } = product;
-                  const createdProduct = await createProduct(categoryName, productToCreate);
-                  setProducts(draft => {
-                    draft[pIdx] = createdProduct;
-                  });
-                  markAsSaved(createdProduct._id, createdProduct);
-                }}
-              >
-                Save
-              </Button>
             )}
           </SheetTitle>
         </SheetHeader>
@@ -578,7 +560,11 @@ export default function ClassesProductSheet({
                                   
                                   const newTimes = [...(newDaysOfWeek[allDayIndex].times || [])];
                                   newTimes[timeIdx] = { ...(newTimes[timeIdx] || {}), time: e.target.value };
-                                  newDaysOfWeek[allDayIndex] = { ...newDaysOfWeek[allDayIndex], times: newTimes };
+                                  // Always create a new object for the day
+                                  newDaysOfWeek[allDayIndex] = { 
+                                    ...newDaysOfWeek[allDayIndex], 
+                                    times: newTimes 
+                                  };
                                   
                                   updateProduct({ 
                                     schedule: { 
@@ -604,7 +590,11 @@ export default function ClassesProductSheet({
                                   
                                   const newTimes = [...(newDaysOfWeek[allDayIndex].times || [])];
                                   newTimes[timeIdx] = { ...(newTimes[timeIdx] || {}), label: e.target.value };
-                                  newDaysOfWeek[allDayIndex] = { ...newDaysOfWeek[allDayIndex], times: newTimes };
+                                  // Always create a new object for the day
+                                  newDaysOfWeek[allDayIndex] = { 
+                                    ...newDaysOfWeek[allDayIndex], 
+                                    times: newTimes 
+                                  };
                                   
                                   updateProduct({ 
                                     schedule: { 
@@ -626,7 +616,11 @@ export default function ClassesProductSheet({
                                   if (allDayIndex !== -1) {
                                     const newTimes = [...(newDaysOfWeek[allDayIndex].times || [])];
                                     newTimes.splice(timeIdx, 1);
-                                    newDaysOfWeek[allDayIndex].times = newTimes;
+                                    // Create a new object for the day with updated times array
+                                    newDaysOfWeek[allDayIndex] = {
+                                      ...newDaysOfWeek[allDayIndex],
+                                      times: newTimes
+                                    };
                                     
                                     updateProduct({ 
                                       schedule: { 
@@ -650,8 +644,11 @@ export default function ClassesProductSheet({
                               if (allDayIndex === -1) {
                                 newDaysOfWeek.push({ dayIndex: -1, times: [{ time: '', label: '', selected: true }] });
                               } else {
-                                const newTimes = [...(newDaysOfWeek[allDayIndex].times || []), { time: '', label: '', selected: true }];
-                                newDaysOfWeek[allDayIndex].times = newTimes;
+                                // Create a new object for the day with updated times array
+                                newDaysOfWeek[allDayIndex] = {
+                                  ...newDaysOfWeek[allDayIndex],
+                                  times: [...(newDaysOfWeek[allDayIndex].times || []), { time: '', label: '', selected: true }]
+                                };
                               }
                               
                               updateProduct({ 

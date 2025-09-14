@@ -82,6 +82,9 @@ export default function Page() {
   // Check if cart contains membership products
   const hasMembershipProducts = cart.products.some(product => product.type === 'membership')
   
+  // Check if any products in cart require a waiver
+  const hasWaiverRequiredProducts = cart.products.some(product => product.waiverRequired === true)
+  
   // Check if all required customers are assigned for products with waivers
   const needsCustomerAssignment = cart.products.some(product => {
     if (!product.waiverRequired) return false
@@ -158,10 +161,24 @@ export default function Page() {
       setSelectedSlot(null)
       setShowCustomerSelection(false)
       
-      // Auto-apply eligible discounts when customer is assigned
+      // Re-apply adjustments with the new customer, preserving any existing discount
       if (selectedCustomer.customer) {
         setTimeout(() => {
-          applyAdjustments(null, null, null, null, selectedCustomer.customer, true)
+          // Check if there's already a discount applied
+          const existingDiscount = appliedAdjustments?.discounts?.items?.[0]
+          
+          if (existingDiscount) {
+            // If there's an existing custom discount, re-apply it with the new customer
+            if (existingDiscount.name === 'Custom Discount') {
+              applyAdjustments(null, null, existingDiscount.value, 'Custom Discount', selectedCustomer.customer, false)
+            } else {
+              // Re-apply the existing regular discount with the new customer
+              applyAdjustments(null, existingDiscount.id, null, existingDiscount.name, selectedCustomer.customer, false)
+            }
+          } else {
+            // No existing discount, try auto-applying eligible discounts
+            applyAdjustments(null, null, null, null, selectedCustomer.customer, true)
+          }
         }, 120)
       }
       return
@@ -785,12 +802,23 @@ export default function Page() {
 
   // Execute the actual discount application (separated for reuse after PIN verification)
   const executeCustomDiscount = async (discountAmount) => {
-    // Apply custom discount through the adjustments API
-    await applyAdjustments(null, null, discountAmount);
+    console.log('🎯 [UI] Applying custom discount:', discountAmount);
+    
+    // Apply custom discount through the adjustments API with proper name
+    const result = await applyAdjustments(null, null, discountAmount, 'Custom Discount');
+    
+    console.log('🎯 [UI] Custom discount result:', result);
+    console.log('🎯 [UI] Applied adjustments after custom discount:', appliedAdjustments);
     
     setCustomDiscountDollar(null);
     setCustomDiscountPercent(null);
-    toast.success(`Applied custom discount of $${discountAmount.toFixed(2)}`);
+    
+    // Only show success toast if discount was actually applied
+    if (result && result.adjustments?.discounts?.total > 0) {
+      // Success message already shown by applyAdjustments
+    } else if (!result) {
+      toast.error('Failed to apply custom discount');
+    }
   };
   
   // Calculate percentage from dollar amount
@@ -1761,6 +1789,7 @@ export default function Page() {
         onConfirm={handleCustomerSelection}
         selectedSlot={selectedSlot}
         singleSelection={true}
+        waiverRequired={hasWaiverRequiredProducts}
       />
 
       <DiscountPinDialog

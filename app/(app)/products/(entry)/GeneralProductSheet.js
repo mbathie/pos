@@ -30,7 +30,7 @@ export default function GeneralProductSheet({
 }) {
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   
-  // Find product and index
+  // Find product and index - handle both real IDs and temporary IDs for new products
   const product = products?.find(p => p._id === selectedProductId);
   const pIdx = products?.findIndex(p => p._id === selectedProductId);
   
@@ -78,7 +78,7 @@ export default function GeneralProductSheet({
               <h2 className="text-xl font-semibold">{product.name}</h2>
             </div>
             
-            {/* Auto-save indicator */}
+            {/* Auto-save indicator - works for both new and existing products */}
             {product._id && (
               <TooltipProvider>
                 <Tooltip>
@@ -95,29 +95,13 @@ export default function GeneralProductSheet({
                   </TooltipTrigger>
                   <TooltipContent>
                     <p>
-                      {saving[product._id] ? 'Saving...' : 
+                      {saving[product._id] ? (product.isNew ? 'Creating...' : 'Saving...') : 
                        isDirty[product._id] ? 'Unsaved changes (auto-saves in 3s)' : 
                        'All changes saved'}
                     </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-            )}
-            
-            {/* Manual save for new products */}
-            {!product._id && (
-              <Button
-                size="sm"
-                onClick={async () => {
-                  const createdProduct = await createProduct(categoryName, product);
-                  setProducts(draft => {
-                    draft[pIdx] = createdProduct;
-                  });
-                  markAsSaved(createdProduct._id, createdProduct);
-                }}
-              >
-                Save
-              </Button>
             )}
           </SheetTitle>
         </SheetHeader>

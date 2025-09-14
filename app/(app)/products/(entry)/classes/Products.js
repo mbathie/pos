@@ -40,8 +40,16 @@ export default function Page({products, setProducts, categoryName, type}) {
     }
   }, [products, saveProduct]);
 
-  // Use the auto-save hook
-  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(products, autoSaveProduct, 3000);
+  // Use the auto-save hook - this component doesn't support creating new products via auto-save
+  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(
+    products,
+    setProducts,
+    autoSaveProduct,
+    null, // createProduct - not needed for this component
+    null, // categoryName - not needed for this component
+    3000,
+    null  // onProductCreated - not needed for this component
+  );
 
   return (
     <div className='flex flex-col space-y-4'>

@@ -32,8 +32,16 @@ export default function Page({products, setProducts, units, title, description, 
   const [iconDialogProductIdx, setIconDialogProductIdx] = useState(null);
   const [iconDialogQuery, setIconDialogQuery] = useState('');
 
-  // Use the auto-save hook
-  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(products, updateProduct, 3000);
+  // Use the auto-save hook with create support for new products
+  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(
+    products,
+    setProducts,
+    updateProduct,
+    createProduct,
+    categoryName,
+    3000,
+    null // onProductCreated - not needed for this component
+  );
 
   return (
     <div className='flex flex-col space-y-4'>

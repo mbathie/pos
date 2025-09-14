@@ -42,7 +42,7 @@ export default function DiscountPinDialog({ open, onOpenChange, onSuccess, permi
       }
 
       // Success
-      toast.success(`Custom discount authorized by ${data.user.name}`)
+      toast.success(`Custom discount authorized by ${data.authorizer.name}`)
       setPin('')
       onSuccess?.(data)
       onOpenChange(false)

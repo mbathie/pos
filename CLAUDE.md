@@ -75,6 +75,14 @@
 - Build: `npm run build`
 - Lint: `npm run lint`
 
+## Next.js API Routes
+- In Next.js API routes, params must be awaited: `const { id } = await params;` not `const { id } = params;`
+
+## Email Configuration
+- Use `process.env.EMAIL_ASSETS_DOMAIN` for image URLs in emails (logos, QR codes, etc.)
+- Falls back to `process.env.NEXT_PUBLIC_API_BASE_URL` if EMAIL_ASSETS_DOMAIN is not set
+- This ensures images load properly in email clients which may block certain domains
+
 ## UI/UX Conventions
 
 ### Reference Pages

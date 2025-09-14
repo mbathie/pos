@@ -137,7 +137,6 @@ export default function Page() {
                 <TableHead></TableHead>
                 <TableHead>Product</TableHead>
                 <TableHead>Type</TableHead>
-                <TableHead>Availability</TableHead>
                 <TableHead>Next Class</TableHead>
                 <TableHead>Detail</TableHead>
               </TableRow>
@@ -158,18 +157,6 @@ export default function Page() {
                   </TableCell>
                   <TableCell className="align-top">{entry.product?.name}</TableCell>
                   <TableCell className="align-top">{entry.product?.type}</TableCell>
-                  <TableCell className="align-top">
-                    {entry.product?.type === 'course' ? (
-                      `${entry.available}/${entry.capacity}`
-                    ) : (
-                      (() => {
-                        const mostRecent = entry.classes?.reduce((latest, curr) => {
-                          return !latest || dayjs(curr.datetime).isAfter(dayjs(latest.datetime)) ? curr : latest;
-                        }, null);
-                        return mostRecent ? `${mostRecent.available}/${entry.capacity}` : '-';
-                      })()
-                    )}
-                  </TableCell>
                   <TableCell className="align-top">
                     {(() => {
                       const now = dayjs();

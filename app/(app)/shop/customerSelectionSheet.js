@@ -17,7 +17,8 @@ export default function CustomerSelectionSheet({
   onOpenChange, 
   onConfirm,
   selectedSlot,
-  singleSelection = true
+  singleSelection = true,
+  waiverRequired = false
 }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [customers, setCustomers] = useState([])
@@ -57,6 +58,9 @@ export default function CustomerSelectionSheet({
       try {
         const params = new URLSearchParams()
         params.append('search', searchQuery)
+        if (waiverRequired) {
+          params.append('requiresWaiver', 'true')
+        }
         
         const res = await fetch(`/api/customers?${params}`)
         if (res.ok) {
@@ -79,7 +83,7 @@ export default function CustomerSelectionSheet({
     }, 300)
 
     return () => clearTimeout(timer)
-  }, [open, searchQuery])
+  }, [open, searchQuery, waiverRequired])
 
   // Create new customer
   const handleCreateCustomer = async () => {
