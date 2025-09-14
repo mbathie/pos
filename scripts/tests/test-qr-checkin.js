@@ -18,20 +18,16 @@ async function testQRCheckin() {
     
     console.log(`Created test customer: ${customer.name} (memberId: ${customer.memberId})`);
     
-    // Simulate QR code data
-    const qrData = {
-      type: 'customer',
-      memberId: customer.memberId,
-      name: customer.name
-    };
+    // QR code data is now just the plain memberId
+    const qrData = String(customer.memberId);
     
-    console.log('QR Data:', JSON.stringify(qrData));
+    console.log('QR Data (plain memberId):', qrData);
     
-    // Test QR check-in with JSON string
+    // Test QR check-in with plain text memberId
     const checkinResult = await apiCall('/api/checkin/qr', {
       method: 'POST',
       body: JSON.stringify({
-        customerId: JSON.stringify(qrData), // Send as JSON string
+        customerId: qrData, // Send as plain text memberId
         test: true
       })
     });
@@ -43,14 +39,14 @@ async function testQRCheckin() {
       console.log(`   Status: ${checkinResult.status}`);
       console.log(`   Message: ${checkinResult.message}`);
       
-      return formatTestResult('QR Check-in with JSON', true, {
+      return formatTestResult('QR Check-in with plain memberId', true, {
         customerId: customer._id,
         memberId: customer.memberId,
         status: checkinResult.status,
         message: checkinResult.message
       });
     } else {
-      return formatTestResult('QR Check-in with JSON', false, {
+      return formatTestResult('QR Check-in with plain memberId', false, {
         error: 'Customer not correctly identified',
         expected: customer._id,
         received: checkinResult.customer?._id
@@ -58,7 +54,7 @@ async function testQRCheckin() {
     }
     
   } catch (error) {
-    return formatTestResult('QR Check-in with JSON', false, {
+    return formatTestResult('QR Check-in with plain memberId', false, {
       error: error.message
     });
   }
@@ -66,7 +62,7 @@ async function testQRCheckin() {
 
 // Run the test
 if (require.main === module) {
-  runTest('QR Check-in with JSON Data', testQRCheckin).then(result => {
+  runTest('QR Check-in with Plain MemberId', testQRCheckin).then(result => {
     console.log('\n📊 Test Summary:');
     console.log(`   Result: ${result.passed ? '✅ PASSED' : '❌ FAILED'}`);
     process.exit(result.passed ? 0 : 1);

@@ -24,12 +24,8 @@ export async function GET(request, { params }) {
       return new NextResponse('Customer not found', { status: 404 });
     }
     
-    // Generate QR code data
-    const qrData = JSON.stringify({
-      type: 'customer',
-      memberId: customer.memberId,
-      name: customer.name
-    });
+    // Generate QR code data - just the memberId as plain text
+    const qrData = String(customer.memberId);
     
     // Generate QR code as PNG buffer
     const qrCodeBuffer = await QRCode.toBuffer(qrData, {

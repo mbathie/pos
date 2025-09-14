@@ -19,67 +19,57 @@ export async function POST(request) {
     
     const { customerId, test = false } = await request.json();
     
-    console.log('Customer ID from QR:', customerId);
+    console.log('QR code data received:', customerId);
     console.log('Test mode:', test);
     
     if (!customerId) {
       return NextResponse.json({ error: 'Customer ID is required' }, { status: 400 });
     }
     
-    // Parse the QR code data - it must be JSON
+    // Parse the QR code data - should be plain text memberId
     let customer;
-    try {
-      // QR code data must be a JSON string
-      if (typeof customerId !== 'string' || !customerId.startsWith('{')) {
-        return NextResponse.json({ 
-          error: 'Invalid QR code format. Expected JSON data.' 
-        }, { status: 400 });
-      }
-      
-      const qrData = JSON.parse(customerId);
-      console.log('Parsed QR data:', qrData);
-      
-      // Validate required fields
-      if (!qrData.memberId) {
-        return NextResponse.json({ 
-          error: 'Invalid QR code data. Missing memberId.' 
-        }, { status: 400 });
-      }
-      
-      // Find customer by memberId
-      // First try to find by memberId and org
-      customer = await Customer.findOne({ 
-        memberId: qrData.memberId,
-        orgs: employee.org._id 
-      });
-      
-      // If not found in this org, find by memberId alone (customer might belong to multiple orgs)
-      if (!customer) {
-        customer = await Customer.findOne({ 
-          memberId: qrData.memberId
-        });
-        
-        // Verify customer belongs to this org
-        if (customer && customer.orgs) {
-          const belongsToOrg = customer.orgs.some(orgId => 
-            orgId.toString() === employee.org._id.toString()
-          );
-          if (!belongsToOrg) {
-            console.log('Customer found but not in this org:', customer.name);
-            customer = null; // Reset if not in org
-          }
-        }
-      }
-      
-      console.log('Customer found by memberId:', customer ? customer.name : 'Not found');
-      
-    } catch (parseError) {
-      console.error('Error parsing QR data:', parseError);
+    
+    // Convert to string and trim any whitespace
+    const memberIdStr = String(customerId).trim();
+    console.log('Processing memberId:', memberIdStr);
+    
+    // Validate it's a valid numeric string (only digits)
+    if (!/^\d+$/.test(memberIdStr)) {
       return NextResponse.json({ 
-        error: 'Invalid QR code format. Could not parse JSON data.',
-        details: parseError.message 
+        error: 'Invalid QR code format. Expected numeric member ID.',
+        received: memberIdStr
       }, { status: 400 });
     }
+    
+    // Convert to number
+    const memberId = parseInt(memberIdStr, 10);
+    
+    // Find customer by memberId
+    // First try to find by memberId and org
+    customer = await Customer.findOne({ 
+      memberId: memberId,
+      orgs: employee.org._id 
+    });
+    
+    // If not found in this org, find by memberId alone (customer might belong to multiple orgs)
+    if (!customer) {
+      customer = await Customer.findOne({ 
+        memberId: memberId
+      });
+      
+      // Verify customer belongs to this org
+      if (customer && customer.orgs) {
+        const belongsToOrg = customer.orgs.some(orgId => 
+          orgId.toString() === employee.org._id.toString()
+        );
+        if (!belongsToOrg) {
+          console.log('Customer found but not in this org:', customer.name);
+          customer = null; // Reset if not in org
+        }
+      }
+    }
+    
+    console.log('Customer found by memberId:', customer ? customer.name : 'Not found');
     
     if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
