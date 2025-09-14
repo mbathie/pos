@@ -55,6 +55,10 @@ export async function GET(req, { params }) {
   const { employee } = await getEmployee();
   const org = employee.org;
   const { slug } = await params;
+  
+  // Get query parameters
+  const { searchParams } = new URL(req.url);
+  const publishedFilter = searchParams.get('published');
 
   const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
 
@@ -66,10 +70,18 @@ export async function GET(req, { params }) {
     return NextResponse.json({ error: "Category not found" }, { status: 404 });
   }
 
-  const products = await Product.find({ 
-      category: category._id,
-      deleted: { $ne: true }
-    })
+  // Build query filter
+  const filter = { 
+    category: category._id,
+    deleted: { $ne: true }
+  };
+  
+  // Add publish filter if requested (for POS/retail views)
+  if (publishedFilter === '1' || publishedFilter === 'true') {
+    filter.publish = { $ne: false }; // Include products where publish is true or undefined
+  }
+
+  const products = await Product.find(filter)
     .populate('folder')
     .populate({ path: 'accounting', strictPopulate: false })
     .sort({ order: 1, createdAt: -1 });  // Sort by order field first, then by creation date

@@ -116,6 +116,34 @@ export default function ManageProductsPage() {
     }
   };
 
+  const updatePublishStatus = async (productId, publishValue) => {
+    try {
+      const res = await fetch(`/api/products/${productId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ product: { publish: publishValue } }),
+      });
+
+      if (res.ok) {
+        // Update the local state
+        setAllProducts(prev => 
+          prev.map(product => 
+            product._id === productId 
+              ? { ...product, publish: publishValue }
+              : product
+          )
+        );
+        console.log('Publish status updated successfully');
+      } else {
+        console.error('Failed to update publish status');
+      }
+    } catch (error) {
+      console.error('Error updating publish status:', error);
+    }
+  };
+
   const handleSort = (field) => {
     setSort(prev => ({
       field,
@@ -287,6 +315,10 @@ export default function ManageProductsPage() {
           aValue = a.bump === true ? 1 : 0;
           bValue = b.bump === true ? 1 : 0;
           break;
+        case 'publish':
+          aValue = a.publish !== false ? 1 : 0;
+          bValue = b.publish !== false ? 1 : 0;
+          break;
         case 'qty':
           aValue = a.qty || 0;
           bValue = b.qty || 0;
@@ -434,6 +466,15 @@ export default function ManageProductsPage() {
                         <ChevronsUpDown className="size-4" />
                       </div>
                     </TableHead>
+                    <TableHead 
+                      className="cursor-pointer bg-muted hover:bg-muted/80 w-20"
+                      onClick={() => handleSort('publish')}
+                    >
+                      <div className="flex items-center gap-1">
+                        Publish
+                        <ChevronsUpDown className="size-4" />
+                      </div>
+                    </TableHead>
                     <TableHead className="bg-muted rounded-tr-lg w-18">
                       
                     </TableHead>
@@ -446,7 +487,7 @@ export default function ManageProductsPage() {
                   <TableBody>
                     {filteredProducts.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                           {hasActiveFilters ? 'No products match your filters.' : 
                            allProducts.length === 0 ? 'No products found.' : 'No products match your filters.'}
                         </TableCell>
@@ -542,6 +583,14 @@ export default function ManageProductsPage() {
                               checked={product.bump === true}
                               onCheckedChange={(checked) => {
                                 updateBumpStatus(product._id, checked);
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell className="align-top w-20">
+                            <Checkbox
+                              checked={product.publish !== false}
+                              onCheckedChange={(checked) => {
+                                updatePublishStatus(product._id, checked);
                               }}
                             />
                           </TableCell>

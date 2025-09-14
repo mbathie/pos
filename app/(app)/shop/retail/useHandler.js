@@ -17,7 +17,7 @@ export function useHandler() {
   }
 
   const getProducts = async ({category}) => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${category._id}/products`)
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${category._id}/products?published=1`)
     const products = await res.json()
     return products
   }
