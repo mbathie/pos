@@ -1579,12 +1579,14 @@ export default function Page() {
                     ))
                   }
                   onClick={async () => {
+                    // If no terminals configured, navigate to terminal settings
+                    if (!hasTerminals) {
+                      router.push('/manage/terminals');
+                      return;
+                    }
+                    
                     // If terminal is disconnected and terminals exist, retry connection
                     if (terminalStatus === 'disconnected') {
-                      if (!hasTerminals) {
-                        toast.info('No payment terminals configured. Please set up a terminal first.');
-                        return;
-                      }
                       try {
                         await discoverReaders();
                         setTimeout(async () => {
@@ -1630,7 +1632,7 @@ export default function Page() {
                       terminalStatus === 'checking' ? 'Checking...' :
                       terminalStatus === 'connecting' ? 'Connecting...' :
                       terminalStatus === 'discovering' ? 'Discovering...' :
-                      !hasTerminals ? 'No Terminal Configured' :
+                      !hasTerminals ? 'Setup Terminal' :
                       'Retry Connection'
                   }
                 </Button>
