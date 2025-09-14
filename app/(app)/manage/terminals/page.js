@@ -22,9 +22,11 @@ import {
   useTerminalManagement
 } from './effects'
 import { useTerminalLink } from './useTerminalLink'
+import { useRouter } from 'next/navigation'
 
 export default function TerminalsPage() {
   const { locations } = useGlobals()
+  const router = useRouter()
   const [terminals, setTerminals] = useState([])
   const [loading, setLoading] = useState(true)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -42,6 +44,15 @@ export default function TerminalsPage() {
     isTerminalLinked, 
     getTerminalStatus 
   } = useTerminalLink()
+
+  // Helper function to check if location has required address fields
+  const hasCompleteAddress = (location) => {
+    return location && 
+           location.address1 && 
+           location.city && 
+           location.state && 
+           location.postcode
+  }
 
   // Load data on component mount
   useEffect(() => {
@@ -153,7 +164,11 @@ export default function TerminalsPage() {
           
           <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="cursor-pointer">
+              <Button 
+                className="cursor-pointer"
+                disabled={!locations?.some(hasCompleteAddress)}
+                title={!locations?.some(hasCompleteAddress) ? "Setup location address first" : "Add new terminal"}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Terminal
               </Button>
@@ -180,7 +195,7 @@ export default function TerminalsPage() {
                       <SelectValue placeholder="Select a location" />
                     </SelectTrigger>
                     <SelectContent>
-                      {locations?.map((location) => (
+                      {locations?.filter(hasCompleteAddress).map((location) => (
                         <SelectItem key={location._id} value={location._id}>
                           {location.name}
                         </SelectItem>
@@ -288,19 +303,31 @@ export default function TerminalsPage() {
                     <td className="px-4 py-3 align-middle"></td>
                     <td className="px-4 py-3 align-middle"></td>
                     <td className="px-4 py-3 text-right align-middle">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="cursor-pointer h-8 w-8"
-                        onClick={() => {
-                          setSelectedLocationId(location._id)
-                          setAddDialogOpen(true)
-                        }}
-                        aria-label="Add terminal"
-                        title="Add terminal"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                      {hasCompleteAddress(location) ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="cursor-pointer h-8 w-8"
+                          onClick={() => {
+                            setSelectedLocationId(location._id)
+                            setAddDialogOpen(true)
+                          }}
+                          aria-label="Add terminal"
+                          title="Add terminal"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="cursor-pointer"
+                          onClick={() => router.push(`/manage/locations/${location._id}`)}
+                          title="Address required for terminal setup"
+                        >
+                          Setup Address
+                        </Button>
+                      )}
                     </td>
                   </tr>
 
