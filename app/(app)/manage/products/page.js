@@ -83,6 +83,7 @@ export default function ManageProductsPage() {
     setFilters({
       category: 'all',
       search: '',
+      publish: 'all',
     });
   };
 
@@ -344,7 +345,7 @@ export default function ManageProductsPage() {
     <div className="mx-auto px-4 max-w-7xl h-screen flex flex-col py-4">
       {/* Header */}
       <div className="mb-4 flex-shrink-0">
-        <h1 className="text-xl font-semibold mb-1">Products Management</h1>
+        <h1 className="text-xl font-medium mb-1">Products Management</h1>
         <p className="text-sm text-muted-foreground">
           View and manage all products with inventory tracking and accounting codes
         </p>
@@ -412,7 +413,7 @@ export default function ManageProductsPage() {
       ) : (
         <div className="flex-1 min-h-0 relative overflow-hidden rounded-lg border">
           <div className="h-full overflow-auto">
-            <table className="w-full table-fixed">
+            <table className="w-full table-fixed text-sm">
               <thead className="sticky top-0 z-10 bg-muted/50 border-b">
                 <tr>
                   <th 
@@ -519,8 +520,8 @@ export default function ManageProductsPage() {
                               <span>{product.name}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 align-middle w-1/6">
-                            <div className="flex items-start gap-2">
+                          <td className="">
+                            <div className="flex items-start">
                               {product.category?.thumbnail ? (
                                 <img 
                                   src={product.category.thumbnail} 
