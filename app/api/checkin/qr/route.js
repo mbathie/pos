@@ -26,9 +26,52 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Customer ID is required' }, { status: 400 });
     }
     
-    // Find the customer
-    const customer = await Customer.findById(customerId);
-    console.log('Customer found:', customer ? customer.name : 'Not found');
+    // Parse the QR code data if it's JSON
+    let customer;
+    try {
+      // Check if customerId is a JSON string
+      if (typeof customerId === 'string' && customerId.startsWith('{')) {
+        const qrData = JSON.parse(customerId);
+        console.log('Parsed QR data:', qrData);
+        
+        // Find customer by memberId
+        if (qrData.memberId) {
+          // First try to find by memberId and org
+          customer = await Customer.findOne({ 
+            memberId: qrData.memberId,
+            orgs: employee.org._id 
+          });
+          
+          // If not found in this org, find by memberId alone (customer might belong to multiple orgs)
+          if (!customer) {
+            customer = await Customer.findOne({ 
+              memberId: qrData.memberId
+            });
+            
+            // Verify customer belongs to this org
+            if (customer && customer.orgs) {
+              const belongsToOrg = customer.orgs.some(orgId => 
+                orgId.toString() === employee.org._id.toString()
+              );
+              if (!belongsToOrg) {
+                console.log('Customer found but not in this org:', customer.name);
+                customer = null; // Reset if not in org
+              }
+            }
+          }
+          
+          console.log('Customer found by memberId:', customer ? customer.name : 'Not found');
+        }
+      } else {
+        // Fallback to direct ID lookup (for backwards compatibility)
+        customer = await Customer.findById(customerId);
+        console.log('Customer found by ID:', customer ? customer.name : 'Not found');
+      }
+    } catch (parseError) {
+      console.error('Error parsing QR data:', parseError);
+      // If JSON parse fails, try as direct ID
+      customer = await Customer.findById(customerId);
+    }
     
     if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
@@ -40,18 +83,18 @@ export async function POST(request) {
     const thirtyMinutesAfter = new Date(now.getTime() + 30 * 60 * 1000);
     
     // Search for schedules with this customer
-    console.log('Searching schedules for org:', employee.org._id, 'and customer:', customerId);
+    console.log('Searching schedules for org:', employee.org._id, 'and customer:', customer._id);
     
     // In test mode, find any schedule with this customer regardless of status
     const searchQuery = test ? {
       org: employee.org._id,
-      'locations.classes.customers.customer': customerId
+      'locations.classes.customers.customer': customer._id
     } : {
       org: employee.org._id,
       // Look for classes where customer is in the customers array with status 'confirmed'
       'locations.classes.customers': {
         $elemMatch: {
-          customer: customerId,
+          customer: customer._id,
           status: 'confirmed'
         }
       }
@@ -64,13 +107,13 @@ export async function POST(request) {
     if (!schedules || schedules.length === 0) {
       // Also try searching for any schedule with this customer to debug
       const anySchedule = await Schedule.findOne({
-        'locations.classes.customers.customer': customerId
+        'locations.classes.customers.customer': customer._id
       });
       console.log('Any schedule with customer:', anySchedule ? 'Found' : 'Not found');
       
       // Check for active membership even if no schedules
       const activeMembership = await Membership.findOne({
-        customer: customerId,
+        customer: customer._id,
         org: employee.org._id,
         status: 'active'
       }).populate('product').populate('location');
@@ -107,7 +150,7 @@ export async function POST(request) {
         // Check for recent duplicate check-in (within last 10 seconds)
         const tenSecondsAgo = new Date(now.getTime() - 10 * 1000);
         const recentCheckin = await Checkin.findOne({
-          customer: customerId,
+          customer: customer._id,
           product: activeMembership.product._id,
           createdAt: { $gte: tenSecondsAgo }
         });
@@ -135,7 +178,7 @@ export async function POST(request) {
         
         // Create a membership-only check-in record
         const membershipCheckinRecord = new Checkin({
-          customer: customerId,
+          customer: customer._id,
           product: activeMembership.product._id,
           // Omit schedule field entirely for membership-only check-in
           class: {
@@ -172,7 +215,7 @@ export async function POST(request) {
       if (activeMembership && !isMembershipValid) {
         // Create a failed check-in record for expired membership
         const failedCheckinRecord = new Checkin({
-          customer: customerId,
+          customer: customer._id,
           product: activeMembership.product._id,
           class: {
             datetime: now,
@@ -248,7 +291,7 @@ export async function POST(request) {
             // Only consider classes in the future
             if (classTime > now) {
               const customerInClass = classItem.customers.find(c => 
-                c.customer.toString() === customerId
+                c.customer.toString() === customer._id.toString()
               );
               
               if (customerInClass) {
@@ -268,7 +311,7 @@ export async function POST(request) {
             if (classTime >= thirtyMinutesBefore && classTime <= thirtyMinutesAfter) {
               // Find the customer in this class
               const customerInClass = classItem.customers.find(c => 
-                c.customer.toString() === customerId && c.status === 'confirmed'
+                c.customer.toString() === customer._id.toString() && c.status === 'confirmed'
               );
               
               console.log('Customer in class?', customerInClass ? 'Yes' : 'No');
@@ -293,7 +336,7 @@ export async function POST(request) {
       
       // Check for active membership even if no class is found
       const activeMembership = await Membership.findOne({
-        customer: customerId,
+        customer: customer._id,
         org: employee.org._id,
         status: 'active'
       }).populate('product').populate('location');
@@ -330,7 +373,7 @@ export async function POST(request) {
         // Check for recent duplicate check-in (within last 10 seconds)
         const tenSecondsAgo = new Date(now.getTime() - 10 * 1000);
         const recentCheckin = await Checkin.findOne({
-          customer: customerId,
+          customer: customer._id,
           product: activeMembership.product._id,
           createdAt: { $gte: tenSecondsAgo }
         });
@@ -358,7 +401,7 @@ export async function POST(request) {
         
         // Create a membership-only check-in record
         const membershipCheckinRecord = new Checkin({
-          customer: customerId,
+          customer: customer._id,
           product: activeMembership.product._id,
           // Omit schedule field entirely for membership-only check-in
           class: {
@@ -402,7 +445,7 @@ export async function POST(request) {
             const classTime = new Date(classItem.datetime);
             if (classTime > now && (!nextClassTime || classTime < nextClassTime)) {
               const customerInClass = classItem.customers.find(c => 
-                c.customer.toString() === customerId
+                c.customer.toString() === customer._id.toString()
               );
               if (customerInClass) {
                 nextClass = classItem;
@@ -418,7 +461,7 @@ export async function POST(request) {
       if (activeMembership && !isMembershipValid) {
         // Create a failed check-in record for expired membership
         const failedCheckinRecord = new Checkin({
-          customer: customerId,
+          customer: customer._id,
           product: activeMembership.product._id,
           class: {
             datetime: now,
@@ -482,7 +525,7 @@ export async function POST(request) {
     
     // Update the customer's status to 'checked in'
     const customerIndex = foundClass.customers.findIndex(c => 
-      c.customer.toString() === customerId
+      c.customer.toString() === customer._id.toString()
     );
     
     if (customerIndex !== -1) {
@@ -500,7 +543,7 @@ export async function POST(request) {
       
       // Create a CLASS check-in record
       const classCheckinRecord = new Checkin({
-        customer: customerId,
+        customer: customer._id,
         product: foundProduct._id,
         schedule: foundSchedule._id,
         class: {
@@ -518,7 +561,7 @@ export async function POST(request) {
       // Also check for active membership and create SEPARATE record
       let membershipCheckin = null;
       const activeMembership = await Membership.findOne({
-        customer: customerId,
+        customer: customer._id,
         org: employee.org._id,
         status: 'active'
       }).populate('product');
@@ -546,7 +589,7 @@ export async function POST(request) {
         
         // Create a SEPARATE membership check-in record
         const membershipCheckinRecord = new Checkin({
-          customer: customerId,
+          customer: customer._id,
           product: activeMembership.product._id,
           // Don't include schedule - this is a membership-only check-in
           class: {
