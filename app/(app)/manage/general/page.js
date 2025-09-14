@@ -74,7 +74,7 @@ export default function Page() {
       <div className="flex-shrink-0 px-4 pt-2">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-xl font-semibold">General Entries</h1>
+            <h1 className="text-xl font-medium">General Entries</h1>
             <p className="text-sm text-muted-foreground">
               View general product entries and customer assignments
             </p>
@@ -138,13 +138,13 @@ export default function Page() {
       <div className="flex-1 flex flex-col overflow-hidden mx-4 mb-4">
         <div className="flex-1 flex flex-col overflow-hidden bg-card rounded-lg border">
           <div className="overflow-y-auto flex-1">
-            <table className="w-full">
-              <thead className="sticky top-0 bg-card z-10 border-b">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-card z-10 border-b font-medium">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-muted-foreground">Member</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-muted-foreground">Member #</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-muted-foreground">Product</th>
-                  <th className="px-6 py-4 text-left text-sm font-medium text-muted-foreground">Date</th>
+                  <th className="px-6 py-4 text-left text-sm text-muted-foreground">Member</th>
+                  <th className="px-6 py-4 text-left text-sm text-muted-foreground">Member #</th>
+                  <th className="px-6 py-4 text-left text-sm text-muted-foreground">Product</th>
+                  <th className="px-6 py-4 text-left text-sm text-muted-foreground">Date</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -163,7 +163,7 @@ export default function Page() {
                     <tr key={entry._id} className="hover:bg-muted/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex flex-col gap-1">
-                          <div className="font-medium text-foreground">{entry.customer?.name || 'Walk-in'}</div>
+                          <div className="text-foreground">{entry.customer?.name || 'Walk-in'}</div>
                           {entry.customer?.email && (
                             <div className="text-sm text-muted-foreground">{entry.customer?.email}</div>
                           )}
