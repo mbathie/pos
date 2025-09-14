@@ -1517,13 +1517,13 @@ export default function Page() {
                     {terminalStatus === 'connected' && (
                       <>
                         <Wifi className="size-4 text-primary" />
-                        <span className="text-xs text-primary">Ready</span>
+                        <span className="text-xs text-primary">Connected</span>
                       </>
                     )}
                     {terminalStatus === 'disconnected' && (
                       <>
-                        <WifiOff className="size-4 text-destructive" />
-                        <span className="text-xs text-destructive">Disconnected</span>
+                        <WifiOff className="size-4 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">No Terminal</span>
                       </>
                     )}
                     {(terminalStatus === 'checking' || terminalStatus === 'discovering' || terminalStatus === 'connecting') && (
