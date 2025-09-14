@@ -188,7 +188,7 @@ export default function SampleTablePage() {
   };
 
   return (
-    <div className="container mx-auto px-4 max-w-7xl h-screen flex flex-col py-4">
+    <div className="mx-auto px-4 max-w-7xl h-screen flex flex-col py-4">
       {/* Header */}
       <div className="mb-4 flex-shrink-0">
         <h1 className="text-xl font-semibold mb-1">Orders Management</h1>

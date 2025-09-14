@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -339,7 +337,14 @@ export default function ManageProductsPage() {
   const hasActiveFilters = (filters.category && filters.category !== 'all') || filters.search;
 
   return (
-    <div className="mx-4 h-[calc(100vh-65px)] flex flex-col">
+    <div className="mx-auto px-4 max-w-7xl h-screen flex flex-col py-4">
+      {/* Header */}
+      <div className="mb-4 flex-shrink-0">
+        <h1 className="text-xl font-semibold mb-1">Products Management</h1>
+        <p className="text-sm text-muted-foreground">
+          View and manage all products with inventory tracking and accounting codes
+        </p>
+      </div>
 
       {/* Filters */}
       <div className="flex gap-2 items-end mb-4 flex-shrink-0">
@@ -383,119 +388,114 @@ export default function ManageProductsPage() {
       </div>
 
       {/* Products Table */}
-      <Card className="p-0 m-0 flex-1 flex flex-col overflow-hidden">
-        <CardContent className="p-0 m-0 flex-1 flex flex-col overflow-hidden">
-          {loading && allProducts.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground flex-1 flex items-center justify-center">
-              Loading products...
-            </div>
-          ) : (
-            <div className="flex-1 min-h-0 relative">
-              <Table className="table-fixed w-full">
-                <TableHeader className="sticky top-0 z-10 bg-background">
-                  <TableRow>
-                    <TableHead 
-                      className="cursor-pointer bg-muted rounded-tl-lg w-1/5"
-                      onClick={() => handleSort('name')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Name
-                        <ChevronsUpDown className="size-4" />
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer bg-muted hover:bg-muted/80 w-1/8"
-                      onClick={() => handleSort('category')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Category
-                        <ChevronsUpDown className="size-4" />
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer bg-muted hover:bg-muted/80 w-1/6"
-                      onClick={() => handleSort('accounting')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Acct. Code
-                        <ChevronsUpDown className="size-4" />
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer bg-muted hover:bg-muted/80 w-1/8"
-                      onClick={() => handleSort('menu')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Menu
-                        <ChevronsUpDown className="size-4" />
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer bg-muted hover:bg-muted/80 w-1/8"
-                      onClick={() => handleSort('folder')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Folder
-                        <ChevronsUpDown className="size-4" />
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer bg-muted hover:bg-muted/80 w-16"
-                      onClick={() => handleSort('qty')}
-                    >
-                      <div className="flex items-center justify-start gap-1">
-                        Qty
-                        <ChevronsUpDown className="size-4" />
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer bg-muted hover:bg-muted/80 w-16"
-                      onClick={() => handleSort('par')}
-                    >
-                      <div className="flex items-center justify-start gap-1">
-                        Par
-                        <ChevronsUpDown className="size-4" />
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer bg-muted hover:bg-muted/80 w-16"
-                      onClick={() => handleSort('bump')}
-                    >
-                      <div className="flex items-center gap-1">
-                        Bump
-                        <ChevronsUpDown className="size-4" />
-                      </div>
-                    </TableHead>
-                    <TableHead 
-                      className="cursor-pointer bg-muted hover:bg-muted/80 w-20"
+      {loading && allProducts.length === 0 ? (
+        <div className="text-center py-8 text-muted-foreground flex-1 flex items-center justify-center">
+          Loading products...
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0 relative overflow-hidden rounded-lg border">
+          <div className="h-full overflow-auto">
+            <table className="w-full table-fixed">
+              <thead className="sticky top-0 z-10 bg-muted/50 border-b">
+                <tr>
+                  <th 
+                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-1/5"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center">
+                      Name
+                      <ChevronsUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </th>
+                  <th 
+                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-1/8"
+                    onClick={() => handleSort('category')}
+                  >
+                    <div className="flex items-center">
+                      Category
+                      <ChevronsUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </th>
+                  <th 
+                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-1/6"
+                    onClick={() => handleSort('accounting')}
+                  >
+                    <div className="flex items-center">
+                      Acct. Code
+                      <ChevronsUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </th>
+                  <th 
+                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-1/8"
+                    onClick={() => handleSort('menu')}
+                  >
+                    <div className="flex items-center">
+                      Menu
+                      <ChevronsUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </th>
+                  <th 
+                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-1/8"
+                    onClick={() => handleSort('folder')}
+                  >
+                    <div className="flex items-center">
+                      Folder
+                      <ChevronsUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </th>
+                  <th 
+                    className="h-12 px-4 text-center align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-16"
+                    onClick={() => handleSort('qty')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Qty
+                      <ChevronsUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </th>
+                  <th 
+                    className="h-12 px-4 text-center align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-16"
+                    onClick={() => handleSort('par')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Par
+                      <ChevronsUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </th>
+                  <th 
+                    className="h-12 px-4 text-center align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-16"
+                    onClick={() => handleSort('bump')}
+                  >
+                    <div className="flex items-center justify-center">
+                      Bump
+                      <ChevronsUpDown className="ml-2 h-4 w-4" />
+                    </div>
+                  </th>
+                    <th 
+                      className="h-12 px-4 text-center align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted w-20"
                       onClick={() => handleSort('publish')}
                     >
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center justify-center">
                         Publish
-                        <ChevronsUpDown className="size-4" />
+                        <ChevronsUpDown className="ml-2 h-4 w-4" />
                       </div>
-                    </TableHead>
-                    <TableHead className="bg-muted rounded-tr-lg w-18">
+                    </th>
+                    <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground w-18">
                       
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-              </Table>
-              
-              <div className="absolute inset-0 top-12 overflow-y-auto">
-                <Table className="table-fixed w-full">
-                  <TableBody>
-                    {filteredProducts.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProducts.length === 0 ? (
+                    <tr>
+                        <td colSpan={10} className="text-center py-8 text-muted-foreground">
                           {hasActiveFilters ? 'No products match your filters.' : 
                            allProducts.length === 0 ? 'No products found.' : 'No products match your filters.'}
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     ) : (
                       filteredProducts.map((product) => (
-                        <TableRow key={product._id} className="hover:bg-muted/50">
-                          <TableCell className="font-medium align-top w-1/5">
+                        <tr key={product._id} className="hover:bg-muted/50 border-b">
+                          <td className="px-4 py-3 font-medium align-middle w-1/5">
                             <div className="flex items-center gap-2">
                               {product.thumbnail ? (
                                 <img 
@@ -508,28 +508,24 @@ export default function ManageProductsPage() {
                                   <Tag className="w-4 h-4 text-muted-foreground" />
                                 </div>
                               )}
-                              {product.name}
+                              <span>{product.name}</span>
                             </div>
-                          </TableCell>
-                          <TableCell className="align-top w-1/8">
-                            {product.category ? (
-                              <div className="flex items-center gap-2">
-                                {product.category.thumbnail ? (
-                                  <img 
-                                    src={product.category.thumbnail} 
-                                    alt={product.category.name} 
-                                    className="w-5 h-5 rounded object-cover invert"
-                                  />
-                                ) : (
-                                  <Image className="w-5 h-5 text-muted-foreground/0" />
-                                )}
-                                <span className="text-sm">{product.category.name}</span>
-                              </div>
-                            ) : (
-                              <span></span>
-                            )}
-                          </TableCell>
-                          <TableCell className="align-top w-1/6">
+                          </td>
+                          <td className="px-4 py-3 align-middle w-1/8">
+                            <div className="flex items-center gap-2">
+                              {product.category?.thumbnail ? (
+                                <img 
+                                  src={product.category.thumbnail} 
+                                  alt={product.category?.name} 
+                                  className="w-5 h-5 rounded object-cover invert flex-shrink-0"
+                                />
+                              ) : (
+                                <div className="w-5 h-5 flex-shrink-0"></div>
+                              )}
+                              <span className="text-sm">{product.category?.name || ''}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 align-middle w-1/6">
                             {product.accounting ? (
                               <div className="flex flex-col">
                                 <span className="text-sm">{product.accounting.name}</span>
@@ -538,15 +534,11 @@ export default function ManageProductsPage() {
                             ) : (
                               <span></span>
                             )}
-                          </TableCell>
-                          <TableCell className="align-top w-1/8">
-                            {product.category?.menu ? (
-                              <>{product.category.menu}</>
-                            ) : (
-                              <span></span>
-                            )}
-                          </TableCell>
-                          <TableCell className="align-top w-1/8">
+                          </td>
+                          <td className="px-4 py-3 align-middle w-1/8">
+                            {product.category?.menu || ''}
+                          </td>
+                          <td className="px-4 py-3 align-middle w-1/8">
                             {product.folder ? (
                               <div className="flex items-center gap-2">
                                 <div 
@@ -560,8 +552,8 @@ export default function ManageProductsPage() {
                             ) : (
                               <span></span>
                             )}
-                          </TableCell>
-                          <TableCell className="align-top w-16">
+                          </td>
+                          <td className="px-4 py-3 align-middle text-center w-16">
                             <span className={
                               product.qty !== null && 
                               product.qty !== undefined && 
@@ -574,27 +566,27 @@ export default function ManageProductsPage() {
                             }>
                               {product.qty || 0}
                             </span>
-                          </TableCell>
-                          <TableCell className="align-top w-16">
+                          </td>
+                          <td className="px-4 py-3 align-middle text-center w-16">
                             {product.par || 0}
-                          </TableCell>
-                          <TableCell className="align-top w-16">
+                          </td>
+                          <td className="px-4 py-3 align-middle text-center w-16">
                             <Checkbox
                               checked={product.bump === true}
                               onCheckedChange={(checked) => {
                                 updateBumpStatus(product._id, checked);
                               }}
                             />
-                          </TableCell>
-                          <TableCell className="align-top w-20">
+                          </td>
+                          <td className="px-4 py-3 align-middle text-center w-20">
                             <Checkbox
                               checked={product.publish !== false}
                               onCheckedChange={(checked) => {
                                 updatePublishStatus(product._id, checked);
                               }}
                             />
-                          </TableCell>
-                          <TableCell className="align-top w-18">
+                          </td>
+                          <td className="px-4 py-3 align-middle text-right w-18">
                             <div className="flex gap-2 pl-2">
                               <Button
                                 variant="ghost"
@@ -615,17 +607,17 @@ export default function ManageProductsPage() {
                                 <Edit className="size-4" />
                               </Button>
                             </div>
-                          </TableCell>
-                        </TableRow>
+                          </td>
+                        </tr>
                       ))
                     )}
-                  </TableBody>
-                </Table>
+                  </tbody>
+                </table>
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          )
+        </div>
+      )}
 
       {/* Edit Product Dialog */}
       <Dialog open={editDialog.open} onOpenChange={(open) => {
