@@ -25,8 +25,9 @@ import { useTerminalLink } from './useTerminalLink'
 import { useRouter } from 'next/navigation'
 
 export default function TerminalsPage() {
-  const { locations } = useGlobals()
+  const { locations: globalLocations, setLocations } = useGlobals()
   const router = useRouter()
+  const [locations, setLocalLocations] = useState([])
   const [terminals, setTerminals] = useState([])
   const [loading, setLoading] = useState(true)
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -58,16 +59,33 @@ export default function TerminalsPage() {
   useEffect(() => {
     loadData()
   }, [])
+  
+  // Use local locations once loaded, fallback to global
+  const displayLocations = locations.length > 0 ? locations : globalLocations
 
   const loadData = async () => {
     setLoading(true)
     setError(null)
     
-    const result = await fetchTerminalsData()
-    
-    setTerminals(result.terminals)
-    setError(result.error)
-    setLoading(false)
+    try {
+      // Fetch locations first
+      const locationsRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/locations`)
+      if (locationsRes.ok) {
+        const locationsData = await locationsRes.json()
+        setLocalLocations(locationsData)
+        setLocations(locationsData) // Also update global state
+      }
+      
+      // Then fetch terminals
+      const result = await fetchTerminalsData()
+      setTerminals(result.terminals)
+      setError(result.error)
+    } catch (error) {
+      console.error('Error loading data:', error)
+      setError('Failed to load data')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const onAddTerminal = async () => {
@@ -166,8 +184,8 @@ export default function TerminalsPage() {
             <DialogTrigger asChild>
               <Button 
                 className="cursor-pointer"
-                disabled={!locations?.some(hasCompleteAddress)}
-                title={!locations?.some(hasCompleteAddress) ? "Setup location address first" : "Add new terminal"}
+                disabled={!displayLocations?.some(hasCompleteAddress)}
+                title={!displayLocations?.some(hasCompleteAddress) ? "Setup location address first" : "Add new terminal"}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Terminal
@@ -195,7 +213,7 @@ export default function TerminalsPage() {
                       <SelectValue placeholder="Select a location" />
                     </SelectTrigger>
                     <SelectContent>
-                      {locations?.filter(hasCompleteAddress).map((location) => (
+                      {displayLocations?.filter(hasCompleteAddress).map((location) => (
                         <SelectItem key={location._id} value={location._id}>
                           {location.name}
                         </SelectItem>
@@ -290,7 +308,7 @@ export default function TerminalsPage() {
             </tr>
           </thead>
           <tbody className="[&_tr:last-child]:border-0">
-            {locations?.map((location) => {
+            {displayLocations?.map((location) => {
               const locationTerminals = getTerminalsForLocation(terminals, location._id)
               
               return (
@@ -426,14 +444,17 @@ export default function TerminalsPage() {
         </table>
       </div>
 
-      {locations?.length === 0 && (
+      {displayLocations?.length === 0 && (
         <div className="text-center py-8 mt-8">
           <Terminal className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
           <h3 className="text-lg font-semibold mb-2">No Locations Found</h3>
           <p className="text-sm text-muted-foreground mb-4">
             You need to create locations before you can add terminals
           </p>
-          <Button className="cursor-pointer">
+          <Button 
+            className="cursor-pointer"
+            onClick={() => router.push('/manage/locations/create')}
+          >
             Create Location
           </Button>
         </div>
