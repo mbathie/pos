@@ -177,11 +177,23 @@ export default function ClassesProductSheet({
               <Label>Product Name</Label>
               <div className="flex items-center gap-2">
                 <Label htmlFor={`publish-${product._id}`} className="text-sm font-normal">Publish</Label>
-                <Switch
-                  id={`publish-${product._id}`}
-                  checked={product.publish !== undefined ? product.publish : true}
-                  onCheckedChange={(checked) => updateProduct({ publish: checked })}
-                />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="flex items-center gap-1">
+                        <Info className="h-4 w-4 text-muted-foreground" />
+                        <Switch
+                          id={`publish-${product._id}`}
+                          checked={product.publish !== undefined ? product.publish : true}
+                          onCheckedChange={(checked) => updateProduct({ publish: checked })}
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Select publish if you want this product to appear in your POS</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
             <Input
