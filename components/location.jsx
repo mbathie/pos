@@ -7,7 +7,7 @@ import {
   SidebarMenu, SidebarMenuButton, SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-export function LocationSwitcher({}) {
+export function LocationDisplay() {
   const { location } = useGlobals()
 
   return (

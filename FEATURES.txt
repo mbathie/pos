@@ -1,3 +1,24 @@
+15.9.2025
+
+- membership, should be able to take payment without using a card
+  - can give discounts, say we just want to give them 1 month free we just apply a 100% discount
+- membership discounts only apply to the first payment - look into how Stripe does this
+- membership holds
+  - settings, need to setup membership hold limitations
+  - each company should be able to define how many days in a year a customer can hold membership for
+  - it should change their next billing cycle date
+  - needs to block the customer from any membership related discounts.
+- membership cancellations
+  - company wide cancellation policy.
+  - how to handle 12 month vs 1 month memberships
+- ability to grant credits ($) to the customer account - manually assign (expiry) i.e. gift cards
+- basic reporting
+DONE - should be able to assign particular browser fixed always to a location (ADMIN only)
+  - staff when they login to a terminal can't switch between locations, as its now locked to a particular
+    location
+- customer email receipts should be off by default for shop items
+  customers can as for it, in which case they can still receiive it.
+
 Questions:
   - how will membership expiry work, i.e. after 6 months
 

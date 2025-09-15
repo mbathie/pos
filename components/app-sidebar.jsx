@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { MapPin, MapPinCheckInside, Users, CircleDollarSign, Landmark, Settings, Calendar, QrCode, ChefHat, Receipt, Percent, Terminal, UserCheck, Tag, ScanLine, CreditCard, CheckCircle } from "lucide-react";
 import { NavMenu } from "@/components/nav-menu";
 import { NavUser } from "@/components/nav-user";
-import { LocationSwitcher } from "@/components/location-switcher";
+import { LocationDisplay } from "@/components/location";
 import {
   Sidebar,
   SidebarContent,
@@ -88,7 +88,7 @@ export function AppSidebar(props) {
   return (
     <Sidebar collapsible="icon" {...props} >
       <SidebarHeader>
-        <LocationSwitcher />
+        <LocationDisplay />
       </SidebarHeader>
       <SidebarContent suppressHydrationWarning>
         <NavMenu settings={settings} />

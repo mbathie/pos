@@ -16,6 +16,22 @@ const CustomerSchema = new mongoose.Schema({
     unique: true,
     sparse: true,
   },
+  credits: {
+    balance: { type: Number, default: 0 },
+    credits: [{
+      date: { type: Date, default: Date.now },
+      employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
+      amount: Number,
+      note: String
+    }],
+    debits: [{
+      date: { type: Date, default: Date.now },
+      employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
+      transaction: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' },
+      amount: Number,
+      note: String
+    }]
+  }
 }, { timestamps: true, strict: false });
 
 // Index for orgs array

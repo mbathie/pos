@@ -4,19 +4,36 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt, Users } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt, Users, DollarSign, Plus } from "lucide-react";
 import TransactionsTable from '@/components/transactions-table';
 import { CustomerAvatar } from '@/components/customer-avatar';
+import { useGlobals } from '@/lib/globals';
+import { 
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import dayjs from 'dayjs';
 
 export default function CustomerDetailPage({ params }) {
   const router = useRouter();
+  const { employee } = useGlobals();
   const [customer, setCustomer] = useState(null);
   const [memberships, setMemberships] = useState([]);
   const [parentMemberships, setParentMemberships] = useState([]);
   const [dependentMemberships, setDependentMemberships] = useState([]);
   const [loading, setLoading] = useState(true);
   const [customerId, setCustomerId] = useState(null);
+  const [creditDialogOpen, setCreditDialogOpen] = useState(false);
+  const [creditAmount, setCreditAmount] = useState('');
+  const [creditNote, setCreditNote] = useState('');
+  const [creditLoading, setCreditLoading] = useState(false);
 
   // Handle async params in Next.js 15+
   useEffect(() => {
@@ -108,6 +125,36 @@ export default function CustomerDetailPage({ params }) {
     return `${variation} ${unit}${parseInt(variation) > 1 ? 's' : ''}`;
   };
 
+  const handleAddCredit = async () => {
+    if (!creditAmount || parseFloat(creditAmount) <= 0) return;
+    
+    setCreditLoading(true);
+    try {
+      const response = await fetch(`/api/customers/${customerId}/credits`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: parseFloat(creditAmount),
+          note: creditNote
+        })
+      });
+      
+      if (response.ok) {
+        const updatedCustomer = await response.json();
+        setCustomer(updatedCustomer);
+        setCreditDialogOpen(false);
+        setCreditAmount('');
+        setCreditNote('');
+      } else {
+        console.error('Failed to add credit');
+      }
+    } catch (error) {
+      console.error('Error adding credit:', error);
+    } finally {
+      setCreditLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="mx-4">
@@ -157,12 +204,12 @@ export default function CustomerDetailPage({ params }) {
 
       {/* Customer Information */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6 flex-shrink-0">
-        {/* Basic Information */}
+        {/* Combined Basic & Contact Information */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <User className="size-5" />
-              Basic Information
+              Customer Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -202,6 +249,44 @@ export default function CustomerDetailPage({ params }) {
                   <div></div>
                 </div>
               </div>
+            </div>
+            
+            {/* Contact Information Section */}
+            <div className="border-t pt-4 space-y-3">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <Mail className="size-4" />
+                  Email
+                </label>
+                <p className="text-sm">{customer.email || 'Not provided'}</p>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                  <Phone className="size-4" />
+                  Phone
+                </label>
+                <p className="text-sm">{formatPhone(customer.phone)}</p>
+              </div>
+              
+              {customer.address && (
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
+                    <MapPin className="size-4" />
+                    Address
+                  </label>
+                  <div className="text-sm space-y-1">
+                    {customer.address.address1 && <p>{customer.address.address1}</p>}
+                    {(customer.address.city || customer.address.state || customer.address.postcode) && (
+                      <p>
+                        {[customer.address.city, customer.address.state, customer.address.postcode]
+                          .filter(Boolean)
+                          .join(', ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -342,49 +427,72 @@ export default function CustomerDetailPage({ params }) {
           </CardContent>
         </Card>
 
-        {/* Contact Information */}
+        {/* Credit Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Phone className="size-5" />
-              Contact Information
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DollarSign className="size-5" />
+                Credit
+              </div>
+              {(employee?.role === 'ADMIN' || employee?.role === 'MANAGER') && (
+                <Button 
+                  size="sm" 
+                  onClick={() => setCreditDialogOpen(true)}
+                  className="cursor-pointer"
+                >
+                  <Plus className="size-4 mr-1" />
+                  Add Credit
+                </Button>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                <Mail className="size-4" />
-                Email
-              </label>
-              <p className="text-sm">{customer.email || 'Not provided'}</p>
+            {/* Balance Display */}
+            <div className="text-center py-4 border rounded-lg bg-muted/30">
+              <p className="text-sm text-muted-foreground mb-1">Current Balance</p>
+              <p className="text-3xl font-bold">${(customer.credits?.balance || 0).toFixed(2)}</p>
             </div>
             
-            <div>
-              <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                <Phone className="size-4" />
-                Phone
-              </label>
-              <p className="text-sm">{formatPhone(customer.phone)}</p>
-            </div>
-            
-            {customer.address && (
-              <div>
-                <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                  <MapPin className="size-4" />
-                  Address
-                </label>
-                <div className="text-sm space-y-1">
-                  {customer.address.address1 && <p>{customer.address.address1}</p>}
-                  {(customer.address.city || customer.address.state || customer.address.postcode) && (
-                    <p>
-                      {[customer.address.city, customer.address.state, customer.address.postcode]
-                        .filter(Boolean)
-                        .join(', ')}
-                    </p>
-                  )}
+            {/* Credit History */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">Recent Activity</p>
+              {customer.credits?.credits?.length > 0 || customer.credits?.debits?.length > 0 ? (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {/* Combine and sort credits and debits by date */}
+                  {[
+                    ...(customer.credits?.credits || []).map(c => ({ ...c, type: 'credit' })),
+                    ...(customer.credits?.debits || []).map(d => ({ ...d, type: 'debit' }))
+                  ]
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .slice(0, 10)
+                    .map((item, index) => (
+                      <div key={index} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
+                        <div className="flex-1">
+                          <p className="font-medium">
+                            {item.type === 'credit' ? (
+                              <span className="text-primary">+${item.amount.toFixed(2)}</span>
+                            ) : (
+                              <span className="text-destructive">-${item.amount.toFixed(2)}</span>
+                            )}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {dayjs(item.date).format('DD/MM/YYYY h:mm A')}
+                          </p>
+                          {item.note && (
+                            <p className="text-xs text-muted-foreground italic">{item.note}</p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                 </div>
-              </div>
-            )}
+              ) : (
+                <div className="text-center py-4">
+                  <DollarSign className="size-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm text-muted-foreground">No credit history</p>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -407,6 +515,64 @@ export default function CustomerDetailPage({ params }) {
           className="flex-1"
         />
       </div>
+      
+      {/* Add Credit Dialog */}
+      <Dialog open={creditDialogOpen} onOpenChange={setCreditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Credit</DialogTitle>
+            <DialogDescription>
+              Add credit to {customer?.name}'s account. This will be immediately available for use.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="amount">Amount ($)</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                placeholder="0.00"
+                value={creditAmount}
+                onChange={(e) => setCreditAmount(e.target.value)}
+              />
+            </div>
+            
+            <div>
+              <Label htmlFor="note">Note (Optional)</Label>
+              <Textarea
+                id="note"
+                placeholder="Add a note about this credit..."
+                value={creditNote}
+                onChange={(e) => setCreditNote(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setCreditDialogOpen(false);
+                setCreditAmount('');
+                setCreditNote('');
+              }}
+              disabled={creditLoading}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddCredit}
+              disabled={!creditAmount || parseFloat(creditAmount) <= 0 || creditLoading}
+            >
+              {creditLoading ? 'Adding...' : 'Add Credit'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
