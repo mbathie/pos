@@ -7,7 +7,7 @@ let terminalInstance = null;
 let discoveredReaders = [];
 let connecting = false
 
-export function useCard({ cart }) {
+export function useCard({ cart, employee, location }) {
   const { terminalConnection, setTerminalConnection, clearTerminalConnection, isTerminalConnectionValid } = useGlobals();
   const paymentIntentId = useRef()
   const transactionId = useRef()
@@ -17,11 +17,15 @@ export function useCard({ cart }) {
   const [terminalStatus, setTerminalStatus] = useState('checking') // checking, disconnected, discovering, connecting, connected
   const [paymentStatus, setPaymentStatus] = useState(null) // null, collecting, processing, succeeded, failed
 
-  // Check for cached connection on mount
+  // Check for cached connection on mount and location changes
   useEffect(() => {
     const checkCachedConnection = async () => {
-      if (isTerminalConnectionValid()) {
-        console.log('🔄 Found valid cached terminal connection:', terminalConnection);
+      const currentLocationId = location?._id || employee?.selectedLocationId || employee?.location?._id;
+      
+      // Check if cached connection is valid AND for the current location
+      if (isTerminalConnectionValid() && 
+          terminalConnection.locationId === currentLocationId) {
+        console.log('🔄 Found valid cached terminal connection for current location:', terminalConnection);
         setTerminalStatus('connecting'); // Show connecting status while checking
         
         // Initialize terminal if not already initialized
@@ -44,13 +48,25 @@ export function useCard({ cart }) {
           }
         }
       } else {
-        // No cached connection or expired
+        // No cached connection, expired, or different location
+        if (terminalConnection.locationId && terminalConnection.locationId !== currentLocationId) {
+          console.log('📍 Location changed, disconnecting from previous location terminal...');
+          // If there's an active terminal connection for a different location, disconnect it
+          if (terminalInstance) {
+            const connected = await terminalInstance.getConnectedReader();
+            if (connected) {
+              console.log('🔌 Disconnecting reader from previous location...');
+              await terminalInstance.disconnectReader();
+            }
+          }
+          clearTerminalConnection();
+        }
         setTerminalStatus('disconnected');
       }
     };
     
     checkCachedConnection();
-  }, []); // Only run on mount
+  }, [location?._id, employee?.selectedLocationId, employee?.location?._id]); // Re-check when location changes
 
   const initTerminal = async () => {
     if (!terminalInstance && typeof window !== 'undefined') {
@@ -158,13 +174,15 @@ export function useCard({ cart }) {
         connecting = false
         setTerminalStatus('connected')
         
-        // Cache the connection in localStorage via globals
+        // Cache the connection in localStorage via globals with location ID
+        const currentLocationId = location?._id || employee?.selectedLocationId || employee?.location?._id;
         setTerminalConnection({
           readerId: result.reader.id,
           readerLabel: result.reader.label,
-          isSimulated: result.reader.simulated || false
+          isSimulated: result.reader.simulated || false,
+          locationId: currentLocationId
         });
-        console.log('💾 Terminal connection cached for future use');
+        console.log('💾 Terminal connection cached for location:', currentLocationId);
       }
     } catch (error) {
       console.log('Terminal connection error:', error.message || 'Unknown error');

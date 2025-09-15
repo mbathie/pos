@@ -30,7 +30,7 @@ const emailSchema = z.string().email('Please enter a valid email address');
 const keypad = ['1','2','3','4','5','6','7','8','9','.','0','AC'];
 
 export default function Page() {
-  const { cart, resetCart, markCartAsStale, setCart, employee, setEmployee, appliedAdjustments, setAppliedAdjustments, clearAppliedAdjustments } = useGlobals();
+  const { cart, resetCart, markCartAsStale, setCart, employee, setEmployee, location, appliedAdjustments, setAppliedAdjustments, clearAppliedAdjustments } = useGlobals();
   const [cashInput, setCashInput] = useState('0');
   const [tab, setTab] = useState('card');
   const router = useRouter();
@@ -41,13 +41,14 @@ export default function Page() {
   const { 
     discoverReaders, 
     connectReader, 
+    disconnectReader,
     collectPayment, 
     capturePayment,
     cancelPayment,
     terminalStatus,
     paymentStatus: cardPaymentStatus,
     transactionId: cardTransactionId
-  } = useCard({cart})
+  } = useCard({cart, employee, location})
   const { calcChange, receiveCash } = useCash({cart})
 
   const [changeInfo, setChangeInfo] = useState({ received: "0.00", change: "0.00" });
@@ -560,19 +561,54 @@ export default function Page() {
   // Check if Stripe is configured and terminals exist
   useEffect(() => {
     const checkStripeAndTerminals = async () => {
+      console.log('🔍 Checking terminals - Employee object:', employee);
+      console.log('🔍 Checking terminals - Cart object:', cart);
+      
       try {
         // Check Stripe status
         const stripeRes = await fetch('/api/payments');
         const stripeData = await stripeRes.json();
         setStripeEnabled(stripeData.charges_enabled || false);
         
-        // Check if any terminals are configured
-        if (stripeData.charges_enabled) {
+        // Use the location from globals which is updated by the location switcher
+        const currentLocationId = location?._id || employee?.selectedLocationId || employee?.location?._id;
+        
+        if (stripeData.charges_enabled && currentLocationId) {
           const terminalsRes = await fetch('/api/terminals');
           const terminals = await terminalsRes.json();
-          setHasTerminals(terminals && terminals.length > 0);
+          console.log('🔍 All terminals from API:', terminals);
+          console.log('📍 Current location ID (using selectedLocationId):', currentLocationId);
+          
+          // Filter terminals for the current location only
+          const locationTerminals = terminals?.filter(t => {
+            const locationMatch = t.location?._id === currentLocationId || 
+                                 t.location === currentLocationId;
+            console.log(`  Terminal ${t.label}: location ${t.location?._id || t.location} === ${currentLocationId}? ${locationMatch}`);
+            return locationMatch;
+          }) || [];
+          
+          setHasTerminals(locationTerminals.length > 0);
+          console.log(`📍 Found ${locationTerminals.length} terminal(s) for location ${currentLocationId}:`, locationTerminals);
+          
+          // If no terminals for this location, ensure we disconnect any existing connection
+          if (locationTerminals.length === 0 && terminalStatus === 'connected') {
+            console.log('📍 No terminals at new location, disconnecting...');
+            if (disconnectReader) {
+              await disconnectReader();
+            }
+          }
         } else {
+          console.log('❌ Cannot check terminals:', {
+            stripeEnabled: stripeData.charges_enabled,
+            hasLocation: !!currentLocationId
+          });
           setHasTerminals(false);
+          
+          // Disconnect if we have no location
+          if (terminalStatus === 'connected' && disconnectReader) {
+            console.log('📍 No location selected, disconnecting terminal...');
+            await disconnectReader();
+          }
         }
       } catch (error) {
         console.error('Error checking Stripe/terminal status:', error);
@@ -581,25 +617,36 @@ export default function Page() {
       }
     };
     checkStripeAndTerminals();
-  }, []);
+  }, [location?._id, employee?.selectedLocationId, employee?.location?._id]); // Re-check when location changes
 
   // Only attempt terminal connection if terminals are actually configured
   useEffect(() => {
+    console.log('🔄 Terminal auto-connect check:', {
+      stripeEnabled,
+      hasTerminals,
+      terminalStatus,
+      locationId: location?._id || employee?.selectedLocationId || employee?.location?._id
+    });
+    
     // Only try to initialize if:
     // 1. Stripe is enabled
     // 2. Terminals are configured in the system
     // 3. Terminal is currently disconnected
     if (stripeEnabled && hasTerminals && terminalStatus === 'disconnected') {
+      console.log('✅ Conditions met for auto-connect, initializing terminal...');
+      
       // Single async function to handle both discovery and connection
       const initializeTerminal = async () => {
         try {
           // Discover readers
+          console.log('🔍 Discovering readers...');
           await discoverReaders();
           
           // Minimal delay to ensure discovery completes
           await new Promise(resolve => setTimeout(resolve, 100));
           
           // Connect to the discovered reader
+          console.log('🔌 Connecting to reader...');
           await connectReader();
         } catch (error) {
           console.error('Terminal initialization error:', error);
@@ -613,8 +660,14 @@ export default function Page() {
       // Minimal initial delay to ensure state is ready
       const timer = setTimeout(initializeTerminal, 200);
       return () => clearTimeout(timer);
+    } else {
+      console.log('⏭️ Skipping auto-connect:', {
+        stripeNotEnabled: !stripeEnabled,
+        noTerminals: !hasTerminals,
+        notDisconnected: terminalStatus !== 'disconnected'
+      });
     }
-  }, [stripeEnabled, hasTerminals, terminalStatus]);
+  }, [stripeEnabled, hasTerminals, terminalStatus, location?._id, employee?.selectedLocationId, employee?.location?._id]); // Also trigger when location changes
 
   // Always use live cart for display
   const displayCart = cart

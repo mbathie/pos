@@ -18,17 +18,32 @@ export async function GET() {
 
     const { payload } = await jwtVerify(token.value, SECRET_KEY)
 
+    console.log('📍 /api/users/me - JWT payload:', {
+      selectedLocationId: payload.selectedLocationId,
+      employeeId: payload.employeeId
+    });
+
     const employee = await Employee.findById(payload.employeeId)
-      .populate({ path: "location", select: "name" })
       .populate({ path: "org", select: "name stripeAccountId" })
       .lean()
 
     if (!employee)
       return NextResponse.json({ error: "User not found" }, { status: 404 })
 
-    const { hash, createdAt, updatedAt, deleted, ...safeEmployee } = employee
+    const { hash, createdAt, updatedAt, deleted, location, ...safeEmployee } = employee
 
-    return NextResponse.json({ employee: safeEmployee }, { status: 200 })
+    // Add selectedLocationId from JWT to the employee object
+    const employeeWithSelectedLocation = {
+      ...safeEmployee,
+      selectedLocationId: payload.selectedLocationId || null
+    }
+    
+    console.log('📍 /api/users/me - Returning employee:', {
+      selectedLocationId: employeeWithSelectedLocation.selectedLocationId,
+      employeeId: employeeWithSelectedLocation._id
+    });
+
+    return NextResponse.json({ employee: employeeWithSelectedLocation }, { status: 200 })
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })

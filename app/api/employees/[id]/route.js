@@ -14,9 +14,9 @@ export async function PUT(req, { params }) {
   try {
     const { id } = await params
     const body = await req.json()
-    const { name, email, locationId, role } = body
+    const { name, email, role } = body
 
-    if (!name || !email || !locationId || !role) {
+    if (!name || !email || !role) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
@@ -36,14 +36,13 @@ export async function PUT(req, { params }) {
       { 
         name, 
         email, 
-        location: locationId, 
         role 
       },
       { 
         new: true,
         runValidators: true
       }
-    ).populate({ path: 'location', select: 'name' })
+    )
 
     if (!updatedEmployee) {
       return NextResponse.json({ error: "Employee not found" }, { status: 404 })

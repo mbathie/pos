@@ -49,11 +49,25 @@ export default function LoginPage() {
       // }
       
       setEmployee(employeeData)
-      setLocation(data.employee.location)
-
+      
+      // Fetch all locations
       const locationsRes = await fetch(`/api/locations`, { method: "GET" });
       const _l = await locationsRes.json()
       setLocations(_l)
+      
+      // Set the location based on selectedLocationId (which comes from browser tie)
+      if (data.employee.selectedLocationId) {
+        const selectedLocation = _l.find(loc => loc._id === data.employee.selectedLocationId);
+        if (selectedLocation) {
+          setLocation(selectedLocation);
+        } else if (_l.length > 0) {
+          // Fallback to first location if selected location not found
+          setLocation(_l[0]);
+        }
+      } else if (_l.length > 0) {
+        // Fallback to first location
+        setLocation(_l[0]);
+      }
 
       window.location.href = "/shop"
     } catch (err) {

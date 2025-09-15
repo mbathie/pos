@@ -53,7 +53,6 @@ dayjs.extend(relativeTime)
 
 export default function Page () {
   const [ employees, setEmployees ] = useState([])
-  const [ locations, setLocations ] = useState([])
   const [ dialogOpen, setDialogOpen ] = useState(null)
   const [ newEmployee, setNewEmployee ] = useState({})
   const [ actionLoading, setActionLoading ] = useState({})
@@ -62,9 +61,6 @@ export default function Page () {
     async function start() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees`, { method: "GET" })
       setEmployees(await res.json())
-
-      const lres = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/locations`, { method: "GET" })
-      setLocations(await lres.json())
     }
     start()
   },[])
@@ -140,7 +136,6 @@ export default function Page () {
               e={newEmployee}
               isOpen={newEmployee.new}
               setIsOpen={() => setNewEmployee({...newEmployee, new: false})}
-              locations={locations}
               employees={employees}
               setEmployees={setEmployees}
             />
@@ -153,7 +148,6 @@ export default function Page () {
               <TableRow>
                 <TableHead className="bg-muted rounded-tl-lg">Email</TableHead>
                 <TableHead className="bg-muted">Name</TableHead>
-                <TableHead className="bg-muted">Default Location</TableHead>
                 <TableHead className="bg-muted">Role</TableHead>
                 <TableHead className="bg-muted">Last Activity</TableHead>
                 <TableHead className="bg-muted rounded-tr-lg"></TableHead>
@@ -171,7 +165,6 @@ export default function Page () {
                         {e.locked && <Lock className="size-4 text-destructive" />}
                       </TableCell>
                       <TableCell>{e.name}</TableCell>
-                      <TableCell>{e?.location?.name}</TableCell>
                       <TableCell>{e.role}</TableCell>
                       <TableCell>{dayjs(e.updatedAt).fromNow()}</TableCell>
                       <TableCell className="text-right">
@@ -230,7 +223,6 @@ export default function Page () {
                           e={e}
                           isOpen={dialogOpen === i}
                           setIsOpen={() => setDialogOpen(null)}
-                          locations={locations}
                           employees={employees}
                           setEmployees={setEmployees}
                         />
@@ -248,7 +240,7 @@ export default function Page () {
   )
 }
 
-export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locations }) {
+export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen }) {
   const [ employee, setEmployee ] = useState({})
   const [ isValid, setIsValid ] = useState(false)
   const [ isLoading, setIsLoading ] = useState(false)
@@ -260,9 +252,6 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
     email: z.string().email(),
     name: z.string().min(1, "Name is required"),
     role: z.enum(availableRoles), // Use roles from permissions file
-    location: z.object({
-      id: z.string().min(1, "Location must be selected"),
-    }),
   });
 
   useEffect(() => {
@@ -275,8 +264,6 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
         email: employee.email,
         name: employee.name, 
         role: employee.role,
-        location: employee.location,
-        locationId: employee.location?.id
       });
     } else {
       console.log('Validation passed for employee:', employee.email || 'new employee');
@@ -288,20 +275,15 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
       email: "", 
       name: "", 
       role: "", 
-      location: {},
       new: false,
     };
 
     if (e) {
-      // For existing employees, ensure location has the right structure
+      // For existing employees
       const processedEmployee = {
         ...baseEmployee,
         ...e,
         id: e._id || e.id, // Ensure employee has id field for API calls
-        location: e.location ? {
-          ...e.location,
-          id: e.location._id || e.location.id // Ensure location id field exists
-        } : {}
       };
       setEmployee(processedEmployee);
     } else {
@@ -313,7 +295,7 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees/${employee.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),
+      body: JSON.stringify({name: employee.name, role: employee.role, email: employee.email}),
     })
     const _e = await res.json()
     // Update the specific employee in the list without refetching
@@ -330,7 +312,7 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/employees`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({locationId: employee.location.id, name: employee.name, role: employee.role, email: employee.email}),
+        body: JSON.stringify({name: employee.name, role: employee.role, email: employee.email}),
       })    
       const _e = await res.json()
       setEmployees([_e, ...employees])
@@ -373,34 +355,6 @@ export function Employee ({ e, employees, setEmployees, isOpen, setIsOpen, locat
             value={employee.name} 
             onChange={(x) => setEmployee({ ...employee, name: x.target.value })} 
           />
-        </div>
-
-        <div className="grid w-full max-w-sm items-center gap-1.5">
-          <Label htmlFor="location">Location</Label>
-          <Select id="location" value={employee?.location?.name} 
-            onValueChange={(value) => {
-              const selectedLocation = locations.find(l => l.name === value);
-              // Ensure the location has an 'id' field for validation
-              const locationWithId = {
-                ...selectedLocation,
-                id: selectedLocation._id || selectedLocation.id
-              };
-              setEmployee({ ...employee, location: locationWithId });
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Location" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                {locations.map((l, lIdx) => {
-                  return (
-                    <SelectItem key={lIdx} value={l.name}>{l.name}</SelectItem>
-                  )
-                })}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="grid w-full max-w-sm items-center gap-1.5">

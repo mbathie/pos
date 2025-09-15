@@ -14,9 +14,9 @@ export async function POST(req) {
   }
 
   try {
-    const { name, email, role, locationId } = await req.json()
+    const { name, email, role } = await req.json()
 
-    if (!name || !email || !role || !locationId) {
+    if (!name || !email || !role) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -29,13 +29,9 @@ export async function POST(req) {
       name,
       email,
       role,
-      location: locationId,
       org: currentEmployee.org,
       // No hash or pin initially - will be set during setup
     })
-
-    // Populate the location for the response
-    await newEmployee.populate({ path: 'location', select: 'name' })
 
     // Get organization name for email
     const org = await Org.findById(currentEmployee.org).select('name').lean()
@@ -68,7 +64,6 @@ export async function GET() {
 
   try {
     const employees = await Employee.find({ org: employee.org })
-      .populate({ path: 'location', select: 'name' })
       .lean();
     console.log(employees)
     return NextResponse.json(employees);

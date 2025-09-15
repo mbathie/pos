@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server"
-import { SignJWT } from "jose"
 import bcrypt from "bcrypt"
 import { connectDB } from "@/lib/mongoose"
 import { Org, Location, Employee } from "@/models"
-
-const SECRET_KEY = new TextEncoder().encode(process.env.JWT_SECRET)
+import { 
+  getOrCreateBrowserId, 
+  updateAuth 
+} from "@/lib/cookies"
 
 export async function POST(req) {
   try {
@@ -28,33 +29,44 @@ export async function POST(req) {
 
     const hash = await bcrypt.hash(password, 10)
 
+    // Get or generate browser ID for the new org
+    const browserId = await getOrCreateBrowserId()
+
     const org = await Org.create({ name, phone, deleted: false })
+    
+    // Create the Main HQ location with browser ID already set
     const location = await Location.create({ 
-      name: "Main HQ", org, deleted: false, phone
+      name: "Main HQ", 
+      org, 
+      deleted: false, 
+      phone,
+      browser: browserId // Set browser ID for the default location
     })
+    
+    console.log('🖥️ New org signup: Main HQ tied to browser:', {
+      orgName: name,
+      locationId: location._id,
+      browserId: browserId
+    })
+    
     const employee = await Employee.create({
       name: nameEmployee,
       email,
       hash,
       org: org._id,
-      location: location._id,
       role: "ADMIN",
     })
 
-    const token = await new SignJWT({
-      employeeId: employee._id.toString(),
-      orgId: org._id.toString(),
-      selectedLocationId: location._id.toString(),
-      email,
+    let selectedLocationId = location._id.toString() // Always use the new location for signup
+
+    // Update auth with location and set all cookies
+    await updateAuth({ 
+      employee, 
+      locationId: selectedLocationId, 
+      browserId 
     })
-      .setProtectedHeader({ alg: "HS256" })
-      .setExpirationTime("1y")
-      .sign(SECRET_KEY)
 
-    const response = NextResponse.json({ error: false, message: "Logged in" })
-    response.cookies.set("token", token, { httpOnly: true, secure: true })
-
-    return response
+    return NextResponse.json({ error: false, message: "Logged in" })
   } catch (error) {
     console.error(error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })

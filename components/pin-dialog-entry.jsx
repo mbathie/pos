@@ -45,6 +45,19 @@ export default function PinDialogEntry({ open, onOpenChange, onSuccess }) {
         if (userRes.ok) {
           const userData = await userRes.json()
           setEmployee(userData.employee)
+          
+          // Fetch all locations to update the location properly
+          const locationsRes = await fetch(`/api/locations`, { method: "GET" });
+          const _l = await locationsRes.json()
+          
+          // Set the location based on selectedLocationId (which comes from browser tie or default)
+          if (userData.employee.selectedLocationId) {
+            const selectedLocation = _l.find(loc => loc._id === userData.employee.selectedLocationId);
+            if (selectedLocation) {
+              setLocation(selectedLocation);
+            }
+          }
+          
           window.location.reload()
         }
       }
