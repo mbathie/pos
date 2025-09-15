@@ -18,16 +18,22 @@ export async function GET(request) {
     const hours = searchParams.get('hours');
     const paymentMethod = searchParams.get('paymentMethod');
     const customerId = searchParams.get('customerId');
+    const locationId = searchParams.get('locationId');
 
     let query = { 
       org: employee.org._id
     };
 
-    // Only filter by location if not searching for a specific customer
-    // When searching by customer, we want to see all their transactions across all locations
-    if (!customerId) {
+    // Filter by location
+    // If locationId is provided and not 'all', use it
+    // Otherwise use employee's selected location for backward compatibility
+    if (locationId && locationId !== 'all') {
+      query.location = locationId;
+    } else if (!locationId && !customerId) {
+      // For backward compatibility - if no locationId param, use employee's selected location
       query.location = employee.selectedLocationId;
     }
+    // Note: When searching by customer or 'all' locations, don't filter by location
 
     // Filter by status
     if (status && status !== 'all') {

@@ -286,7 +286,7 @@ export default function Page() {
   }
 
   return (
-    <div className="px-4 max-w-7xl h-screen flex flex-col py-4">
+    <div className="px-4 max-w-7xl flex flex-col py-4">
       {/* Header */}
       <div className="mb-4 flex-shrink-0">
         <h1 className="text-xl font-semibold mb-1">Store Locations</h1>

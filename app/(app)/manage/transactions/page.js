@@ -1,6 +1,7 @@
 'use client'
 import React, { useEffect, useState, useMemo } from "react";
 import { useRouter } from 'next/navigation';
+import { useGlobals } from '@/lib/globals';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button";
@@ -41,8 +42,10 @@ dayjs.extend(relativeTime);
 
 export default function TransactionsPage() {
   const router = useRouter();
+  const { location: globalLocation, locations } = useGlobals();
   const [transactions, setTransactions] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState(null);
   const [filters, setFilters] = useState({
     status: 'all',
     paymentMethod: 'all',
@@ -54,10 +57,19 @@ export default function TransactionsPage() {
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [resendReceiptDialog, setResendReceiptDialog] = useState({ open: false, transaction: null });
 
-  // Fetch transactions when filters change
+  // Initialize selected location from global location
   useEffect(() => {
-    fetchTransactions();
-  }, [filters]);
+    if (globalLocation && !selectedLocation) {
+      setSelectedLocation(globalLocation._id);
+    }
+  }, [globalLocation]);
+
+  // Fetch transactions when filters or location change
+  useEffect(() => {
+    if (selectedLocation) {
+      fetchTransactions();
+    }
+  }, [filters, selectedLocation]);
 
   const fetchTransactions = async () => {
     setLoading(true);
@@ -66,6 +78,7 @@ export default function TransactionsPage() {
       if (filters.status !== 'all') params.append('status', filters.status);
       if (filters.paymentMethod !== 'all') params.append('paymentMethod', filters.paymentMethod);
       if (filters.dateRange) params.append('hours', filters.dateRange);
+      if (selectedLocation && selectedLocation !== 'all') params.append('locationId', selectedLocation);
 
       const response = await fetch(`/api/transactions?${params}`);
       if (response.ok) {
@@ -259,7 +272,7 @@ export default function TransactionsPage() {
   };
 
   return (
-    <div className="px-4 pt-2 w-full h-full flex flex-col py-4">
+    <div className="px-4 pt-2 w-full flex flex-col py-4">
       {/* Header */}
       <div className="mb-4 flex-shrink-0">
         <h1 className="text-xl font-semibold mb-1">Transactions</h1>
@@ -308,6 +321,21 @@ export default function TransactionsPage() {
               <SelectItem value="48">Last 48 hours</SelectItem>
               <SelectItem value="168">Last 7 days</SelectItem>
               <SelectItem value="720">Last 30 days</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* Location Filter */}
+          <Select value={selectedLocation || ''} onValueChange={setSelectedLocation}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select location" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Locations</SelectItem>
+              {locations?.map((loc) => (
+                <SelectItem key={loc._id} value={loc._id}>
+                  {loc.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
 
