@@ -183,6 +183,56 @@ function createTestCart(options = {}) {
 }
 
 /**
+ * Create a simple cart for testing
+ */
+function createCart(options = {}) {
+  const config = getTestConfig();
+  
+  return {
+    products: options.products || [{
+      _id: config.testProduct._id,
+      name: config.testProduct.name,
+      type: 'shop',
+      qty: 1,
+      amount: {
+        subtotal: options.subtotal || 10.00
+      }
+    }],
+    customer: options.customer || null,
+    location: { _id: config.locationId },
+    subtotal: options.subtotal || 10.00,
+    tax: options.tax || 1.00,
+    total: options.total || 11.00,
+    adjustments: options.adjustments || {
+      discounts: { items: [], total: 0 },
+      surcharges: { items: [], total: 0 }
+    }
+  };
+}
+
+/**
+ * Process any type of payment
+ */
+async function processPayment(type, cart, options = {}) {
+  if (type === 'cash') {
+    return processCashPayment(cart, options.received);
+  }
+  // Add other payment types as needed
+  throw new Error(`Payment type ${type} not supported`);
+}
+
+/**
+ * Clean up specific test resource
+ */
+async function cleanup(resource, id) {
+  try {
+    await apiCall(`/api/${resource}/${id}`, { method: 'DELETE' });
+  } catch (error) {
+    // Ignore cleanup errors
+  }
+}
+
+/**
  * Clean up test data
  */
 async function cleanupTestData() {
@@ -280,7 +330,10 @@ module.exports = {
   createDiscount,
   applyAdjustments,
   processCashPayment,
+  processPayment,
   createTestCart,
+  createCart,
+  cleanup,
   cleanupTestData,
   assert,
   formatTestResult,

@@ -612,6 +612,12 @@ export default function TransactionDetailsPage() {
                   <span>-{formatCurrency(transaction.adjustments.discounts.total)}</span>
                 </div>
               )}
+              {transaction.adjustments?.credits?.amount > 0 && (
+                <div className="flex justify-between">
+                  <span>Credit Applied</span>
+                  <span>-{formatCurrency(transaction.adjustments.credits.amount)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Tax (GST)</span>
                 <span>{formatCurrency(transaction.tax)}</span>

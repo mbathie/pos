@@ -19,6 +19,7 @@ const TEST_CATEGORIES = {
   setup: 'Environment Setup',
   mod: 'Product Modifications',
   discount: 'Discount System',
+  credits: 'Customer Credits',
   cleanup: 'Cleanup'
   // Note: 'seed' tests are excluded from regular test runs
 };
@@ -73,12 +74,26 @@ async function runTest(test) {
     // Clear module cache to ensure fresh run
     delete require.cache[require.resolve(test.path)];
     
+    // Capture console output to suppress verbose test output
+    const originalConsoleLog = console.log;
+    const originalConsoleError = console.error;
+    const capturedOutput = [];
+    
+    console.log = (...args) => {
+      capturedOutput.push(args.join(' '));
+    };
+    console.error = (...args) => {
+      capturedOutput.push('ERROR: ' + args.join(' '));
+    };
+    
     const testModule = require(test.path);
     const testFunction = typeof testModule === 'function' 
       ? testModule 
       : testModule.default || testModule.runTest || Object.values(testModule)[0];
     
     if (typeof testFunction !== 'function') {
+      console.log = originalConsoleLog;
+      console.error = originalConsoleError;
       return {
         name: test.name,
         passed: false,
@@ -87,12 +102,22 @@ async function runTest(test) {
     }
     
     const result = await testFunction();
+    
+    // Restore console
+    console.log = originalConsoleLog;
+    console.error = originalConsoleError;
+    
     return {
       name: test.name,
       category: test.category,
+      output: capturedOutput,
       ...result
     };
   } catch (error) {
+    // Restore console in case of error
+    console.log = originalConsoleLog;
+    console.error = originalConsoleError;
+    
     return {
       name: test.name,
       category: test.category,
@@ -135,20 +160,44 @@ async function runAllTests(tests, cleanup = false) {
       }
     }
     
-    process.stdout.write(`  Running ${test.name}... `);
-    
     const result = await runTest(test);
     results.total++;
     results.byCategory[currentCategory].total++;
     
+    // Format test output
+    const testNumber = results.total.toString().padStart(2, '0');
+    const statusIcon = result.passed ? '✅' : '❌';
+    const status = result.passed ? 'PASSED' : 'FAILED';
+    
+    // Build test line
+    let testLine = `  Test ${testNumber}: ${test.name.padEnd(30)} `;
+    
+    // Add details if available
+    if (result.details) {
+      const detailStr = typeof result.details === 'string' 
+        ? result.details 
+        : JSON.stringify(result.details).slice(0, 40);
+      testLine += `${detailStr.padEnd(25)} `;
+    } else {
+      testLine += ''.padEnd(25);
+    }
+    
+    // Add status
+    testLine += `${statusIcon} ${status}`;
+    
+    // Add error if failed
+    if (!result.passed && result.error) {
+      testLine += `\n         Error: ${result.error}`;
+    }
+    
+    console.log(testLine);
+    
     if (result.passed) {
       results.passed++;
       results.byCategory[currentCategory].passed++;
-      console.log('✅ PASSED');
     } else {
       results.failed++;
       results.byCategory[currentCategory].failed++;
-      console.log(`❌ FAILED${result.error ? `: ${result.error}` : ''}`);
     }
     
     results.tests.push(result);
@@ -204,6 +253,7 @@ async function runAllTests(tests, cleanup = false) {
 async function main() {
   const args = process.argv.slice(2);
   const shouldCleanup = args.includes('--cleanup');
+  const shouldFresh = args.includes('--fresh');
   const pattern = args.find(arg => !arg.startsWith('--'));
   
   // Check if server is running
@@ -215,6 +265,18 @@ async function main() {
     console.error('❌ Server is not running. Please start the dev server first.');
     console.log('   Run: npm run dev --turbopack');
     process.exit(1);
+  }
+  
+  // Clean up old test data if --fresh flag is used
+  if (shouldFresh) {
+    console.log('🧹 Cleaning up old test data for fresh start...');
+    const fs = require('fs');
+    const path = require('path');
+    const testDataFile = path.join(__dirname, 'tests', '.test-data.json');
+    if (fs.existsSync(testDataFile)) {
+      fs.unlinkSync(testDataFile);
+      console.log('✅ Old test data removed\n');
+    }
   }
   
   // Discover tests

@@ -1,0 +1,301 @@
+#!/usr/bin/env node
+
+/**
+ * Test Customer Credits System
+ * Tests credit application, payment processing, and balance updates
+ */
+
+const colors = require('colors');
+const { apiCall, createCustomer, createDiscount, createCart, processPayment, cleanup } = require('./test-utils');
+
+async function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Add credits to a customer
+ */
+async function addCustomerCredit(customerId, amount, note = 'Test credit') {
+  return apiCall(`/api/customers/${customerId}/credits`, {
+    method: 'POST',
+    body: JSON.stringify({ amount, note })
+  });
+}
+
+/**
+ * Get customer details including credit balance
+ */
+async function getCustomer(customerId) {
+  return apiCall(`/api/customers/${customerId}`);
+}
+
+/**
+ * Get transaction details
+ */
+async function getTransaction(transactionId) {
+  return apiCall(`/api/transactions/${transactionId}`);
+}
+
+/**
+ * Process a cash payment with credits
+ */
+async function processCashPaymentWithCredits(cart, creditAmount) {
+  // Apply credits to cart
+  const cartWithCredits = {
+    ...cart,
+    adjustments: {
+      ...cart.adjustments,
+      credits: {
+        customerId: cart.customer._id,
+        amount: creditAmount
+      }
+    }
+  };
+  
+  // Recalculate totals with credits
+  const subtotalAfterDiscounts = cart.subtotal - (cart.adjustments?.discounts?.total || 0);
+  const subtotalAfterCredits = Math.max(0, subtotalAfterDiscounts - creditAmount);
+  const newTax = subtotalAfterCredits * 0.1; // 10% GST
+  cartWithCredits.tax = parseFloat(newTax.toFixed(2));
+  cartWithCredits.total = subtotalAfterCredits + cartWithCredits.tax;
+  
+  // Process cash payment
+  return apiCall('/api/payments/cash', {
+    method: 'POST',
+    body: JSON.stringify({
+      cart: cartWithCredits,
+      received: cartWithCredits.total,
+      change: 0,
+      customer: cart.customer
+    })
+  });
+}
+
+async function runTests() {
+  let testCustomer = null;
+  let testDiscount = null;
+  const results = {
+    passed: 0,
+    failed: 0,
+    errors: [],
+    tests: []
+  };
+  
+  try {
+    // Test 1: Add credits to customer
+    testCustomer = await createCustomer({
+      name: 'Credit Test Customer',
+      email: `credit.test${Date.now()}@test.com`
+    });
+    
+    const creditAmount = 20.00;
+    const updatedCustomer = await addCustomerCredit(testCustomer._id, creditAmount, 'Initial test credit');
+    
+    if (updatedCustomer.credits?.balance === creditAmount) {
+      results.tests.push({ name: 'Add credits', passed: true, details: `Balance: $${creditAmount}` });
+      results.passed++;
+    } else {
+      results.tests.push({ name: 'Add credits', passed: false });
+      results.failed++;
+    }
+    
+    // Test 2: Full payment with credits (no remaining balance)
+    const cart1 = await createCart({
+      subtotal: 10.00,
+      tax: 1.00,
+      total: 11.00,
+      customer: testCustomer
+    });
+    
+    const payment1 = await processCashPaymentWithCredits(cart1, 10.00);
+    const transaction1 = payment1.transaction;
+    
+    if (transaction1.total === 0 && transaction1.tax === 0 && transaction1.adjustments?.credits?.amount === 10.00) {
+      results.tests.push({ name: 'Full credit payment', passed: true, details: 'Total: $0, Tax: $0' });
+      results.passed++;
+    } else {
+      results.tests.push({ name: 'Full credit payment', passed: false, error: `Expected $0, got $${transaction1.total}` });
+      results.failed++;
+    }
+    
+    // Check customer balance after payment
+    await sleep(500); // Give time for balance update
+    const customerAfterPayment1 = await getCustomer(testCustomer._id);
+    const expectedBalance1 = creditAmount - 10.00;
+    
+    if (Math.abs(customerAfterPayment1.credits.balance - expectedBalance1) < 0.01) {
+      results.tests.push({ name: 'Balance update', passed: true, details: `New: $${expectedBalance1}` });
+      results.passed++;
+    } else {
+      results.tests.push({ name: 'Balance update', passed: false });
+      results.failed++;
+    }
+    
+    // Test 3: Partial payment with credits
+    const cart2 = await createCart({
+      subtotal: 15.00,
+      tax: 1.50,
+      total: 16.50,
+      customer: testCustomer
+    });
+    
+    const payment2 = await processCashPaymentWithCredits(cart2, 5.00); // Use $5 credits
+    const transaction2 = payment2.transaction;
+    
+    // After $5 credit, subtotal becomes $10, tax should be $1.00, total $11.00
+    if (Math.abs(transaction2.total - 11.00) < 0.01 && Math.abs(transaction2.tax - 1.00) < 0.01) {
+      results.tests.push({ name: 'Partial credit payment', passed: true, details: 'Total: $11' });
+      results.passed++;
+    } else {
+      results.tests.push({ name: 'Partial credit payment', passed: false });
+      results.failed++;
+    }
+    
+    // Test 4: Credits with discount
+    
+    // Create a 10% discount
+    testDiscount = await createDiscount({
+      name: 'Credit Test Discount',
+      code: `CREDIT${Date.now()}`,
+      value: 10, // 10% discount
+      requireCustomer: true
+    });
+    
+    const cart3 = await createCart({
+      subtotal: 20.00,
+      tax: 2.00,
+      total: 22.00,
+      customer: testCustomer,
+      adjustments: {
+        discounts: {
+          items: [{
+            id: testDiscount._id,
+            name: testDiscount.name,
+            amount: 2.00 // 10% of $20
+          }],
+          total: 2.00
+        }
+      }
+    });
+    
+    // After discount: $18 subtotal, apply $5 credit = $13 taxable, tax = $1.30, total = $14.30
+    const payment3 = await processCashPaymentWithCredits(cart3, 5.00);
+    const transaction3 = payment3.transaction;
+    
+    if (Math.abs(transaction3.total - 14.30) < 0.01 && Math.abs(transaction3.tax - 1.30) < 0.01) {
+      results.tests.push({ name: 'Credits + discount', passed: true, details: 'Total: $14.30' });
+      results.passed++;
+    } else {
+      results.tests.push({ name: 'Credits + discount', passed: false });
+      results.failed++;
+    }
+    
+    // Test 5: Credits exceed total (should only use needed amount)
+    
+    // Add more credits to customer
+    await addCustomerCredit(testCustomer._id, 50.00, 'Additional test credit');
+    
+    const cart4 = await createCart({
+      subtotal: 5.00,
+      tax: 0.50,
+      total: 5.50,
+      customer: testCustomer
+    });
+    
+    const payment4 = await processCashPaymentWithCredits(cart4, 5.00); // Only use what's needed
+    const transaction4 = payment4.transaction;
+    
+    if (transaction4.total === 0 && transaction4.tax === 0) {
+      results.tests.push({ name: 'Excess credits', passed: true, details: 'Used $5 only' });
+      results.passed++;
+    } else {
+      results.tests.push({ name: 'Excess credits', passed: false });
+      results.failed++;
+    }
+    
+    // Test 6: Verify transaction details include credits
+    const transactionDetails = await getTransaction(transaction3._id);
+    
+    if (transactionDetails.adjustments?.credits?.amount === 5.00 && 
+        transactionDetails.adjustments?.credits?.customerId) {
+      results.tests.push({ name: 'Transaction storage', passed: true, details: 'Credits stored' });
+      results.passed++;
+    } else {
+      results.tests.push({ name: 'Transaction storage', passed: false });
+      results.failed++;
+    }
+    
+    // Test 7: Check debit entries in customer record
+    const finalCustomer = await getCustomer(testCustomer._id);
+    const debits = finalCustomer.credits?.debits || [];
+    
+    if (debits.length > 0 && debits.some(d => d.transaction)) {
+      results.tests.push({ name: 'Debit entries', passed: true, details: `${debits.length} debits` });
+      results.passed++;
+    } else {
+      results.tests.push({ name: 'Debit entries', passed: false });
+      results.failed++;
+    }
+    
+    // Test 8: Zero-dollar transaction with full credit coverage
+    const cart5 = await createCart({
+      subtotal: 3.50,
+      tax: 0.35,
+      total: 3.85,
+      customer: testCustomer
+    });
+    
+    const payment5 = await processCashPaymentWithCredits(cart5, 3.50);
+    const transaction5 = payment5.transaction;
+    
+    if (transaction5.total === 0 && transaction5.tax === 0) {
+      results.tests.push({ name: 'Zero-dollar transaction', passed: true, details: 'Credits only' });
+      results.passed++;
+    } else {
+      results.tests.push({ name: 'Zero-dollar transaction', passed: false });
+      results.failed++;
+    }
+    
+  } catch (error) {
+    results.errors.push(error.message);
+    results.failed++;
+  } finally {
+    // Cleanup
+    if (testCustomer) {
+      try {
+        await cleanup('customers', testCustomer._id);
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    }
+    
+    if (testDiscount) {
+      try {
+        await cleanup('discounts', testDiscount._id);
+      } catch (e) {
+        // Ignore cleanup errors
+      }
+    }
+  }
+  
+  // Return results for test runner
+  return {
+    passed: results.failed === 0,
+    details: `${results.passed} tests passed`,
+    error: results.failed > 0 ? `${results.failed} tests failed` : null
+  };
+}
+
+// Export for test runner
+module.exports = runTests;
+
+// Run if called directly
+if (require.main === module) {
+  runTests().then(result => {
+    console.log(result.passed ? '✅ All tests passed' : '❌ Some tests failed');
+    process.exit(result.passed ? 0 : 1);
+  }).catch(error => {
+    console.error('Fatal error:', error);
+    process.exit(1);
+  });
+}

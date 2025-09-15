@@ -81,6 +81,9 @@ export default function Page() {
   const [sendingReceipt, setSendingReceipt] = useState(false)
   const [isValidEmail, setIsValidEmail] = useState(false)
   
+  // Customer credits state
+  const [customerCredits, setCustomerCredits] = useState(null)
+  
   // Check if cart contains membership products
   const hasMembershipProducts = cart.products.some(product => product.type === 'membership')
   
@@ -126,6 +129,34 @@ export default function Page() {
       setTab('card')
     }
   }, [hasMembershipProducts, tab])
+  
+  // Fetch customer credits when a customer is selected
+  useEffect(() => {
+    const fetchCustomerCredits = async () => {
+      if (cart.customer?._id) {
+        try {
+          const response = await fetch(`/api/customers/${cart.customer._id}`)
+          if (response.ok) {
+            const customerData = await response.json()
+            setCustomerCredits(customerData.credits || { balance: 0 })
+            
+            // Update cart customer with credits data
+            setCart(draft => {
+              if (draft.customer) {
+                draft.customer.credits = customerData.credits || { balance: 0 }
+              }
+            })
+          }
+        } catch (error) {
+          console.error('Error fetching customer credits:', error)
+        }
+      } else {
+        setCustomerCredits(null)
+      }
+    }
+    
+    fetchCustomerCredits()
+  }, [cart.customer?._id])
 
   useEffect(() => {
     console.log(cart)
@@ -1082,6 +1113,14 @@ export default function Page() {
               </>
             )}
             
+            {/* Show credits if any are applied */}
+            {displayCart.adjustments?.credits?.amount > 0 && (
+              <div className="flex justify-between">
+                <span>Credit</span>
+                <span className="text-right">-${displayCart.adjustments.credits.amount.toFixed(2)}</span>
+              </div>
+            )}
+            
             <div className="flex justify-between">
               <span>Tax</span>
               <span className="text-right">${displayCart.tax.toFixed(2)}</span>
@@ -1442,13 +1481,13 @@ export default function Page() {
               <div className="flex flex-col gap-2">
                 <div className="flex items-center gap-2">
                   <div className="flex-1 flex items-center gap-2">
-                    <span className="text-sm font-medium">Items</span>
+                    <span className="font-medium">Customer</span>
                     <div className="flex-1 border-b border-dotted border-muted-foreground/30" />
                   </div>
                   <div className="flex items-center gap-2">
                     {cart.customer ? (
                       <>
-                        <span className="text-sm">
+                        <span>
                           {cart.customer.name}
                         </span>
                         <Trash2
@@ -1477,6 +1516,92 @@ export default function Page() {
                         Customer
                       </Button>
                     )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Credit Section - Show when customer has credit balance */}
+            {cart.customer && ((customerCredits?.balance || cart.customer?.credits?.balance || 0) > 0 || cart.adjustments?.credits?.amount > 0) && (
+              <div className="flex flex-col gap-2 mt-2">
+                <div className="flex flex-row gap-4 items-center">
+                  <div className="">Credit (${(customerCredits?.balance || cart.customer?.credits?.balance || 0).toFixed(2)})</div>
+                  <div className="flex-1" />
+                  <div className="flex gap-2 items-center">
+                    <div className="flex items-center gap-1">
+                      <span className="text-sm text-muted-foreground">$</span>
+                      <NumberInput
+                        min={0}
+                        max={(() => {
+                          const availableCredits = customerCredits?.balance || cart.customer?.credits?.balance || 0;
+                          const subtotalAfterDiscounts = cart.subtotal - (cart.adjustments?.discounts?.total || 0) + (cart.adjustments?.surcharges?.total || 0);
+                          return Math.min(availableCredits, subtotalAfterDiscounts);
+                        })()}
+                        step={0.01}
+                        value={cart.adjustments?.credits?.amount}
+                        onChange={(value) => {
+                          // Update credit amount in cart adjustments
+                          const creditAmount = value === null || value === undefined ? null : value;
+                          setCart(draft => {
+                            if (!draft.adjustments) {
+                              draft.adjustments = {};
+                            }
+                            if (!draft.adjustments.credits) {
+                              draft.adjustments.credits = {
+                                customerId: cart.customer._id,
+                                amount: null
+                              };
+                            }
+                            draft.adjustments.credits.amount = creditAmount;
+                            
+                            // Recalculate totals with credit applied to subtotal before tax
+                            const subtotalAfterDiscounts = draft.subtotal - (draft.adjustments?.discounts?.total || 0) + (draft.adjustments?.surcharges?.total || 0);
+                            const subtotalAfterCredits = Math.max(0, subtotalAfterDiscounts - (creditAmount || 0));
+                            const newTax = subtotalAfterCredits * 0.1; // 10% GST
+                            draft.tax = parseFloat(newTax.toFixed(2));
+                            draft.total = subtotalAfterCredits + draft.tax;
+                          });
+                        }}
+                        placeholder="0.00"
+                        className="w-24"
+                        disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                      />
+                    </div>
+                    <Button
+                      onClick={() => {
+                        const availableCredits = customerCredits?.balance || cart.customer?.credits?.balance || 0;
+                        // Calculate the actual subtotal after discounts/surcharges to determine max credit
+                        const subtotalAfterDiscounts = cart.subtotal - (cart.adjustments?.discounts?.total || 0) + (cart.adjustments?.surcharges?.total || 0);
+                        // Max credit is either available balance or the subtotal after discounts (can't exceed what needs to be paid)
+                        const maxCredit = Math.min(availableCredits, subtotalAfterDiscounts);
+                        
+                        setCart(draft => {
+                          if (!draft.adjustments) {
+                            draft.adjustments = {};
+                          }
+                          if (!draft.adjustments.credits) {
+                            draft.adjustments.credits = {
+                              customerId: cart.customer._id,
+                              amount: 0
+                            };
+                          }
+                          draft.adjustments.credits.amount = maxCredit;
+                          
+                          // Recalculate totals with max credit applied to subtotal before tax
+                          const draftSubtotalAfterDiscounts = draft.subtotal - (draft.adjustments?.discounts?.total || 0) + (draft.adjustments?.surcharges?.total || 0);
+                          const subtotalAfterCredits = Math.max(0, draftSubtotalAfterDiscounts - maxCredit);
+                          const newTax = subtotalAfterCredits * 0.1; // 10% GST
+                          draft.tax = parseFloat(newTax.toFixed(2));
+                          draft.total = subtotalAfterCredits + draft.tax;
+                        });
+                        
+                        toast.success(`Applied $${maxCredit.toFixed(2)} in credits`);
+                      }}
+                      disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                      className="px-3"
+                    >
+                      Max
+                    </Button>
                   </div>
                 </div>
               </div>

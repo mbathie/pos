@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt, Users, DollarSign, Plus } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt, Users, DollarSign, Plus, ExternalLink } from "lucide-react";
 import TransactionsTable from '@/components/transactions-table';
 import { CustomerAvatar } from '@/components/customer-avatar';
 import { useGlobals } from '@/lib/globals';
@@ -20,6 +20,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+
+dayjs.extend(relativeTime);
 
 export default function CustomerDetailPage({ params }) {
   const router = useRouter();
@@ -178,7 +181,7 @@ export default function CustomerDetailPage({ params }) {
   return (
     <div className="mx-4 h-[calc(100vh-65px)] flex flex-col">
       {/* Header */}
-      <div className="flex items-start gap-4 mb-4 flex-shrink-0">
+      <div className="flex items-center gap-4 mb-4 flex-shrink-0">
         <Button
           variant="ghost"
           size="sm"
@@ -189,16 +192,8 @@ export default function CustomerDetailPage({ params }) {
           Back
         </Button>
         
-        <div>
-          <div className="text-lg font-bold">{customer.name || 'Unnamed Customer'}</div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Member since {dayjs(customer.createdAt).format('MMMM YYYY')}</span>
-            {customer.waiver?.agree && (
-              <Badge variant="outline" className="text-xs text-primary border-primary">
-                Waiver Signed
-              </Badge>
-            )}
-          </div>
+        <div className="text-sm text-muted-foreground">
+          Member since {dayjs(customer.createdAt).format('MMMM YYYY')}
         </div>
       </div>
 
@@ -207,84 +202,69 @@ export default function CustomerDetailPage({ params }) {
         {/* Combined Basic & Contact Information */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="size-5" />
-              Customer Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex gap-4">
-              {/* Left side: Photo */}
+            <CardTitle className="flex items-start gap-3">
               <CustomerAvatar 
                 customer={customer} 
                 size="xl" 
                 shape="square"
               />
-              
-              {/* Right side: Grid of fields */}
-              <div className="flex-grow">
-                <div className="grid grid-cols-3 gap-4">
-                  {/* Row 1 */}
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Member ID</label>
-                    <p className="text-sm font-mono">{customer.memberId || 'Not assigned'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Name</label>
-                    <p className="text-sm">{customer.name || 'Not provided'}</p>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Date of Birth</label>
-                    <p className="text-sm">
-                      {customer.dob ? dayjs(customer.dob).format('DD/MM/YYYY') : 'Not provided'}
-                    </p>
-                  </div>
-                  
-                  {/* Row 2 - Gender aligned under Member ID column */}
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Gender</label>
-                    <p className="text-sm capitalize">{customer.gender || 'Not specified'}</p>
-                  </div>
-                  <div></div>
-                  <div></div>
-                </div>
+              <div className="flex flex-col gap-1">
+                <span className="">{customer.name || 'Unnamed Customer'}</span>
+                {customer.waiver?.agree && (
+                  <Badge variant="outline" className="text-xs text-primary border-primary w-fit">
+                    Waiver Signed
+                  </Badge>
+                )}
               </div>
-            </div>
-            
-            {/* Contact Information Section */}
-            <div className="border-t pt-4 space-y-3">
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+              {/* Row 1 */}
               <div>
-                <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                  <Mail className="size-4" />
+                <label className="text-xs font-medium text-muted-foreground">Member ID</label>
+                <p className="text-sm font-mono">{customer.memberId || 'Not assigned'}</p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Date of Birth</label>
+                <p className="text-sm">
+                  {customer.dob ? dayjs(customer.dob).format('DD/MM/YYYY') : 'Not provided'}
+                </p>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Gender</label>
+                <p className="text-sm capitalize">{customer.gender || 'Not specified'}</p>
+              </div>
+              
+              {/* Row 2 */}
+              <div className="col-span-2">
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Mail className="size-3" />
                   Email
                 </label>
-                <p className="text-sm">{customer.email || 'Not provided'}</p>
+                <p className="text-sm truncate" title={customer.email}>{customer.email || 'Not provided'}</p>
               </div>
-              
               <div>
-                <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                  <Phone className="size-4" />
+                <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                  <Phone className="size-3" />
                   Phone
                 </label>
                 <p className="text-sm">{formatPhone(customer.phone)}</p>
               </div>
               
+              {/* Row 3 - Address spans full width if present */}
               {customer.address && (
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                    <MapPin className="size-4" />
+                <div className="col-span-3">
+                  <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                    <MapPin className="size-3" />
                     Address
                   </label>
-                  <div className="text-sm space-y-1">
-                    {customer.address.address1 && <p>{customer.address.address1}</p>}
-                    {(customer.address.city || customer.address.state || customer.address.postcode) && (
-                      <p>
-                        {[customer.address.city, customer.address.state, customer.address.postcode]
-                          .filter(Boolean)
-                          .join(', ')}
-                      </p>
-                    )}
-                  </div>
+                  <p className="text-sm">
+                    {[customer.address.address1, 
+                      [customer.address.city, customer.address.state, customer.address.postcode].filter(Boolean).join(', ')]
+                      .filter(Boolean)
+                      .join(', ')}
+                  </p>
                 </div>
               )}
             </div>
@@ -430,10 +410,11 @@ export default function CustomerDetailPage({ params }) {
         {/* Credit Card */}
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex items-center justify-between items-start">
               <div className="flex items-center gap-2">
                 <DollarSign className="size-5" />
-                Credit
+                <span>Credit</span>
+                <span className="">${(customer.credits?.balance || 0).toFixed(2)}</span>
               </div>
               {(employee?.role === 'ADMIN' || employee?.role === 'MANAGER') && (
                 <Button 
@@ -447,18 +428,12 @@ export default function CustomerDetailPage({ params }) {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Balance Display */}
-            <div className="text-center py-4 border rounded-lg bg-muted/30">
-              <p className="text-sm text-muted-foreground mb-1">Current Balance</p>
-              <p className="text-3xl font-bold">${(customer.credits?.balance || 0).toFixed(2)}</p>
-            </div>
-            
+          <CardContent>
             {/* Credit History */}
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">Recent Activity</p>
               {customer.credits?.credits?.length > 0 || customer.credits?.debits?.length > 0 ? (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
+                <div className="max-h-48 overflow-y-auto">
                   {/* Combine and sort credits and debits by date */}
                   {[
                     ...(customer.credits?.credits || []).map(c => ({ ...c, type: 'credit' })),
@@ -468,27 +443,31 @@ export default function CustomerDetailPage({ params }) {
                     .slice(0, 10)
                     .map((item, index) => (
                       <div key={index} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
-                        <div className="flex-1">
-                          <p className="font-medium">
-                            {item.type === 'credit' ? (
-                              <span className="text-primary">+${item.amount.toFixed(2)}</span>
-                            ) : (
-                              <span className="text-destructive">-${item.amount.toFixed(2)}</span>
-                            )}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {dayjs(item.date).format('DD/MM/YYYY h:mm A')}
-                          </p>
-                          {item.note && (
-                            <p className="text-xs text-muted-foreground italic">{item.note}</p>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            {item.type === 'credit' ? '+' : '-'}${item.amount.toFixed(2)}
+                          </span>
+                          {/* {item.note && (
+                            <span className="text-xs text-muted-foreground italic">
+                              {item.note}
+                            </span>
+                          )} */}
+                          {item.transaction && (
+                            <ExternalLink 
+                              className="size-4 text-muted-foreground cursor-pointer hover:text-foreground transition-colors" 
+                              onClick={() => router.push(`/manage/transactions/${item.transaction}`)}
+                            />
                           )}
+                        </div>
+                        <div className="text-xs text-muted-foreground text-right flex gap-1">
+                          <div>{dayjs(item.date).fromNow()}..</div>
+                          <div>{dayjs(item.date).format('DD/MM/YYYY')}</div>
                         </div>
                       </div>
                     ))}
                 </div>
               ) : (
-                <div className="text-center py-4">
-                  <DollarSign className="size-8 mx-auto text-muted-foreground mb-2" />
+                <div className="text-center py-8">
                   <p className="text-sm text-muted-foreground">No credit history</p>
                 </div>
               )}
@@ -512,7 +491,7 @@ export default function CustomerDetailPage({ params }) {
         <TransactionsTable 
           customerId={customerId} 
           showFilters={false}
-          className="flex-1"
+          className="flex-1 pb-4"
         />
       </div>
       
@@ -527,7 +506,7 @@ export default function CustomerDetailPage({ params }) {
           </DialogHeader>
           
           <div className="space-y-4">
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="amount">Amount ($)</Label>
               <Input
                 id="amount"
@@ -540,7 +519,7 @@ export default function CustomerDetailPage({ params }) {
               />
             </div>
             
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="note">Note (Optional)</Label>
               <Textarea
                 id="note"

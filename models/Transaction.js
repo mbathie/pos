@@ -22,6 +22,10 @@ const TransactionSchema = new mongoose.Schema({
         amount: Number
       }],
       total: Number
+    },
+    credits: {
+      customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+      amount: Number
     }
   },
   stripe: mongoose.Schema.Types.Mixed,

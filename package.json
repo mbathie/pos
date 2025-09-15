@@ -14,12 +14,8 @@
     "test:local-http": "playwright test --config=playwright.local-http.config.js --project=chromium --reporter=line",
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
-    "test:all": "node scripts/run-tests.js",
-    "test:all:cleanup": "node scripts/run-tests.js --cleanup",
-    "test:discount": "node scripts/run-tests.js discount",
-    "test:mod": "node scripts/run-tests.js mod",
+    "test:suite": "node scripts/run-tests.js",
     "seed": "node scripts/run-seed.js",
-    "seed:format": "node scripts/run-seed.js --format",
     "db:wipe": "node scripts/wipe-db.js"
   },
   "dependencies": {
