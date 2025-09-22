@@ -150,10 +150,10 @@ export default function IconSelect({
 
           {/* Show tabs only if both options are available */}
           {showIconLibrary && showImageUpload ? (
-            <Tabs defaultValue="icon" className="flex flex-col h-full w-full">
+            <Tabs defaultValue="image" className="flex flex-col h-full w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="icon">Icon Library</TabsTrigger>
                 <TabsTrigger value="image">Upload Image</TabsTrigger>
+                <TabsTrigger value="icon">Icon Library</TabsTrigger>
               </TabsList>
 
             <TabsContent value="icon" className="mt-4 max-h-[50vh] overflow-auto">
