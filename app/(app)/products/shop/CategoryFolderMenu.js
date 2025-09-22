@@ -9,11 +9,13 @@ import {
 import { Button } from '@/components/ui/button';
 import {
   ChevronRight,
-  GripVertical
+  GripVertical,
+  Image as ImageIcon
 } from 'lucide-react';
 import { ProductThumbnail } from '@/components/product-thumbnail';
 import colors from '@/lib/tailwind-colors';
 import { cn } from '@/lib/utils';
+import { SvgIcon } from '@/components/ui/svg-icon';
 import {
   DndContext,
   closestCenter,
@@ -288,7 +290,7 @@ export function CategoryFolderMenu({
                     className="size-5 text-foreground rounded-xs"
                   />
                 ) : (
-                  <Image className="size-5" />
+                  <ImageIcon className="size-5" />
                 )}
                 <span className="text-sm font-medium">{category.name}</span>
               </div>

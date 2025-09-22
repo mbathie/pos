@@ -41,7 +41,7 @@ export async function PUT(req, { params }) {
 
   const { product } = await req.json();
   const { id } = await params
-  console.log('PUT product received:', product)
+  console.log('PUT product received, thumbnail:', product.thumbnail ? product.thumbnail.substring(0, 50) + '...' : 'no thumbnail')
 
   // First verify the product exists and belongs to a category in this org
   const existingProduct = await Product.findById(id).populate('category');
@@ -55,8 +55,10 @@ export async function PUT(req, { params }) {
 
   if (imageField) {
     const imageData = product[imageField];
+    console.log(`Processing ${imageField}, starts with:`, imageData ? imageData.substring(0, 30) : 'null');
 
-    if (imageData && imageData.startsWith('data:')) {
+    // Only process base64 JPEG/PNG images, not SVG icons
+    if (imageData && (imageData.startsWith('data:image/jpeg') || imageData.startsWith('data:image/png'))) {
       try {
         // Delete old image from Spaces if it exists
         const oldImage = existingProduct[imageField];
@@ -78,6 +80,7 @@ export async function PUT(req, { params }) {
 
         // Replace base64 with the Spaces URL
         product[imageField] = url;
+        console.log('Uploaded to Spaces, new URL:', url);
       } catch (error) {
         console.error('Error uploading image to Spaces:', error);
         return NextResponse.json({ error: 'Failed to upload image' }, { status: 500 });

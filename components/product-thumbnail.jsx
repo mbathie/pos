@@ -32,7 +32,9 @@ export function ProductThumbnail({
 
   const sizeClass = sizeClasses[size] || sizeClasses.md;
   const iconSize = iconSizes[size] || iconSizes.md;
-  const FallbackIcon = fallbackIcon;
+
+  // Ensure fallbackIcon is a valid React component
+  const FallbackIcon = (typeof fallbackIcon === 'function') ? fallbackIcon : Tag;
 
   // No image - show fallback
   if (!src) {
