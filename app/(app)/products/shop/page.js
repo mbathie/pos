@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogDescription } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button'
-import { Image, Plus, Loader2, Save, Edit2, Trash2, MoreVertical, Folder as FolderIcon, Check, ExternalLink } from 'lucide-react'
+import { Image as ImageIcon, Plus, Loader2, Save, Edit2, Trash2, MoreVertical, Folder as FolderIcon, Check, ExternalLink } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 
 
@@ -263,7 +263,7 @@ export default function Page() {
                 {newCategoryThumbnail ? (
                   <img src={newCategoryThumbnail} alt="Icon" className="w-full h-full rounded-lg object-cover" />
                 ) : (
-                  <Image className="size-8" />
+                  <ImageIcon className="size-8" />
                 )}
               </Button>
               <Input 
@@ -317,7 +317,7 @@ export default function Page() {
                 {editCategoryThumbnail ? (
                   <img src={editCategoryThumbnail} alt="Icon" className="w-full h-full rounded-lg object-cover" />
                 ) : (
-                  <Image className="size-8 text-black" />
+                  <ImageIcon className="size-8 text-black" />
                 )}
               </Button>
               <Input 
@@ -512,7 +512,7 @@ export default function Page() {
                               className="size-5"
                             />
                           ) : (
-                            <Image className="w-6 h-6 text-foreground" />
+                            <ImageIcon className="w-6 h-6 text-foreground" />
                           )}
                           <div>
                             {category.name}
@@ -554,7 +554,7 @@ export default function Page() {
                               setCategoryIconMode('edit');
                               setCategoryIconDialogOpen(true);
                             }}>
-                              <Image className="h-4 w-4 mr-2" />
+                              <ImageIcon className="h-4 w-4 mr-2" />
                               Edit Icon
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => {
