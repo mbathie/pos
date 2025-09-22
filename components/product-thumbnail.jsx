@@ -19,7 +19,8 @@ export function ProductThumbnail({
     sm: 'w-8 h-8',
     md: 'w-10 h-10',
     lg: 'w-12 h-12',
-    xl: 'w-16 h-16'
+    xl: 'w-16 h-16',
+    '2xl': 'w-24 h-24'
   };
 
   const iconSizes = {
@@ -27,7 +28,8 @@ export function ProductThumbnail({
     sm: 'w-4 h-4',
     md: 'w-5 h-5',
     lg: 'w-6 h-6',
-    xl: 'w-8 h-8'
+    xl: 'w-8 h-8',
+    '2xl': 'w-10 h-10'
   };
 
   const sizeClass = sizeClasses[size] || sizeClasses.md;
@@ -50,7 +52,8 @@ export function ProductThumbnail({
     sm: 32,
     md: 40,
     lg: 48,
-    xl: 64
+    xl: 64,
+    '2xl': 96
   }[size] || 40;
 
   return (
