@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import ProductIcon from '@/components/icon';
+import { ProductThumbnail } from '@/components/product-thumbnail';
 
 export default function Page() {
   const [schedules, setSchedules] = useState([]);
@@ -151,9 +151,11 @@ export default function Page() {
                   {/* <TableCell className="align-top">{entry._id}</TableCell> */}
 
                   <TableCell>
-                    <div className="relative size-6">
-                      <ProductIcon size="sm" product={entry.product} />
-                    </div>
+                    <ProductThumbnail
+                      src={entry.product?.thumbnail}
+                      alt={entry.product?.name}
+                      size="sm"
+                    />
                   </TableCell>
                   <TableCell className="align-top">{entry.product?.name}</TableCell>
                   <TableCell className="align-top">{entry.product?.type}</TableCell>

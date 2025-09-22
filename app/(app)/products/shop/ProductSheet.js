@@ -118,7 +118,7 @@ export default function ProductSheet({
               setIconDialogQuery(product.name);
             }}>
               {!product?.thumbnail ? (
-                <Button className="bg-white rounded-lg size-16">
+                <Button className="rounded-lg size-16">
                   <Tag className="!w-8 !h-8" />
                 </Button>
               ) : (

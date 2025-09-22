@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar"
 import { Ellipsis, Check, Clock, CheckCircle, XCircle, User, CalendarIcon, Search, ArrowLeft } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import ProductIcon from '@/components/icon';
+import { ProductThumbnail } from '@/components/product-thumbnail';
 import { CustomerAvatar } from '@/components/customer-avatar';
 
 export default function Page({ schedule, setSchedule }) {
@@ -91,9 +91,12 @@ export default function Page({ schedule, setSchedule }) {
       <Card className='p-4'>
         <CardContent className='p-0'>
           <div className="flex items-start gap-4">
-            <div className="relative w-[50px] h-[50px]">
-              <ProductIcon product={schedule.product} size="md" />
-            </div>
+            <ProductThumbnail
+              src={schedule.product?.thumbnail}
+              alt={schedule.product?.name}
+              size="lg"
+              className="w-[50px] h-[50px]"
+            />
             <div className="flex-1">
               <div className="flex items-start justify-between">
                 <h2 className="text-xl font-semibold">{schedule.product.name}</h2>
