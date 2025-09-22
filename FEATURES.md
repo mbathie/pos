@@ -304,7 +304,10 @@ When a membership is suspended, all membership-related discounts are automatical
 - `/scripts/tests/test-suspended-membership-discount.js` - Comprehensive test coverage
 
 ### Future Enhancements
-- [ ] Email notifications for pause/resume
+- [x] ~~Email notifications for pause/resume~~ ✅ Completed
 - [ ] Customer self-service pause via mobile app
-- [ ] Automatic resume reminders
+- [ ] Automatic resume reminders (email reminder before auto-resume)
 - [ ] Suspension reason categories for reporting
+- [ ] HTML email templates with branding
+- [ ] SMS notifications option
+- [ ] Webhook notifications for integrations
