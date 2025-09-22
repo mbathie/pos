@@ -1,96 +1,59 @@
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongoose';
-import { Schedule, Customer, Product, Checkin, Membership } from '@/models';
+import { Schedule, Customer, Membership } from '@/models';
 import { getEmployee } from '@/lib/auth';
+import { createCheckinRecord, buildCheckinResponse, getMembershipStatus } from '@/lib/checkin';
 import dayjs from 'dayjs';
 
 export async function POST(request) {
   try {
     await connectDB();
-    
-    // Get employee from session
+
+    // Authenticate employee
     const { employee } = await getEmployee();
-    
-    console.log('Check-in API called');
-    console.log('Employee:', employee?.name, 'Org:', employee?.org?._id);
-    
     if (!employee) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-    
+
     const { customerId, test = false } = await request.json();
-    
-    console.log('QR code data received:', customerId);
-    console.log('Test mode:', test);
-    
     if (!customerId) {
       return NextResponse.json({ error: 'Customer ID is required' }, { status: 400 });
     }
-    
-    // Parse the QR code data - should be plain text memberId
-    let customer;
-    
-    // Convert to string and trim any whitespace
-    const memberIdStr = String(customerId).trim();
-    console.log('Processing memberId:', memberIdStr);
-    
-    // Validate it's a valid numeric string (only digits)
-    if (!/^\d+$/.test(memberIdStr)) {
-      return NextResponse.json({ 
-        error: 'Invalid QR code format. Expected numeric member ID.',
-        received: memberIdStr
-      }, { status: 400 });
+
+    // Parse and validate member ID
+    const memberId = parseInt(customerId, 10);
+    if (isNaN(memberId)) {
+      return NextResponse.json({ error: 'Invalid member ID' }, { status: 400 });
     }
-    
-    // Convert to number
-    const memberId = parseInt(memberIdStr, 10);
-    
-    // Find customer by memberId
-    // First try to find by memberId and org
-    customer = await Customer.findOne({ 
+
+    // Find customer
+    let customer = await Customer.findOne({
       memberId: memberId,
-      orgs: employee.org._id 
+      orgs: employee.org._id
     });
-    
-    // If not found in this org, find by memberId alone (customer might belong to multiple orgs)
+
     if (!customer) {
-      customer = await Customer.findOne({ 
-        memberId: memberId
-      });
-      
-      // Verify customer belongs to this org
-      if (customer && customer.orgs) {
-        const belongsToOrg = customer.orgs.some(orgId => 
-          orgId.toString() === employee.org._id.toString()
-        );
-        if (!belongsToOrg) {
-          console.log('Customer found but not in this org:', customer.name);
-          customer = null; // Reset if not in org
-        }
+      customer = await Customer.findOne({ memberId });
+      if (customer?.orgs && !customer.orgs.some(orgId => orgId.toString() === employee.org._id.toString())) {
+        customer = null;
       }
     }
-    
-    console.log('Customer found by memberId:', customer ? customer.name : 'Not found');
-    
+
     if (!customer) {
       return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
     }
-    
-    // Get current time and time window (30 minutes before and after)
+
+    // Time window setup
     const now = new Date();
     const thirtyMinutesBefore = new Date(now.getTime() - 30 * 60 * 1000);
     const thirtyMinutesAfter = new Date(now.getTime() + 30 * 60 * 1000);
-    
-    // Search for schedules with this customer
-    console.log('Searching schedules for org:', employee.org._id, 'and customer:', customer._id);
-    
-    // In test mode, find any schedule with this customer regardless of status
+
+    // Search for scheduled classes
     const searchQuery = test ? {
       org: employee.org._id,
       'locations.classes.customers.customer': customer._id
     } : {
       org: employee.org._id,
-      // Look for classes where customer is in the customers array with status 'confirmed'
       'locations.classes.customers': {
         $elemMatch: {
           customer: customer._id,
@@ -98,676 +61,305 @@ export async function POST(request) {
         }
       }
     };
-    
+
     const schedules = await Schedule.find(searchQuery).populate('product');
-    
-    console.log('Schedules found:', schedules?.length || 0);
-    
+
+    // Get membership status
+    const membership = await Membership.findOne({
+      customer: customer._id,
+      org: employee.org._id,
+      status: { $in: ['active', 'suspended', 'expired', 'cancelled'] }
+    }).populate('product').populate('location');
+
+    const membershipStatus = getMembershipStatus(membership);
+
+    // Process based on what we found
     if (!schedules || schedules.length === 0) {
-      // Also try searching for any schedule with this customer to debug
-      const anySchedule = await Schedule.findOne({
-        'locations.classes.customers.customer': customer._id
-      });
-      console.log('Any schedule with customer:', anySchedule ? 'Found' : 'Not found');
-      
-      // Check for any membership (active or suspended)
-      const membership = await Membership.findOne({
-        customer: customer._id,
-        org: employee.org._id,
-        status: { $in: ['active', 'suspended'] }
-      }).populate('product').populate('location');
-
-      // Check if membership is suspended
-      if (membership && membership.status === 'suspended') {
-        console.log('Membership is suspended:', {
-          product: membership.product?.name,
-          suspendedUntil: membership.suspendedUntil
-        });
-
-        // Create a failed check-in record for suspended membership
-        const failedCheckinRecord = new Checkin({
-          customer: customer._id,
-          product: membership.product._id,
-          class: {
-            datetime: now,
-            location: membership.location?._id || null
-          },
-          status: 'no-show',
-          method: 'qr-code',
-          success: {
-            status: false,
-            reason: 'membership-suspended'
-          },
-          org: employee.org._id
-        });
-
-        await failedCheckinRecord.save();
-
-        return NextResponse.json({
-          success: false,
-          status: 'membership-suspended',
-          message: `Membership is suspended until ${dayjs(membership.suspendedUntil).format('MMMM D, YYYY')}`,
-          customer: {
-            _id: customer._id,
-            name: customer.name,
-            email: customer.email,
-            memberId: customer.memberId,
-            photo: customer.photo
-          },
-          membershipDetails: {
-            product: membership.product?.name,
-            suspendedUntil: membership.suspendedUntil,
-            status: membership.status
-          },
-          checkinId: failedCheckinRecord._id
-        });
-      }
-
-      // Validate active membership is not expired
-      let isMembershipValid = false;
-      if (membership && membership.status === 'active') {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        if (membership.nextBillingDate) {
-          const nextBilling = new Date(membership.nextBillingDate);
-          nextBilling.setHours(0, 0, 0, 0);
-
-          // Membership is valid if today is not past the next billing date
-          isMembershipValid = today <= nextBilling && membership.status === 'active';
-
-          console.log('Membership validation:', {
-            product: membership.product?.name,
-            status: membership.status,
-            nextBillingDate: membership.nextBillingDate,
-            today: today,
-            isValid: isMembershipValid
-          });
-        } else {
-          // If no nextBillingDate, only check status
-          isMembershipValid = membership.status === 'active';
-        }
-      }
-
-      const activeMembership = membership && membership.status === 'active' ? membership : null;
-      
-      if (activeMembership && isMembershipValid) {
-        console.log('Valid active membership found (no schedules):', activeMembership.product?.name);
-        
-        // Check for recent duplicate check-in (within last 10 seconds)
-        const tenSecondsAgo = new Date(now.getTime() - 10 * 1000);
-        const recentCheckin = await Checkin.findOne({
-          customer: customer._id,
-          product: activeMembership.product._id,
-          createdAt: { $gte: tenSecondsAgo }
-        });
-        
-        if (recentCheckin) {
-          console.log('Duplicate check-in detected, using existing record');
-          return NextResponse.json({
-            success: true,
-            customer: {
-              _id: customer._id,
-              name: customer.name,
-              email: customer.email,
-              memberId: customer.memberId,
-              photo: customer.photo
-            },
-            membershipCheckin: {
-              product: activeMembership.product?.name,
-              checkinId: recentCheckin._id
-            },
-            status: 'membership-checked-in',
-            message: 'Membership check-in successful',
-            testMode: false
-          });
-        }
-        
-        // Create a membership-only check-in record
-        const membershipCheckinRecord = new Checkin({
-          customer: customer._id,
-          product: activeMembership.product._id,
-          // Omit schedule field entirely for membership-only check-in
-          class: {
-            datetime: now,
-            location: activeMembership.location?._id || null
-          },
-          status: 'checked-in',
-          method: 'qr-code',
-          org: employee.org._id
-        });
-        
-        await membershipCheckinRecord.save();
-        
-        return NextResponse.json({
-          success: true,
-          customer: {
-            _id: customer._id,
-            name: customer.name,
-            email: customer.email,
-            memberId: customer.memberId,
-            photo: customer.photo
-          },
-          membershipCheckin: {
-            product: activeMembership.product?.name,
-            checkinId: membershipCheckinRecord._id
-          },
-          status: 'membership-checked-in',
-          message: 'Membership check-in successful',
-          testMode: false
-        });
-      }
-      
-      // Check if there's an expired membership
-      if (activeMembership && !isMembershipValid) {
-        // Create a failed check-in record for expired membership
-        const failedCheckinRecord = new Checkin({
-          customer: customer._id,
-          product: activeMembership.product._id,
-          class: {
-            datetime: now,
-            location: activeMembership.location?._id || null
-          },
-          status: 'no-show',
-          method: 'qr-code',
-          success: {
-            status: false,
-            reason: 'membership-expired'
-          },
-          org: employee.org._id
-        });
-        
-        await failedCheckinRecord.save();
-        
-        return NextResponse.json({ 
-          success: false,
-          status: 'membership-expired',
-          message: 'Membership has expired',
-          customer: {
-            _id: customer._id,
-            name: customer.name,
-            email: customer.email,
-            memberId: customer.memberId,
-            photo: customer.photo
-          },
-          membershipDetails: {
-            product: activeMembership.product?.name,
-            nextBillingDate: activeMembership.nextBillingDate,
-            status: activeMembership.status
-          },
-          checkinId: failedCheckinRecord._id
-        });
-      }
-      
-      return NextResponse.json({ 
-        success: false,
-        status: 'no-scheduled-classes',
-        message: 'No classes, courses or memberships found',
-        customer: {
-          _id: customer._id,
-          name: customer.name,
-          email: customer.email,
-          memberId: customer.memberId,
-          photo: customer.photo
-        }
-      });
+      // No schedules found - handle membership-only check-in
+      return handleMembershipOnlyCheckin(customer, membership, membershipStatus, employee.org._id);
     }
-    
-    // Find the specific class within the time window
-    let foundClass = null;
-    let foundSchedule = null;
-    let foundLocation = null;
-    let foundProduct = null;
-    
-    console.log('Current time:', now.toISOString());
-    console.log('Time window:', thirtyMinutesBefore.toISOString(), 'to', thirtyMinutesAfter.toISOString());
-    
-    for (const schedule of schedules) {
-      console.log('Checking schedule:', schedule._id, 'Locations:', schedule.locations?.length || 0);
-      
-      for (const location of schedule.locations) {
-        console.log('Checking location classes:', location.classes?.length || 0);
-        
-        for (const classItem of location.classes) {
-          const classTime = new Date(classItem.datetime);
-          
-          // In test mode, find any future class with this customer
-          if (test) {
-            console.log('Test mode - checking class time:', classTime.toISOString());
-            
-            // Only consider classes in the future
-            if (classTime > now) {
-              const customerInClass = classItem.customers.find(c => 
-                c.customer.toString() === customer._id.toString()
-              );
-              
-              if (customerInClass) {
-                console.log('Test mode - Found customer in future class, checking in regardless of 30min window');
-                foundClass = classItem;
-                foundSchedule = schedule;
-                foundLocation = location;
-                foundProduct = schedule.product;
-                break;
-              }
-            }
-          } else {
-            // Normal mode - check time window
-            console.log('Class time:', classTime.toISOString(), 'In window?', classTime >= thirtyMinutesBefore && classTime <= thirtyMinutesAfter);
-            
-            // Check if class is within 30 minutes window
-            if (classTime >= thirtyMinutesBefore && classTime <= thirtyMinutesAfter) {
-              // Find the customer in this class
-              const customerInClass = classItem.customers.find(c => 
-                c.customer.toString() === customer._id.toString() && c.status === 'confirmed'
-              );
-              
-              console.log('Customer in class?', customerInClass ? 'Yes' : 'No');
-              
-              if (customerInClass) {
-                foundClass = classItem;
-                foundSchedule = schedule;
-                foundLocation = location;
-                foundProduct = schedule.product;
-                break;
-              }
-            }
+
+    // Look for class in time window
+    const classResult = findClassInWindow(schedules, customer._id, now, thirtyMinutesBefore, thirtyMinutesAfter, test);
+
+    if (!classResult.foundClass) {
+      // No class in window - handle based on membership status
+      return handleNoClassInWindow(customer, membership, membershipStatus, employee.org._id, schedules, now);
+    }
+
+    // Found a class - handle class check-in
+    return handleClassCheckin(classResult, customer, membership, membershipStatus, employee.org._id, now, test);
+
+  } catch (error) {
+    console.error('Check-in error:', error);
+    return NextResponse.json({
+      error: 'Internal server error',
+      details: error.message
+    }, { status: 500 });
+  }
+}
+
+// Helper function to find class in time window
+function findClassInWindow(schedules, customerId, now, thirtyMinutesBefore, thirtyMinutesAfter, test) {
+  let foundClass = null;
+  let foundSchedule = null;
+  let foundLocation = null;
+  let foundProduct = null;
+
+  for (const schedule of schedules) {
+    for (const location of schedule.locations) {
+      for (const classItem of location.classes) {
+        const classTime = new Date(classItem.datetime);
+
+        const isInWindow = test ?
+          classTime > now : // Test mode: any future class
+          (classTime >= thirtyMinutesBefore && classTime <= thirtyMinutesAfter);
+
+        if (isInWindow) {
+          const customerInClass = classItem.customers.find(c => {
+            const isCustomer = c.customer.toString() === customerId.toString();
+            return test ? isCustomer : (isCustomer && c.status === 'confirmed');
+          });
+
+          if (customerInClass) {
+            foundClass = classItem;
+            foundSchedule = schedule;
+            foundLocation = location;
+            foundProduct = schedule.product;
+            break;
           }
         }
-        if (foundClass) break;
       }
       if (foundClass) break;
     }
-    
-    if (!foundClass) {
-      console.log('No class found in time window');
-      
-      // Check for any membership (active or suspended) even if no class is found
-      const membership = await Membership.findOne({
-        customer: customer._id,
-        org: employee.org._id,
-        status: { $in: ['active', 'suspended'] }
-      }).populate('product').populate('location');
-
-      // Check if membership is suspended
-      if (membership && membership.status === 'suspended') {
-        console.log('Membership is suspended (no class in window):', {
-          product: membership.product?.name,
-          suspendedUntil: membership.suspendedUntil
-        });
-
-        // Create a failed check-in record for suspended membership
-        const failedCheckinRecord = new Checkin({
-          customer: customer._id,
-          product: membership.product._id,
-          class: {
-            datetime: now,
-            location: membership.location?._id || null
-          },
-          status: 'no-show',
-          method: 'qr-code',
-          success: {
-            status: false,
-            reason: 'membership-suspended'
-          },
-          org: employee.org._id
-        });
-
-        await failedCheckinRecord.save();
-
-        // Find next upcoming class for this customer
-        let nextClass = null;
-        let nextClassTime = null;
-        let nextClassProduct = null;
-
-        for (const schedule of schedules) {
-          for (const location of schedule.locations) {
-            for (const classItem of location.classes) {
-              const classTime = new Date(classItem.datetime);
-              if (classTime > now && (!nextClassTime || classTime < nextClassTime)) {
-                const customerInClass = classItem.customers.find(c =>
-                  c.customer.toString() === customer._id.toString()
-                );
-                if (customerInClass) {
-                  nextClass = classItem;
-                  nextClassTime = classTime;
-                  nextClassProduct = schedule.product;
-                }
-              }
-            }
-          }
-        }
-
-        return NextResponse.json({
-          success: false,
-          status: 'membership-suspended',
-          message: `Membership is suspended until ${dayjs(membership.suspendedUntil).format('MMMM D, YYYY')}`,
-          customer: {
-            _id: customer._id,
-            name: customer.name,
-            email: customer.email,
-            memberId: customer.memberId,
-            photo: customer.photo
-          },
-          membershipDetails: {
-            product: membership.product?.name,
-            suspendedUntil: membership.suspendedUntil,
-            status: membership.status
-          },
-          nextClass: nextClassTime ? {
-            datetime: nextClassTime,
-            productName: nextClassProduct?.name || 'Class/Course',
-            timeUntil: Math.round((nextClassTime - now) / 1000 / 60) // minutes until class
-          } : null,
-          checkinId: failedCheckinRecord._id
-        });
-      }
-
-      const activeMembership = membership && membership.status === 'active' ? membership : null;
-      
-      // Validate membership is not expired
-      let isMembershipValid = false;
-      if (activeMembership) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        if (activeMembership.nextBillingDate) {
-          const nextBilling = new Date(activeMembership.nextBillingDate);
-          nextBilling.setHours(0, 0, 0, 0);
-          
-          // Membership is valid if today is not past the next billing date
-          isMembershipValid = today <= nextBilling && activeMembership.status === 'active';
-          
-          console.log('Membership validation (no class in window):', {
-            product: activeMembership.product?.name,
-            status: activeMembership.status,
-            nextBillingDate: activeMembership.nextBillingDate,
-            today: today,
-            isValid: isMembershipValid
-          });
-        } else {
-          // If no nextBillingDate, only check status
-          isMembershipValid = activeMembership.status === 'active';
-        }
-      }
-      
-      if (activeMembership && isMembershipValid && !test) {
-        console.log('Valid active membership found for general check-in:', activeMembership.product?.name);
-        
-        // Check for recent duplicate check-in (within last 10 seconds)
-        const tenSecondsAgo = new Date(now.getTime() - 10 * 1000);
-        const recentCheckin = await Checkin.findOne({
-          customer: customer._id,
-          product: activeMembership.product._id,
-          createdAt: { $gte: tenSecondsAgo }
-        });
-        
-        if (recentCheckin) {
-          console.log('Duplicate check-in detected, using existing record');
-          return NextResponse.json({
-            success: true,
-            customer: {
-              _id: customer._id,
-              name: customer.name,
-              email: customer.email,
-              memberId: customer.memberId,
-              photo: customer.photo
-            },
-            membershipCheckin: {
-              product: activeMembership.product?.name,
-              checkinId: recentCheckin._id
-            },
-            status: 'membership-checked-in',
-            message: 'Membership check-in successful',
-            testMode: false
-          });
-        }
-        
-        // Create a membership-only check-in record
-        const membershipCheckinRecord = new Checkin({
-          customer: customer._id,
-          product: activeMembership.product._id,
-          // Omit schedule field entirely for membership-only check-in
-          class: {
-            datetime: now,
-            location: activeMembership.location?._id || null
-          },
-          status: 'checked-in',
-          method: 'qr-code',
-          org: employee.org._id
-        });
-        
-        await membershipCheckinRecord.save();
-        
-        return NextResponse.json({
-          success: true,
-          customer: {
-            _id: customer._id,
-            name: customer.name,
-            email: customer.email,
-            memberId: customer.memberId,
-            photo: customer.photo
-          },
-          membershipCheckin: {
-            product: activeMembership.product?.name,
-            checkinId: membershipCheckinRecord._id
-          },
-          status: 'membership-checked-in',
-          message: 'Membership check-in successful',
-          testMode: false
-        });
-      }
-      
-      // Find next upcoming class for this customer
-      let nextClass = null;
-      let nextClassTime = null;
-      let nextClassProduct = null;
-      
-      for (const schedule of schedules) {
-        for (const location of schedule.locations) {
-          for (const classItem of location.classes) {
-            const classTime = new Date(classItem.datetime);
-            if (classTime > now && (!nextClassTime || classTime < nextClassTime)) {
-              const customerInClass = classItem.customers.find(c => 
-                c.customer.toString() === customer._id.toString()
-              );
-              if (customerInClass) {
-                nextClass = classItem;
-                nextClassTime = classTime;
-                nextClassProduct = schedule.product;
-              }
-            }
-          }
-        }
-      }
-      
-      // Check if there's an expired membership
-      if (activeMembership && !isMembershipValid) {
-        // Create a failed check-in record for expired membership
-        const failedCheckinRecord = new Checkin({
-          customer: customer._id,
-          product: activeMembership.product._id,
-          class: {
-            datetime: now,
-            location: activeMembership.location?._id || null
-          },
-          status: 'no-show',
-          method: 'qr-code',
-          success: {
-            status: false,
-            reason: 'membership-expired'
-          },
-          org: employee.org._id
-        });
-        
-        await failedCheckinRecord.save();
-        
-        return NextResponse.json({ 
-          success: false,
-          status: 'membership-expired',
-          message: 'Membership has expired',
-          customer: {
-            _id: customer._id,
-            name: customer.name,
-            email: customer.email,
-            memberId: customer.memberId,
-            photo: customer.photo
-          },
-          membershipDetails: {
-            product: activeMembership.product?.name,
-            nextBillingDate: activeMembership.nextBillingDate,
-            status: activeMembership.status
-          },
-          nextClass: nextClassTime ? {
-            datetime: nextClassTime,
-            productName: nextClassProduct?.name || 'Class/Course',
-            timeUntil: Math.round((nextClassTime - now) / 1000 / 60) // minutes until class
-          } : null,
-          checkinId: failedCheckinRecord._id
-        });
-      }
-      
-      return NextResponse.json({ 
-        success: false,
-        status: 'no-class-in-window',
-        message: 'No class within check-in window (30 minutes before/after class time)',
-        customer: {
-          _id: customer._id,
-          name: customer.name,
-          email: customer.email,
-          memberId: customer.memberId,
-          photo: customer.photo
-        },
-        nextClass: nextClassTime ? {
-          datetime: nextClassTime,
-          productName: nextClassProduct?.name || 'Class/Course',
-          timeUntil: Math.round((nextClassTime - now) / 1000 / 60) // minutes until class
-        } : null,
-        hasActiveMembership: false
-      });
-    }
-    
-    // Update the customer's status to 'checked in'
-    const customerIndex = foundClass.customers.findIndex(c => 
-      c.customer.toString() === customer._id.toString()
-    );
-    
-    if (customerIndex !== -1) {
-      // Update status in the schedule
-      const updatePath = `locations.${schedules[0].locations.indexOf(foundLocation)}.classes.${foundLocation.classes.indexOf(foundClass)}.customers.${customerIndex}.status`;
-      
-      await Schedule.findByIdAndUpdate(
-        foundSchedule._id,
-        {
-          $set: {
-            [updatePath]: 'checked in'
-          }
-        }
-      );
-      
-      // Create a CLASS check-in record
-      const classCheckinRecord = new Checkin({
-        customer: customer._id,
-        product: foundProduct._id,
-        schedule: foundSchedule._id,
-        class: {
-          datetime: foundClass.datetime,
-          location: foundLocation.location
-        },
-        status: 'checked-in',
-        method: 'qr-code',
-        org: employee.org._id
-      });
-      
-      await classCheckinRecord.save();
-      console.log('Class check-in created:', classCheckinRecord._id);
-      
-      // Also check for membership (active or suspended) and create SEPARATE record if active
-      let membershipCheckin = null;
-      const membership = await Membership.findOne({
-        customer: customer._id,
-        org: employee.org._id,
-        status: { $in: ['active', 'suspended'] }
-      }).populate('product');
-
-      // Only create membership check-in if membership is active (not suspended)
-      const activeMembership = membership && membership.status === 'active' ? membership : null;
-      
-      // Validate membership is not expired for class check-in
-      let isMembershipValid = false;
-      if (activeMembership) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        if (activeMembership.nextBillingDate) {
-          const nextBilling = new Date(activeMembership.nextBillingDate);
-          nextBilling.setHours(0, 0, 0, 0);
-          
-          // Membership is valid if today is not past the next billing date
-          isMembershipValid = today <= nextBilling && activeMembership.status === 'active';
-        } else {
-          // If no nextBillingDate, only check status
-          isMembershipValid = activeMembership.status === 'active';
-        }
-      }
-      
-      if (activeMembership && isMembershipValid) {
-        console.log('Valid active membership found:', activeMembership.product?.name);
-        
-        // Create a SEPARATE membership check-in record
-        const membershipCheckinRecord = new Checkin({
-          customer: customer._id,
-          product: activeMembership.product._id,
-          // Don't include schedule - this is a membership-only check-in
-          class: {
-            datetime: now, // Use CURRENT time for membership check-in
-            location: foundLocation.location
-          },
-          status: 'checked-in',
-          method: 'qr-code',
-          org: employee.org._id
-        });
-        
-        await membershipCheckinRecord.save();
-        console.log('Membership check-in created:', membershipCheckinRecord._id);
-        
-        membershipCheckin = {
-          product: activeMembership.product?.name,
-          checkinId: membershipCheckinRecord._id
-        };
-      }
-      
-      // Return success with details
-      return NextResponse.json({
-        success: true,
-        customer: {
-          _id: customer._id,
-          name: customer.name,
-          email: customer.email,
-          memberId: customer.memberId,
-          photo: customer.photo
-        },
-        product: {
-          _id: foundProduct._id,
-          name: foundProduct.name
-        },
-        classTime: foundClass.datetime,
-        checkinId: classCheckinRecord._id,
-        membershipCheckin,
-        status: 'checked-in',
-        message: test ? 'Test check-in successful' : 'Check-in successful',
-        testMode: test
-      });
-    }
-    
-    return NextResponse.json({ 
-      error: 'Unable to update check-in status' 
-    }, { status: 500 });
-    
-  } catch (error) {
-    console.error('Check-in error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error.message 
-    }, { status: 500 });
+    if (foundClass) break;
   }
+
+  return { foundClass, foundSchedule, foundLocation, foundProduct };
+}
+
+// Handle membership-only check-in (no schedules found)
+async function handleMembershipOnlyCheckin(customer, membership, membershipStatus, orgId) {
+  if (!membershipStatus) {
+    return NextResponse.json(buildCheckinResponse({
+      success: false,
+      customer,
+      status: 'no-scheduled-classes',
+      message: 'No classes, courses or memberships found'
+    }));
+  }
+
+  if (membershipStatus.status === 'suspended') {
+    const checkin = await createCheckinRecord({
+      customerId: customer._id,
+      productId: membership.product._id,
+      orgId,
+      type: 'failed',
+      failureReason: 'membership-suspended'
+    });
+
+    return NextResponse.json(buildCheckinResponse({
+      success: false,
+      customer,
+      status: 'membership-suspended',
+      message: membershipStatus.message,
+      checkinId: checkin._id,
+      suspendedMembership: {
+        product: membershipStatus.product,
+        suspendedUntil: membershipStatus.suspendedUntil,
+        status: membershipStatus.status,
+        message: membershipStatus.message
+      }
+    }));
+  }
+
+  if (membershipStatus.isValid) {
+    const checkin = await createCheckinRecord({
+      customerId: customer._id,
+      productId: membership.product._id,
+      orgId,
+      type: 'membership'
+    });
+
+    return NextResponse.json(buildCheckinResponse({
+      success: true,
+      customer,
+      status: 'membership-checked-in',
+      message: 'Membership check-in successful',
+      checkinId: checkin._id,
+      membershipCheckin: {
+        product: membershipStatus.product,
+        checkinId: checkin._id
+      }
+    }));
+  }
+
+  // Expired or invalid membership
+  const checkin = await createCheckinRecord({
+    customerId: customer._id,
+    productId: membership.product._id,
+    orgId,
+    type: 'failed',
+    failureReason: 'membership-expired',
+    classInfo: {
+      datetime: new Date(),
+      location: membership.location?._id || null
+    }
+  });
+
+  return NextResponse.json(buildCheckinResponse({
+    success: false,
+    customer,
+    status: 'membership-expired',
+    message: membershipStatus.message,
+    checkinId: checkin._id
+  }));
+}
+
+// Handle no class in window
+async function handleNoClassInWindow(customer, membership, membershipStatus, orgId, schedules, now) {
+  // Find next upcoming class
+  let nextClassInfo = null;
+  for (const schedule of schedules) {
+    for (const location of schedule.locations) {
+      for (const classItem of location.classes) {
+        const classTime = new Date(classItem.datetime);
+        if (classTime > now) {
+          const customerInClass = classItem.customers.find(c =>
+            c.customer.toString() === customer._id.toString()
+          );
+          if (customerInClass && (!nextClassInfo || classTime < nextClassInfo.datetime)) {
+            nextClassInfo = {
+              datetime: classTime,
+              productName: schedule.product?.name || 'Class/Course',
+              timeUntil: Math.round((classTime - now) / 1000 / 60)
+            };
+          }
+        }
+      }
+    }
+  }
+
+  if (membershipStatus?.status === 'suspended') {
+    const checkin = await createCheckinRecord({
+      customerId: customer._id,
+      productId: membership.product._id,
+      orgId,
+      type: 'failed',
+      failureReason: 'membership-suspended'
+    });
+
+    return NextResponse.json(buildCheckinResponse({
+      success: false,
+      customer,
+      status: 'membership-suspended',
+      message: membershipStatus.message,
+      checkinId: checkin._id,
+      nextClass: nextClassInfo,
+      suspendedMembership: {
+        product: membershipStatus.product,
+        suspendedUntil: membershipStatus.suspendedUntil,
+        status: membershipStatus.status
+      }
+    }));
+  }
+
+  return NextResponse.json(buildCheckinResponse({
+    success: false,
+    customer,
+    status: 'no-class-in-window',
+    message: 'No class within check-in window (30 minutes before/after class time)',
+    nextClass: nextClassInfo,
+    hasActiveMembership: membershipStatus?.isValid || false
+  }));
+}
+
+// Handle class check-in
+async function handleClassCheckin(classResult, customer, membership, membershipStatus, orgId, now, test) {
+  const { foundClass, foundSchedule, foundLocation, foundProduct } = classResult;
+
+  // Update schedule status
+  const customerIndex = foundClass.customers.findIndex(c =>
+    c.customer.toString() === customer._id.toString()
+  );
+
+  if (customerIndex !== -1) {
+    // Find the correct indices by matching IDs
+    const locationIndex = foundSchedule.locations.findIndex(l =>
+      l._id.toString() === foundLocation._id.toString()
+    );
+    const classIndex = foundLocation.classes.findIndex(c =>
+      c._id.toString() === foundClass._id.toString()
+    );
+
+    if (locationIndex !== -1 && classIndex !== -1) {
+      const updatePath = `locations.${locationIndex}.classes.${classIndex}.customers.${customerIndex}.status`;
+
+      await Schedule.findByIdAndUpdate(foundSchedule._id, {
+        $set: { [updatePath]: 'checked in' }
+      });
+    } else {
+      console.error('Could not find location or class indices for update');
+    }
+  }
+
+  // Create class check-in
+  const classCheckin = await createCheckinRecord({
+    customerId: customer._id,
+    productId: foundProduct._id,
+    orgId,
+    type: 'class',
+    scheduleId: foundSchedule._id,
+    classInfo: {
+      datetime: foundClass.datetime,
+      location: foundLocation.location
+    }
+  });
+
+  // Handle membership check-in if active
+  let membershipCheckinInfo = null;
+  let suspendedMembershipInfo = null;
+
+  if (membershipStatus) {
+    if (membershipStatus.status === 'suspended') {
+      suspendedMembershipInfo = {
+        product: membershipStatus.product,
+        suspendedUntil: membershipStatus.suspendedUntil,
+        status: membershipStatus.status,
+        message: membershipStatus.message
+      };
+    } else if (membershipStatus.isValid) {
+      const membershipCheckin = await createCheckinRecord({
+        customerId: customer._id,
+        productId: membership.product._id,
+        orgId,
+        type: 'membership',
+        classInfo: {
+          datetime: now,
+          location: foundLocation.location
+        }
+      });
+
+      membershipCheckinInfo = {
+        product: membershipStatus.product,
+        checkinId: membershipCheckin._id
+      };
+    }
+  }
+
+  return NextResponse.json(buildCheckinResponse({
+    success: true,
+    customer,
+    product: {
+      _id: foundProduct._id,
+      name: foundProduct.name
+    },
+    classTime: foundClass.datetime,
+    checkinId: classCheckin._id,
+    membershipCheckin: membershipCheckinInfo,
+    suspendedMembership: suspendedMembershipInfo,
+    status: 'checked-in',
+    message: test ? 'Test check-in successful' : 'Check-in successful',
+    testMode: test
+  }));
 }

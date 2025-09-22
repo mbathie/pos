@@ -1,6 +1,8 @@
 # POS System Features
 
-## Membership Pause/Suspension
+<div style="background-color: #1e3a8a; color: white; padding: 10px; border-radius: 5px;">
+  <h2 style="margin: 0; border: none; text-decoration: none;">Membership Pause/Suspension</h2>
+</div>
 
 ### Overview
 Allows members to temporarily pause their membership subscription for a specified number of days. During the pause period, the member's billing is suspended and they receive a prorated credit for the unused portion of their current billing period. The system enforces organization-defined limits on suspension days per year.
@@ -303,27 +305,73 @@ When a membership is suspended, all membership-related discounts are automatical
 - `/app/(app)/shop/payment.js` - UI shows appropriate error messages
 - `/scripts/tests/test-suspended-membership-discount.js` - Comprehensive test coverage
 
-### Check-in Handling for Suspended Memberships
+<div style="background-color: #1e3a8a; color: white; padding: 10px; border-radius: 5px; margin-top: 20px;">
+  <h2 style="margin: 0; border: none; text-decoration: none;">Check-in System</h2>
+</div>
 
-The check-in system properly handles suspended memberships to prevent access during the pause period.
+### Overview
+The check-in system handles various membership statuses and class purchases with intelligent routing and clear user feedback.
 
-#### Check-in Behavior
-When a customer with a suspended membership attempts to check in:
-1. **QR Code Scan**: System detects the suspended membership status
-2. **Check-in Denied**: Creates a failed check-in record with reason "membership-suspended"
-3. **Clear Message**: Displays "Membership Suspended" with the resume date
-4. **Helpful Information**: Shows when the membership will resume and suggests contacting staff for early resume
+### Check-in Behavior Matrix
 
-#### Implementation Details
-- **Status Detection**: Checks for both 'active' and 'suspended' membership statuses
-- **Failed Check-in Record**: Creates audit trail with `status: 'no-show'` and `reason: 'membership-suspended'`
-- **User Interface**: Orange-colored alert showing suspension details
-- **Next Class Info**: If applicable, shows when the next scheduled class is
+| Customer Status | Has Scheduled Class | Check-in Result | Visual Feedback |
+|----------------|-------------------|-----------------|-----------------|
+| Active Membership | Yes | ✅ Both class & membership checked in | Green success for both |
+| Active Membership | No | ✅ Membership checked in | Green success |
+| Suspended Membership | Yes | ✅ Class checked in, ⚠️ Membership warning | Green for class, Orange warning for membership |
+| Suspended Membership | No | ❌ Check-in denied | Orange alert with suspension details |
+| Expired Membership | Yes | ✅ Class checked in only | Green for class |
+| Expired Membership | No | ❌ Check-in denied | Red alert for expired membership |
+| No Membership | Yes | ✅ Class checked in | Green success |
+| No Membership | No | ❌ No valid check-in | Gray message |
 
-#### Technical Implementation
-- `/app/api/checkin/qr/route.js` - API endpoint handles suspended membership checks
-- `/app/(app)/checkin/page.js` - Frontend displays appropriate suspension message
-- Check-in records include suspension reason for reporting
+### Key Features
+1. **Suspended Members Can Attend Purchased Classes**: Customers with suspended memberships can still check into classes they've purchased separately
+2. **Clear Status Communication**: Different colored alerts (green/orange/red) indicate success, warning, or failure
+3. **Auto-Close for Privacy**: Check-in dialogs auto-close after 8 seconds to protect customer PII
+4. **URL Parameter Support**: Staff can test check-ins using `?id=memberId` parameter
+5. **Time Window Validation**: Classes can be checked into 30 minutes before/after scheduled time
+
+### Check-in Record Status Types
+- `checked-in`: Successful check-in for class or membership
+- `denied`: Attempted check-in blocked due to suspension
+- `no-show`: Customer didn't attempt to check in
+- `late`: Check-in after grace period (future feature)
+- `early`: Check-in before allowed window (future feature)
+
+### Check-in Failure Reasons
+- `membership-suspended`: Membership is currently suspended
+- `membership-expired`: Membership has expired
+- `no-scheduled-classes`: No classes found for customer
+- `no-class-in-window`: Class exists but outside 30-minute window
+- `invalid-status`: Other validation failure
+
+### Technical Implementation
+- `/app/api/checkin/qr/route.js` - Main check-in API endpoint
+- `/lib/checkin.js` - Shared check-in logic and utilities (refactored)
+- `/app/(app)/checkin/page.js` - Frontend check-in interface with QR scanner
+- `/models/Checkin.js` - Check-in data model with status tracking
+
+### Database Schema
+```javascript
+// Checkin Model
+{
+  customer: ObjectId,
+  product: ObjectId,
+  schedule: ObjectId (optional),
+  class: {
+    datetime: Date,
+    location: ObjectId
+  },
+  status: 'checked-in' | 'denied' | 'no-show' | 'late' | 'early',
+  method: 'qr-code' | 'manual' | 'staff',
+  success: {
+    status: Boolean,
+    reason: String (enum)
+  },
+  org: ObjectId
+}
+```
 
 ### Future Enhancements
 - [x] ~~Email notifications for pause/resume~~ ✅ Completed

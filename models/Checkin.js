@@ -25,7 +25,7 @@ const checkinSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['checked-in', 'late', 'early', 'no-show'],
+    enum: ['checked-in', 'late', 'early', 'no-show', 'denied'],
     default: 'checked-in'
   },
   method: {
@@ -40,7 +40,7 @@ const checkinSchema = new mongoose.Schema({
     },
     reason: {
       type: String,
-      enum: ['success', 'membership-expired', 'no-scheduled-classes', 'no-class-in-window', 'invalid-status'],
+      enum: ['success', 'membership-expired', 'membership-suspended', 'no-scheduled-classes', 'no-class-in-window', 'invalid-status'],
       default: 'success'
     }
   },

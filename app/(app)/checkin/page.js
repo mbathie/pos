@@ -59,6 +59,7 @@ export default function CheckInPage() {
       const res = await fetch('/api/checkin/qr', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ customerId })
       })
       
@@ -66,7 +67,10 @@ export default function CheckInPage() {
       
       const data = await res.json()
       console.log('Check-in response:', data)
-      
+      console.log('Check-in response status field:', data.status)
+      console.log('Customer data:', data.customer)
+      console.log('Membership details:', data.membershipDetails)
+
       // Show alert dialog with check-in result
       setAlertData(data)
       setShowAlertDialog(true)
@@ -489,6 +493,24 @@ export default function CheckInPage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Suspended Membership Warning if checking into class with suspended membership */}
+                    {alertData.suspendedMembership && (
+                      <Alert className="bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900">
+                        <AlertCircle className="h-4 w-4 text-orange-600" />
+                        <AlertDescription className="text-orange-900 dark:text-orange-100">
+                          <div className="space-y-1">
+                            <div className="font-semibold">Note: Membership Suspended</div>
+                            <div className="text-sm">{alertData.suspendedMembership.product}</div>
+                            {alertData.suspendedMembership.suspendedUntil && (
+                              <div className="text-xs mt-1">
+                                Suspended until: {dayjs(alertData.suspendedMembership.suspendedUntil).format('MMMM D, YYYY')}
+                              </div>
+                            )}
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                     
                     <Alert className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900">
                       <CheckCircle className="h-4 w-4 text-green-600" />
@@ -543,12 +565,13 @@ export default function CheckInPage() {
                         <AlertDescription className="text-orange-900 dark:text-orange-100">
                           <div className="space-y-1">
                             <div className="font-semibold">Membership Suspended</div>
-                            {alertData.membershipDetails && (
+                            {console.log('Rendering suspended membership alert with data:', alertData.membershipDetails || alertData.suspendedMembership)}
+                            {(alertData.membershipDetails || alertData.suspendedMembership) && (
                               <div className="text-sm">
-                                <div>{alertData.membershipDetails.product}</div>
-                                {alertData.membershipDetails.suspendedUntil && (
+                                <div>{(alertData.membershipDetails || alertData.suspendedMembership).product}</div>
+                                {(alertData.membershipDetails || alertData.suspendedMembership).suspendedUntil && (
                                   <div className="text-xs mt-1">
-                                    Suspended until: {dayjs(alertData.membershipDetails.suspendedUntil).format('MMMM D, YYYY')}
+                                    Suspended until: {dayjs((alertData.membershipDetails || alertData.suspendedMembership).suspendedUntil).format('MMMM D, YYYY')}
                                   </div>
                                 )}
                               </div>
