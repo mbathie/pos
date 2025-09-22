@@ -74,14 +74,40 @@ export function useProduct(setProducts) {
 
   const createProduct = async (categoryName, product) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${categoryName}/products`, {
+      // First get or create the category to get its ID
+      let categoryId = categoryName;
+
+      // Check if categoryName is actually a name (string) and not an ObjectId
+      if (!/^[0-9a-fA-F]{24}$/.test(categoryName)) {
+        // Create or get category by name
+        const catRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${categoryName}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ menu: categoryName }),
+        });
+
+        if (catRes.ok) {
+          const catData = await catRes.json();
+          categoryId = catData.category._id;
+        } else {
+          throw new Error('Failed to get/create category');
+        }
+      }
+
+      // Add category to product
+      const productWithCategory = { ...product, category: categoryId };
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product }),
+        body: JSON.stringify({ product: productWithCategory }),
       });
 
+      if (!res.ok) {
+        throw new Error(`Failed to create product: ${res.statusText}`);
+      }
+
       const created = await res.json();
-      // console.log(created.product)
       return created.product;
     } catch (err) {
       console.error(err);

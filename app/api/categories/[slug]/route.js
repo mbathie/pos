@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { getEmployee } from "@/lib/auth";
 import { Category } from "@/models";
+import { uploadBase64Image, deleteImage } from "@/lib/spaces";
 
 
 
@@ -14,7 +15,25 @@ export async function POST(req, { params }) {
   const { slug } = await params;
 
   const body = await req.json();
-  const { menu, thumbnail } = body;
+  let { menu, thumbnail } = body;
+
+  // Handle thumbnail upload if it's base64
+  if (thumbnail && (thumbnail.startsWith('data:image/jpeg') || thumbnail.startsWith('data:image/png'))) {
+    try {
+      const categoryId = slug + Date.now(); // Use slug + timestamp for unique ID
+      const { url } = await uploadBase64Image(
+        thumbnail,
+        'categories',
+        categoryId,
+        `category-${Date.now()}.jpg`
+      );
+      thumbnail = url; // Replace base64 with the Spaces URL
+      console.log('Category thumbnail uploaded to Spaces:', url);
+    } catch (error) {
+      console.error('Error uploading category thumbnail to Spaces:', error);
+      return NextResponse.json({ error: 'Failed to upload thumbnail' }, { status: 500 });
+    }
+  }
 
   const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
 
@@ -22,9 +41,9 @@ export async function POST(req, { params }) {
     ? { _id: slug, org }
     : { name: slug, org };
 
-  const update = isValidObjectId ? {} : { 
-    name: slug, 
-    org: employee.orgId, 
+  const update = isValidObjectId ? {} : {
+    name: slug,
+    org: employee.orgId,
     ...(menu && { menu }),
     ...(thumbnail && { thumbnail })
   };
@@ -66,11 +85,43 @@ export async function PUT(req, { params }) {
   const { slug } = await params;
   const body = await req.json();
   const updateData = {};
-  
+
   // Only update fields that are provided
   if (body.order !== undefined) updateData.order = body.order;
   if (body.name !== undefined) updateData.name = body.name;
-  if (body.thumbnail !== undefined) updateData.thumbnail = body.thumbnail;
+
+  // Handle thumbnail upload if it's base64
+  if (body.thumbnail !== undefined) {
+    let thumbnail = body.thumbnail;
+
+    if (thumbnail && (thumbnail.startsWith('data:image/jpeg') || thumbnail.startsWith('data:image/png'))) {
+      try {
+        // First, get the existing category to check for old thumbnail
+        const existingCategory = await Category.findOne({ _id: slug, org: org._id });
+        if (existingCategory && existingCategory.thumbnail) {
+          try {
+            await deleteImage(existingCategory.thumbnail);
+          } catch (error) {
+            console.error('Error deleting old category thumbnail:', error);
+          }
+        }
+
+        const categoryId = slug;
+        const { url } = await uploadBase64Image(
+          thumbnail,
+          'categories',
+          categoryId,
+          `category-${Date.now()}.jpg`
+        );
+        thumbnail = url; // Replace base64 with the Spaces URL
+        console.log('Category thumbnail uploaded to Spaces:', url);
+      } catch (error) {
+        console.error('Error uploading category thumbnail to Spaces:', error);
+        return NextResponse.json({ error: 'Failed to upload thumbnail' }, { status: 500 });
+      }
+    }
+    updateData.thumbnail = thumbnail;
+  }
 
   if (!slug) {
     return NextResponse.json({ error: "Missing category ID" }, { status: 400 });
