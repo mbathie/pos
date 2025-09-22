@@ -248,7 +248,7 @@ export default function CheckInClient() {
   const orgLogo = org?.branding?.logo || '/logo.png'
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] relative">
+    <div className="h-[calc(100vh-4rem)] flex">
       {/* Alert Dialog for Check-in Result */}
       <AlertDialog open={showAlertDialog} onOpenChange={handleCloseAlert}>
         <AlertDialogContent className="max-w-md">
@@ -479,159 +479,142 @@ export default function CheckInClient() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Background Image - Only show if org branding exists */}
-      {org?.branding?.checkInBackground && (
-        <div className="absolute inset-0 -z-10">
-          <Image
-            src={org.branding.checkInBackground}
-            alt="Background"
-            fill
-            className="object-cover opacity-20"
-            priority
-          />
+      {/* Left side - Image (hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-1/2 relative m-4 rounded-lg overflow-hidden">
+        <Image
+          src="https://images.unsplash.com/photo-1564769662533-4f00a87b4056?q=80&w=2070"
+          alt="Woman bouldering in climbing gym"
+          fill
+          className="object-cover"
+          priority
+          sizes="50vw"
+        />
+        <div className="absolute inset-0 bg-black/20" />
+        <div className="relative z-10 flex items-center p-12 text-white">
+          <div>
+            <h2 className="text-4xl font-bold mb-2">{org?.name || 'Marks Gyms'}</h2>
+            <p className="text-lg opacity-90">Your journey to fitness starts here</p>
+          </div>
         </div>
-      )}
+      </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Header */}
-        <div className="flex flex-col items-center mb-8">
-          {orgLogo && (
-            <Image
-              src={orgLogo}
-              alt={org?.name || 'Logo'}
-              width={200}
-              height={80}
-              className="mb-4"
-              priority
-            />
-          )}
-          <h1 className="text-2xl font-bold text-center">{org?.name || 'Fitness Center'}</h1>
-          <p className="text-muted-foreground text-center mt-2">
-            {org?.tagline || 'Your journey to fitness starts here'}
-          </p>
-        </div>
-
-        {/* Main Content Card */}
-        <div className="bg-card/95 backdrop-blur rounded-lg shadow-lg p-6">
+      {/* Right side - Check-in functionality */}
+      <div className="flex-1 flex items-center justify-center p-8 lg:w-1/2">
+        <div className="w-full max-w-md">
           <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold mb-2">
-              {org?.name || 'Fitness Center'} Check In
-            </h2>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl font-bold tracking-tight">{org?.name || 'Marks Gyms'} Check In</h1>
+            <p className="text-muted-foreground mt-2">
               {showManualEntry ? 'Enter your member ID' : 'Hold your QR code up to the camera'}
             </p>
           </div>
 
           {/* Camera/Manual Entry Section */}
-          <div className="bg-background rounded-lg p-4 mb-6">
-            {!showManualEntry ? (
-              <>
-                {/* QR Scanner View */}
-                <div className="relative aspect-square max-w-sm mx-auto bg-black rounded-lg overflow-hidden">
+          {!showManualEntry ? (
+            <>
+              {/* Camera View - Always On */}
+              <div className="relative">
+                <div className="relative bg-black rounded-lg overflow-hidden aspect-video mb-4">
                   <video
                     ref={videoRef}
-                    className="w-full h-full object-cover"
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover scale-x-[-1]"
                   />
 
-                  {/* Scanner overlay */}
-                  <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute inset-0 border-4 border-primary/20 rounded-lg" />
-                    <div className="absolute inset-x-0 top-1/2 h-0.5 bg-primary/50 -translate-y-1/2 animate-pulse" />
+                  {/* Scanning overlay */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div className="w-48 h-48 md:w-64 md:h-64 border-2 border-white/50 rounded-lg">
+                      <div className="w-full h-full border-2 border-white rounded-lg animate-pulse"></div>
+                    </div>
                   </div>
 
                   {/* Status indicator */}
-                  <div className="absolute top-4 left-4 right-4">
-                    {scanStatus === 'scanning' && (
-                      <div className="bg-background/90 backdrop-blur text-foreground px-3 py-2 rounded-full flex items-center gap-2 text-sm">
-                        <Camera className="h-4 w-4 animate-pulse" />
-                        Ready to scan
-                      </div>
-                    )}
-                    {scanStatus === 'processing' && (
-                      <div className="bg-primary/90 backdrop-blur text-primary-foreground px-3 py-2 rounded-full flex items-center gap-2 text-sm">
+                  {scanStatus === 'scanning' && !isProcessing && (
+                    <div className="absolute top-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      Ready to scan
+                    </div>
+                  )}
+
+                  {isProcessing && (
+                    <div className="absolute top-4 left-4 bg-black/50 text-white px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Processing...
+                    </div>
+                  )}
+
+                  {scanStatus === 'error' && cameraError && (
+                    <div className="absolute top-4 left-4 bg-red-600/90 text-white px-3 py-1 rounded-full text-sm">
+                      {cameraError}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Toggle to manual entry */}
+              <div className="text-center">
+                <div className="relative my-4">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">or</span>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowManualEntry(true)}
+                  className="cursor-pointer"
+                >
+                  Enter Member ID Manually
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Manual Entry View */}
+              <form onSubmit={handleManualSubmit} className="space-y-4">
+                <div>
+                  <Label htmlFor="memberId">Member ID</Label>
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      id="memberId"
+                      type="text"
+                      placeholder="Enter member ID..."
+                      value={memberIdInput}
+                      onChange={(e) => setMemberIdInput(e.target.value)}
+                      disabled={isProcessing}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="submit"
+                      disabled={!memberIdInput.trim() || isProcessing}
+                      className="cursor-pointer"
+                    >
+                      {isProcessing ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Processing...
-                      </div>
-                    )}
-                    {scanStatus === 'success' && (
-                      <div className="bg-green-600/90 backdrop-blur text-white px-3 py-2 rounded-full flex items-center gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4" />
-                        Check-in successful!
-                      </div>
-                    )}
-                    {scanStatus === 'error' && cameraError && (
-                      <div className="bg-destructive/90 backdrop-blur text-destructive-foreground px-3 py-2 rounded-full text-sm">
-                        {cameraError}
-                      </div>
-                    )}
+                      ) : (
+                        <ArrowRight className="h-4 w-4" />
+                      )}
+                    </Button>
                   </div>
                 </div>
+              </form>
 
-                {/* Toggle to manual entry */}
-                <div className="mt-4 text-center">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-background px-2 text-muted-foreground">or</span>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowManualEntry(true)}
-                    className="mt-4"
-                  >
-                    Enter Member ID Manually
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                {/* Manual Entry View */}
-                <form onSubmit={handleManualSubmit} className="max-w-sm mx-auto">
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="memberId">Member ID</Label>
-                      <div className="flex gap-2 mt-1">
-                        <Input
-                          id="memberId"
-                          type="text"
-                          placeholder="Enter member ID..."
-                          value={memberIdInput}
-                          onChange={(e) => setMemberIdInput(e.target.value)}
-                          disabled={isProcessing}
-                          className="flex-1"
-                        />
-                        <Button
-                          type="submit"
-                          disabled={!memberIdInput.trim() || isProcessing}
-                        >
-                          {isProcessing ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <ArrowRight className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                </form>
-
-                {/* Toggle back to scanner */}
-                <div className="mt-6 text-center">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setShowManualEntry(false)}
-                    className="gap-2"
-                  >
-                    <Camera className="h-4 w-4" />
-                    Back to QR Scanner
-                  </Button>
-                </div>
-              </>
-            )}
-          </div>
+              {/* Toggle back to scanner */}
+              <div className="text-center mt-6">
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowManualEntry(false)}
+                  className="gap-2 cursor-pointer"
+                >
+                  <Camera className="h-4 w-4" />
+                  Back to QR Scanner
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
