@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Image from 'next/image'
+import { useSearchParams } from 'next/navigation'
 import { BrowserQRCodeReader } from '@zxing/browser'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -25,6 +26,7 @@ dayjs.extend(relativeTime)
 
 export default function CheckInPage() {
   const { employee } = useGlobals()
+  const searchParams = useSearchParams()
   const [showManualEntry, setShowManualEntry] = useState(false)
   const [memberIdInput, setMemberIdInput] = useState('')
   const [scanResult, setScanResult] = useState(null)
@@ -34,24 +36,11 @@ export default function CheckInPage() {
   const [org, setOrg] = useState(null)
   const [showAlertDialog, setShowAlertDialog] = useState(false)
   const [alertData, setAlertData] = useState(null)
+  const [urlParamProcessed, setUrlParamProcessed] = useState(false)
   const videoRef = useRef(null)
   const codeReaderRef = useRef(null)
   const scanningRef = useRef(true)
   const alertTimeoutRef = useRef(null)
-  
-  // Fetch org data
-  useEffect(() => {
-    const fetchOrg = async () => {
-      try {
-        const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/orgs')
-        const data = await res.json()
-        setOrg(data.org)
-      } catch (error) {
-        console.error('Error fetching org:', error)
-      }
-    }
-    fetchOrg()
-  }, [])
 
   // Process QR code scan result
   const processCheckIn = useCallback(async (customerId) => {
@@ -216,6 +205,33 @@ export default function CheckInPage() {
     }
   }, [processCheckIn, isProcessing])
 
+  // Fetch org data
+  useEffect(() => {
+    const fetchOrg = async () => {
+      try {
+        const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/orgs')
+        const data = await res.json()
+        setOrg(data.org)
+      } catch (error) {
+        console.error('Error fetching org:', error)
+      }
+    }
+    fetchOrg()
+  }, [])
+
+  // Check for URL parameter and process checkin
+  useEffect(() => {
+    const customerId = searchParams.get('id')
+    if (customerId && !urlParamProcessed && !isProcessing) {
+      console.log('Processing checkin from URL parameter:', customerId)
+      setUrlParamProcessed(true)
+      // Small delay to ensure everything is initialized
+      setTimeout(() => {
+        processCheckIn(customerId)
+      }, 500)
+    }
+  }, [searchParams, urlParamProcessed, isProcessing, processCheckIn])
+
   const handleManualEntry = () => {
     setShowManualEntry(!showManualEntry)
     setMemberIdInput('')
@@ -223,61 +239,11 @@ export default function CheckInPage() {
   
   const handleManualCheckIn = async () => {
     if (!memberIdInput.trim() || isProcessing) return
-    
+
     scanningRef.current = false
     await processCheckIn(memberIdInput.trim())
     setShowManualEntry(false)
     setMemberIdInput('')
-  }
-  
-  // Test check-in function (dev only)
-  const handleTestCheckIn = async () => {
-    if (isProcessing) return
-    
-    console.log('Running test check-in...')
-    setIsProcessing(true)
-    setScanStatus('processing')
-    
-    try {
-      const res = await fetch('/api/checkin/qr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          customerId: '686724d857a1608855983071',
-          test: true // Special test flag
-        })
-      })
-      
-      const data = await res.json()
-      console.log('Test check-in response:', data)
-      
-      // Show alert dialog with check-in result
-      setAlertData(data)
-      setShowAlertDialog(true)
-      
-      // Don't auto-close in test mode
-      // Test mode is already set in the response, so no timeout needed
-      
-      if (data.success) {
-        setScanStatus('success')
-      } else {
-        setScanStatus('idle')
-      }
-      
-      setTimeout(() => {
-        setIsProcessing(false)
-      }, 1000)
-    } catch (error) {
-      console.error('Test check-in error:', error)
-      setScanStatus('error')
-      setCameraError('Test check-in failed')
-      setIsProcessing(false)
-      
-      setTimeout(() => {
-        setCameraError(null)
-        setScanStatus('idle')
-      }, 3000)
-    }
   }
 
   return (
@@ -403,28 +369,6 @@ export default function CheckInPage() {
                 </div>
               </div>
             </div>
-            
-            {/* Test Button - Only visible in development */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="mt-6 p-4 border-2 border-dashed border-muted-foreground/20 rounded-lg">
-                <p className="text-xs text-muted-foreground text-center mb-2">Development Only</p>
-                <Button 
-                  onClick={handleTestCheckIn}
-                  disabled={isProcessing}
-                  variant="secondary"
-                  className="w-full"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Processing Test Check-in...
-                    </>
-                  ) : (
-                    'Test Check-in (Mark - 686724d857a1608855983071)'
-                  )}
-                </Button>
-              </div>
-            )}
           </div>
 
         </div>
