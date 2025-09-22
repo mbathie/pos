@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { ProductIcon } from '@/components/product-icon'
+import { ProductThumbnail } from '@/components/product-thumbnail'
 
 export default function ProductCard({ product, onClick }) {
   return (
@@ -13,7 +13,7 @@ export default function ProductCard({ product, onClick }) {
         className="cursor-pointer"
         onClick={onClick}
       >
-        <ProductIcon
+        <ProductThumbnail
           src={product.thumbnail}
           alt={product.name}
           size="lg"

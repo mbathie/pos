@@ -13,7 +13,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Loader2, CheckCircle, Save, Trash2, Plus, Info, Trash, CalendarIcon } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ProductIcon } from '@/components/product-icon';
+import { ProductThumbnail } from '@/components/product-thumbnail';
 import ProductInstructions from './ProductInstructions';
 import ProductTerms from './ProductTerms';
 import dayjs from 'dayjs';
@@ -133,7 +133,7 @@ export default function ClassesProductSheet({
                 setIconDialogQuery(product.name);
               }}
             >
-              <ProductIcon
+              <ProductThumbnail
                 src={product.thumbnail}
                 alt={product.name}
                 size="lg"

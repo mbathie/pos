@@ -1,7 +1,7 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ChevronRight, Check } from 'lucide-react';
-import { ProductIcon } from '@/components/product-icon';
+import { ProductThumbnail } from '@/components/product-thumbnail';
 
 export default function ProductsTable({ 
   products, 
@@ -37,7 +37,7 @@ export default function ProductsTable({
                 onClick={() => onProductClick(product, pIdx)}
               >
                 <TableCell>
-                  <ProductIcon
+                  <ProductThumbnail
                     src={product.thumbnail}
                     alt={product.name}
                     size="xs"

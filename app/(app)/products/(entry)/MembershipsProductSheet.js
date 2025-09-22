@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Loader2, CheckCircle, Save, Trash2, Plus, Trash, Info } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { ProductIcon } from '@/components/product-icon';
+import { ProductThumbnail } from '@/components/product-thumbnail';
 import ProductInstructions from '@/app/(app)/products/(entry)/ProductInstructions';
 import ProductTerms from '@/app/(app)/products/(entry)/ProductTerms';
 import { NumberInput } from '@/components/ui/number-input';
@@ -81,7 +81,7 @@ export default function MembershipsProductSheet({
                   setIconDialogQuery(product.name);
                 }}
               >
-                <ProductIcon
+                <ProductThumbnail
                   src={product.thumbnail}
                   alt={product.name}
                   size="lg"

@@ -7,12 +7,11 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import { 
-  ChevronRight, 
-  Image,
+import {
+  ChevronRight,
   GripVertical
 } from 'lucide-react';
-import { SvgIcon } from '@/components/ui/svg-icon';
+import { ProductThumbnail } from '@/components/product-thumbnail';
 import colors from '@/lib/tailwind-colors';
 import { cn } from '@/lib/utils';
 import {
@@ -86,15 +85,12 @@ function SortableCategory({
             className="flex items-center gap-2 flex-1"
             onClick={() => !editMode && onCategorySelect(category)}
           >
-            {category.thumbnail ? (
-              <SvgIcon
-                src={category.thumbnail}
-                alt={category.name}
-                className="size-5 text-foreground rounded-xs"
-              />
-            ) : (
-              <Image className="size-5" />
-            )}
+            <ProductThumbnail
+              src={category.thumbnail}
+              alt={category.name}
+              size="sm"
+              className="size-5"
+            />
             <span className="text-sm font-medium">{category.name}</span>
           </div>
           
