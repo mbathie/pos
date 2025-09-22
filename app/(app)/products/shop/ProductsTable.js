@@ -21,6 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from '@/components/ui/button';
 import { Tag, ChevronRight, Check, GripVertical, ChevronsUpDown } from 'lucide-react';
 import colors from '@/lib/tailwind-colors';
+import { ProductThumbnail } from '@/components/product-thumbnail';
 
 // Sortable row component
 function SortableRow({ product, pIdx, onProductClick }) {
@@ -60,13 +61,11 @@ function SortableRow({ product, pIdx, onProductClick }) {
       </TableCell>
       
       <TableCell onClick={(e) => e.stopPropagation()}>
-        {!product?.thumbnail ? (
-          <div className="bg-muted rounded-lg w-10 h-10 flex items-center justify-center">
-            <Tag className="w-5 h-5" />
-          </div>
-        ) : (
-          <img className='rounded-lg w-10 h-10 object-cover' src={product.thumbnail} alt="Thumbnail" />
-        )}
+        <ProductThumbnail
+          src={product?.thumbnail}
+          alt={product?.name}
+          size="md"
+        />
       </TableCell>
       
       <TableCell>

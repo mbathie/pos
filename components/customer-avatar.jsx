@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 export function CustomerAvatar({ 
@@ -44,16 +45,15 @@ export function CustomerAvatar({
 
   if (customer.photo) {
     return (
-      <img 
-        src={customer.photo} 
-        alt={customer.name || 'Customer'} 
-        className={cn(
-          sizeClass,
-          shapeClass,
-          "object-cover flex-shrink-0",
-          className
-        )}
-      />
+      <div className={cn(sizeClass, shapeClass, "relative overflow-hidden flex-shrink-0", className)}>
+        <Image
+          src={customer.photo}
+          alt={customer.name || 'Customer'}
+          fill
+          sizes="(max-width: 768px) 32px, 48px"
+          className="object-cover"
+        />
+      </div>
     );
   }
 

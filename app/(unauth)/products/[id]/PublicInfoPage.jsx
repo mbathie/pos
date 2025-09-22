@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import { Card, CardContent } from '@/components/ui/card'
 
 export default function PublicInfoPage({
@@ -14,11 +15,14 @@ export default function PublicInfoPage({
         {/* Top row: org logo left, product name + thumbnail right */}
         <div className="mb-6 flex items-center justify-between gap-4">
           {org?.logo && (
-            <img
-              src={org.logo}
-              alt={org.name || 'Organization'}
-              className="h-9 md:h-12 rounded-lg object-contain"
-            />
+            <div className="relative h-9 md:h-12 w-36 md:w-48">
+              <Image
+                src={org.logo}
+                alt={org.name || 'Organization'}
+                fill
+                className="rounded-lg object-contain"
+              />
+            </div>
           )}
           {product && (
             <div className="ml-auto flex items-center gap-3">
@@ -26,11 +30,14 @@ export default function PublicInfoPage({
                 <div className="text-base md:text-lg font-semibold truncate max-w-[50vw]">{product?.name}</div>
               </div>
               {product?.thumbnail && (
-                <img
-                  src={product.thumbnail}
-                  alt={product.name}
-                  className="w-12 h-12 md:w-14 md:h-14 rounded-md object-cover ring-1 ring-border shadow-sm"
-                />
+                <div className="relative w-12 h-12 md:w-14 md:h-14">
+                  <Image
+                    src={product.thumbnail}
+                    alt={product.name}
+                    fill
+                    className="rounded-md object-cover ring-1 ring-border shadow-sm"
+                  />
+                </div>
               )}
             </div>
           )}
