@@ -303,6 +303,28 @@ When a membership is suspended, all membership-related discounts are automatical
 - `/app/(app)/shop/payment.js` - UI shows appropriate error messages
 - `/scripts/tests/test-suspended-membership-discount.js` - Comprehensive test coverage
 
+### Check-in Handling for Suspended Memberships
+
+The check-in system properly handles suspended memberships to prevent access during the pause period.
+
+#### Check-in Behavior
+When a customer with a suspended membership attempts to check in:
+1. **QR Code Scan**: System detects the suspended membership status
+2. **Check-in Denied**: Creates a failed check-in record with reason "membership-suspended"
+3. **Clear Message**: Displays "Membership Suspended" with the resume date
+4. **Helpful Information**: Shows when the membership will resume and suggests contacting staff for early resume
+
+#### Implementation Details
+- **Status Detection**: Checks for both 'active' and 'suspended' membership statuses
+- **Failed Check-in Record**: Creates audit trail with `status: 'no-show'` and `reason: 'membership-suspended'`
+- **User Interface**: Orange-colored alert showing suspension details
+- **Next Class Info**: If applicable, shows when the next scheduled class is
+
+#### Technical Implementation
+- `/app/api/checkin/qr/route.js` - API endpoint handles suspended membership checks
+- `/app/(app)/checkin/page.js` - Frontend displays appropriate suspension message
+- Check-in records include suspension reason for reporting
+
 ### Future Enhancements
 - [x] ~~Email notifications for pause/resume~~ ✅ Completed
 - [ ] Customer self-service pause via mobile app

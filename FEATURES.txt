@@ -2,7 +2,7 @@
 
 - membership cancellations
 - basic reporting
-
+- refunds
 
 15.9.2025
 

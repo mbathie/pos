@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/mongoose';
 import { Schedule, Customer, Product, Checkin, Membership } from '@/models';
 import { getEmployee } from '@/lib/auth';
+import dayjs from 'dayjs';
 
 export async function POST(request) {
   try {
@@ -109,38 +110,86 @@ export async function POST(request) {
       });
       console.log('Any schedule with customer:', anySchedule ? 'Found' : 'Not found');
       
-      // Check for active membership even if no schedules
-      const activeMembership = await Membership.findOne({
+      // Check for any membership (active or suspended)
+      const membership = await Membership.findOne({
         customer: customer._id,
         org: employee.org._id,
-        status: 'active'
+        status: { $in: ['active', 'suspended'] }
       }).populate('product').populate('location');
-      
-      // Validate membership is not expired
+
+      // Check if membership is suspended
+      if (membership && membership.status === 'suspended') {
+        console.log('Membership is suspended:', {
+          product: membership.product?.name,
+          suspendedUntil: membership.suspendedUntil
+        });
+
+        // Create a failed check-in record for suspended membership
+        const failedCheckinRecord = new Checkin({
+          customer: customer._id,
+          product: membership.product._id,
+          class: {
+            datetime: now,
+            location: membership.location?._id || null
+          },
+          status: 'no-show',
+          method: 'qr-code',
+          success: {
+            status: false,
+            reason: 'membership-suspended'
+          },
+          org: employee.org._id
+        });
+
+        await failedCheckinRecord.save();
+
+        return NextResponse.json({
+          success: false,
+          status: 'membership-suspended',
+          message: `Membership is suspended until ${dayjs(membership.suspendedUntil).format('MMMM D, YYYY')}`,
+          customer: {
+            _id: customer._id,
+            name: customer.name,
+            email: customer.email,
+            memberId: customer.memberId,
+            photo: customer.photo
+          },
+          membershipDetails: {
+            product: membership.product?.name,
+            suspendedUntil: membership.suspendedUntil,
+            status: membership.status
+          },
+          checkinId: failedCheckinRecord._id
+        });
+      }
+
+      // Validate active membership is not expired
       let isMembershipValid = false;
-      if (activeMembership) {
+      if (membership && membership.status === 'active') {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        
-        if (activeMembership.nextBillingDate) {
-          const nextBilling = new Date(activeMembership.nextBillingDate);
+
+        if (membership.nextBillingDate) {
+          const nextBilling = new Date(membership.nextBillingDate);
           nextBilling.setHours(0, 0, 0, 0);
-          
+
           // Membership is valid if today is not past the next billing date
-          isMembershipValid = today <= nextBilling && activeMembership.status === 'active';
-          
+          isMembershipValid = today <= nextBilling && membership.status === 'active';
+
           console.log('Membership validation:', {
-            product: activeMembership.product?.name,
-            status: activeMembership.status,
-            nextBillingDate: activeMembership.nextBillingDate,
+            product: membership.product?.name,
+            status: membership.status,
+            nextBillingDate: membership.nextBillingDate,
             today: today,
             isValid: isMembershipValid
           });
         } else {
           // If no nextBillingDate, only check status
-          isMembershipValid = activeMembership.status === 'active';
+          isMembershipValid = membership.status === 'active';
         }
       }
+
+      const activeMembership = membership && membership.status === 'active' ? membership : null;
       
       if (activeMembership && isMembershipValid) {
         console.log('Valid active membership found (no schedules):', activeMembership.product?.name);
@@ -332,12 +381,88 @@ export async function POST(request) {
     if (!foundClass) {
       console.log('No class found in time window');
       
-      // Check for active membership even if no class is found
-      const activeMembership = await Membership.findOne({
+      // Check for any membership (active or suspended) even if no class is found
+      const membership = await Membership.findOne({
         customer: customer._id,
         org: employee.org._id,
-        status: 'active'
+        status: { $in: ['active', 'suspended'] }
       }).populate('product').populate('location');
+
+      // Check if membership is suspended
+      if (membership && membership.status === 'suspended') {
+        console.log('Membership is suspended (no class in window):', {
+          product: membership.product?.name,
+          suspendedUntil: membership.suspendedUntil
+        });
+
+        // Create a failed check-in record for suspended membership
+        const failedCheckinRecord = new Checkin({
+          customer: customer._id,
+          product: membership.product._id,
+          class: {
+            datetime: now,
+            location: membership.location?._id || null
+          },
+          status: 'no-show',
+          method: 'qr-code',
+          success: {
+            status: false,
+            reason: 'membership-suspended'
+          },
+          org: employee.org._id
+        });
+
+        await failedCheckinRecord.save();
+
+        // Find next upcoming class for this customer
+        let nextClass = null;
+        let nextClassTime = null;
+        let nextClassProduct = null;
+
+        for (const schedule of schedules) {
+          for (const location of schedule.locations) {
+            for (const classItem of location.classes) {
+              const classTime = new Date(classItem.datetime);
+              if (classTime > now && (!nextClassTime || classTime < nextClassTime)) {
+                const customerInClass = classItem.customers.find(c =>
+                  c.customer.toString() === customer._id.toString()
+                );
+                if (customerInClass) {
+                  nextClass = classItem;
+                  nextClassTime = classTime;
+                  nextClassProduct = schedule.product;
+                }
+              }
+            }
+          }
+        }
+
+        return NextResponse.json({
+          success: false,
+          status: 'membership-suspended',
+          message: `Membership is suspended until ${dayjs(membership.suspendedUntil).format('MMMM D, YYYY')}`,
+          customer: {
+            _id: customer._id,
+            name: customer.name,
+            email: customer.email,
+            memberId: customer.memberId,
+            photo: customer.photo
+          },
+          membershipDetails: {
+            product: membership.product?.name,
+            suspendedUntil: membership.suspendedUntil,
+            status: membership.status
+          },
+          nextClass: nextClassTime ? {
+            datetime: nextClassTime,
+            productName: nextClassProduct?.name || 'Class/Course',
+            timeUntil: Math.round((nextClassTime - now) / 1000 / 60) // minutes until class
+          } : null,
+          checkinId: failedCheckinRecord._id
+        });
+      }
+
+      const activeMembership = membership && membership.status === 'active' ? membership : null;
       
       // Validate membership is not expired
       let isMembershipValid = false;
@@ -556,13 +681,16 @@ export async function POST(request) {
       await classCheckinRecord.save();
       console.log('Class check-in created:', classCheckinRecord._id);
       
-      // Also check for active membership and create SEPARATE record
+      // Also check for membership (active or suspended) and create SEPARATE record if active
       let membershipCheckin = null;
-      const activeMembership = await Membership.findOne({
+      const membership = await Membership.findOne({
         customer: customer._id,
         org: employee.org._id,
-        status: 'active'
+        status: { $in: ['active', 'suspended'] }
       }).populate('product');
+
+      // Only create membership check-in if membership is active (not suspended)
+      const activeMembership = membership && membership.status === 'active' ? membership : null;
       
       // Validate membership is not expired for class check-in
       let isMembershipValid = false;

@@ -593,6 +593,29 @@ export default function CheckInPage() {
                         </AlertDescription>
                       </Alert>
                     )}
+                    {alertData.status === 'membership-suspended' && (
+                      <Alert className="bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-900">
+                        <AlertCircle className="h-4 w-4 text-orange-600" />
+                        <AlertDescription className="text-orange-900 dark:text-orange-100">
+                          <div className="space-y-1">
+                            <div className="font-semibold">Membership Suspended</div>
+                            {alertData.membershipDetails && (
+                              <div className="text-sm">
+                                <div>{alertData.membershipDetails.product}</div>
+                                {alertData.membershipDetails.suspendedUntil && (
+                                  <div className="text-xs mt-1">
+                                    Suspended until: {dayjs(alertData.membershipDetails.suspendedUntil).format('MMMM D, YYYY')}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            <div className="text-xs mt-2">
+                              Please contact staff if you need to resume your membership early.
+                            </div>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
                     {alertData.status === 'membership-expired' && (
                       <Alert className="bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900">
                         <AlertCircle className="h-4 w-4 text-red-600" />
