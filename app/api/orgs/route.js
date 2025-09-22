@@ -20,8 +20,8 @@ export async function POST(req) {
 
   // Extract only the fields we want to update
   const updateFields = {};
-  const allowedFields = ['name', 'phone', 'addressLine', 'suburb', 'state', 'postcode'];
-  
+  const allowedFields = ['name', 'phone', 'addressLine', 'suburb', 'state', 'postcode', 'autoReceiptShop', 'membershipSuspensionDaysPerYear'];
+
   allowedFields.forEach(field => {
     if (data[field] !== undefined) {
       updateFields[field] = data[field];

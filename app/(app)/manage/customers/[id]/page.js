@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt, Users, DollarSign, Plus, ExternalLink } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt, Users, DollarSign, Plus, ExternalLink, MoreVertical, Pause, Play, X } from "lucide-react";
 import TransactionsTable from '@/components/transactions-table';
 import { CustomerAvatar } from '@/components/customer-avatar';
 import { useGlobals } from '@/lib/globals';
@@ -19,8 +19,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { MembershipPauseDialog } from '@/components/membership-pause-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 dayjs.extend(relativeTime);
 
@@ -37,6 +45,9 @@ export default function CustomerDetailPage({ params }) {
   const [creditAmount, setCreditAmount] = useState('');
   const [creditNote, setCreditNote] = useState('');
   const [creditLoading, setCreditLoading] = useState(false);
+  const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
+  const [selectedMembership, setSelectedMembership] = useState(null);
+  const [org, setOrg] = useState(null);
 
   // Handle async params in Next.js 15+
   useEffect(() => {
@@ -51,6 +62,7 @@ export default function CustomerDetailPage({ params }) {
     if (customerId) {
       fetchCustomer();
       fetchMemberships();
+      fetchOrgSettings();
     }
   }, [customerId]);
 
@@ -81,12 +93,12 @@ export default function CustomerDetailPage({ params }) {
         const membershipData = await response.json();
         const allMemberships = membershipData.memberships || [];
         setMemberships(allMemberships);
-        
+
         // Separate parent memberships (where customer is the actual member)
         // from dependent memberships (where customer is the guardian)
         const parentMems = allMemberships.filter(m => !m.dependent);
         const dependentMems = allMemberships.filter(m => m.dependent);
-        
+
         setParentMemberships(parentMems);
         setDependentMemberships(dependentMems);
       } else {
@@ -94,6 +106,18 @@ export default function CustomerDetailPage({ params }) {
       }
     } catch (error) {
       console.error('Error fetching memberships:', error);
+    }
+  };
+
+  const fetchOrgSettings = async () => {
+    try {
+      const response = await fetch('/api/orgs');
+      if (response.ok) {
+        const data = await response.json();
+        setOrg(data.org);
+      }
+    } catch (error) {
+      console.error('Error fetching org settings:', error);
     }
   };
 
@@ -126,6 +150,57 @@ export default function CustomerDetailPage({ params }) {
     if (variation === "1" && unit === "month") return "Monthly";
     if (variation === "1" && unit === "year") return "Yearly";
     return `${variation} ${unit}${parseInt(variation) > 1 ? 's' : ''}`;
+  };
+
+  const handleCancelScheduledPause = async (membership) => {
+    if (!confirm('Cancel the scheduled pause for this membership?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/memberships/${membership._id}/cancel-scheduled-pause`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.ok) {
+        toast.success('Scheduled pause cancelled');
+        fetchMemberships();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to cancel scheduled pause');
+      }
+    } catch (error) {
+      console.error('Error cancelling scheduled pause:', error);
+      toast.error('Failed to cancel scheduled pause');
+    }
+  };
+
+  const handleResumeMembership = async (membership) => {
+    try {
+      const response = await fetch(`/api/memberships/${membership._id}/resume`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+
+        if (result.creditAdjustment) {
+          toast.success(`Membership resumed early. Credit adjusted by $${result.creditAdjustment.amount.toFixed(2)}`);
+        } else {
+          toast.success('Membership resumed successfully');
+        }
+
+        fetchMemberships();
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to resume membership');
+      }
+    } catch (error) {
+      console.error('Error resuming membership:', error);
+      toast.error('Failed to resume membership');
+    }
   };
 
   const handleAddCredit = async () => {
@@ -291,9 +366,65 @@ export default function CustomerDetailPage({ params }) {
                           {membership.priceName} • {formatBillingPeriod(membership.variation, membership.unit)}
                         </p>
                       </div>
-                      <Badge variant={getStatusBadgeVariant(membership.status)} className="capitalize">
-                        {membership.status}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-1">
+                          <Badge variant={getStatusBadgeVariant(membership.status)} className="capitalize">
+                            {membership.status}
+                          </Badge>
+                          {membership.scheduledPauseDate && membership.status === 'active' && (
+                            <Badge variant="outline" className="text-xs flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              Pause: {dayjs(membership.scheduledPauseDate).format('DD/MM')}
+                              <button
+                                onClick={() => handleCancelScheduledPause(membership)}
+                                className="ml-1 hover:bg-destructive/20 rounded-full p-0.5 transition-colors"
+                                title="Cancel scheduled pause"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          )}
+                        </div>
+                        {membership.status === 'active' && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedMembership(membership);
+                                  setPauseDialogOpen(true);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <Pause className="mr-2 h-4 w-4" />
+                                Pause Membership
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                        {membership.status === 'suspended' && membership.suspendedUntil && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => handleResumeMembership(membership)}
+                                className="cursor-pointer"
+                              >
+                                <Play className="mr-2 h-4 w-4" />
+                                Resume Membership
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
@@ -302,8 +433,29 @@ export default function CustomerDetailPage({ params }) {
                         <p className="text-sm">{dayjs(membership.subscriptionStartDate).format('DD/MM/YYYY')}</p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-muted-foreground">Next Billing</label>
-                        <p className="text-sm">{dayjs(membership.nextBillingDate).format('DD/MM/YYYY')}</p>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {membership.status === 'suspended' ? 'Resumes' :
+                           membership.scheduledPauseDate ? 'Pause Starts' : 'Next Billing'}
+                        </label>
+                        <p className="text-sm">
+                          {(() => {
+                            if (membership.status === 'suspended') {
+                              // Check for suspension info in the membership itself
+                              if (membership.suspendedUntil) {
+                                return dayjs(membership.suspendedUntil).format('DD/MM/YYYY');
+                              }
+                            } else if (membership.scheduledPauseDate) {
+                              // Show scheduled pause date
+                              return dayjs(membership.scheduledPauseDate).format('DD/MM/YYYY');
+                            }
+                            // Check for latest suspension in suspensions array
+                            const latestSuspension = membership.suspensions?.slice(-1)[0];
+                            if (latestSuspension?.resumesAt) {
+                              return dayjs(latestSuspension.resumesAt).format('DD/MM/YYYY');
+                            }
+                            return dayjs(membership.nextBillingDate).format('DD/MM/YYYY');
+                          })()}
+                        </p>
                       </div>
                     </div>
                     
@@ -552,6 +704,21 @@ export default function CustomerDetailPage({ params }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Pause Membership Dialog */}
+      {selectedMembership && (
+        <MembershipPauseDialog
+          open={pauseDialogOpen}
+          onOpenChange={setPauseDialogOpen}
+          membership={selectedMembership}
+          customer={customer}
+          maxDays={org?.membershipSuspensionDaysPerYear || 30}
+          onPause={() => {
+            fetchMemberships();
+            fetchCustomer();
+          }}
+        />
+      )}
     </div>
   );
 }

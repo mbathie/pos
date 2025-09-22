@@ -1,297 +1,421 @@
 'use client'
 
+import { useState, useEffect, useRef } from 'react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { useGlobals } from '@/lib/globals'
+import { NumberInput } from '@/components/ui/number-input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { toast } from 'sonner'
+import { Upload, Trash2, Loader2, Loader } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
+import Image from 'next/image'
+import IconSelect from '@/components/icon-select'
 
-import { TypographyLarge, TypographyMuted } from '@/components/ui/typography'
-import { Card, CardContent } from '@/components/ui/card'
-import { Loader, CheckCircle2, Calculator, Download, Link as LinkIcon } from 'lucide-react'
-import { useState, useEffect } from 'react'
-import { Separator } from '@radix-ui/react-separator'
-import { QRCode } from 'react-qrcode-logo'
+const australianStates = [
+  { value: 'NSW', label: 'New South Wales' },
+  { value: 'VIC', label: 'Victoria' },
+  { value: 'QLD', label: 'Queensland' },
+  { value: 'WA', label: 'Western Australia' },
+  { value: 'SA', label: 'South Australia' },
+  { value: 'TAS', label: 'Tasmania' },
+  { value: 'ACT', label: 'Australian Capital Territory' },
+  { value: 'NT', label: 'Northern Territory' }
+]
 
-export default function Page() {
-  const router = useRouter()
-  const { employee } = useGlobals()
-  const [loading, setLoading] = useState(false)
-
-  const [ chargesEnabled, setChargesEnabled ] = useState(false)
-  const [ hasFetched, setHasFetched ] = useState(false)
-  const [ org, setOrg ] = useState({})
+export default function OrganizationSettingsPage() {
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [logoDialogOpen, setLogoDialogOpen] = useState(false)
+  const [orgData, setOrgData] = useState({
+    name: '',
+    phone: '',
+    addressLine: '',
+    suburb: '',
+    state: '',
+    postcode: '',
+    logo: null,
+    membershipSuspensionDaysPerYear: 30
+  })
+  const [originalData, setOriginalData] = useState(null)
+  const [savingSuspensionDays, setSavingSuspensionDays] = useState(false)
 
   useEffect(() => {
-    const fetchStripeAccount = async () => {
-      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/payments')
-      const data = await res.json()
-      setChargesEnabled(data.charges_enabled)
-      setHasFetched(true)
-    }
-    fetchStripeAccount()
+    fetchOrgData()
   }, [])
 
-  useEffect(() => {
-    const fetchOrg = async () => {
-      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/orgs')
-      const data = await res.json()
-      setOrg(data.org)
+  const fetchOrgData = async () => {
+    try {
+      const response = await fetch('/api/orgs')
+      if (response.ok) {
+        const data = await response.json()
+        const org = data.org
+        setOrgData({
+          name: org.name || '',
+          phone: org.phone || '',
+          addressLine: org.addressLine || '',
+          suburb: org.suburb || '',
+          state: org.state || '',
+          postcode: org.postcode || '',
+          logo: org.logo || null,
+          membershipSuspensionDaysPerYear: org.membershipSuspensionDaysPerYear || 30
+        })
+        setOriginalData({
+          name: org.name || '',
+          phone: org.phone || '',
+          addressLine: org.addressLine || '',
+          suburb: org.suburb || '',
+          state: org.state || '',
+          postcode: org.postcode || '',
+          logo: org.logo || null,
+          membershipSuspensionDaysPerYear: org.membershipSuspensionDaysPerYear || 30
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching organization data:', error)
+      toast.error('Failed to load organization data')
+    } finally {
+      setLoading(false)
     }
-    fetchOrg()
-  }, [])
-
-  const handleConnect = async () => {
-    setLoading(true)
-    const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/payments/setup')
-    const data = await res.json()
-    router.push(data.url)
   }
 
-
-  const downloadWaiverPDF = async () => {
+  const handleSave = async () => {
+    setSaving(true)
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/waiver/pdf`);
-      
-      if (!response.ok) {
-        throw new Error('Failed to generate PDF');
+      const response = await fetch('/api/orgs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orgData)
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setOriginalData(orgData)
+        toast.success('Organization settings saved successfully')
+      } else {
+        toast.error('Failed to save organization settings')
       }
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'waiver-qr-code.pdf';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error downloading PDF:', error);
-      alert('Failed to download PDF. Please try again.');
+      console.error('Error saving organization:', error)
+      toast.error('Failed to save organization settings')
+    } finally {
+      setSaving(false)
     }
-  };
+  }
+
+  const handleLogoSelected = async (logoDataUrl) => {
+    try {
+      const response = await fetch('/api/orgs/logo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logo: logoDataUrl })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        setOrgData(prev => ({ ...prev, logo: data.logo }))
+        setOriginalData(prev => ({ ...prev, logo: data.logo }))
+        toast.success('Logo updated successfully')
+      } else {
+        toast.error('Failed to update logo')
+      }
+    } catch (error) {
+      console.error('Error updating logo:', error)
+      toast.error('Failed to update logo')
+    }
+  }
+
+  const handleLogoRemove = async () => {
+    if (!orgData.logo) return
+
+    try {
+      const response = await fetch('/api/orgs/logo', {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        setOrgData(prev => ({ ...prev, logo: null }))
+        setOriginalData(prev => ({ ...prev, logo: null }))
+        toast.success('Logo removed successfully')
+      } else {
+        toast.error('Failed to remove logo')
+      }
+    } catch (error) {
+      console.error('Error removing logo:', error)
+      toast.error('Failed to remove logo')
+    }
+  }
+
+  const handleSuspensionDaysChange = (value) => {
+    // Allow null for empty field, otherwise ensure positive whole integers
+    if (value === null) {
+      setOrgData(prev => ({ ...prev, membershipSuspensionDaysPerYear: null }))
+    } else {
+      const validValue = Math.max(0, Math.min(365, Math.floor(value)))
+      setOrgData(prev => ({ ...prev, membershipSuspensionDaysPerYear: validValue }))
+    }
+  }
+
+  const handleSaveSuspensionDays = async () => {
+    setSavingSuspensionDays(true)
+
+    // Use 0 if the field is empty/null
+    const valueToSave = orgData.membershipSuspensionDaysPerYear ?? 0
+
+    try {
+      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/orgs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ membershipSuspensionDaysPerYear: valueToSave })
+      })
+
+      if (!res.ok) {
+        throw new Error('Failed to update setting')
+      }
+
+      const data = await res.json()
+      setOriginalData(prev => ({ ...prev, membershipSuspensionDaysPerYear: valueToSave }))
+      toast.success('Membership suspension days updated successfully')
+    } catch (error) {
+      console.error('Error updating suspension days setting:', error)
+      setOrgData(prev => ({ ...prev, membershipSuspensionDaysPerYear: originalData?.membershipSuspensionDaysPerYear || 30 }))
+      toast.error('Failed to update setting. Please try again.')
+    } finally {
+      setSavingSuspensionDays(false)
+    }
+  }
+
+  const hasChanges = JSON.stringify(orgData) !== JSON.stringify(originalData)
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium">Organization</h3>
+          <p className="text-sm text-muted-foreground">
+            Manage your organization settings and preferences.
+          </p>
+        </div>
+        <div className="text-center py-8 text-muted-foreground">
+          Loading organization settings...
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="px-4 flex flex-col gap-4 mb-4">
-      <TypographyLarge>Settings</TypographyLarge>
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium">Organization</h3>
+        <p className="text-sm text-muted-foreground">
+          Manage your organization's information and branding.
+        </p>
+      </div>
+
       <Card>
-        <CardContent>
-          <div className='grid grid-cols-2 gap-8'>
+        <CardContent className="space-y-6 pt-6">
+          {/* Organization Name */}
+          <div className="space-y-2">
+            <Label htmlFor="name">Organization Name</Label>
+            <Input
+              id="name"
+              value={orgData.name}
+              onChange={(e) => setOrgData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Enter organization name"
+            />
+          </div>
 
-
-            <div>
-              <div>Organization Settings</div>
-              <TypographyMuted>
-                Manage your organization's information, logo, and address details.
-              </TypographyMuted>
-            </div>
-            <div>
-              <Link href="/settings/org">
-                <Button>
-                  Manage Organization
-                </Button>
-              </Link>
-            </div>
-
-            <Separator className='border-t border-muted col-span-2' />
-
-            <div>
-              <div>Waiver Content</div>
-              <TypographyMuted>
-                Customize the legal waiver text that customers must agree to when signing up for classes or activities.
-              </TypographyMuted>
-            </div>
-            <div>
-              <Link href="/settings/waiver">
-                <Button>
-                  Edit Waiver
-                </Button>
-              </Link>
-            </div>
-
-            <Separator className='border-t border-muted col-span-2' />
-
-            <div>
-              <div>Terms & Conditions</div>
-              <TypographyMuted>
-                Manage the terms and conditions that customers must agree to when making purchases or signing up for services.
-              </TypographyMuted>
-            </div>
-            <div>
-              <Link href="/settings/tandc">
-                <Button>
-                  Edit Terms
-                </Button>
-              </Link>
-            </div>
-
-            <Separator className='border-t border-muted col-span-2' />
-
-            <div>
-              <div>Waiver Signup Page</div>
-              <TypographyMuted>
-                For new customers wanting to join, this is the URL to direct them to. You can also print the QR place it at a convenient location
-              </TypographyMuted>
-            </div>
-            <div className='flex gap-2 flex-row'>
-              <div className="rounded-lg overflow-hidden w-[148px] h-[148px]">
-                <QRCode value={`${process.env.NEXT_PUBLIC_DOMAIN}/org/${employee?.org?._id}/waiver`} size={128} />
-              </div>
-              <div className='flex flex-col gap-2'>
-                <div>
-                  <Link target="_blank" href={`${process.env.NEXT_PUBLIC_DOMAIN}/org/${employee?.org?._id}/waiver`}>
-                    <Button className='w-38 flex justify-start'>
-                      <LinkIcon className="size-4" />
-                      Waiver Link
-                    </Button>
-                  </Link>
+          {/* Logo Upload */}
+          <div className="space-y-2">
+            <Label>Organization Logo</Label>
+            <p className="text-sm text-muted-foreground">
+              Upload your company logo for receipts and branding. Recommended size: 3:1 aspect ratio.
+            </p>
+            <div className="flex items-center gap-4">
+              {orgData.logo ? (
+                <div className="relative w-48 h-16 border rounded-lg overflow-hidden">
+                  <Image
+                    src={orgData.logo}
+                    alt="Organization logo"
+                    fill
+                    className="object-contain"
+                  />
                 </div>
-                <div>
-                  <Button className='w-38' onClick={downloadWaiverPDF}>
-                    <Download className="size-4 flex justify-start" />
-                    Download PDF
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <Separator className='border-t border-muted col-span-2' />
-
-            <div>
-              <div>Stripe Payments Setup</div>
-              <TypographyMuted>
-                Connect your existing Stripe account, or connect to a new one.
-              </TypographyMuted>
-            </div>
-            <div>
-              {hasFetched && (
-                !chargesEnabled ? (
-                  <Button onClick={handleConnect} disabled={loading}>
-                    {loading && <Loader className="mr-2 h-4 w-4 animate-spin" />}
-                    Connect
-                  </Button>
-                ) : (
-                  <div className="gap-2 flex items-start text-primary">
-                    <CheckCircle2/>
-                    Completed
-                  </div>
-                )
-              )}
-            </div>
-
-            <div>
-              <div>Payment Terminals</div>
-              <TypographyMuted>
-                {chargesEnabled 
-                  ? 'Manage payment terminals for taking card payments.'
-                  : 'Complete Stripe account setup to enable payment terminals.'
-                }
-              </TypographyMuted>
-            </div>
-            <div>
-              {chargesEnabled ? (
-                <Link href="/manage/terminals">
-                  <Button className='cursor-pointer'>
-                    Manage Terminals
-                  </Button>
-                </Link>
               ) : (
-                <Button 
-                  disabled
-                  variant="secondary"
-                  className='cursor-not-allowed'
-                >
-                  Complete Stripe Setup First
-                </Button>
+                <div className="w-48 h-16 border-2 border-dashed rounded-lg flex items-center justify-center text-muted-foreground">
+                  No logo
+                </div>
               )}
-            </div>
-
-            <Separator className='border-t border-muted col-span-2' />
-
-            <div>
-              <div>Products & Quantities</div>
-              <TypographyMuted>
-                Manage Products, product quantities, and stock par levels
-
-              </TypographyMuted>
-            </div>
-            <div>
-              <Link href="/manage/products">
-                <Button>
-                  Manage Products
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLogoDialogOpen(true)}
+                  className="cursor-pointer"
+                >
+                  <Upload className="size-4 mr-2" />
+                  {orgData.logo ? 'Change Logo' : 'Upload Logo'}
                 </Button>
-              </Link>
+                {orgData.logo && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLogoRemove}
+                    className="cursor-pointer"
+                  >
+                    <Trash2 className="size-4 mr-2" />
+                    Remove
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Phone */}
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={orgData.phone}
+              onChange={(e) => setOrgData(prev => ({ ...prev, phone: e.target.value }))}
+              placeholder="Enter phone number"
+            />
+          </div>
+
+          {/* Address Line */}
+          <div className="space-y-2">
+            <Label htmlFor="addressLine">Address Line</Label>
+            <Input
+              id="addressLine"
+              value={orgData.addressLine}
+              onChange={(e) => setOrgData(prev => ({ ...prev, addressLine: e.target.value }))}
+              placeholder="Street address"
+            />
+          </div>
+
+          {/* Suburb */}
+          <div className="space-y-2">
+            <Label htmlFor="suburb">Suburb / Locality</Label>
+            <Input
+              id="suburb"
+              value={orgData.suburb}
+              onChange={(e) => setOrgData(prev => ({ ...prev, suburb: e.target.value }))}
+              placeholder="Suburb or locality"
+            />
+          </div>
+
+          {/* State and Postcode - side by side on wider screens */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="state">State</Label>
+              <Select
+                value={orgData.state}
+                onValueChange={(value) => setOrgData(prev => ({ ...prev, state: value }))}
+              >
+                <SelectTrigger id="state" className="w-full">
+                  <SelectValue placeholder="Select state" />
+                </SelectTrigger>
+                <SelectContent>
+                  {australianStates.map(state => (
+                    <SelectItem key={state.value} value={state.value}>
+                      {state.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <Separator className='border-t border-muted col-span-2' />
-
-            <div>
-              <div>Shop Locations</div>
-              <TypographyMuted>
-                If your business has multiple locations, you can manage them here.
-              </TypographyMuted>
+            <div className="space-y-2">
+              <Label htmlFor="postcode">Postcode</Label>
+              <Input
+                id="postcode"
+                value={orgData.postcode}
+                onChange={(e) => setOrgData(prev => ({ ...prev, postcode: e.target.value }))}
+                placeholder="Postcode"
+                maxLength={4}
+                className="w-full"
+              />
             </div>
-            <div>
-              <Link href="/manage/locations">
-                <Button>
-                  Manage Locations
-                </Button>
-              </Link>
-            </div>
+          </div>
 
-            <Separator className='border-t border-muted col-span-2' />
-
-            <div>
-              <div>Product Location Availability</div>
-              <TypographyMuted>
-                Manage which locations are available for each product.
-              </TypographyMuted>
-            </div>
-            <div>
-              <Link href="/products/locations">
-                <Button>
-                  Manage Locations
-                </Button>
-              </Link>
-            </div>
-
-            <Separator className='border-t border-muted col-span-2' />
-
-            <div>
-              <div>Accounting Codes</div>
-              <TypographyMuted>
-                Manage accounting codes for your products and services. Set up tax categories and organize your financial reporting.
-              </TypographyMuted>
-            </div>
-            <div>
-              <Link href="/manage/accounting">
-                <Button>
-                  Manage Codes
-                </Button>
-              </Link>
-            </div>
-
-            <Separator className='border-t border-muted col-span-2' />
-
-            <div>
-              <div>Adjustments (Discounts & Surcharges)</div>
-              <TypographyMuted>
-                Create and manage adjustments for your products and services. Set up discounts, surcharges, and promotional codes.
-              </TypographyMuted>
-            </div>
-            <div>
-              <Link href="/manage/adjustments">
-                <Button>
-                  Manage Adjustments
-                </Button>
-              </Link>
-            </div>
-
+          {/* Save Button */}
+          <div className="flex justify-end pt-4">
+            <Button
+              onClick={handleSave}
+              disabled={!hasChanges || saving}
+              className="cursor-pointer"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="size-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
           </div>
         </CardContent>
       </Card>
 
+      {/* Membership Settings Card */}
+      <Card>
+        <CardContent className="space-y-4 pt-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="suspension-days">Membership Suspension Days</Label>
+              <p className="text-sm text-muted-foreground">
+                Set the maximum number of days a member can suspend their membership in a 365 day period.
+              </p>
+              <div className="flex items-center space-x-2">
+                <NumberInput
+                  id="suspension-days"
+                  min={0}
+                  max={365}
+                  step={1}
+                  value={orgData.membershipSuspensionDaysPerYear}
+                  onChange={handleSuspensionDaysChange}
+                  disabled={savingSuspensionDays}
+                  className="w-24"
+                />
+                <span className="text-sm text-muted-foreground">days per year</span>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <Button
+                onClick={handleSaveSuspensionDays}
+                disabled={((orgData.membershipSuspensionDaysPerYear ?? 0) === (originalData?.membershipSuspensionDaysPerYear ?? 0)) || savingSuspensionDays}
+                className="cursor-pointer"
+              >
+                {savingSuspensionDays ? (
+                  <>
+                    <Loader2 className="size-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Logo Selection Dialog */}
+      <IconSelect
+        open={logoDialogOpen}
+        setOpen={setLogoDialogOpen}
+        onIconSelected={handleLogoSelected}
+        title="Upload Organization Logo"
+        query=""
+        aspectRatio={3}
+        showIconLibrary={false}
+        showImageUpload={true}
+      />
     </div>
-  );
+  )
 }

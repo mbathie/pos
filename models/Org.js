@@ -3,7 +3,11 @@ import mongoose from 'mongoose';
 const OrgSchema = new mongoose.Schema({
   name: String,
   phone: String,
-}, { 
+  membershipSuspensionDaysPerYear: {
+    type: Number,
+    default: 30
+  },
+}, {
   timestamps: true,
   strict: false
 });

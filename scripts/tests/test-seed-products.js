@@ -99,7 +99,7 @@ async function createProduct(token, categoryId, productData, modGroupIds, folder
         new: true,
         updated: true,
         waiverRequired: false,
-        bump: false,
+        bump: productData.bump !== undefined ? productData.bump : (productData.type === 'shop' ? true : false),
         thumbnail: productData.thumbnail || null
       }
     })

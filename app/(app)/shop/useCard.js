@@ -197,8 +197,41 @@ export function useCard({ cart, employee, location }) {
     try {
       setPaymentStatus('creating')
       
+      // Check if cart total is zero (100% discount or full credit coverage)
+      const isZeroDollar = cart.total === 0;
+      
       // Check if cart contains membership products
       const hasMemberships = cart.products.some(product => product.type === 'membership');
+      
+      // For zero-dollar transactions, skip card reader entirely
+      if (isZeroDollar) {
+        console.log('💵 Processing zero-dollar transaction (100% discount/credit)');
+        
+        // Create transaction directly without payment intent
+        const res = await fetch('/api/payments/zero-dollar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            cart,
+            customer: cart.customer,
+            hasMemberships 
+          }),
+        });
+        const result = await res.json();
+        
+        if (!res.ok || result.error) {
+          console.error('❌ Zero-dollar transaction failed:', result.error)
+          setPaymentStatus('failed')
+          throw new Error(result.error || 'Failed to process zero-dollar transaction')
+        }
+        
+        console.log('✅ Zero-dollar transaction processed successfully');
+        transactionId.current = result.transactionId;
+        setPaymentStatus('succeeded');
+        
+        // Return early - no card collection needed
+        return;
+      }
       
       let endpoint = '/api/payments/intent';
       let payload = { cart, customer: cart.customer };

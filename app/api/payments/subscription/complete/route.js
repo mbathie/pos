@@ -41,7 +41,7 @@ function calculateNextBillingDate(unit, count) {
 export async function POST(req, { params }) {
   await connectDB()
 
-  const { cart, paymentIntentId, transactionId } = await req.json()
+  const { cart, paymentIntentId, transactionId, isSimulation } = await req.json()
   const { employee } = await getEmployee()
   const org = employee.org
 
@@ -238,7 +238,8 @@ export async function POST(req, { params }) {
                   orgId: org._id.toString(),
                   locationId: employee.selectedLocationId.toString(),
                   firstPeriodPaid: 'true',
-                  paymentIntentId: paymentIntentId
+                  paymentIntentId: paymentIntentId,
+                  isSimulated: isSimulation ? 'true' : 'false' // Track if this was from simulation
                 }
               }, {
                 stripeAccount: org.stripeAccountId

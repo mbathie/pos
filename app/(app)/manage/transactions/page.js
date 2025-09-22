@@ -285,7 +285,7 @@ export default function TransactionsPage() {
       <div className="flex-shrink-0">
         <div className="flex flex-col md:flex-row gap-4 mb-4">
           {/* Search */}
-          <div className="relative flex-1 max-w-xs">
+          <div className="relative w-full md:w-80">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
               placeholder="Search transactions..."
@@ -311,7 +311,7 @@ export default function TransactionsPage() {
 
           {/* Date Range Filter */}
           <Select value={filters.dateRange} onValueChange={(value) => handleFilterChange('dateRange', value)}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[140px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -326,7 +326,7 @@ export default function TransactionsPage() {
 
           {/* Location Filter */}
           <Select value={selectedLocation || ''} onValueChange={setSelectedLocation}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Select location" />
             </SelectTrigger>
             <SelectContent>

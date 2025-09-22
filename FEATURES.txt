@@ -1,34 +1,49 @@
+22.9.25
+
+- membership cancellations
+- basic reporting
+
+
 15.9.2025
 
-- membership, should be able to take payment without using a card
+DONE - membership, should be able to take payment without using a card
   - can give discounts, say we just want to give them 1 month free we just apply a 100% discount
-- membership discounts only apply to the first payment - look into how Stripe does this
-- membership holds
-  - settings, need to setup membership hold limitations
-  - each company should be able to define how many days in a year a customer can hold membership for
-  - it should change their next billing cycle date
-  - needs to block the customer from any membership related discounts.
-- membership cancellations
+DONE VERIFIED IT BEHAVES THIS WAY - membership discounts only apply to the first payment - look into how Stripe does this
+DONE - membership holds/pause (22.9.2025)
+  DONE - settings, need to setup membership hold limitations (org.membershipSuspensionDaysPerYear in /settings)
+  DONE - each company should be able to define how many days in a year a customer can hold membership for
+  DONE - it should change their next billing cycle date (uses Stripe pause_collection)
+  DONE - creates negative invoice item (credit) for the suspension period (limited to current billing period)
+  DONE - tracks suspension history in membership.suspensions array (moved from customer model)
+  DONE - enforces max suspension days per 365-day period from subscription start
+  DONE - UI controls in customer detail page with pause/resume functionality (ellipsis menu)
+  DONE - Stripe Connect support with connected accounts (org.stripeAccountId)
+  DONE - Credit calculation properly limited to unused days in current billing period
+  DONE - Resume functionality to end suspension early
+  DONE - Graceful fallback when Stripe API fails (local pause still works)
+  DONE - Check script: node scripts/check-stripe-subscription.js <sub_id> [acct_id]
+  DONE - blocks customer from any membership related discounts while suspended (22.9.2025)
+MOVED - membership cancellations
   - company wide cancellation policy.
   - how to handle 12 month vs 1 month memberships
-- ability to grant credits ($) to the customer account - manually assign (expiry) i.e. gift cards
+DONE - ability to grant credits ($) to the customer account - manually assign (expiry) i.e. gift cards
 - basic reporting
 DONE - should be able to assign particular browser fixed always to a location (ADMIN only)
   - staff when they login to a terminal can't switch between locations, as its now locked to a particular
     location
-- customer email receipts should be off by default for shop items
+DONE - customer email receipts should be off by default for shop items
   customers can as for it, in which case they can still receiive it.
 
 Questions:
   - how will membership expiry work, i.e. after 6 months
 
 8th Sep 2025
-- manual discounts, not authorizing a STAFF properly
+DONE - manual discounts, not authorizing a STAFF properly
 DONE - test out surcharges
 DONE - /manage/adjustments/[id]/edit adjustments / discounts need switch (inside the adjustment details card) to enable/disable auto assignment, for use in the cart during checkout. If the switch 
         is off it won't be automatically assigned when a customer is connected in the cart. It can however
         be selected from the discounts dropdown select and assigned that way.
-- hook up products/prices to adjustments
+DONE NOT DONE - hook up products/prices to adjustments
 DONE - http://localhost:3000/manage/checkins - need to know if they've cancelled membership
   - checked in, cancelled, failed payment, membership on hold
   - also needs to be mobile friendly

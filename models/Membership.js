@@ -27,11 +27,32 @@ const MembershipSchema = new mongoose.Schema({
   subscriptionEndDate: Date, // Optional - for fixed-term memberships
   
   // Status Management
-  status: { 
-    type: String, 
-    enum: ['active', 'cancelled', 'expired', 'suspended', 'pending'], 
-    default: 'active' 
+  status: {
+    type: String,
+    enum: ['active', 'cancelled', 'expired', 'suspended', 'pending'],
+    default: 'active'
   },
+  suspendedUntil: Date, // Date when suspension ends and membership resumes
+
+  // Suspension History
+  suspensions: [{
+    suspendedAt: { type: Date, default: Date.now },
+    suspensionDays: Number,
+    resumesAt: Date,
+    yearStartDate: Date, // Start of the 365-day period for tracking
+    stripeInvoiceItemId: String, // ID of the credit invoice item in Stripe
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
+    note: String,
+    scheduledPause: { type: Boolean, default: false }, // True if this was scheduled for future
+    createdAt: Date, // When this suspension was created
+    actualResumedAt: Date, // If resumed early, when it actually resumed
+    adjustmentInvoiceItemId: String // ID of adjustment if resumed early
+  }],
+
+  // Scheduled Pause Fields
+  scheduledPauseDate: Date, // Future date when pause should start
+  scheduledResumDate: Date, // Future date when pause should end
+  scheduledPauseDays: Number, // Number of days for scheduled pause
   
   // Billing History Reference
   billingMethod: { type: String, enum: ['terminal_manual', 'stripe_auto'], default: 'terminal_manual' },

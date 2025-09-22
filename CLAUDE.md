@@ -1,5 +1,59 @@
 # Project Conventions and Important Notes
 
+## Documentation Maintenance
+
+### Feature Documentation Requirements
+After implementing or updating any feature, you MUST update the following documentation files:
+
+1. **FEATURES.md** - Add comprehensive documentation including:
+   - Feature overview and description
+   - Key functionality and behavior
+   - Configuration options (organization settings, etc.)
+   - Technical implementation details
+   - Example scenarios with calculations
+   - List of relevant files in codebase
+   - Testing & verification steps
+   - Limitations and considerations
+   - Future enhancements section
+
+2. **FEATURES.txt** - Mark feature as DONE with date when completed:
+   - Format: `DONE - feature description (DD.MM.YYYY)`
+   - Keep TODO items for future enhancements
+
+3. **CHECKOUT_SCENARIOS.md** - Update if the feature affects checkout/payment flow:
+   - Add new scenarios or modify existing ones
+   - Document error conditions and messages
+   - Include complex use cases
+   - Update quick reference grids if applicable
+
+### Documentation Standards
+- Use clear headings and subheadings
+- Include code examples and file paths where relevant
+- List all affected files with their purposes
+- Provide step-by-step scenarios
+- Document both happy path and edge cases
+- Include test scripts and verification methods
+
+### Checkout Scenarios Documentation
+- **CRITICAL**: Always read `/CHECKOUT_SCENARIOS.md` BEFORE making any checkout/payment related changes
+- **IMPORTANT**: After making changes to checkout/payment related code, update `/CHECKOUT_SCENARIOS.md`
+- Reference this document to understand:
+  - Current product type requirements and restrictions
+  - Payment method rules (when cash vs card is allowed)
+  - Customer assignment logic and requirements
+  - Discount/surcharge application order and rules
+  - Receipt sending behavior
+  - Complex scenario handling
+- This includes changes to:
+  - Product type requirements (shop, membership, class, course, general)
+  - Payment method restrictions (cash vs card rules)
+  - Customer assignment requirements
+  - Discount/surcharge logic in `/lib/adjustments.js`
+  - Receipt sending logic
+  - Waiver requirements
+  - Any checkout validation rules
+- Keep the summary tables up-to-date with any new scenarios or rule changes
+
 ## API Endpoint Structure
 
 ### Customer-facing API endpoints

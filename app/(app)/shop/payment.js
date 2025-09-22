@@ -14,8 +14,9 @@ import { useGlobals } from "@/lib/globals"
 import { calcCartTotals } from '@/lib/cart'
 import { useCard } from './useCard'
 import { useCash } from "./useCash";
-import { Separator } from "@radix-ui/react-separator";
-import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail, Plus, OctagonAlert, Check } from "lucide-react";
+import { useTerminalSimulator } from './useTerminalSimulator';
+import { Separator } from "@/components/ui/separator";
+import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail, Plus, OctagonAlert, Check, TestTube } from "lucide-react";
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
@@ -50,6 +51,13 @@ export default function Page() {
     transactionId: cardTransactionId
   } = useCard({cart, employee, location})
   const { calcChange, receiveCash } = useCash({cart})
+  const {
+    simulatorStatus,
+    simulatedTransactionId,
+    simulatePayment,
+    cancelSimulation,
+    resetSimulator
+  } = useTerminalSimulator({cart, employee, location})
 
   const [changeInfo, setChangeInfo] = useState({ received: "0.00", change: "0.00" });
 
@@ -83,9 +91,15 @@ export default function Page() {
   
   // Customer credits state
   const [customerCredits, setCustomerCredits] = useState(null)
-  
+
+  // Organization settings state
+  const [orgSettings, setOrgSettings] = useState({})
+
   // Check if cart contains membership products
   const hasMembershipProducts = cart.products.some(product => product.type === 'membership')
+
+  // Check if cart contains only shop products
+  const hasOnlyShopProducts = cart.products.length > 0 && cart.products.every(product => product.type === 'shop')
   
   // Check if any products in cart require a waiver
   const hasWaiverRequiredProducts = cart.products.some(product => product.waiverRequired === true)
@@ -161,6 +175,34 @@ export default function Page() {
   useEffect(() => {
     console.log(cart)
   },[cart])
+
+  // Fetch organization settings
+  useEffect(() => {
+    const fetchOrgSettings = async () => {
+      try {
+        const response = await fetch('/api/orgs')
+        if (response.ok) {
+          const data = await response.json()
+          setOrgSettings(data.org || {})
+        }
+      } catch (error) {
+        console.error('Error fetching org settings:', error)
+      }
+    }
+    fetchOrgSettings()
+  }, [])
+
+  // Pre-populate email receipt when payment succeeds for shop-only transactions
+  useEffect(() => {
+    // Check if payment succeeded
+    const isPaymentSuccessful = paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'
+
+    if (isPaymentSuccessful && hasOnlyShopProducts && !orgSettings.autoReceiptShop && cart.customer?.email) {
+      // Pre-populate the email field with customer's email
+      setReceiptEmail(cart.customer.email)
+      console.log('📧 Pre-populating receipt email for manual send:', cart.customer.email)
+    }
+  }, [paymentStatus, cardPaymentStatus, hasOnlyShopProducts, orgSettings.autoReceiptShop, cart.customer?.email])
 
   // Update receive amount when card payment succeeds
   useEffect(() => {
@@ -482,9 +524,9 @@ export default function Page() {
           error: updatedCart.adjustments?.discountError
         });
         
-        // Handle discount application feedback
-        if (updatedCart.adjustments?.discountError) {
-          // Discount was not applied - show detailed error
+        // Handle discount application feedback (skip for custom discounts)
+        if (updatedCart.adjustments?.discountError && !customDiscountAmount) {
+          // Discount was not applied - show detailed error (but not for custom discounts)
           toast.error(
             <div>
               <div className="font-semibold">Discount Not Applied</div>
@@ -815,16 +857,41 @@ export default function Page() {
         
         // Check if cart has a previously applied discount
         if (cart.adjustments?.discounts?.items?.length > 0) {
-          const discountId = cart.adjustments.discounts.items[0].id;
-          console.log(`🔄 [UI] Re-applying previous discount: ${discountId}`)
-          await applyAdjustments(null, discountId);
+          const discount = cart.adjustments.discounts.items[0];
+
+          // Check if it's a custom discount
+          if (discount.name === 'Custom Discount') {
+            console.log(`🔄 [UI] Re-applying custom discount: $${discount.amount}`)
+            await applyAdjustments(null, null, discount.amount, 'Custom Discount');
+          } else {
+            console.log(`🔄 [UI] Re-applying previous discount: ${discount.id}`)
+            await applyAdjustments(null, discount.id);
+          }
         } else if (cart.customer) {
+          // Check if there's already a custom discount applied in the cart
+          const existingCustomDiscount = cart.adjustments?.discounts?.items?.find(d => d.name === 'Custom Discount');
+
           // If customer is already set, check for auto-applicable discounts
           console.log('🔄 [UI] Customer found, checking for auto-applicable discounts...')
-          await applyAdjustments(null, null, null, null, cart.customer, true);
+          if (existingCustomDiscount) {
+            // Re-apply the custom discount to avoid validation errors
+            console.log('🔄 [UI] Re-applying existing custom discount:', existingCustomDiscount.amount)
+            await applyAdjustments(null, null, existingCustomDiscount.amount, 'Custom Discount', cart.customer, false);
+          } else {
+            await applyAdjustments(null, null, null, null, cart.customer, true);
+          }
         } else {
+          // Check if there's already a custom discount applied in the cart
+          const existingCustomDiscount = cart.adjustments?.discounts?.items?.find(d => d.name === 'Custom Discount');
+
           // Just check for surcharges
-          await applyAdjustments();
+          if (existingCustomDiscount) {
+            // Re-apply the custom discount to avoid validation errors
+            console.log('🔄 [UI] Re-applying existing custom discount:', existingCustomDiscount.amount)
+            await applyAdjustments(null, null, existingCustomDiscount.amount, 'Custom Discount');
+          } else {
+            await applyAdjustments();
+          }
         }
       }
     }
@@ -1156,7 +1223,7 @@ export default function Page() {
             {appliedAdjustments?.discounts?.total > 0 ? (
                 // Show applied discount with remove button (disabled after payment)
                 <div className="flex items-center gap-1">
-                  <div className="text-sm">{appliedAdjustments?.discounts?.items?.[0]?.name || 'Custom Discount'}</div>
+                  <div>{appliedAdjustments?.discounts?.items?.[0]?.name || 'Custom Discount'}</div>
                   <Trash2 
                     className={`size-4 ${
                       paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' 
@@ -1607,9 +1674,14 @@ export default function Page() {
               </div>
             )}
             
-            {/* Email Receipt Section - Show when payment succeeds and no customer email */}
-            {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') && 
-             !(cart.customer?.email) &&
+            {/* Email Receipt Section - Show when payment succeeds and either no customer email OR shop-only with auto receipt disabled */}
+            {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') &&
+             (
+               // Show if no customer email
+               (!cart.customer?.email) ||
+               // OR if shop-only products with auto receipt disabled and customer has email
+               (hasOnlyShopProducts && !orgSettings.autoReceiptShop && cart.customer?.email)
+             ) &&
              !requiresCustomerAssignment && (
               <div className="mt-4 space-y-2">
                 <Separator orientation="vertical" className="h-[1px] bg-muted" />
@@ -1733,26 +1805,54 @@ export default function Page() {
                 </div>
               )}
 
-              {/* Payment Buttons - Only show if Stripe is enabled */}
-              {stripeEnabled && (
+              {/* Payment Buttons - Show for zero-dollar even without Stripe */}
+              {(stripeEnabled || cart.total === 0) && (
               <div className="flex flex-col gap-2">
                 <Button
                   disabled={
-                    // Disable during checking, discovering, or connecting
-                    terminalStatus === 'checking' ||
-                    terminalStatus === 'discovering' ||
-                    terminalStatus === 'connecting' ||
-                    // Only disable if not disconnected AND one of these conditions is true
-                    (terminalStatus !== 'disconnected' && (
-                      terminalStatus !== 'connected' || 
+                    // For zero-dollar transactions, only check basic conditions
+                    cart.total === 0 ? (
                       paymentStatus === 'succeeded' || 
                       cardPaymentStatus === 'succeeded' || 
                       isCollectingPayment || 
                       cart.products.length === 0 || 
                       needsCustomerAssignment
-                    ))
+                    ) : (
+                      // For regular transactions, require terminal connection
+                      terminalStatus === 'checking' ||
+                      terminalStatus === 'discovering' ||
+                      terminalStatus === 'connecting' ||
+                      // Only disable if not disconnected AND one of these conditions is true
+                      (terminalStatus !== 'disconnected' && (
+                        terminalStatus !== 'connected' || 
+                        paymentStatus === 'succeeded' || 
+                        cardPaymentStatus === 'succeeded' || 
+                        isCollectingPayment || 
+                        cart.products.length === 0 || 
+                        needsCustomerAssignment
+                      ))
+                    )
                   }
                   onClick={async () => {
+                    // For zero-dollar transactions, skip terminal checks
+                    if (cart.total === 0) {
+                      try {
+                        setIsCollectingPayment(true)
+                        await collectPayment(); // This will detect $0 and use zero-dollar endpoint
+                        // Don't set isCollectingPayment to false here - let the payment status handle it
+                      } catch (error) {
+                        if (error.message === 'PAYMENT_CANCELLED') {
+                          console.log('🚫 Payment was cancelled')
+                          toast.info('Payment collection cancelled')
+                        } else {
+                          console.error('Payment collection failed:', error)
+                          toast.error(`Payment failed: ${error.message}`)
+                        }
+                        setIsCollectingPayment(false)
+                      }
+                      return;
+                    }
+                    
                     // If no terminals configured, navigate to terminal settings
                     if (!hasTerminals) {
                       router.push('/manage/terminals');
@@ -1798,6 +1898,7 @@ export default function Page() {
                   {isCollectingPayment && <Loader2 className="size-4 animate-spin mr-2" />}
                   {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') ? 
                     'Payment Complete' :
+                    cart.total === 0 ? 'Process Free Transaction' :
                     terminalStatus === 'connected' ? 
                       (cardPaymentStatus === 'collecting' ? 'Waiting for Card...' : 
                        cardPaymentStatus === 'processing' ? 'Processing...' :
@@ -1851,8 +1952,8 @@ export default function Page() {
               </div>
               )}
 
-              {/* Capture Payment button - only show in dev mode and if Stripe is enabled */}
-              {process.env.NEXT_PUBLIC_IS_DEV === 'true' && stripeEnabled && (
+              {/* Capture Payment button - only show in dev mode, if Stripe is enabled, and terminal is connected */}
+              {process.env.NEXT_PUBLIC_IS_DEV === 'true' && stripeEnabled && terminalStatus === 'connected' && (
                 <Button
                   disabled={!paymentIntentId || paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
                   onClick={async () => {
@@ -1860,7 +1961,7 @@ export default function Page() {
                     const intent = await capturePayment();
                     console.log(intent.status)
                     setPaymentStatus(intent.status)
-                    
+
                     // Mark that we have a successful payment (PIN will be removed on navigation)
                     if (intent.status === 'succeeded') {
                       hasSuccessfulPayment.current = true
@@ -1879,23 +1980,79 @@ export default function Page() {
                   Capture Payment
                 </Button>
               )}
-              
-              {/* Debug payment info - only show in dev mode */}
-              {process.env.NEXT_PUBLIC_IS_DEV === 'true' && (
-                <div className="flex flex-col gap-1 text-sm">
-                  {paymentIntentId && (
-                    <div>Payment ID: {paymentIntentId}</div>
+
+              {/* Terminal Simulator button - only show in dev mode */}
+              {process.env.NEXT_PUBLIC_IS_DEV === 'true' && stripeEnabled && (
+                <div className="flex flex-col gap-2 mt-4">
+                  {/* <Separator className="my-2" /> */}
+                  <div className="text-xs text-muted-foreground text-center">Terminal Simulator (Dev Only)</div>
+                  <Button
+                    variant={simulatorStatus === 'succeeded' ? 'secondary' : 'outline'}
+                    disabled={
+                      cart.products.length === 0 ||
+                      cart.total === 0 ||
+                      needsCustomerAssignment ||
+                      paymentStatus === 'succeeded' ||
+                      cardPaymentStatus === 'succeeded' ||
+                      simulatorStatus === 'creating' ||
+                      simulatorStatus === 'reading' ||
+                      simulatorStatus === 'processing'
+                    }
+                    onClick={async () => {
+                      if (simulatorStatus === 'succeeded') {
+                        // Reset for another simulation
+                        resetSimulator();
+                        return;
+                      }
+
+                      const result = await simulatePayment();
+                      if (result.success) {
+                        // Handle successful simulated payment
+                        setTransactionId(result.transactionId);
+                        hasSuccessfulPayment.current = true;
+                        if (cart.products.length > 0) {
+                          console.log('✅ Simulated payment succeeded, marking cart as stale');
+                          markCartAsStale();
+                        }
+                      }
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <TestTube className="size-4 mr-2" />
+                    {simulatorStatus === 'ready' ? 'Simulate Terminal Payment' :
+                     simulatorStatus === 'creating' ? 'Creating Payment...' :
+                     simulatorStatus === 'reading' ? 'Reading Card...' :
+                     simulatorStatus === 'processing' ? 'Processing...' :
+                     simulatorStatus === 'succeeded' ? 'Payment Successful ✓' :
+                     simulatorStatus === 'failed' ? 'Simulation Failed' :
+                     'Simulate Terminal Payment'}
+                  </Button>
+
+                  {/* Cancel simulation button */}
+                  {(simulatorStatus === 'creating' || simulatorStatus === 'reading' || simulatorStatus === 'processing') && (
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => {
+                        cancelSimulation();
+                        toast.info('Simulation cancelled');
+                      }}
+                    >
+                      Cancel Simulation
+                    </Button>
                   )}
-                  {paymentStatus && (
-                    <div className={`${paymentStatus === 'succeeded' ? 'text-green-600' : ''}`}>
-                      Status: {paymentStatus}
+
+                  {/* Simulation status indicator */}
+                  {simulatorStatus !== 'ready' && simulatorStatus !== 'succeeded' && (
+                    <div className="text-xs text-center">
+                      {simulatorStatus === 'creating' && <span className="text-chart-4">Initializing terminal simulation...</span>}
+                      {simulatorStatus === 'reading' && <span className="text-chart-3">Simulating card read...</span>}
+                      {simulatorStatus === 'processing' && <span className="text-primary">Processing payment...</span>}
+                      {simulatorStatus === 'failed' && <span className="text-destructive">Simulation failed</span>}
                     </div>
                   )}
-
                 </div>
               )}
-
-
 
             </CardContent>
           </Card>  

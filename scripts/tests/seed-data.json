@@ -120,6 +120,7 @@
       "category": "coffees",
       "folder": "milky",
       "type": "shop",
+      "bump": true,
       "description": "A smooth and velvety coffee with microfoam",
       "variations": [
         { "name": "Small", "value": "", "amount": 4.50 },

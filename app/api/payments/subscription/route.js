@@ -9,7 +9,7 @@ import { calcCartTotals } from "@/lib/cart";
 export async function POST(req, { params }) {
   await connectDB()
 
-  const { cart } = await req.json()
+  const { cart, isSimulation } = await req.json()
   const { employee } = await getEmployee()
   const org = employee.org
 
@@ -107,21 +107,46 @@ export async function POST(req, { params }) {
     const totals = calcCartTotals(cart.products);
     const amountInCents = Math.round(totals.total * 100);
     
-    // Create a payment intent for the first period charge (auto-capture for memberships)
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountInCents,
-      currency: 'aud',
-      payment_method_types: ['card_present'],
-      capture_method: 'automatic', // Auto-capture for membership first period
-      metadata: {
-        orgId: org._id.toString(),
-        locationId: employee.selectedLocationId.toString(),
-        customersCount: processedCustomers.length.toString(),
-        isFirstPeriodCharge: 'true'
-      }
-    }, {
-      stripeAccount: org.stripeAccountId
-    });
+    // Create a payment intent for the first period charge
+    let paymentIntent;
+
+    if (isSimulation && process.env.NEXT_PUBLIC_IS_DEV === 'true') {
+      // For simulation, create a payment intent that works in test mode
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: amountInCents,
+        currency: 'aud',
+        payment_method_types: ['card'],
+        payment_method: 'pm_card_visa', // Test card that always succeeds
+        confirmation_method: 'manual',
+        confirm: true, // Automatically confirm with the test card
+        capture_method: 'manual', // Manual capture for consistency with regular flow
+        metadata: {
+          orgId: org._id.toString(),
+          locationId: employee.selectedLocationId.toString(),
+          customersCount: processedCustomers.length.toString(),
+          isFirstPeriodCharge: 'true',
+          isSimulated: 'true'
+        }
+      }, {
+        stripeAccount: org.stripeAccountId
+      });
+    } else {
+      // Regular payment intent for real terminal payments
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: amountInCents,
+        currency: 'aud',
+        payment_method_types: ['card_present'],
+        capture_method: 'automatic', // Auto-capture for membership first period
+        metadata: {
+          orgId: org._id.toString(),
+          locationId: employee.selectedLocationId.toString(),
+          customersCount: processedCustomers.length.toString(),
+          isFirstPeriodCharge: 'true'
+        }
+      }, {
+        stripeAccount: org.stripeAccountId
+      });
+    }
 
     // Create transaction record for the first period payment
     // Pass isSetupPhase: true to prevent membership creation here (will be done in create-manual route)

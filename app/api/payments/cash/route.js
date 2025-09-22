@@ -12,9 +12,11 @@ export async function POST(req, { params }) {
   // Check if cart contains membership products (not allowed for cash payments)
   const hasMemberships = cart.products.some(product => product.type === 'membership');
   
+  // Block ALL cash payments for memberships (even zero-dollar)
+  // Zero-dollar memberships should go through card payment flow
   if (hasMemberships) {
     return NextResponse.json({
-      error: 'Membership products must be paid by card for subscription setup'
+      error: 'Membership products must be paid by card (use Card payment for free memberships)'
     }, { status: 400 });
   }
 
