@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react'
 import Image from 'next/image'
-import { useSearchParams } from 'next/navigation'
 import { BrowserQRCodeReader } from '@zxing/browser'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -26,7 +25,6 @@ dayjs.extend(relativeTime)
 
 export default function CheckInClient() {
   const { employee } = useGlobals()
-  const searchParams = useSearchParams()
   const [showManualEntry, setShowManualEntry] = useState(false)
   const [memberIdInput, setMemberIdInput] = useState('')
   const [scanResult, setScanResult] = useState(null)
@@ -36,7 +34,6 @@ export default function CheckInClient() {
   const [org, setOrg] = useState(null)
   const [showAlertDialog, setShowAlertDialog] = useState(false)
   const [alertData, setAlertData] = useState(null)
-  const [urlParamProcessed, setUrlParamProcessed] = useState(false)
   const videoRef = useRef(null)
   const codeReaderRef = useRef(null)
   const scanningRef = useRef(true)
@@ -115,16 +112,6 @@ export default function CheckInClient() {
       }, 3000)
     }
   }, [isProcessing])
-
-  // Check for URL parameter on mount
-  useEffect(() => {
-    const customerId = searchParams.get('id')
-    if (customerId && !urlParamProcessed && !isProcessing) {
-      console.log('Processing checkin from URL parameter:', customerId)
-      setUrlParamProcessed(true)
-      processCheckIn(customerId)
-    }
-  }, [searchParams, urlParamProcessed, isProcessing, processCheckIn])
 
   // Initialize QR code scanner with front camera for mobile
   useEffect(() => {

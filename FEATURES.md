@@ -329,8 +329,8 @@ The check-in system handles various membership statuses and class purchases with
 1. **Suspended Members Can Attend Purchased Classes**: Customers with suspended memberships can still check into classes they've purchased separately
 2. **Clear Status Communication**: Different colored alerts (green/orange/red) indicate success, warning, or failure
 3. **Auto-Close for Privacy**: Check-in dialogs auto-close after 8 seconds to protect customer PII
-4. **URL Parameter Support**: Staff can test check-ins using `?id=memberId` parameter
-5. **Time Window Validation**: Classes can be checked into 30 minutes before/after scheduled time
+4. **Time Window Validation**: Classes can be checked into 30 minutes before/after scheduled time
+5. **Manual Entry Option**: Staff can manually enter member IDs if QR scanning isn't available
 
 ### Check-in Record Status Types
 - `checked-in`: Successful check-in for class or membership
