@@ -30,13 +30,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 
 export default function Page() {
   const [locations, setLocations] = useState([])
@@ -240,7 +233,7 @@ export default function Page() {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, itemsPerPage])
+  }, [searchQuery])
 
   // Generate page numbers for pagination
   const getPageNumbers = () => {
@@ -316,19 +309,6 @@ export default function Page() {
               className="pl-10"
             />
           </div>
-
-          {/* Items per page */}
-          <Select value={String(itemsPerPage)} onValueChange={(value) => setItemsPerPage(Number(value))}>
-            <SelectTrigger className="w-[120px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="10">10 / page</SelectItem>
-              <SelectItem value="20">20 / page</SelectItem>
-              <SelectItem value="50">50 / page</SelectItem>
-              <SelectItem value="100">100 / page</SelectItem>
-            </SelectContent>
-          </Select>
 
           {/* Add Location Button */}
           <Link href="/manage/locations/create">
