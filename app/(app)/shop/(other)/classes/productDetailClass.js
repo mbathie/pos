@@ -188,7 +188,10 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
                         {timesForSelectedDate.map((time) => (
                           <div
                             key={time.datetime}
-                            className="flex items-center space-x-3 p-2 hover:bg-muted rounded-md"
+                            className={cn(
+                              "flex items-center space-x-3 p-2 hover:bg-muted rounded-md",
+                              time.conflict && "opacity-60"
+                            )}
                           >
                             <Checkbox
                               id={time.datetime}
@@ -200,25 +203,36 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
                                   setSelectedTimes(selectedTimes.filter(t => t.datetime !== time.datetime));
                                 }
                                 setProduct(draft => {
-                                  draft.selectedTimes = checked 
+                                  draft.selectedTimes = checked
                                     ? [...selectedTimes, time]
                                     : selectedTimes.filter(t => t.datetime !== time.datetime);
                                 });
                               }}
-                              disabled={time.available <= 0}
+                              disabled={time.available <= 0 || time.conflict}
                             />
                             <label
                               htmlFor={time.datetime}
-                              className="flex-1 flex items-center justify-between cursor-pointer"
+                              className={cn(
+                                "flex-1 flex items-center justify-between cursor-pointer",
+                                time.conflict && "line-through text-muted-foreground"
+                              )}
                             >
                               <div className="flex items-center gap-2">
                                 <span>{time.time}</span>
                                 {time.label && (
                                   <Badge variant="secondary">{time.label}</Badge>
                                 )}
+                                {time.conflict && (
+                                  <Badge variant="destructive" className="text-xs">{time.conflictReason}</Badge>
+                                )}
                               </div>
                               <span className="text-sm text-muted-foreground">
-                                {time.available > 0 ? `${time.available} spots` : 'Full'}
+                                {time.conflict
+                                  ? 'Unavailable'
+                                  : time.available > 0
+                                    ? `${time.available} spots`
+                                    : 'Full'
+                                }
                               </span>
                             </label>
                           </div>

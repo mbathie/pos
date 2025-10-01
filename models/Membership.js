@@ -60,8 +60,14 @@ const MembershipSchema = new mongoose.Schema({
   
   // Metadata
   notes: String,
-  cancellationReason: String,
-  cancellationDate: Date,
+
+  // Cancellation Fields
+  cancelAtPeriodEnd: { type: Boolean, default: false }, // Stripe cancel_at_period_end
+  cancellationScheduledFor: Date, // Date when cancellation will take effect
+  cancellationReason: String, // Reason for cancellation
+  cancelledBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }, // Employee who cancelled
+  cancelledAt: Date, // When cancellation was requested
+  cancellationDate: Date, // Legacy field - when subscription actually ended
 }, { timestamps: true, strict: false });
 
 // Indexes for efficient queries

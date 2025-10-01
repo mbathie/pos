@@ -4,11 +4,11 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt, Users, DollarSign, Plus, ExternalLink, MoreVertical, Pause, Play, X } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt, Users, DollarSign, Plus, ExternalLink, MoreVertical, Pause, X, Ban } from "lucide-react";
 import TransactionsTable from '@/components/transactions-table';
 import { CustomerAvatar } from '@/components/customer-avatar';
 import { useGlobals } from '@/lib/globals';
-import { 
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -16,6 +16,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -47,6 +56,8 @@ export default function CustomerDetailPage({ params }) {
   const [creditLoading, setCreditLoading] = useState(false);
   const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
   const [selectedMembership, setSelectedMembership] = useState(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [membershipToCancel, setMembershipToCancel] = useState(null);
   const [org, setOrg] = useState(null);
 
   // Handle async params in Next.js 15+
@@ -202,6 +213,33 @@ export default function CustomerDetailPage({ params }) {
       toast.error('Failed to resume membership');
     }
   };
+
+  const handleCancelMembership = async () => {
+    if (!membershipToCancel) return;
+
+    const nextBillingDate = dayjs(membershipToCancel.nextBillingDate).format('DD/MM/YYYY');
+
+    try {
+      const response = await fetch(`/api/memberships/${membershipToCancel._id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (response.ok) {
+        toast.success(`Membership will be cancelled on ${nextBillingDate}`);
+        fetchMemberships();
+        setCancelDialogOpen(false);
+        setMembershipToCancel(null);
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to cancel membership');
+      }
+    } catch (error) {
+      console.error('Error cancelling membership:', error);
+      toast.error('Failed to cancel membership');
+    }
+  };
+
 
   const handleAddCredit = async () => {
     if (!creditAmount || parseFloat(creditAmount) <= 0) return;
@@ -384,8 +422,14 @@ export default function CustomerDetailPage({ params }) {
                               </button>
                             </Badge>
                           )}
+                          {membership.cancelAtPeriodEnd && membership.status === 'active' && (
+                            <Badge variant="destructive" className="text-xs flex items-center gap-1">
+                              <Ban className="h-3 w-3" />
+                              Cancels: {dayjs(membership.cancellationScheduledFor).format('DD/MM')}
+                            </Badge>
+                          )}
                         </div>
-                        {membership.status === 'active' && (
+                        {membership.status === 'active' && !membership.cancelAtPeriodEnd && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -402,6 +446,16 @@ export default function CustomerDetailPage({ params }) {
                               >
                                 <Pause className="mr-2 h-4 w-4" />
                                 Pause Membership
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setMembershipToCancel(membership);
+                                  setCancelDialogOpen(true);
+                                }}
+                                className="cursor-pointer"
+                              >
+                                <Ban className="mr-2 h-4 w-4" />
+                                Cancel Membership
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -432,31 +486,33 @@ export default function CustomerDetailPage({ params }) {
                         <label className="text-sm font-medium text-muted-foreground">Started</label>
                         <p className="text-sm">{dayjs(membership.subscriptionStartDate).format('DD/MM/YYYY')}</p>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">
-                          {membership.status === 'suspended' ? 'Resumes' :
-                           membership.scheduledPauseDate ? 'Pause Starts' : 'Next Billing'}
-                        </label>
-                        <p className="text-sm">
-                          {(() => {
-                            if (membership.status === 'suspended') {
-                              // Check for suspension info in the membership itself
-                              if (membership.suspendedUntil) {
-                                return dayjs(membership.suspendedUntil).format('DD/MM/YYYY');
+                      {!membership.cancelAtPeriodEnd && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">
+                            {membership.status === 'suspended' ? 'Resumes' :
+                             membership.scheduledPauseDate ? 'Pause Starts' : 'Next Billing'}
+                          </label>
+                          <p className="text-sm">
+                            {(() => {
+                              if (membership.status === 'suspended') {
+                                // Check for suspension info in the membership itself
+                                if (membership.suspendedUntil) {
+                                  return dayjs(membership.suspendedUntil).format('DD/MM/YYYY');
+                                }
+                              } else if (membership.scheduledPauseDate) {
+                                // Show scheduled pause date
+                                return dayjs(membership.scheduledPauseDate).format('DD/MM/YYYY');
                               }
-                            } else if (membership.scheduledPauseDate) {
-                              // Show scheduled pause date
-                              return dayjs(membership.scheduledPauseDate).format('DD/MM/YYYY');
-                            }
-                            // Check for latest suspension in suspensions array
-                            const latestSuspension = membership.suspensions?.slice(-1)[0];
-                            if (latestSuspension?.resumesAt) {
-                              return dayjs(latestSuspension.resumesAt).format('DD/MM/YYYY');
-                            }
-                            return dayjs(membership.nextBillingDate).format('DD/MM/YYYY');
-                          })()}
-                        </p>
-                      </div>
+                              // Check for latest suspension in suspensions array
+                              const latestSuspension = membership.suspensions?.slice(-1)[0];
+                              if (latestSuspension?.resumesAt) {
+                                return dayjs(latestSuspension.resumesAt).format('DD/MM/YYYY');
+                              }
+                              return dayjs(membership.nextBillingDate).format('DD/MM/YYYY');
+                            })()}
+                          </p>
+                        </div>
+                      )}
                     </div>
                     
                     <div>
@@ -719,6 +775,29 @@ export default function CustomerDetailPage({ params }) {
           }}
         />
       )}
+
+      {/* Cancel Membership Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogTitle>Cancel {membershipToCancel?.product?.name}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            The membership will remain active until{' '}
+            <strong>{membershipToCancel && dayjs(membershipToCancel.nextBillingDate).format('DD/MM/YYYY')}</strong>{' '}
+            and will not be renewed after that date.
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setCancelDialogOpen(false);
+              setMembershipToCancel(null);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleCancelMembership}>
+              OK
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

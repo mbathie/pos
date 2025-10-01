@@ -1,8 +1,20 @@
-22.9.25
+01.10.2025
 
-- membership cancellations
+DONE - membership cancellations (01.10.2025)
+  - Cancel active memberships at end of billing period (cancel_at_period_end)
+  - Stripe Connected Account support
+  - AlertDialog confirmation with cancellation details
+  - Visual indicators (Active + Cancels badges)
+  - Employee tracking (who cancelled, when, and why)
+  - Automatic UI cleanup (hides dropdown, removes Next Billing)
+  - Fallback logic for Stripe date fields (current_period_end/cancel_at/nextBillingDate)
+  - Comprehensive logging for troubleshooting
+
+TODO:
 - basic reporting
 - refunds
+
+22.9.25
 
 15.9.2025
 
@@ -23,9 +35,6 @@ DONE - membership holds/pause (22.9.2025)
   DONE - Graceful fallback when Stripe API fails (local pause still works)
   DONE - Check script: node scripts/check-stripe-subscription.js <sub_id> [acct_id]
   DONE - blocks customer from any membership related discounts while suspended (22.9.2025)
-MOVED - membership cancellations
-  - company wide cancellation policy.
-  - how to handle 12 month vs 1 month memberships
 DONE - ability to grant credits ($) to the customer account - manually assign (expiry) i.e. gift cards
 - basic reporting
 DONE - should be able to assign particular browser fixed always to a location (ADMIN only)

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/pagination"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MoreHorizontal, User, CreditCard, Calendar, DollarSign } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MoreHorizontal, User, CreditCard, Calendar, DollarSign, Ban, Pause } from "lucide-react";
 import { TypographyLarge } from '@/components/ui/typography';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -227,6 +227,7 @@ export default function MembershipsPage() {
             <SelectContent>
               <SelectItem value="all">All Status</SelectItem>
               <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="suspended">Suspended</SelectItem>
               <SelectItem value="canceled">Canceled</SelectItem>
             </SelectContent>
           </Select>
@@ -393,19 +394,43 @@ export default function MembershipsPage() {
                     </td>
                     
                     <td className="px-4 py-3 align-middle">
-                      <div className="flex flex-col">
-                        <div>
-                          {membership.nextBillingDate 
-                            ? dayjs(membership.nextBillingDate).format('DD/MM/YYYY')
-                            : '-'
-                          }
+                      {membership.cancelAtPeriodEnd ? (
+                        <div className="flex flex-col gap-1">
+                          <Badge variant="destructive" className="text-xs flex items-center gap-1 w-fit">
+                            <Ban className="h-3 w-3" />
+                            Cancels: {dayjs(membership.cancellationScheduledFor).format('DD/MM')}
+                          </Badge>
                         </div>
-                        {membership.nextBillingDate && (
-                          <div className="text-xs text-muted-foreground">
-                            {dayjs(membership.nextBillingDate).fromNow()}
+                      ) : membership.status === 'suspended' || membership.scheduledPauseDate ? (
+                        <div className="flex flex-col gap-1">
+                          {membership.scheduledPauseDate && (
+                            <Badge variant="outline" className="text-xs flex items-center gap-1 w-fit">
+                              <Pause className="h-3 w-3" />
+                              Pause: {dayjs(membership.scheduledPauseDate).format('DD/MM')}
+                            </Badge>
+                          )}
+                          {membership.status === 'suspended' && membership.suspendedUntil && (
+                            <Badge variant="outline" className="text-xs flex items-center gap-1 w-fit">
+                              <Pause className="h-3 w-3" />
+                              Resumes: {dayjs(membership.suspendedUntil).format('DD/MM')}
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col">
+                          <div>
+                            {membership.nextBillingDate
+                              ? dayjs(membership.nextBillingDate).format('DD/MM/YYYY')
+                              : '-'
+                            }
                           </div>
-                        )}
-                      </div>
+                          {membership.nextBillingDate && (
+                            <div className="text-xs text-muted-foreground">
+                              {dayjs(membership.nextBillingDate).fromNow()}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
                     
                     <td className="px-4 py-3 align-middle">
@@ -420,9 +445,11 @@ export default function MembershipsPage() {
                     </td>
                     
                     <td className="px-4 py-3 align-middle">
-                      <Badge variant={getStatusBadgeVariant(membership.status)}>
-                        {membership.status}
-                      </Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant={getStatusBadgeVariant(membership.status)}>
+                          {membership.status}
+                        </Badge>
+                      </div>
                     </td>
                     
                     <td className="px-4 py-3 text-right align-middle" data-actions>

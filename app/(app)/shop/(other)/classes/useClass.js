@@ -1,6 +1,45 @@
 import dayjs from 'dayjs'
+import { useGlobals } from '@/lib/globals'
+
+// Helper function to check if a date/time falls within location hours
+const isWithinLocationHours = (dateTime, location) => {
+  if (!location?.storeHours) return true; // If no store hours, allow all times
+
+  const dayOfWeek = dateTime.getDay(); // 0 = Sunday, 1 = Monday, etc.
+  const storeHour = location.storeHours.find(h => h.d === dayOfWeek);
+
+  if (!storeHour || !storeHour.open || !storeHour.close) {
+    return false; // Store is closed on this day
+  }
+
+  const classTime = dateTime.getHours() * 60 + dateTime.getMinutes();
+  const [openHour, openMin] = storeHour.open.split(':').map(Number);
+  const [closeHour, closeMin] = storeHour.close.split(':').map(Number);
+  const openTime = openHour * 60 + openMin;
+  const closeTime = closeHour * 60 + closeMin;
+
+  return classTime >= openTime && classTime <= closeTime;
+}
+
+// Helper function to check if a date is a closed day
+// Returns the closed day object if found, null otherwise
+const getClosedDay = (date, location) => {
+  if (!location?.closedDays || location.closedDays.length === 0) return null;
+
+  const dateStr = dayjs(date).format('YYYY-MM-DD');
+
+  return location.closedDays.find(closedDay => {
+    const startDate = closedDay.startDate;
+    const endDate = closedDay.endDate;
+
+    if (!startDate || !endDate) return false;
+
+    return dateStr >= startDate && dateStr <= endDate;
+  });
+}
 
 export function useClass({product, setProduct}) {
+  const { location: globalLocation } = useGlobals();
 
   // Get all dates that have classes in the next 6 months
   const getAvailableDates = (schedule) => {
@@ -41,18 +80,36 @@ export function useClass({product, setProduct}) {
       return [];
     }
 
+    // Fetch fresh location data to ensure we have latest store hours and closed days
+    let location = globalLocation;
+    if (globalLocation?._id) {
+      try {
+        const locationRes = await fetch(`/api/locations/${globalLocation._id}`);
+        if (locationRes.ok) {
+          location = await locationRes.json();
+        }
+      } catch (error) {
+        console.error('Error fetching location:', error);
+        // Fall back to global location if fetch fails
+      }
+    }
+
     const times = [];
     const dayOfWeek = date.getDay();
     // Convert Sunday = 0 to our format where Monday = 0
     const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    
+
     // Find the day configuration for this day
     const dayConfig = schedule.daysOfWeek.find(d => d.dayIndex === adjustedDayOfWeek);
-    
+
     // Check if this day has any selected times
     if (!dayConfig || !dayConfig.times?.some(t => t.selected)) {
       return [];
     }
+
+    // Check if this date is a closed day
+    const closedDay = getClosedDay(date, location);
+    const dateIsClosedDay = Boolean(closedDay);
 
     // Fetch actual schedule data to get availability
     const res = await fetch(`/api/products/${product._id}/schedules`);
@@ -61,7 +118,7 @@ export function useClass({product, setProduct}) {
     // Get current time for filtering
     const now = new Date();
     const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
-    
+
     // Check if the selected date is today
     const selectedDateStr = dayjs(date).format('YYYY-MM-DD');
     const todayStr = dayjs(now).format('YYYY-MM-DD');
@@ -70,20 +127,20 @@ export function useClass({product, setProduct}) {
     // Add all selected times for this day
     dayConfig.times.forEach(timeItem => {
       if (!timeItem.selected) return; // Skip unselected times
-      
+
       const timeStr = timeItem.time;
       const timeLabel = timeItem.label || '';
-      
+
       if (timeStr) {
         const [hours, minutes] = timeStr.split(':');
         const classDateTime = new Date(date);
         classDateTime.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-        
+
         // If it's today, filter out times that are more than 30 minutes in the past
         if (isToday && classDateTime < thirtyMinutesAgo) {
           return; // Skip this time
         }
-        
+
         const iso = classDateTime.toISOString();
         // Find matching scheduled class to get actual availability
         const match = scheduleData.classes?.find(s => {
@@ -91,16 +148,22 @@ export function useClass({product, setProduct}) {
           return scheduleDate === iso;
         });
         const available = match?.available ?? product?.capacity ?? 5;
-        
+
+        // Check if this time conflicts with location hours or closed days
+        const withinHours = isWithinLocationHours(classDateTime, location);
+        const isConflict = dateIsClosedDay || !withinHours;
+
         times.push({
           datetime: iso,
           time: dayjs(classDateTime).format('h:mm A'),
           label: timeLabel,
-          available: available
+          available: available,
+          conflict: isConflict,
+          conflictReason: dateIsClosedDay ? (closedDay?.name || 'Closed day') : !withinHours ? 'Outside store hours' : null
         });
       }
     });
-    
+
     return times.sort((a, b) => new Date(a.datetime) - new Date(b.datetime));
   };
 

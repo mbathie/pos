@@ -20,6 +20,7 @@ const TEST_CATEGORIES = {
   mod: 'Product Modifications',
   discount: 'Discount System',
   credits: 'Customer Credits',
+  location: 'Location Hours & Schedules',
   cleanup: 'Cleanup'
   // Note: 'seed' tests are excluded from regular test runs
 };

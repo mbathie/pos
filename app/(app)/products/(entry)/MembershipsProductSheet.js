@@ -6,9 +6,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Loader2, CheckCircle, Save, Trash2, Plus, Trash, Info } from 'lucide-react';
+import { Loader2, CheckCircle, Save, Trash2, Plus, Trash, Info, X } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ProductThumbnail } from '@/components/product-thumbnail';
 import ProductInstructions from '@/app/(app)/products/(entry)/ProductInstructions';
@@ -16,9 +17,9 @@ import ProductTerms from '@/app/(app)/products/(entry)/ProductTerms';
 import { NumberInput } from '@/components/ui/number-input';
 import DiscountsSheet from '@/components/discounts/discounts-sheet';
 
-export default function MembershipsProductSheet({ 
-  open, 
-  onOpenChange, 
+export default function MembershipsProductSheet({
+  open,
+  onOpenChange,
   products,
   selectedProductId,
   setProducts,
@@ -34,12 +35,52 @@ export default function MembershipsProductSheet({
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [discountsPanelOpen, setDiscountsPanelOpen] = React.useState(false);
   const [currentPriceIndex, setCurrentPriceIndex] = React.useState(null);
+  const [relatedDiscounts, setRelatedDiscounts] = React.useState([]);
   
   // Find product and index
-  const productIdx = products?.findIndex(p => 
+  const productIdx = products?.findIndex(p =>
     p._id ? p._id === selectedProductId : p === selectedProductId
   );
   const product = products?.[productIdx];
+
+  // Fetch related discounts when product changes
+  React.useEffect(() => {
+    const fetchRelatedDiscounts = async () => {
+      if (!product?._id || !product?.category) return;
+
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/discounts`);
+        if (res.ok) {
+          const allDiscounts = await res.json();
+
+          // Filter discounts that apply to this product
+          // Based on the schema: discounts have musts.categories or musts.products
+          // and adjustments[].categories or adjustments[].products
+          const filtered = allDiscounts.filter(discount => {
+            // Check if this product/category is in the "must haves"
+            const mustMatchesProduct = discount.musts?.products?.some(p => p === product._id);
+            const mustMatchesCategory = discount.musts?.categories?.some(c => c === product.category || c === product.category?._id);
+
+            // Check if this product/category is in any of the adjustments
+            const adjustmentMatches = discount.adjustments?.some(adj => {
+              const adjMatchesProduct = adj.products?.some(p => p === product._id);
+              const adjMatchesCategory = adj.categories?.some(c => c === product.category || c === product.category?._id);
+              return adjMatchesProduct || adjMatchesCategory;
+            });
+
+            return mustMatchesProduct || mustMatchesCategory || adjustmentMatches;
+          });
+
+          setRelatedDiscounts(filtered);
+        }
+      } catch (error) {
+        console.error('Error fetching related discounts:', error);
+      }
+    };
+
+    fetchRelatedDiscounts();
+  }, [product?._id, product?.category]);
+
   if (!product || productIdx === -1) return null;
   
   const handleDelete = async () => {
@@ -262,8 +303,8 @@ export default function MembershipsProductSheet({
               )}
               
               <div className="flex items-center gap-2 mt-2">
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   className="cursor-pointer"
                   onClick={() => {
                     setProducts((draft) => {
@@ -281,16 +322,33 @@ export default function MembershipsProductSheet({
                 >
                   <Plus className="h-4 w-4 mr-1" /> Add Price
                 </Button>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   className="cursor-pointer"
                   onClick={() => {
                     setCurrentPriceIndex(0); // Use 0 as we're managing product-level discounts
                     setDiscountsPanelOpen(true);
                   }}
                 >
-                  <Plus className="h-4 w-4 mr-1" /> Discounts
+                  Manage Discounts
                 </Button>
+                {relatedDiscounts.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {relatedDiscounts.map(discount => (
+                      <Badge
+                        key={discount._id}
+                        variant={discount.mode === 'discount' ? 'secondary' : ''}
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setCurrentPriceIndex(0);
+                          setDiscountsPanelOpen(true);
+                        }}
+                      >
+                        {discount.name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
             
