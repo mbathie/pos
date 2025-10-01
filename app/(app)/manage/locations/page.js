@@ -424,7 +424,11 @@ export default function Page() {
                 </tr>
               ) : (
                 currentData.map((loc) => (
-                  <tr key={loc._id} className="border-b hover:bg-muted/50">
+                  <tr
+                    key={loc._id}
+                    className="border-b hover:bg-muted/50 cursor-pointer"
+                    onClick={() => window.location.href = `/manage/locations/${loc._id}`}
+                  >
                     <td className="px-4 py-3 font-medium align-middle">
                       <div className="flex items-center gap-2">
                         <div className="h-8 w-8 flex-shrink-0 rounded bg-muted flex items-center justify-center">
@@ -442,9 +446,9 @@ export default function Page() {
                     <td className="px-4 py-3 align-middle">
                       {loc.phone || '—'}
                     </td>
-                    <td className="px-4 py-3 align-middle text-center">
+                    <td className="px-4 py-3 align-middle text-center" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-center">
-                        <Checkbox 
+                        <Checkbox
                           checked={selectedPOSLocation === loc._id}
                           onCheckedChange={() => handlePOSSelection(loc._id)}
                           className="cursor-pointer"
@@ -452,7 +456,7 @@ export default function Page() {
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right align-middle">
+                    <td className="px-4 py-3 text-right align-middle" onClick={(e) => e.stopPropagation()}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="cursor-pointer h-8 w-8" aria-label="Location actions" title="Location actions">
