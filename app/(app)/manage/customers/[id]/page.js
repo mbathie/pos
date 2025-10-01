@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt, Users, DollarSign, Plus, ExternalLink, MoreVertical, Pause, X, Ban } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt, Users, DollarSign, Plus, ExternalLink, MoreVertical, Pause, X, Ban, Play } from "lucide-react";
 import TransactionsTable from '@/components/transactions-table';
 import { CustomerAvatar } from '@/components/customer-avatar';
 import { useGlobals } from '@/lib/globals';
