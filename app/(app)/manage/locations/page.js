@@ -467,12 +467,6 @@ export default function Page() {
                               Edit location
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer">
-                            View details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer">
-                            Manage staff
-                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="cursor-pointer text-destructive">
                             {loc.active !== false ? 'Deactivate' : 'Activate'} location

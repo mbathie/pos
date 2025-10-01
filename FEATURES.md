@@ -583,7 +583,16 @@ Add special closure dates in **Manage > Shop Locations > [Location] > Closed Day
 - **Name**: Description (e.g., "Christmas Day", "Staff Training")
 - **Start Date**: First day of closure
 - **End Date**: Last day of closure (same as start for single-day closures)
+- **Repeats**: Frequency for recurring closures (default: "Does not repeat")
+  - **Does not repeat**: One-time closure
+  - **Daily**: Repeats every day
+  - **Weekly**: Repeats every week on the same day
+  - **Fortnightly**: Repeats every 2 weeks on the same day
+  - **Monthly**: Repeats every month on the same date
+  - **Quarterly**: Repeats every 3 months on the same date
+  - **Yearly**: Repeats every year on the same date (ideal for annual holidays)
 - Supports multi-day ranges (e.g., Dec 24-26 for Christmas break)
+- Duration is preserved across repetitions (e.g., 3-day closure repeats as 3 days each time)
 
 ### How It Works
 
@@ -612,6 +621,11 @@ Add special closure dates in **Manage > Shop Locations > [Location] > Closed Day
 - Converts class date to YYYY-MM-DD format
 - Checks if date falls within any closed day range
 - If startDate <= classDate <= endDate → blocked
+- **For repeating closures**:
+  - Calculates the duration of the original closure (endDate - startDate)
+  - Checks if the date matches the repeat pattern (weekly, monthly, etc.)
+  - Validates that the date falls within the duration window for that repetition
+  - Example: "Staff Training" every Monday (1 day) will block all Mondays
 
 ### Example Scenarios
 
@@ -661,6 +675,38 @@ Add special closure dates in **Manage > Shop Locations > [Location] > Closed Day
 - All weekday 10:30 PM times ❌ ~~Outside store hours~~ (after 10:00 PM close)
 - Staff should adjust class schedule or extend store hours
 
+#### Scenario 5: Repeating Annual Holiday (Yearly)
+**Setup**:
+- Closed days: "Christmas Day" Dec 25, 2025 - Dec 25, 2025, Repeats: Yearly
+- Class: Morning Class, daily at 09:00 AM
+
+**Result**:
+- Dec 25, 2025 at 09:00 AM ❌ ~~Closed day~~ (Christmas Day)
+- Dec 25, 2026 at 09:00 AM ❌ ~~Closed day~~ (Christmas Day - repeating)
+- Dec 25, 2027 at 09:00 AM ❌ ~~Closed day~~ (Christmas Day - repeating)
+- All other dates ✅ Available
+
+#### Scenario 6: Repeating Weekly Staff Training
+**Setup**:
+- Closed days: "Staff Training" Monday Jan 6, 2025 - Monday Jan 6, 2025, Repeats: Weekly
+- Class: Various classes throughout the week
+
+**Result**:
+- Every Monday (all times) ❌ ~~Closed day~~ (Staff Training)
+- Tuesday-Sunday ✅ Available
+
+#### Scenario 7: Repeating Multi-Day Quarterly Event
+**Setup**:
+- Closed days: "Maintenance Week" Jan 15-17, 2025, Repeats: Quarterly
+- Class: All classes affected
+
+**Result**:
+- Jan 15-17, 2025 ❌ ~~Closed day~~ (Maintenance Week)
+- Apr 15-17, 2025 ❌ ~~Closed day~~ (Maintenance Week - repeating)
+- Jul 15-17, 2025 ❌ ~~Closed day~~ (Maintenance Week - repeating)
+- Oct 15-17, 2025 ❌ ~~Closed day~~ (Maintenance Week - repeating)
+- Duration preserved: All occurrences are 3 days (Jan 15-17)
+
 ### Database Schema
 
 ```javascript
@@ -687,7 +733,8 @@ Add special closure dates in **Manage > Shop Locations > [Location] > Closed Day
     {
       name: String,      // "Christmas Day", "Staff Training"
       startDate: String, // "2025-12-25" (YYYY-MM-DD)
-      endDate: String    // "2025-12-25" (YYYY-MM-DD)
+      endDate: String,   // "2025-12-25" (YYYY-MM-DD)
+      repeats: String    // "none", "daily", "weekly", "fortnightly", "monthly", "quarterly", "yearly"
     }
   ],
   

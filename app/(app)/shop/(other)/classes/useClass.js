@@ -26,15 +26,85 @@ const isWithinLocationHours = (dateTime, location) => {
 const getClosedDay = (date, location) => {
   if (!location?.closedDays || location.closedDays.length === 0) return null;
 
-  const dateStr = dayjs(date).format('YYYY-MM-DD');
+  const checkDate = dayjs(date);
+  const dateStr = checkDate.format('YYYY-MM-DD');
 
   return location.closedDays.find(closedDay => {
     const startDate = closedDay.startDate;
     const endDate = closedDay.endDate;
+    const repeats = closedDay.repeats || 'none';
 
     if (!startDate || !endDate) return false;
 
-    return dateStr >= startDate && dateStr <= endDate;
+    const start = dayjs(startDate);
+    const end = dayjs(endDate);
+
+    // Check if date falls within the original occurrence
+    if (dateStr >= startDate && dateStr <= endDate) {
+      return true;
+    }
+
+    // If it doesn't repeat, no need to check further
+    if (repeats === 'none') {
+      return false;
+    }
+
+    // For repeating patterns, check if this date matches a repetition
+    const durationDays = end.diff(start, 'days');
+
+    switch (repeats) {
+      case 'daily':
+        // Check if date is after start and duration matches
+        return checkDate.isAfter(start) && checkDate.diff(start, 'days') % 1 === 0;
+
+      case 'weekly':
+        // Check if same day of week and at least 1 week after
+        if (checkDate.day() !== start.day()) return false;
+        const weeksSince = checkDate.diff(start, 'weeks');
+        if (weeksSince < 1) return false;
+        // Check if within the duration window for this repetition
+        const daysSinceLastOccurrence = checkDate.diff(start.add(weeksSince * 7, 'days'), 'days');
+        return daysSinceLastOccurrence >= 0 && daysSinceLastOccurrence <= durationDays;
+
+      case 'fortnightly':
+        // Check if same day of week and at least 2 weeks after
+        if (checkDate.day() !== start.day()) return false;
+        const fortnightsSince = checkDate.diff(start, 'weeks') / 2;
+        if (fortnightsSince < 1 || fortnightsSince % 1 !== 0) return false;
+        const daysFromFortnight = checkDate.diff(start.add(Math.floor(fortnightsSince) * 14, 'days'), 'days');
+        return daysFromFortnight >= 0 && daysFromFortnight <= durationDays;
+
+      case 'monthly':
+        // Check if same day of month
+        if (checkDate.date() !== start.date()) return false;
+        const monthsSince = checkDate.diff(start, 'months');
+        if (monthsSince < 1) return false;
+        // Check if within the duration window
+        const monthBase = start.add(monthsSince, 'months');
+        const daysFromMonth = checkDate.diff(monthBase, 'days');
+        return daysFromMonth >= 0 && daysFromMonth <= durationDays;
+
+      case 'quarterly':
+        // Check if same day of month, 3 months apart
+        if (checkDate.date() !== start.date()) return false;
+        const quartersSince = checkDate.diff(start, 'months') / 3;
+        if (quartersSince < 1 || quartersSince % 1 !== 0) return false;
+        const quarterBase = start.add(Math.floor(quartersSince) * 3, 'months');
+        const daysFromQuarter = checkDate.diff(quarterBase, 'days');
+        return daysFromQuarter >= 0 && daysFromQuarter <= durationDays;
+
+      case 'yearly':
+        // Check if same day and month
+        if (checkDate.month() !== start.month() || checkDate.date() !== start.date()) return false;
+        const yearsSince = checkDate.diff(start, 'years');
+        if (yearsSince < 1) return false;
+        const yearBase = start.add(yearsSince, 'years');
+        const daysFromYear = checkDate.diff(yearBase, 'days');
+        return daysFromYear >= 0 && daysFromYear <= durationDays;
+
+      default:
+        return false;
+    }
   });
 }
 

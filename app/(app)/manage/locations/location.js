@@ -30,7 +30,8 @@ export default function LocationForm({ initialData, onSubmit, submitLabel = 'Sav
     const newClosedDay = {
       name: '',
       startDate: '',
-      endDate: ''
+      endDate: '',
+      repeats: 'none'
     }
     setLocation({ ...location, closedDays: [...location.closedDays, newClosedDay] })
   }
@@ -177,18 +178,23 @@ export default function LocationForm({ initialData, onSubmit, submitLabel = 'Sav
               <div className="space-y-3">
                 {location.closedDays.map((closedDay, index) => (
                   <div key={index} className="flex items-start gap-2 p-3 border rounded-md">
-                    <div className="flex-1 space-y-2">
-                      <Input
-                        placeholder="Holiday name (e.g., Christmas Day)"
-                        value={closedDay.name}
-                        onChange={(e) => updateClosedDay(index, 'name', e.target.value)}
-                      />
+                    <div className="flex-1 space-y-4">
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor={`closedDay-name-${index}`}>Name</Label>
+                        <Input
+                          id={`closedDay-name-${index}`}
+                          placeholder="Holiday name (e.g., Christmas Day)"
+                          value={closedDay.name}
+                          onChange={(e) => updateClosedDay(index, 'name', e.target.value)}
+                        />
+                      </div>
                       <div className="flex gap-2">
-                        <div className="flex-1">
-                          <Label className="text-xs text-muted-foreground">Start Date</Label>
+                        <div className="flex-1 flex flex-col gap-1">
+                          <Label htmlFor={`closedDay-start-${index}`}>Start Date</Label>
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button
+                                id={`closedDay-start-${index}`}
                                 variant="outline"
                                 className={cn(
                                   "w-full justify-start text-left font-normal",
@@ -213,11 +219,12 @@ export default function LocationForm({ initialData, onSubmit, submitLabel = 'Sav
                             </PopoverContent>
                           </Popover>
                         </div>
-                        <div className="flex-1">
-                          <Label className="text-xs text-muted-foreground">End Date</Label>
+                        <div className="flex-1 flex flex-col gap-1">
+                          <Label htmlFor={`closedDay-end-${index}`}>End Date</Label>
                           <Popover>
                             <PopoverTrigger asChild>
                               <Button
+                                id={`closedDay-end-${index}`}
                                 variant="outline"
                                 className={cn(
                                   "w-full justify-start text-left font-normal",
@@ -248,6 +255,26 @@ export default function LocationForm({ initialData, onSubmit, submitLabel = 'Sav
                               />
                             </PopoverContent>
                           </Popover>
+                        </div>
+                        <div className="flex-1 flex flex-col gap-1">
+                          <Label htmlFor={`closedDay-repeats-${index}`}>Repeats</Label>
+                          <Select
+                            value={closedDay.repeats || 'none'}
+                            onValueChange={(value) => updateClosedDay(index, 'repeats', value)}
+                          >
+                            <SelectTrigger id={`closedDay-repeats-${index}`}>
+                              <SelectValue placeholder="Select frequency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">Does not repeat</SelectItem>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="fortnightly">Fortnightly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                              <SelectItem value="quarterly">Quarterly</SelectItem>
+                              <SelectItem value="yearly">Yearly</SelectItem>
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                     </div>
