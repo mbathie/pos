@@ -1,20 +1,12 @@
 'use client'
 import React, { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { MapPin, Plus, Search, MoreHorizontal, ArrowUpDown, ArrowUp, ArrowDown, Building2, Info } from 'lucide-react'
+import { MapPin, Plus, Search, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Building2, Info } from 'lucide-react'
 import { useGlobals } from '@/lib/globals'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 import {
   Tooltip,
   TooltipContent,
@@ -436,21 +428,8 @@ export default function Page() {
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right align-middle" onClick={(e) => e.stopPropagation()}>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="cursor-pointer h-8 w-8" aria-label="Location actions" title="Location actions">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem className="cursor-pointer" asChild>
-                            <Link href={`/manage/locations/${loc._id}`}>
-                              Edit location
-                            </Link>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <td className="px-4 py-3 text-right align-middle">
+                      <ChevronRight className="h-5 w-5 text-muted-foreground inline-block" />
                     </td>
                   </tr>
                 ))
