@@ -179,7 +179,7 @@ export default function LocationForm({ initialData, onSubmit, submitLabel = 'Sav
                 {location.closedDays.map((closedDay, index) => (
                   <div key={index} className="flex items-start gap-2 p-3 border rounded-md">
                     <div className="flex-1 space-y-4">
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-1 max-w-xs">
                         <Label htmlFor={`closedDay-name-${index}`}>Name</Label>
                         <Input
                           id={`closedDay-name-${index}`}
