@@ -460,16 +460,10 @@ export default function Page() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
                           <DropdownMenuItem className="cursor-pointer" asChild>
                             <Link href={`/manage/locations/${loc._id}`}>
                               Edit location
                             </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-pointer text-destructive">
-                            {loc.active !== false ? 'Deactivate' : 'Activate'} location
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
