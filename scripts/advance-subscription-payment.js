@@ -11,7 +11,7 @@
 
 import Stripe from 'stripe';
 import { connectDB } from '../lib/mongoose.js';
-import { Membership, Customer, Organization } from '../models/index.js';
+import { Membership, Customer, Org } from '../models/index.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
