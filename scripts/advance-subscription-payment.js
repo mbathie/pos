@@ -9,6 +9,7 @@
  * 4. Triggers the webhook to process the payment
  */
 
+import 'dotenv/config';
 import Stripe from 'stripe';
 import { connectDB } from '../lib/mongoose.js';
 import { Membership, Customer, Org } from '../models/index.js';
