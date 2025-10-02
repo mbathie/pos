@@ -486,7 +486,12 @@ export default function CustomerDetailPage({ params }) {
                         <label className="text-sm font-medium text-muted-foreground">Started</label>
                         <p className="text-sm">{dayjs(membership.subscriptionStartDate).format('DD/MM/YYYY')}</p>
                       </div>
-                      {!membership.cancelAtPeriodEnd && (
+                      {membership.subscriptionEndDate && !membership.cancelAtPeriodEnd ? (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Ends</label>
+                          <p className="text-sm">{dayjs(membership.subscriptionEndDate).format('DD/MM/YYYY')}</p>
+                        </div>
+                      ) : !membership.cancelAtPeriodEnd && (
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">
                             {membership.status === 'suspended' ? 'Resumes' :
@@ -595,8 +600,14 @@ export default function CustomerDetailPage({ params }) {
                             </p>
                           </div>
                           <div className="flex items-center justify-between">
-                            <p className="text-xs text-muted-foreground">Next billing</p>
-                            <p className="text-xs">{dayjs(dependentMembership.nextBillingDate).format('DD/MM/YYYY')}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {dependentMembership.subscriptionEndDate ? 'Ends' : 'Next billing'}
+                            </p>
+                            <p className="text-xs">
+                              {dependentMembership.subscriptionEndDate
+                                ? dayjs(dependentMembership.subscriptionEndDate).format('DD/MM/YYYY')
+                                : dayjs(dependentMembership.nextBillingDate).format('DD/MM/YYYY')}
+                            </p>
                           </div>
                         </div>
                       )}
