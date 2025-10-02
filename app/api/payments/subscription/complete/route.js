@@ -77,6 +77,15 @@ export async function POST(req, { params }) {
       console.log('  Prices count:', pricesArray.length);
       
       for (const price of pricesArray) {
+          console.log('💰 Processing price:', {
+            name: price.name,
+            value: price.value,
+            billingFrequency: price.billingFrequency,
+            billingMax: price.billingMax,
+            hasBillingMax: !!price.billingMax,
+            customers: price.customers?.length || 0
+          });
+
           for (const customerSlot of price.customers || []) {
             if (customerSlot.customer?._id) {
               // Fetch updated customer data from database
@@ -245,7 +254,15 @@ export async function POST(req, { params }) {
 
               // Add billing cycle limit if billingMax is set
               // Note: billingMax represents the total number of times to charge (including first period)
+              console.log('🔍 Checking billingMax:', {
+                priceBillingMax: price.billingMax,
+                type: typeof price.billingMax,
+                isSet: price.billingMax && price.billingMax > 0,
+                willSetMetadata: !!(price.billingMax && price.billingMax > 0)
+              });
+
               if (price.billingMax && price.billingMax > 0) {
+                console.log(`✅ Setting billingMax metadata: billingMax=${price.billingMax}, billingCount=1`);
                 subscriptionParams.metadata.billingMax = price.billingMax.toString();
                 subscriptionParams.metadata.billingCount = '1'; // Already charged 1st period
                 subscriptionParams.metadata.hasLimitedBilling = 'true';
@@ -253,11 +270,15 @@ export async function POST(req, { params }) {
                 // If billingMax is 1, cancel the subscription immediately after this period
                 if (price.billingMax === 1) {
                   subscriptionParams.cancel_at_period_end = true;
+                  console.log('⚠️ billingMax=1, setting cancel_at_period_end=true');
                 }
               } else {
                 // Indefinite billing
+                console.log('ℹ️ No billingMax set, subscription will be indefinite');
                 subscriptionParams.metadata.hasLimitedBilling = 'false';
               }
+
+              console.log('📋 Final subscription metadata:', subscriptionParams.metadata);
 
               // Create a subscription but with manual collection
               const subscription = await stripe.subscriptions.create(subscriptionParams, {
