@@ -222,8 +222,8 @@ export async function POST(req, { params }) {
                 nextBillingCount = 1;
               }
               
-              // Create a subscription but with manual collection
-              const subscription = await stripe.subscriptions.create({
+              // Prepare subscription creation parameters
+              const subscriptionParams = {
                 customer: updatedCustomer.stripeCustomerId,
                 items: [{
                   price: stripePrice.id,
@@ -241,7 +241,26 @@ export async function POST(req, { params }) {
                   paymentIntentId: paymentIntentId,
                   isSimulated: isSimulation ? 'true' : 'false' // Track if this was from simulation
                 }
-              }, {
+              };
+
+              // Add billing cycle limit if billingMax is set
+              // Note: billingMax represents the total number of times to charge (including first period)
+              if (price.billingMax && price.billingMax > 0) {
+                subscriptionParams.metadata.billingMax = price.billingMax.toString();
+                subscriptionParams.metadata.billingCount = '1'; // Already charged 1st period
+                subscriptionParams.metadata.hasLimitedBilling = 'true';
+
+                // If billingMax is 1, cancel the subscription immediately after this period
+                if (price.billingMax === 1) {
+                  subscriptionParams.cancel_at_period_end = true;
+                }
+              } else {
+                // Indefinite billing
+                subscriptionParams.metadata.hasLimitedBilling = 'false';
+              }
+
+              // Create a subscription but with manual collection
+              const subscription = await stripe.subscriptions.create(subscriptionParams, {
                 stripeAccount: org.stripeAccountId
               });
 
