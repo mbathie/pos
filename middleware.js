@@ -47,7 +47,7 @@ export async function middleware(req) {
 
   // Note: Test mode removed - tests should use proper auth token instead
 
-  // Allow all /api/auth/*, /api/unauth/*, /api/public/*, and /api/c/* routes through
+  // Allow all /api/auth/*, /api/unauth/*, /api/public/*, /api/webhooks/*, and /api/c/* routes through
   if (
     pathname.startsWith("/api/auth/") ||
     pathname === "/api/auth" ||
@@ -55,6 +55,8 @@ export async function middleware(req) {
     pathname === "/api/unauth" ||
     pathname.startsWith("/api/public/") ||
     pathname === "/api/public" ||
+    pathname.startsWith("/api/webhooks/") ||
+    pathname === "/api/webhooks" ||
     pathname.startsWith("/api/c/") ||
     pathname === "/api/c" ||
     pathname === "/api/health" ||
