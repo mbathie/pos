@@ -212,6 +212,19 @@ export default function MembershipsProductSheet({
                     <Label className="w-32">Price Name</Label>
                     <Label className="w-24">Amount ($)</Label>
                     <Label className="w-40">Billing Frequency</Label>
+                    <Label className="flex items-center gap-2 w-24">
+                      Billing Max
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="size-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p>The number of times a customer will be automatically charged before their membership ends. Leave blank for indefinite.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </Label>
                     <Label className="flex items-center gap-2 w-[60px] justify-center">
                       Minor
                       <TooltipProvider>
@@ -273,7 +286,20 @@ export default function MembershipsProductSheet({
                           </SelectGroup>
                         </SelectContent>
                       </Select>
-                      
+
+                      <NumberInput
+                        placeholder=""
+                        value={price.billingMax || null}
+                        min={1}
+                        step={1}
+                        className="w-24 text-sm"
+                        onChange={(value) => {
+                          setProducts((draft) => {
+                            draft[productIdx].prices[priceIdx].billingMax = value;
+                          });
+                        }}
+                      />
+
                       <div className="flex items-center justify-center w-[60px]">
                         <Checkbox
                           checked={price.minor || false}
