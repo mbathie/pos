@@ -7,12 +7,23 @@
  * 2. Creates an invoice for the next billing period
  * 3. Finalizes and pays the invoice
  * 4. Triggers the webhook to process the payment
+ *
+ * NOTE: This script always uses .env.development for local testing
  */
 
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import Stripe from 'stripe';
 import { connectDB } from '../lib/mongoose.js';
 import { Membership, Customer, Org } from '../models/index.js';
+
+// Get directory path for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load .env.development explicitly for local testing
+dotenv.config({ path: join(__dirname, '..', '.env.development') });
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
