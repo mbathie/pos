@@ -82,7 +82,10 @@ async function advanceSubscriptionPayment(customerId) {
 
         console.log(`\n📊 Current subscription status:`);
         console.log(`   Status: ${subscription.status}`);
-        console.log(`   Current period: ${new Date(subscription.current_period_start * 1000).toLocaleDateString()} - ${new Date(subscription.current_period_end * 1000).toLocaleDateString()}`);
+        console.log(`   Customer: ${subscription.customer}`);
+        if (subscription.current_period_start && subscription.current_period_end) {
+          console.log(`   Current period: ${new Date(subscription.current_period_start * 1000).toLocaleDateString()} - ${new Date(subscription.current_period_end * 1000).toLocaleDateString()}`);
+        }
 
         if (subscription.metadata.hasLimitedBilling === 'true') {
           console.log(`   Billing: ${subscription.metadata.billingCount || 0}/${subscription.metadata.billingMax || 0}`);
@@ -92,6 +95,7 @@ async function advanceSubscriptionPayment(customerId) {
         console.log(`\n⏳ Creating invoice...`);
         const invoice = await stripe.invoices.create(
           {
+            customer: subscription.customer,
             subscription: membership.stripeSubscriptionId,
             description: `Manual advance payment for ${membership.product?.name}`
           },
