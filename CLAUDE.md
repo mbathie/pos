@@ -77,6 +77,23 @@ After implementing or updating any feature, you MUST update the following docume
 - Call `await connectDB()` at the beginning of API routes
 - Do NOT use `import dbConnect from '@/lib/mongodb'` as this module doesn't exist
 
+## Stripe Integration
+
+### Connected Accounts
+- **IMPORTANT**: This application ALWAYS uses Stripe Connected Accounts
+- All organizations have their own Stripe connected account (stored in `org.stripeAccountId`)
+- All Stripe API calls must include the `stripeAccount` parameter in the options object (third parameter)
+- Example: `stripe.subscriptions.retrieve(id, null, { stripeAccount: org.stripeAccountId })`
+- Webhook events include `event.account` which is the connected account ID
+- Connected account ID format: `acct_xxxxxxxxxxxxx`
+
+### Invoice Structure (API Version Notes)
+- In newer Stripe API versions, invoice subscription references are nested in the `parent` object:
+  - New format: `invoice.parent.subscription_details.subscription`
+  - Old format: `invoice.subscription` (may still exist in some cases)
+  - Fallback: `invoice.lines.data[0].parent.subscription_item_details.subscription`
+- Always check for subscription ID in all three locations when processing invoices
+
 ## Authentication
 
 ### Employee Authentication (POS System)

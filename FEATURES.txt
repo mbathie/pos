@@ -10,6 +10,20 @@ DONE - membership cancellations (01.10.2025)
   - Fallback logic for Stripe date fields (current_period_end/cancel_at/nextBillingDate)
   - Comprehensive logging for troubleshooting
 
+DONE - subscription renewal webhooks (02.10.2025)
+  - Automatic processing of recurring subscription payments via Stripe webhooks
+  - Transaction record creation for each renewal payment
+  - Membership billing date updates (lastBillingDate, nextBillingDate)
+  - Billing limit enforcement with auto-cancellation when max payments reached
+  - Idempotency to prevent duplicate transactions from multiple webhook events
+  - Receipt email sending via Brevo after each successful payment
+  - Comprehensive webhook logging to ./tmp/stripe-webhooks.log
+  - Stripe API version compatibility (handles both old and new invoice formats)
+  - Test clock support for development testing
+  - Stripe Connected Accounts support for multi-tenant architecture
+  - Error handling for failed payments, missing subscriptions, etc.
+  - Scripts: advance-test-clock.js, debug-stripe-invoice.js
+
 TODO:
 - basic reporting
 - refunds
