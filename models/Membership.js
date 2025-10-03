@@ -20,6 +20,7 @@ const MembershipSchema = new mongoose.Schema({
   stripeSubscriptionId: String,
   stripeProductId: String,
   stripePriceId: String,
+  testClockId: String, // Stripe Test Clock ID (dev mode only)
   
   // Subscription Lifecycle
   subscriptionStartDate: { type: Date, required: true },

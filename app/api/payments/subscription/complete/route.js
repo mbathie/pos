@@ -231,16 +231,106 @@ export async function POST(req, { params }) {
                 nextBillingCount = 1;
               }
               
+              // Setup payment method for automatic recurring billing
+              const isDev = process.env.NEXT_PUBLIC_IS_DEV === 'true';
+              let testClockId = null;
+              let subscriptionCustomerId = updatedCustomer.stripeCustomerId;
+
+              if (isDev) {
+                console.log('🧪 Dev mode: Creating subscription with test clock');
+
+                // Create a test clock for this subscription
+                const testClock = await stripe.testHelpers.testClocks.create({
+                  frozen_time: Math.floor(Date.now() / 1000),
+                  name: `${updatedCustomer.name} - ${product.name} (${new Date().toISOString()})`
+                }, {
+                  stripeAccount: org.stripeAccountId
+                });
+
+                testClockId = testClock.id;
+                console.log(`⏰ Created test clock: ${testClockId}`);
+
+                // Create a test customer linked to the test clock
+                const testCustomer = await stripe.customers.create({
+                  email: updatedCustomer.email,
+                  name: updatedCustomer.name,
+                  test_clock: testClockId,
+                  metadata: {
+                    originalCustomerId: updatedCustomer._id.toString(),
+                    testClock: testClockId
+                  }
+                }, {
+                  stripeAccount: org.stripeAccountId
+                });
+
+                subscriptionCustomerId = testCustomer.id;
+                console.log(`👤 Created test customer: ${testCustomer.id}`);
+
+                // Attach a test payment method to the customer
+                const paymentMethod = await stripe.paymentMethods.create({
+                  type: 'card',
+                  card: {
+                    token: 'tok_visa' // Stripe test token
+                  }
+                }, {
+                  stripeAccount: org.stripeAccountId
+                });
+
+                await stripe.paymentMethods.attach(
+                  paymentMethod.id,
+                  { customer: testCustomer.id },
+                  { stripeAccount: org.stripeAccountId }
+                );
+
+                // Set as default payment method
+                await stripe.customers.update(
+                  testCustomer.id,
+                  { invoice_settings: { default_payment_method: paymentMethod.id } },
+                  { stripeAccount: org.stripeAccountId }
+                );
+
+                console.log(`💳 Attached test payment method: ${paymentMethod.id}`);
+              } else {
+                // Production: Get payment method from the initial payment intent
+                console.log('💳 Production mode: Setting up automatic billing from initial payment');
+
+                try {
+                  const paymentIntent = await stripe.paymentIntents.retrieve(
+                    paymentIntentId,
+                    { stripeAccount: org.stripeAccountId }
+                  );
+
+                  if (paymentIntent.payment_method) {
+                    // Set the payment method from the initial payment as default
+                    await stripe.customers.update(
+                      updatedCustomer.stripeCustomerId,
+                      {
+                        invoice_settings: {
+                          default_payment_method: paymentIntent.payment_method
+                        }
+                      },
+                      { stripeAccount: org.stripeAccountId }
+                    );
+
+                    console.log(`✅ Set default payment method from initial payment: ${paymentIntent.payment_method}`);
+                  } else {
+                    console.warn('⚠️ No payment method found on initial payment intent');
+                  }
+                } catch (error) {
+                  console.error('❌ Failed to set default payment method:', error);
+                  // Continue anyway - subscription will still be created
+                }
+              }
+
               // Prepare subscription creation parameters
+              // Use charge_automatically for both dev and production (automatic recurring billing)
               const subscriptionParams = {
-                customer: updatedCustomer.stripeCustomerId,
+                customer: subscriptionCustomerId,
                 items: [{
                   price: stripePrice.id,
                   quantity: 1
                 }],
-                collection_method: 'send_invoice', // Manual invoicing
-                days_until_due: 7, // 7 days to pay invoice
-                billing_cycle_anchor: calculateNextBillingDate(nextBillingUnit, nextBillingCount),
+                collection_method: 'charge_automatically',
                 metadata: {
                   productId: product._id.toString(),
                   customerId: updatedCustomer._id.toString(),
@@ -248,7 +338,11 @@ export async function POST(req, { params }) {
                   locationId: employee.selectedLocationId.toString(),
                   firstPeriodPaid: 'true',
                   paymentIntentId: paymentIntentId,
-                  isSimulated: isSimulation ? 'true' : 'false' // Track if this was from simulation
+                  isSimulated: isSimulation ? 'true' : 'false',
+                  priceName: price.name,
+                  productName: product.name,
+                  billingFrequency: billingFrequency,
+                  ...(isDev && { testClockId })
                 }
               };
 
@@ -295,7 +389,8 @@ export async function POST(req, { params }) {
                   price,
                   subscription,
                   employee,
-                  parentCustomer: customerSlot.dependent ? updatedCustomer : null // Pass parent if this is for a dependent
+                  parentCustomer: customerSlot.dependent ? updatedCustomer : null, // Pass parent if this is for a dependent
+                  testClockId // Pass test clock ID for dev mode
                 });
                 
                 console.log(`✅ Created membership record for ${customerSlot.dependent ? customerSlot.dependent.name : updatedCustomer.name} - ${product.name}`);

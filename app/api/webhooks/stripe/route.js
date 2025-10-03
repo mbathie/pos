@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { headers } from 'next/headers';
 import Stripe from 'stripe';
 import { connectDB } from '@/lib/mongoose';
-import { Transaction, Membership, Customer, Organization, Product } from '@/models';
+import { Transaction, Membership, Customer, Org, Product } from '@/models';
 import { sendTransactionReceipt } from '@/lib/email/receipt';
 import { prepareCartForTransaction } from '@/lib/payments/success';
 import { Types } from 'mongoose';
@@ -59,8 +59,8 @@ async function createRenewalTransaction({ invoice, subscription, customer, organ
   const cleanCart = prepareCartForTransaction(cart);
 
   const transaction = await Transaction.create({
-    customer: Types.ObjectId.createFromHexString(customer._id),
-    org: Types.ObjectId.createFromHexString(organization._id),
+    customer: customer._id,
+    org: organization._id,
     total: invoice.total / 100,
     tax: (invoice.tax || 0) / 100,
     subtotal: invoice.subtotal / 100,
@@ -86,12 +86,31 @@ async function createRenewalTransaction({ invoice, subscription, customer, organ
  * Updates membership record with new billing information
  */
 async function updateMembershipBilling({ subscription, invoice, membership }) {
-  // Calculate next billing date
-  const currentPeriodEnd = new Date(subscription.current_period_end * 1000);
+  // Calculate billing dates from the invoice period (more reliable than subscription object)
+  // In newer Stripe API versions, subscription.current_period_end may not be included
+  const periodEnd = invoice.lines?.data?.[0]?.period?.end || invoice.period_end;
+
+  if (!periodEnd) {
+    console.error('❌ Cannot determine next billing date:', {
+      invoiceId: invoice.id,
+      hasPeriodEnd: !!invoice.period_end,
+      hasLinePeriod: !!invoice.lines?.data?.[0]?.period?.end
+    });
+    throw new Error('Cannot determine next billing date from invoice');
+  }
+
+  const nextBillingDate = new Date(periodEnd * 1000);
+  const lastBillingDate = new Date(invoice.created * 1000);
+
+  console.log('📅 Updating membership billing dates:', {
+    nextBillingDate: nextBillingDate.toISOString(),
+    lastBillingDate: lastBillingDate.toISOString(),
+    isValidDate: !isNaN(nextBillingDate.getTime())
+  });
 
   // Update membership
-  membership.nextBillingDate = currentPeriodEnd;
-  membership.lastBillingDate = new Date(invoice.created * 1000);
+  membership.nextBillingDate = nextBillingDate;
+  membership.lastBillingDate = lastBillingDate;
   membership.status = subscription.status === 'active' ? 'active' : subscription.status;
 
   await membership.save();
@@ -102,8 +121,50 @@ async function updateMembershipBilling({ subscription, invoice, membership }) {
 /**
  * Handles invoice.paid event for subscription renewals
  */
-async function handleInvoicePaid(invoice, stripeAccount) {
-  console.log('📄 Processing invoice.paid event:', invoice.id);
+async function handleInvoicePaid(invoiceOrPayment, stripeAccount) {
+  console.log('📄 Processing invoice.paid event:', invoiceOrPayment.id);
+
+  // Determine the invoice ID
+  let invoiceId;
+  if (invoiceOrPayment.id && invoiceOrPayment.id.startsWith('inpay_')) {
+    console.log('🔍 Received InvoicePayment object, fetching actual invoice...');
+    if (!invoiceOrPayment.invoice) {
+      console.log('⏭️ InvoicePayment missing invoice reference');
+      return { skipped: true, reason: 'no_invoice_reference' };
+    }
+    invoiceId = invoiceOrPayment.invoice;
+  } else {
+    invoiceId = invoiceOrPayment.id;
+  }
+
+  // Always retrieve the full invoice to ensure all fields (especially subscription) are populated
+  // The webhook event object doesn't always include complete data
+  const invoice = await stripe.invoices.retrieve(
+    invoiceId,
+    {
+      expand: ['subscription']
+    },
+    {
+      stripeAccount
+    }
+  );
+  console.log('✅ Retrieved full invoice:', invoice.id);
+
+  // Extract subscription ID from invoice (handle both old and new Stripe API formats)
+  let subscriptionId = invoice.subscription; // Old format: direct field
+  if (!subscriptionId && invoice.parent?.subscription_details?.subscription) {
+    subscriptionId = invoice.parent.subscription_details.subscription; // New format: nested in parent
+  }
+  if (!subscriptionId && invoice.lines?.data?.[0]?.parent?.subscription_item_details?.subscription) {
+    subscriptionId = invoice.lines.data[0].parent.subscription_item_details.subscription; // Fallback: from line items
+  }
+
+  console.log('📄 Invoice details:', {
+    subscriptionId,
+    billing_reason: invoice.billing_reason,
+    customer: invoice.customer,
+    amount: invoice.amount_paid / 100
+  });
 
   // Skip if this is the first invoice (already handled during subscription creation)
   if (invoice.billing_reason === 'subscription_create') {
@@ -111,10 +172,20 @@ async function handleInvoicePaid(invoice, stripeAccount) {
     return { skipped: true, reason: 'subscription_create' };
   }
 
+  // Check if invoice has a subscription
+  if (!subscriptionId) {
+    console.log('⏭️ Skipping invoice without subscription (not a subscription renewal)');
+    return { skipped: true, reason: 'no_subscription' };
+  }
+
   // Get the subscription
-  const subscription = await stripe.subscriptions.retrieve(invoice.subscription, {
-    stripeAccount
-  });
+  const subscription = await stripe.subscriptions.retrieve(
+    subscriptionId,
+    null,
+    {
+      stripeAccount
+    }
+  );
 
   if (!subscription) {
     throw new Error(`Subscription not found: ${invoice.subscription}`);
@@ -133,8 +204,22 @@ async function handleInvoicePaid(invoice, stripeAccount) {
 
   await connectDB();
 
+  // Check for duplicate invoice processing (idempotency)
+  const existingTransaction = await Transaction.findOne({
+    'stripe.invoiceId': invoice.id
+  });
+
+  if (existingTransaction) {
+    console.log(`⏭️ Invoice already processed: ${invoice.id} (Transaction: ${existingTransaction._id})`);
+    return {
+      skipped: true,
+      reason: 'already_processed',
+      transactionId: existingTransaction._id
+    };
+  }
+
   const customer = await Customer.findById(customerId);
-  const organization = await Organization.findById(orgId);
+  const organization = await Org.findById(orgId);
   const product = productId ? await Product.findById(productId) : null;
 
   if (!customer || !organization) {
@@ -214,8 +299,11 @@ async function handleInvoicePaid(invoice, stripeAccount) {
 
       // Update membership to reflect upcoming cancellation
       if (membership) {
+        // Get period end from invoice (same as we do for billing dates)
+        const cancelPeriodEnd = invoice.lines?.data?.[0]?.period?.end || invoice.period_end;
+
         membership.cancelAtPeriodEnd = true;
-        membership.cancellationScheduledFor = new Date(subscription.current_period_end * 1000);
+        membership.cancellationScheduledFor = cancelPeriodEnd ? new Date(cancelPeriodEnd * 1000) : null;
         await membership.save();
       }
     } else {
@@ -256,8 +344,11 @@ async function handleInvoicePaid(invoice, stripeAccount) {
     }
   }
 
-  // Calculate next billing date
-  const nextBillingDate = new Date(subscription.current_period_end * 1000);
+  // Calculate billing dates from invoice (same as updateMembershipBilling)
+  const periodEnd = invoice.lines?.data?.[0]?.period?.end || invoice.period_end;
+  const periodStart = invoice.lines?.data?.[0]?.period?.start || invoice.period_start;
+  const nextBillingDate = periodEnd ? new Date(periodEnd * 1000) : null;
+  const currentPeriodStart = periodStart ? new Date(periodStart * 1000) : null;
 
   // Prepare detailed log data
   const logData = {
@@ -274,10 +365,10 @@ async function handleInvoicePaid(invoice, stripeAccount) {
       total: invoice.total / 100
     },
     billingCycle: billingEnforcement || { type: 'indefinite' },
-    nextBillingDate: nextBillingDate.toISOString(),
+    nextBillingDate: nextBillingDate?.toISOString() || null,
     currentPeriod: {
-      start: new Date(subscription.current_period_start * 1000).toISOString(),
-      end: nextBillingDate.toISOString()
+      start: currentPeriodStart?.toISOString() || null,
+      end: nextBillingDate?.toISOString() || null
     },
     transactionId: transaction._id.toString(),
     membershipId: membership?._id?.toString() || null,
@@ -307,7 +398,8 @@ async function handleInvoicePaid(invoice, stripeAccount) {
 export async function POST(req) {
   try {
     const body = await req.text();
-    const signature = headers().get('stripe-signature');
+    const headersList = await headers();
+    const signature = headersList.get('stripe-signature');
 
     if (!signature) {
       return NextResponse.json(
@@ -336,8 +428,10 @@ export async function POST(req) {
     // Handle different event types
     switch (event.type) {
       case 'invoice.paid':
+      case 'invoice.payment_succeeded':
+      case 'invoice_payment.paid': // Non-standard event name sometimes sent by Stripe
         const result = await handleInvoicePaid(event.data.object, stripeAccount);
-        console.log('✅ invoice.paid processed:', result);
+        console.log(`✅ ${event.type} processed:`, result);
         break;
 
       case 'invoice.payment_failed':
