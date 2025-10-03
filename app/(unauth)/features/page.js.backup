@@ -1,0 +1,539 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ChevronRight, FileText, PauseCircle, XCircle, CheckCircle, Clock, Bell } from 'lucide-react';
+
+export default function FeaturesPage() {
+  const [activeSection, setActiveSection] = useState('membership-pause');
+
+  const features = [
+    {
+      id: 'membership-pause',
+      title: 'Membership Pause/Suspension',
+      Icon: PauseCircle
+    },
+    {
+      id: 'membership-cancellation',
+      title: 'Membership Cancellation',
+      Icon: XCircle
+    },
+    {
+      id: 'checkin-system',
+      title: 'Check-in System',
+      Icon: CheckCircle
+    },
+    {
+      id: 'location-hours',
+      title: 'Location Hours & Closed Days',
+      Icon: Clock
+    },
+    {
+      id: 'subscription-webhooks',
+      title: 'Subscription Renewal Webhooks',
+      Icon: Bell
+    }
+  ];
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = features.map(f => document.getElementById(f.id));
+      const scrollPosition = window.scrollY + 100;
+
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const section = sections[i];
+        if (section && section.offsetTop <= scrollPosition) {
+          setActiveSection(features[i].id);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToSection = (id) => {
+    const element = document.getElementById(id);
+    if (element) {
+      const offset = 80;
+      const elementPosition = element.offsetTop - offset;
+      window.scrollTo({
+        top: elementPosition,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b bg-card sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center gap-3">
+            <FileText className="h-6 w-6" />
+            <h1 className="text-xl font-semibold">POS System Features</h1>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="flex gap-8">
+          {/* Sidebar - Table of Contents */}
+          <aside className="w-90 shrink-0 sticky top-20 self-start hidden lg:block">
+            <Card>
+              <CardContent className="p-4">
+                <h2 className="font-semibold mb-4 text-sm uppercase text-muted-foreground">
+                  Table of Contents
+                </h2>
+                <ScrollArea className="h-[calc(100vh-12rem)]">
+                  <nav className="space-y-1">
+                    {features.map((feature) => {
+                      const Icon = feature.Icon;
+                      return (
+                        <Button
+                          key={feature.id}
+                          variant="ghost"
+                          className={`w-full justify-start text-left h-auto py-2 px-3 ${
+                            activeSection === feature.id
+                              ? 'bg-accent text-accent-foreground font-medium'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                          onClick={() => scrollToSection(feature.id)}
+                        >
+                          <Icon className="h-4 w-4 mr-2 shrink-0" />
+                          <span className="flex-1 text-sm">{feature.title}</span>
+                          {activeSection === feature.id && (
+                            <ChevronRight className="h-4 w-4 shrink-0" />
+                          )}
+                        </Button>
+                      );
+                    })}
+                  </nav>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          </aside>
+
+          {/* Main Content */}
+          <main className="flex-1 max-w-4xl">
+            <div className="prose prose-neutral dark:prose-invert max-w-none">
+
+              {/* Membership Pause/Suspension */}
+              <section id="membership-pause" className="mb-16 scroll-mt-20">
+                <div className="bg-primary text-primary-foreground p-4 rounded-lg mb-6 flex items-center gap-3">
+                  <PauseCircle className="h-6 w-6 shrink-0" />
+                  <h2 className="text-2xl font-semibold m-0">Membership Pause/Suspension</h2>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Overview</h3>
+                <p className="text-muted-foreground mb-4">
+                  Allows members to temporarily pause their membership subscription for a specified number of days. During the pause period, the member's billing is suspended and they receive a prorated credit for the unused portion of their current billing period. The system enforces organization-defined limits on suspension days per year.
+                </p>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Key Features</h3>
+                <ul className="space-y-2 text-muted-foreground mb-4">
+                  <li><strong>Flexible Pause Duration:</strong> Members can pause from 1 day up to the organization's configured maximum</li>
+                  <li><strong>365-Day Rolling Limit:</strong> Suspension days are tracked on a rolling 365-day period from subscription start date</li>
+                  <li><strong>Prorated Credits:</strong> Members receive automatic credit for unused days in the current billing period</li>
+                  <li><strong>Scheduled Pauses:</strong> Can schedule pauses to start on a future date (before next billing date)</li>
+                  <li><strong>Early Resume with Credit Adjustment:</strong> When resuming early, credits are automatically adjusted for unused pause days</li>
+                  <li><strong>Email Notifications:</strong> Automatic email notifications when memberships are suspended or resumed</li>
+                  <li><strong>Stripe Integration:</strong> Seamlessly integrates with Stripe's pause_collection API for connected accounts</li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Configuration</h3>
+                <p className="text-muted-foreground mb-2">
+                  Organizations can set the maximum suspension days allowed per year in <strong>Settings → Organization</strong>:
+                </p>
+                <ul className="space-y-1 text-muted-foreground mb-4">
+                  <li>Default: 30 days per year</li>
+                  <li>Range: 0-365 days</li>
+                  <li>Setting: <code className="text-sm bg-muted px-1.5 py-0.5 rounded">org.membershipSuspensionDaysPerYear</code></li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Example Scenarios</h3>
+
+                <div className="space-y-6 mb-6">
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 1: Short-Term Travel</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Customer has $50/month membership, traveling for 2 weeks</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Current billing cycle: Oct 1-31 (30 days)</li>
+                      <li>Pause date: Oct 10</li>
+                      <li>Pause duration: 14 days</li>
+                      <li><strong>Credit calculation:</strong> 14 days × ($50/30) = $23.33 credit</li>
+                      <li><strong>Resume date:</strong> Oct 24</li>
+                      <li><strong>Next billing:</strong> Oct 31 (adjusted amount: $50 - $23.33 = $26.67)</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 2: Extended Leave (Multi-Month)</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Customer has $20/month membership, taking 3-month sabbatical</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Current billing cycle: Sept 18 - Oct 18</li>
+                      <li>Pause date: Sept 22</li>
+                      <li>Pause duration: 90 days</li>
+                      <li><strong>Credit calculation:</strong> Only for remaining days in September (26 days × $20/30 = $17.33)</li>
+                      <li><strong>Skipped billing cycles:</strong> October and November entirely skipped</li>
+                      <li><strong>Resume date:</strong> Dec 21</li>
+                      <li><strong>Next billing:</strong> Dec 21 (new billing cycle starts)</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 3: Early Resume with Credit Adjustment</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Customer resumes 5 days early from 14-day pause</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Original pause: 14 days ($50/month membership)</li>
+                      <li>Actual pause: 9 days</li>
+                      <li><strong>Original credit:</strong> 14 × ($50/30) = $23.33</li>
+                      <li><strong>Adjusted credit:</strong> 9 × ($50/30) = $15.00</li>
+                      <li><strong>Adjustment invoice:</strong> +$8.33 (to reduce the credit)</li>
+                      <li><strong>Result:</strong> Customer's credit is adjusted to reflect actual pause duration</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Files Reference</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Core Business Logic</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/lib/payments/suspend.js</code> - Main suspension logic</li>
+                    <li><code>/lib/memberships.js</code> - Membership data access layer</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">API Routes</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/app/api/memberships/[id]/pause/route.js</code></li>
+                    <li><code>/app/api/memberships/[id]/resume/route.js</code></li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Future Enhancements</h3>
+                <ul className="space-y-1 text-muted-foreground mb-4 text-sm list-disc list-inside">
+                  <li>Customer self-service pause via mobile app</li>
+                  <li>Automatic resume reminders (email reminder before auto-resume)</li>
+                  <li>Suspension reason categories for reporting</li>
+                  <li>HTML email templates with branding</li>
+                  <li>SMS notifications option</li>
+                  <li>Webhook notifications for integrations</li>
+                </ul>
+              </section>
+
+              {/* Membership Cancellation */}
+              <section id="membership-cancellation" className="mb-16 scroll-mt-20">
+                <div className="bg-primary text-primary-foreground p-4 rounded-lg mb-6 flex items-center gap-3">
+                  <XCircle className="h-6 w-6 shrink-0" />
+                  <h2 className="text-2xl font-semibold m-0">Membership Cancellation</h2>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Overview</h3>
+                <p className="text-muted-foreground mb-4">
+                  Allows staff to cancel active membership subscriptions at the end of the current billing period. Cancellations are processed through Stripe's <code className="text-sm bg-muted px-1.5 py-0.5 rounded">cancel_at_period_end</code> API, ensuring members retain access until their paid period expires.
+                </p>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Key Features</h3>
+                <ul className="space-y-2 text-muted-foreground mb-4">
+                  <li><strong>End-of-Period Cancellation:</strong> Memberships remain active until next billing date</li>
+                  <li><strong>Stripe Integration:</strong> Seamlessly integrates with Stripe's cancel_at_period_end for connected accounts</li>
+                  <li><strong>Visual Indicators:</strong> Clear UI badges showing cancellation status and date</li>
+                  <li><strong>Employee Tracking:</strong> Records which employee initiated the cancellation</li>
+                  <li><strong>AlertDialog Confirmation:</strong> User-friendly confirmation dialog with cancellation details</li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">How It Works</h3>
+                <ol className="space-y-2 text-muted-foreground mb-4 list-decimal list-inside">
+                  <li>Staff navigates to customer detail page</li>
+                  <li>Clicks ellipsis menu (⋮) next to active membership</li>
+                  <li>Selects "Cancel Membership" option</li>
+                  <li>Reviews confirmation dialog</li>
+                  <li>System updates Stripe subscription with <code className="text-sm bg-muted px-1.5 py-0.5 rounded">cancel_at_period_end: true</code></li>
+                  <li>UI updates to show Active badge + Cancels badge</li>
+                </ol>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Files Reference</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Core Business Logic</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/lib/payments/cancel.js</code> - Cancellation logic</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">API Routes</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/app/api/memberships/[id]/cancel/route.js</code></li>
+                    <li><code>/app/api/memberships/[id]/reactivate/route.js</code></li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Future Enhancements</h3>
+                <ul className="space-y-1 text-muted-foreground mb-4 text-sm list-disc list-inside">
+                  <li>Add cancellation analytics/reporting</li>
+                  <li>Email notification to customer when membership is cancelled</li>
+                  <li>Bulk cancellation support for multiple memberships</li>
+                  <li>Cancel reason dropdown with predefined options</li>
+                  <li>Automatic win-back campaigns before cancellation date</li>
+                  <li>Customer self-service cancellation in mobile app</li>
+                  <li>Cancellation survey/feedback collection</li>
+                  <li>Reactivation offer before cancellation takes effect</li>
+                </ul>
+              </section>
+
+              {/* Check-in System */}
+              <section id="checkin-system" className="mb-16 scroll-mt-20">
+                <div className="bg-primary text-primary-foreground p-4 rounded-lg mb-6 flex items-center gap-3">
+                  <CheckCircle className="h-6 w-6 shrink-0" />
+                  <h2 className="text-2xl font-semibold m-0">Check-in System</h2>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Overview</h3>
+                <p className="text-muted-foreground mb-4">
+                  The check-in system handles various membership statuses and class purchases with intelligent routing and clear user feedback.
+                </p>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Key Features</h3>
+                <ul className="space-y-2 text-muted-foreground mb-4">
+                  <li><strong>Suspended Members Can Attend Purchased Classes:</strong> Customers with suspended memberships can still check into classes they've purchased separately</li>
+                  <li><strong>Clear Status Communication:</strong> Different colored alerts (green/orange/red) indicate success, warning, or failure</li>
+                  <li><strong>Auto-Close for Privacy:</strong> Check-in dialogs auto-close after 8 seconds to protect customer PII</li>
+                  <li><strong>Time Window Validation:</strong> Classes can be checked into 30 minutes before/after scheduled time</li>
+                  <li><strong>Manual Entry Option:</strong> Staff can manually enter member IDs if QR scanning isn't available</li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Check-in Record Status Types</h3>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <Badge variant="default">checked-in</Badge>
+                  <Badge variant="destructive">denied</Badge>
+                  <Badge variant="secondary">no-show</Badge>
+                  <Badge variant="outline">late</Badge>
+                  <Badge variant="outline">early</Badge>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Files Reference</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/app/api/checkin/qr/route.js</code> - Main check-in API endpoint</li>
+                    <li><code>/lib/checkin.js</code> - Shared check-in logic</li>
+                    <li><code>/app/(app)/checkin/page.js</code> - Frontend check-in interface with QR scanner</li>
+                    <li><code>/models/Checkin.js</code> - Check-in data model</li>
+                  </ul>
+                </div>
+              </section>
+
+              {/* Location Hours & Closed Days */}
+              <section id="location-hours" className="mb-16 scroll-mt-20">
+                <div className="bg-primary text-primary-foreground p-4 rounded-lg mb-6 flex items-center gap-3">
+                  <Clock className="h-6 w-6 shrink-0" />
+                  <h2 className="text-2xl font-semibold m-0">Location Hours & Closed Days</h2>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Overview</h3>
+                <p className="text-muted-foreground mb-4">
+                  Allows organizations to configure store hours and closed days (public holidays, staff training days, etc.) for each location. The system automatically validates class and course bookings against these hours to prevent scheduling conflicts.
+                </p>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Key Features</h3>
+                <ul className="space-y-2 text-muted-foreground mb-4">
+                  <li><strong>Store Hours Configuration:</strong> Set opening and closing times for each day of the week</li>
+                  <li><strong>5-Minute Intervals:</strong> Time selection restricted to 5-minute increments for consistency</li>
+                  <li><strong>Closed Days/Public Holidays:</strong> Define date ranges when the location is closed</li>
+                  <li><strong>Automatic Booking Validation:</strong> Class/course times that conflict with closed hours are automatically blocked</li>
+                  <li><strong>Visual Indicators:</strong> Conflicting times displayed with strikethrough and warning badges</li>
+                  <li><strong>Per-Location Settings:</strong> Each location can have independent hours and closed days</li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Repeating Patterns</h3>
+                <p className="text-muted-foreground mb-2">Closed days support various repeating patterns:</p>
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <Badge variant="secondary">Does not repeat</Badge>
+                  <Badge variant="secondary">Daily</Badge>
+                  <Badge variant="secondary">Weekly</Badge>
+                  <Badge variant="secondary">Fortnightly</Badge>
+                  <Badge variant="secondary">Monthly</Badge>
+                  <Badge variant="secondary">Quarterly</Badge>
+                  <Badge variant="secondary">Yearly</Badge>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Files Reference</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/app/(app)/manage/locations/location.js</code> - Location form with hours/closed days</li>
+                    <li><code>/app/(app)/shop/(other)/classes/useClass.js</code> - Booking validation logic</li>
+                    <li><code>/app/(app)/shop/(other)/classes/productDetailClass.js</code> - UI with conflict display</li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Future Enhancements</h3>
+                <ul className="space-y-1 text-muted-foreground mb-4 text-sm list-disc list-inside">
+                  <li>Timezone support for multi-location organizations</li>
+                  <li>Recurring closed days (e.g., "Every Sunday")</li>
+                  <li>Holiday templates (auto-populate common holidays by region)</li>
+                  <li>Temporary hour overrides (e.g., special event hours)</li>
+                  <li>Email notifications when bookings are affected by hour changes</li>
+                  <li>Bulk import closed days from CSV</li>
+                  <li>Integration with external calendar systems (Google Calendar, Outlook)</li>
+                </ul>
+              </section>
+
+              {/* Subscription Renewal Webhooks */}
+              <section id="subscription-webhooks" className="mb-16 scroll-mt-20">
+                <div className="bg-primary text-primary-foreground p-4 rounded-lg mb-6 flex items-center gap-3">
+                  <Bell className="h-6 w-6 shrink-0" />
+                  <h2 className="text-2xl font-semibold m-0">Subscription Renewal Webhooks</h2>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Overview</h3>
+                <p className="text-muted-foreground mb-4">
+                  Automatically processes recurring subscription payments through Stripe webhooks. When a subscription renews (weekly, monthly, etc.), the system receives a webhook event from Stripe, creates a transaction record, updates membership billing dates, enforces billing limits, and sends a receipt email to the customer.
+                </p>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Key Features</h3>
+                <ul className="space-y-2 text-muted-foreground mb-4">
+                  <li><strong>Automatic Payment Processing:</strong> Processes subscription renewals without manual intervention</li>
+                  <li><strong>Transaction Records:</strong> Creates detailed transaction records for each renewal payment</li>
+                  <li><strong>Billing Date Updates:</strong> Automatically updates membership billing dates after each payment</li>
+                  <li><strong>Billing Limit Enforcement:</strong> Automatically cancels subscriptions after reaching configured billing maximum</li>
+                  <li><strong>Idempotency:</strong> Prevents duplicate transactions when Stripe sends multiple webhook events</li>
+                  <li><strong>Receipt Emails:</strong> Sends professional receipt emails via Brevo for each renewal payment</li>
+                  <li><strong>Stripe Connected Accounts:</strong> Full support for multi-tenant connected account architecture</li>
+                  <li><strong>Comprehensive Logging:</strong> Detailed webhook logs written to <code className="text-sm bg-muted px-1.5 py-0.5 rounded">./tmp/stripe-webhooks.log</code></li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Webhook Events Handled</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-start gap-3">
+                      <Badge variant="default" className="mt-0.5">invoice.paid</Badge>
+                      <span className="text-muted-foreground">Subscription payment succeeded - Create transaction, update membership, send receipt</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Badge variant="default" className="mt-0.5">invoice.payment_succeeded</Badge>
+                      <span className="text-muted-foreground">Alternative payment success event</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Badge variant="destructive" className="mt-0.5">invoice.payment_failed</Badge>
+                      <span className="text-muted-foreground">Subscription payment failed - Log error</span>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Badge variant="secondary" className="mt-0.5">customer.subscription.deleted</Badge>
+                      <span className="text-muted-foreground">Subscription cancelled/expired - Log event</span>
+                    </div>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Billing Limit Example</h3>
+                <p className="text-muted-foreground mb-2">
+                  <strong>Setup:</strong> Monthly membership $20, billing max = 6 months
+                </p>
+                <ul className="space-y-1 text-muted-foreground mb-4 list-disc list-inside">
+                  <li>Payment 1 (initial): billingCount = 1/6</li>
+                  <li>Payment 2 (renewal): billingCount = 2/6</li>
+                  <li>Payment 3 (renewal): billingCount = 3/6</li>
+                  <li>Payment 4 (renewal): billingCount = 4/6</li>
+                  <li>Payment 5 (renewal): billingCount = 5/6</li>
+                  <li>Payment 6 (renewal): billingCount = 6/6 → <strong>Subscription cancelled at period end</strong></li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Idempotency & Duplicate Prevention</h3>
+                <p className="text-muted-foreground mb-4">
+                  Stripe may send multiple webhook events for the same payment (<code className="text-sm bg-muted px-1.5 py-0.5 rounded">invoice.paid</code>, <code className="text-sm bg-muted px-1.5 py-0.5 rounded">invoice.payment_succeeded</code>, <code className="text-sm bg-muted px-1.5 py-0.5 rounded">invoice_payment.paid</code>). The system checks if an invoice has already been processed before creating a transaction, ensuring exactly one transaction per payment.
+                </p>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Testing & Verification</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Test Subscription Renewals with Test Clock</p>
+                  <pre className="bg-background p-3 rounded text-xs overflow-x-auto">
+{`# 1. Create a subscription in POS with billing max = 2
+# 2. Advance test clock to trigger renewal
+node scripts/advance-test-clock.js <customerId>
+
+# 3. Check webhook logs
+tail -f tmp/stripe-webhooks.log
+
+# 4. Verify in database
+# - Transaction created with correct invoice ID
+# - Membership billing dates updated
+# - Billing count incremented
+# - Subscription cancelled if max reached`}
+                  </pre>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Files Reference</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Webhook Handler</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/app/api/webhooks/stripe/route.js</code> - Main webhook endpoint</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">Email & Payment</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/lib/email/receipt.js</code> - Receipt email template</li>
+                    <li><code>/lib/payments/success.js</code> - Transaction utilities</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">Testing Scripts</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/scripts/advance-test-clock.js</code> - Advance test clock</li>
+                    <li><code>/scripts/debug-stripe-invoice.js</code> - Debug invoice structure</li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Verification Checklist</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-600">✅</span>
+                    <span className="text-muted-foreground">Transaction created with status 'completed'</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-600">✅</span>
+                    <span className="text-muted-foreground">Transaction has correct invoice ID</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-600">✅</span>
+                    <span className="text-muted-foreground">No duplicate transactions for same invoice</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-600">✅</span>
+                    <span className="text-muted-foreground">Membership billing dates updated</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-600">✅</span>
+                    <span className="text-muted-foreground">Billing count incremented in Stripe metadata</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-600">✅</span>
+                    <span className="text-muted-foreground">Subscription cancelled if billing max reached</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-600">✅</span>
+                    <span className="text-muted-foreground">Receipt email sent successfully</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-green-600">✅</span>
+                    <span className="text-muted-foreground">Webhook event logged to file</span>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Future Enhancements</h3>
+                <ul className="space-y-1 text-muted-foreground mb-4 text-sm list-disc list-inside">
+                  <li>Implement customer.subscription.deleted webhook handler</li>
+                  <li>Update membership status to 'cancelled' when subscription deleted</li>
+                  <li>Add retry logic for failed email sends</li>
+                  <li>Customer notification for failed payments</li>
+                  <li>Automated dunning emails (payment reminders)</li>
+                  <li>Subscription renewal analytics dashboard</li>
+                  <li>Webhook event replay functionality</li>
+                  <li>Configurable webhook timeout settings</li>
+                  <li>Support for metered billing and usage-based pricing</li>
+                  <li>Automatic refund processing for disputes</li>
+                  <li>Integration with accounting software (QuickBooks, Xero)</li>
+                </ul>
+              </section>
+
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}

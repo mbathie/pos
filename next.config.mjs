@@ -3,13 +3,31 @@ const nextConfig = {
   "devIndicators": false,
   "reactStrictMode": false,
   images: {
-    domains: [
-      'static.thenounproject.com',
-      'images.unsplash.com',
-      'localhost',
-      'cultcha.app',
-      'cultcha.syd1.digitaloceanspaces.com',
-      'cultcha.syd1.cdn.digitaloceanspaces.com'
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'static.thenounproject.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cultcha.app',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cultcha.syd1.digitaloceanspaces.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cultcha.syd1.cdn.digitaloceanspaces.com',
+      },
     ],
   },
   serverExternalPackages: ['mongoose', 'bcrypt'],
