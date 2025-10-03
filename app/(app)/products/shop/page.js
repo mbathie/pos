@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogDescription } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button'
-import { Image as ImageIcon, Plus, Loader2, Save, Edit2, Trash2, MoreVertical, Folder as FolderIcon, Check, ExternalLink } from 'lucide-react'
+import { Image as ImageIcon, Plus, Loader2, Save, Edit2, Trash2, MoreVertical, Folder as FolderIcon, Check, ExternalLink, Tag } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 
 
@@ -24,6 +24,7 @@ import colors from '@/lib/tailwind-colors';
 import { useAutoSave } from '../useAutoSave';
 import { CategoryFolderMenu } from './CategoryFolderMenu';
 import { SvgIcon } from '@/components/ui/svg-icon';
+import { ProductThumbnail } from '@/components/product-thumbnail';
 
 // Note: An older SortableCategory component was removed as it was unused
 
@@ -512,24 +513,19 @@ export default function Page() {
           <div className="flex-1 pl-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-start gap-2">
                     {category?.name && (
                       <>
                         <div className="flex flex-col gap-2">
                           <div className="text-sm font-medium">
                             {category.name}
                           </div>
-                          {category.thumbnail ? (
-                            <SvgIcon
-                              src={category.thumbnail}
-                              alt={category.name}
-                              className="w-10 h-10"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-                              <ImageIcon className="w-5 h-5 text-muted-foreground" />
-                            </div>
-                          )}
+                          <ProductThumbnail
+                            src={category.thumbnail}
+                            alt={category.name}
+                            size="md"
+                            fallbackIcon={Tag}
+                          />
                         </div>
                         
                         {/* Category actions menu */}
