@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { getEmployee } from "@/lib/auth";
-import { Product } from "@/models";
+import { Product, Category } from "@/models";
 import { uploadBase64Image, deleteImage, getImageUrl } from "@/lib/spaces";
 
 export async function GET(req, { params }) {
@@ -43,11 +43,29 @@ export async function PUT(req, { params }) {
   const { id } = await params
   console.log('PUT product received, thumbnail:', product.thumbnail ? product.thumbnail.substring(0, 50) + '...' : 'no thumbnail')
 
-  // First verify the product exists and belongs to a category in this org
+  // First verify the product exists
   const existingProduct = await Product.findById(id).populate('category');
-  if (!existingProduct || !existingProduct.category ||
+  if (!existingProduct) {
+    return NextResponse.json({ error: "Product not found" }, { status: 404 });
+  }
+
+  // If product has a category, verify it belongs to this org
+  // (New products being created might not have a category yet during auto-save)
+  if (existingProduct.category &&
       existingProduct.category.org?.toString() !== employee.org._id.toString()) {
-    return NextResponse.json({ error: "Product not found or unauthorized" }, { status: 404 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+  }
+
+  // If updating the category, verify the new category belongs to this org
+  if (product.category && product.category !== existingProduct.category?.toString()) {
+    const newCategory = await Category.findOne({
+      _id: product.category,
+      org: employee.org._id
+    });
+
+    if (!newCategory) {
+      return NextResponse.json({ error: "Invalid category" }, { status: 400 });
+    }
   }
 
   // Handle image upload if new image is provided (supports both 'image' and 'thumbnail' fields)

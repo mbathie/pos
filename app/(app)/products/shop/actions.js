@@ -160,8 +160,32 @@ export function actions({category, setProducts, setAllProducts}) {
   }
 
   const saveProduct = async ({product, pIdx}) => {
-    // Check if product has an ID (means it's an existing product)
-    if (product._id) {
+    // Check if product is new first (new products have temporary _id but need POST)
+    if (product.new) {
+      // Create new product - ensure category is set
+      // Remove the _id, new, dirty, and updated fields
+      const { _id, new: isNew, dirty, updated, ...productWithoutId } = product;
+      const productWithCategory = { ...productWithoutId, category: category._id };
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product: productWithCategory }),
+      });
+
+      if (res.ok) {
+        const savedProduct = await res.json();
+        setProducts(draft => {
+          // Replace the temporary product with the saved one
+          draft[pIdx] = {
+            ...savedProduct.product,
+            new: false, // Mark as no longer new
+            dirty: false,
+            updated: false
+          };
+        });
+        return savedProduct.product;
+      }
+    } else if (product._id) {
       // Update existing product
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${product._id}`, {
         method: 'PUT',
@@ -180,24 +204,6 @@ export function actions({category, setProducts, setAllProducts}) {
           }
         });
         return updatedProduct;
-      }
-    } else if (product.new) {
-      // Create new product - ensure category is set
-      // Remove the _id field if it exists to avoid duplicate key error
-      const { _id, ...productWithoutId } = product;
-      const productWithCategory = { ...productWithoutId, category: category._id };
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product: productWithCategory }),
-      });
-
-      if (res.ok) {
-        const savedProduct = await res.json();
-        setProducts(draft => {
-          draft[pIdx] = savedProduct.product;
-        });
-        return savedProduct.product;
       }
     }
   }

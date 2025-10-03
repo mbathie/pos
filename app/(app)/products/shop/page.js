@@ -79,7 +79,18 @@ export default function Page() {
   const autoSaveProduct = async (product) => {
     const pIdx = products.findIndex(p => p._id === product._id);
     if (pIdx !== -1) {
-      return await saveProduct({ product, pIdx });
+      const oldId = product._id;
+      const result = await saveProduct({ product, pIdx });
+
+      // If this was a new product, the ID will have changed
+      if (result && result._id && result._id !== oldId) {
+        // Update the selected product ID if this is the product being viewed
+        if (selectedProductId === oldId) {
+          setSelectedProductId(result._id);
+        }
+      }
+
+      return result;
     }
   };
 
@@ -90,7 +101,7 @@ export default function Page() {
     autoSaveProduct,
     null, // createProduct - not needed for shop products
     null, // categoryName - not needed for shop products
-    3000,
+    1000, // Auto-save every 1 second
     null  // onProductCreated - not needed for shop products
   );
 
