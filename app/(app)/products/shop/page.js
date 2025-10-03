@@ -69,9 +69,6 @@ export default function Page() {
   const [folderSheetOpen, setFolderSheetOpen] = useState(false);
   const [folderRefreshTrigger, setFolderRefreshTrigger] = useState(0);
 
-  // Guard to prevent double-clicking "+ Product" button
-  const [isAddingProduct, setIsAddingProduct] = useState(false);
-
   const { 
     addVariation, updateVariation, 
     updateProduct, saveProduct, addProduct, deleteProduct,
@@ -518,19 +515,21 @@ export default function Page() {
                   <div className="flex items-center gap-2">
                     {category?.name && (
                       <>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col gap-2">
+                          <div className="text-sm font-medium">
+                            {category.name}
+                          </div>
                           {category.thumbnail ? (
                             <SvgIcon
                               src={category.thumbnail}
                               alt={category.name}
-                              className="size-5"
+                              className="w-10 h-10"
                             />
                           ) : (
-                            <ImageIcon className="w-6 h-6 text-foreground" />
+                            <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                              <ImageIcon className="w-5 h-5 text-muted-foreground" />
+                            </div>
                           )}
-                          <div>
-                            {category.name}
-                          </div>
                         </div>
                         
                         {/* Category actions menu */}
@@ -613,15 +612,10 @@ export default function Page() {
                    <Button
                      className="cursor-pointer"
                      size="sm"
-                     disabled={isAddingProduct}
                      onClick={() => {
-                       if (isAddingProduct) return; // Double-click guard
-                       setIsAddingProduct(true);
                        const newProductId = addProduct(selectedFolder);
                        setSelectedProductId(newProductId);
                        setSheetOpen(true);
-                       // Reset guard after a short delay
-                       setTimeout(() => setIsAddingProduct(false), 500);
                      }}
                    >
                      <Plus className="size-4" /> Product
