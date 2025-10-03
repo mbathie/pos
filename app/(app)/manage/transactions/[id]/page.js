@@ -541,7 +541,7 @@ export default function TransactionDetailsPage() {
                 Send receipt
               </DropdownMenuItem>
             )}
-            {transaction?.status === 'succeeded' && (
+            {(transaction?.status === 'succeeded' || transaction?.status === 'partially_refunded') && (
               <RefundDialog
                 transaction={transaction}
                 currentEmployee={currentEmployee}
