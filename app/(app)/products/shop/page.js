@@ -69,6 +69,9 @@ export default function Page() {
   const [folderSheetOpen, setFolderSheetOpen] = useState(false);
   const [folderRefreshTrigger, setFolderRefreshTrigger] = useState(0);
 
+  // Guard to prevent double-clicking "+ Product" button
+  const [isAddingProduct, setIsAddingProduct] = useState(false);
+
   const { 
     addVariation, updateVariation, 
     updateProduct, saveProduct, addProduct, deleteProduct,
@@ -610,10 +613,15 @@ export default function Page() {
                    <Button
                      className="cursor-pointer"
                      size="sm"
+                     disabled={isAddingProduct}
                      onClick={() => {
+                       if (isAddingProduct) return; // Double-click guard
+                       setIsAddingProduct(true);
                        const newProductId = addProduct(selectedFolder);
                        setSelectedProductId(newProductId);
                        setSheetOpen(true);
+                       // Reset guard after a short delay
+                       setTimeout(() => setIsAddingProduct(false), 500);
                      }}
                    >
                      <Plus className="size-4" /> Product

@@ -102,10 +102,10 @@ export function actions({category, setProducts, setAllProducts}) {
 
   const addProduct = (selectedFolder = null) => {
     const newProductId = generateObjectId();
-    
+
     setProducts(draft => {
       const newModCats = buildModCatsFromProducts(draft);
-      
+
       const newProduct = {
         dirty: true,
         modCats: newModCats,
@@ -114,22 +114,20 @@ export function actions({category, setProducts, setAllProducts}) {
         new: true,
         _id: newProductId
       };
-      
+
       // If a folder is selected, set it as the default for the new product
       if (selectedFolder) {
         newProduct.folder = selectedFolder;
       }
-      
+
       draft.unshift(newProduct);
     });
-    
-    return newProductId;
-    
+
     // Also update allProducts if it exists
     if (setAllProducts) {
       setAllProducts(draft => {
         const newModCats = buildModCatsFromProducts(draft);
-        
+
         const newProduct = {
           dirty: true,
           modCats: newModCats,
@@ -138,15 +136,17 @@ export function actions({category, setProducts, setAllProducts}) {
           new: true,
           _id: newProductId
         };
-        
+
         // If a folder is selected, set it as the default for the new product
         if (selectedFolder) {
           newProduct.folder = selectedFolder;
         }
-        
+
         draft.unshift(newProduct);
       });
     }
+
+    return newProductId;
   };
 
   const updateProduct = ({ pIdx, key, value }) => {
