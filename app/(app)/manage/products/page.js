@@ -520,16 +520,18 @@ export default function ManageProductsPage() {
                               <span>{product.name}</span>
                             </div>
                           </td>
-                          <td className="">
-                            <div className="flex items-start">
+                          <td className="px-4 py-3 align-middle">
+                            <div className="flex items-center gap-2">
                               {product.category?.thumbnail ? (
-                                <img 
-                                  src={product.category.thumbnail} 
-                                  alt={product.category?.name} 
-                                  className="w-5 h-5 rounded object-cover invert flex-shrink-0"
+                                <img
+                                  src={product.category.thumbnail}
+                                  alt={product.category?.name}
+                                  className="w-8 h-8 rounded object-cover invert flex-shrink-0"
                                 />
                               ) : (
-                                <div className="w-5 h-5 flex-shrink-0"></div>
+                                <div className="w-8 h-8 rounded bg-muted flex items-center justify-center flex-shrink-0">
+                                  <Tag className="w-4 h-4 text-muted-foreground" />
+                                </div>
                               )}
                               <span>{product.category?.name || ''}</span>
                             </div>
