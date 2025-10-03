@@ -8,8 +8,13 @@ import mongoose from "mongoose"
 export async function POST(req) {
   await connectDB();
   const { employee } = await getEmployee();
-  // console.log(employee)
-  const { name, email, phone, address1, city, state, postcode, agree, signature } = await req.json();
+  const body = await req.json();
+
+  // Support both old format (direct fields) and new format (customer object)
+  const { customer: customerObj, dependents } = body;
+  const customerInput = customerObj || body;
+
+  const { name, email, phone, address1, city, state, postcode, dob, gender, agree, signature } = customerInput;
 
   if (await Customer.findOne({ email }))
     return NextResponse.json({ error: 'email exists', exists: true, field: "email" }, { status: 400 });
@@ -18,7 +23,10 @@ export async function POST(req) {
     // const memberId = await generateCustomerId();
 
     const customerData = {
-      name, email, phone, assigned: false,
+      name,
+      email,
+      phone,
+      assigned: false,
       // memberId,
       address: {
         address1,
@@ -28,6 +36,15 @@ export async function POST(req) {
       },
       orgs: [employee.org._id],
     };
+
+    // Add DOB and gender if provided
+    if (dob) customerData.dob = dob;
+    if (gender) customerData.gender = gender;
+
+    // Add dependents if provided
+    if (dependents && Array.isArray(dependents) && dependents.length > 0) {
+      customerData.dependents = dependents;
+    }
 
     // Only add waiver if signature and agree are provided
     if (signature && agree) {
@@ -39,7 +56,7 @@ export async function POST(req) {
     }
 
     const customer = await Customer.create(customerData);
-    return NextResponse.json(customer, { status: 201 });
+    return NextResponse.json({ customer }, { status: 201 });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

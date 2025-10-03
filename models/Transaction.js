@@ -28,10 +28,22 @@ const TransactionSchema = new mongoose.Schema({
       amount: Number
     }
   },
+  // Refunds tracking
+  refunds: [{
+    date: { type: Date, default: Date.now },
+    amount: { type: Number, required: true },
+    employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee', required: true },
+    reason: String,
+    paymentMethod: String, // 'cash' or 'card'
+    stripeRefundId: String, // Stripe refund ID (for card refunds)
+    stripeStatus: String, // Stripe refund status
+    stripeChargeId: String // Stripe charge ID
+  }],
   stripe: mongoose.Schema.Types.Mixed,
+  stripePaymentIntentId: String, // Store payment intent ID for refunds
   cash: mongoose.Schema.Types.Mixed,
   paymentMethod: String,
-  status: String,
+  status: String, // 'completed', 'refunded', 'partially_refunded'
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org' },
   location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },

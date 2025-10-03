@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, CreditCard, Banknote, CheckCircle, XCircle, Clock, Undo2, Mail, MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ResendReceiptDialog } from '@/components/resend-receipt-dialog';
+import { RefundDialog } from '@/components/refund-dialog';
 import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -20,12 +21,26 @@ export default function TransactionDetailsPage() {
   const [transaction, setTransaction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [resendReceiptDialog, setResendReceiptDialog] = useState(false);
+  const [currentEmployee, setCurrentEmployee] = useState(null);
 
   useEffect(() => {
+    fetchEmployee();
     if (params.id) {
       fetchTransaction();
     }
   }, [params.id]);
+
+  const fetchEmployee = async () => {
+    try {
+      const response = await fetch('/api/auth/employee');
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentEmployee(data.employee);
+      }
+    } catch (error) {
+      console.error('Error fetching employee:', error);
+    }
+  };
 
   const fetchTransaction = async () => {
     setLoading(true);
@@ -527,10 +542,23 @@ export default function TransactionDetailsPage() {
               </DropdownMenuItem>
             )}
             {transaction?.status === 'succeeded' && (
-              <DropdownMenuItem className="cursor-pointer">
-                <Undo2 className="mr-2 h-4 w-4" />
-                Refund transaction
-              </DropdownMenuItem>
+              <RefundDialog
+                transaction={transaction}
+                currentEmployee={currentEmployee}
+                onRefundComplete={(updatedTransaction) => {
+                  setTransaction(updatedTransaction);
+                  fetchTransaction(); // Refresh to get latest data
+                }}
+                trigger={
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    <Undo2 className="mr-2 h-4 w-4" />
+                    Refund transaction
+                  </DropdownMenuItem>
+                }
+              />
             )}
           </DropdownMenuContent>
         </DropdownMenu>

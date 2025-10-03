@@ -29,6 +29,10 @@
         "/sample-table",
         "/style-guide"
       ],
+      "restricted": [
+        "process_refund",
+        "custom_discount"
+      ],
       "description": "Limited access to sales and basic operations"
     },
     "CHECKIN": {

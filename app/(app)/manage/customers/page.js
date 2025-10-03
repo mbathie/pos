@@ -19,6 +19,7 @@ import {
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, User, Mail, Phone, IdCard, Check, CreditCard, MoreHorizontal, Users } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { CustomerAvatar } from '@/components/customer-avatar';
+import { AddCustomerDialog } from '@/components/add-customer-dialog';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -189,11 +190,9 @@ export default function CustomersPage() {
             />
           </div>
 
-          {/* Results count */}
+          {/* Add button */}
           <div className="flex items-center gap-2 ml-auto">
-            <Badge variant="secondary" className="text-sm">
-              {loading ? 'Loading...' : `${totalCustomers} customer${totalCustomers !== 1 ? 's' : ''}`}
-            </Badge>
+            <AddCustomerDialog onCustomerAdded={fetchCustomers} />
           </div>
         </div>
       </div>

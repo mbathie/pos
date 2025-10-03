@@ -9,9 +9,14 @@ export default function DiscountPinDialog({ open, onOpenChange, onSuccess, permi
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
+  // Determine the action type from permission
+  const isRefund = permission.includes('refund');
+  const actionName = isRefund ? 'refund' : 'custom discount';
+  const actionNameCapitalized = isRefund ? 'Refund' : 'Discount';
+
   const handleSubmit = async (e) => {
     e.preventDefault()
-    
+
     if (pin.length !== 4) {
       setError('PIN must be 4 digits')
       return
@@ -33,7 +38,7 @@ export default function DiscountPinDialog({ open, onOpenChange, onSuccess, permi
 
       if (!response.ok) {
         if (response.status === 403) {
-          toast.error('Invalid PIN or insufficient permissions for custom discounts')
+          toast.error(`Invalid PIN or insufficient permissions for ${actionName}`)
         } else {
           toast.error(data.error || 'Invalid PIN')
         }
@@ -42,7 +47,7 @@ export default function DiscountPinDialog({ open, onOpenChange, onSuccess, permi
       }
 
       // Success
-      toast.success(`Custom discount authorized by ${data.authorizer.name}`)
+      toast.success(`${actionNameCapitalized} authorized by ${data.authorizer.name}`)
       setPin('')
       onSuccess?.(data)
       onOpenChange(false)
@@ -75,7 +80,10 @@ export default function DiscountPinDialog({ open, onOpenChange, onSuccess, permi
             Manager Authorization Required
           </DialogTitle>
           <DialogDescription>
-            Custom discounts require manager approval. Please enter a manager's 4-digit PIN to authorize this discount.
+            {isRefund
+              ? "Refunds require manager approval. Please enter a manager's 4-digit PIN to authorize this refund."
+              : "Custom discounts require manager approval. Please enter a manager's 4-digit PIN to authorize this discount."
+            }
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -110,7 +118,7 @@ export default function DiscountPinDialog({ open, onOpenChange, onSuccess, permi
                 type="submit"
                 disabled={loading || pin.length !== 4}
               >
-                {loading ? 'Verifying...' : 'Authorize Discount'}
+                {loading ? 'Verifying...' : `Authorize ${actionNameCapitalized}`}
               </Button>
             </div>
           </div>
