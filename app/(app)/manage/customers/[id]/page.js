@@ -481,17 +481,12 @@ export default function CustomerDetailPage({ params }) {
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Started</label>
                         <p className="text-sm">{dayjs(membership.subscriptionStartDate).format('DD/MM/YYYY')}</p>
                       </div>
-                      {membership.subscriptionEndDate && !membership.cancelAtPeriodEnd ? (
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Ends</label>
-                          <p className="text-sm">{dayjs(membership.subscriptionEndDate).format('DD/MM/YYYY')}</p>
-                        </div>
-                      ) : !membership.cancelAtPeriodEnd && (
+                      {!membership.cancelAtPeriodEnd && (
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">
                             {membership.status === 'suspended' ? 'Resumes' :
@@ -516,6 +511,12 @@ export default function CustomerDetailPage({ params }) {
                               return dayjs(membership.nextBillingDate).format('DD/MM/YYYY');
                             })()}
                           </p>
+                        </div>
+                      )}
+                      {membership.subscriptionEndDate && !membership.cancelAtPeriodEnd && (
+                        <div>
+                          <label className="text-sm font-medium text-muted-foreground">Ends</label>
+                          <p className="text-sm">{dayjs(membership.subscriptionEndDate).format('DD/MM/YYYY')}</p>
                         </div>
                       )}
                     </div>
