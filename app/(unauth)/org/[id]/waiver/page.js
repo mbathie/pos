@@ -138,7 +138,13 @@ export default function Page() {
   }
   
   const getSig = () => {
-    const dataURL = sigRef.current.getTrimmedCanvas().toDataURL('image/png')
+    if (!sigRef.current) return
+
+    // Use toDataURL directly instead of getTrimmedCanvas
+    const canvas = sigRef.current.getCanvas()
+    if (!canvas) return
+
+    const dataURL = canvas.toDataURL('image/png')
     console.log('✍️ Signature captured:', {
       length: dataURL.length,
       preview: dataURL.substring(0, 50)
