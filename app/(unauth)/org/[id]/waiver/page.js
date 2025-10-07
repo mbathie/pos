@@ -26,7 +26,6 @@ function DateOfBirthPicker({ value, onChange }) {
   const [open, setOpen] = React.useState(false);
   const [date, setDate] = React.useState(value ? new Date(value) : undefined);
   const userLocale = typeof window !== 'undefined' && navigator.language ? navigator.language : 'en-AU';
-  console.log('Detected locale:', userLocale);
 
   React.useEffect(() => {
     if (date && onChange) {
@@ -132,7 +131,6 @@ export default function Page() {
   const sigContainerRef = useRef(null)
   
   const clear = () => {
-    console.log('🗑️ Signature manually cleared')
     sigRef.current.clear()
     setCustomer({...customer, signature: ""})
   }
@@ -145,10 +143,6 @@ export default function Page() {
     if (!canvas) return
 
     const dataURL = canvas.toDataURL('image/png')
-    console.log('✍️ Signature captured:', {
-      length: dataURL.length,
-      preview: dataURL.substring(0, 50)
-    })
     setCustomer({...customer, signature: dataURL})
   }
   
@@ -174,7 +168,6 @@ export default function Page() {
       context.scale(ratio, ratio)
 
       // Clear and reset the signature
-      console.log('🔄 Canvas resized - signature cleared')
       sigRef.current.clear()
     }
   }
@@ -331,22 +324,6 @@ export default function Page() {
   })
   const isValid = result.success && dependentsValid
 
-  // Debug logging for validation state
-  console.log('🔍 Waiver Validation Debug:', {
-    hasScrolledWaiver,
-    agree,
-    dependentsCount: dependents.length,
-    dependentsValid,
-    schemaValidation: result.success,
-    schemaErrors: result.success ? null : result.error.issues,
-    signatureLength: customer.signature?.length || 0,
-    signaturePreview: customer.signature?.substring(0, 50) || 'empty',
-    photoLength: customer.photo?.length || 0,
-    photoPreview: customer.photo?.substring(0, 50) || 'empty',
-    customer,
-    address,
-    isValid
-  })
 
   const register = async () => {
     // Check if waiver has been reviewed before submitting
