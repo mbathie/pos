@@ -305,12 +305,12 @@ export default function Page() {
   })
   
   // Check if all dependents have complete information
-  const dependentsValid = dependents.every(dep => 
-    dep.name && dep.name.trim() !== '' && 
-    dep.gender && dep.gender.trim() !== '' && 
+  const dependentsValid = dependents.every(dep =>
+    dep.name && dep.name.trim() !== '' &&
+    dep.gender && dep.gender.trim() !== '' &&
     dep.dob && dep.dob.trim() !== ''
   )
-  
+
   const result = waiverSchema.safeParse({
     ...customer,
     ...address,
@@ -318,6 +318,19 @@ export default function Page() {
     agree,
   })
   const isValid = result.success && dependentsValid
+
+  // Debug logging for validation state
+  console.log('🔍 Waiver Validation Debug:', {
+    hasScrolledWaiver,
+    agree,
+    dependentsCount: dependents.length,
+    dependentsValid,
+    schemaValidation: result.success,
+    schemaErrors: result.success ? null : result.error.issues,
+    customer,
+    address,
+    isValid
+  })
 
   const register = async () => {
     // Check if waiver has been reviewed before submitting

@@ -12,7 +12,6 @@ import { ChevronDownIcon, Plus, X, Trash2 } from 'lucide-react';
 import { toast } from "sonner";
 import { z } from "zod";
 import { generateObjectId } from '@/lib/utils';
-import { State } from 'country-state-city';
 
 function DateOfBirthPicker({ value, onChange, label = "Date of birth" }) {
   const [open, setOpen] = React.useState(false);
@@ -73,14 +72,17 @@ export function AddCustomerDialog({ onCustomerAdded }) {
   const [dependents, setDependents] = useState([]);
   const [dependentDatePickerOpen, setDependentDatePickerOpen] = useState({});
 
-  // Get Australian states using country-state-city package
-  const states = useMemo(() => {
-    const stateList = State.getStatesOfCountry('AU');
-    return stateList.map(state => ({
-      value: state.isoCode,
-      label: state.isoCode // Use abbreviation (NSW, VIC, etc.)
-    }));
-  }, []);
+  // Australian states hardcoded
+  const states = useMemo(() => [
+    { value: 'NSW', label: 'NSW' },
+    { value: 'VIC', label: 'VIC' },
+    { value: 'QLD', label: 'QLD' },
+    { value: 'WA', label: 'WA' },
+    { value: 'SA', label: 'SA' },
+    { value: 'TAS', label: 'TAS' },
+    { value: 'ACT', label: 'ACT' },
+    { value: 'NT', label: 'NT' }
+  ], []);
 
   const customerSchema = z.object({
     name: z.string().min(1, "Name is required"),
