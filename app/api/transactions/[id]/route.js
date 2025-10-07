@@ -14,14 +14,15 @@ export async function GET(request, { params }) {
 
     const { id } = await params;
 
-    const transaction = await Transaction.findOne({ 
+    const transaction = await Transaction.findOne({
       _id: id,
-      org: employee.org._id 
+      org: employee.org._id
     })
       .populate('adjustments.discounts.items.id', 'name value type mode')
       .populate('adjustments.surcharges.items.id', 'name value type mode')
       .populate('employee', 'name')
       .populate('customer', 'name email phone')
+      .populate('refunds.employeeId', 'name')
       .lean();
 
     if (!transaction) {

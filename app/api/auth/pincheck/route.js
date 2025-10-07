@@ -52,6 +52,7 @@ export async function POST(request) {
       success: true,
       authorized: true,
       authorizer: {
+        id: authorizer._id,
         name: authorizer.name,
         role: authorizer.role,
         email: authorizer.email

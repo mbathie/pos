@@ -24,9 +24,21 @@ DONE - subscription renewal webhooks (02.10.2025)
   - Error handling for failed payments, missing subscriptions, etc.
   - Scripts: advance-test-clock.js, debug-stripe-invoice.js
 
+DONE - refunds (03.10.2025)
+  - Full and partial refund processing with Stripe integration
+  - Role-based authorization (STAFF requires manager/admin PIN)
+  - Employee tracking (records authorizer for PIN-authorized refunds)
+  - Refund history display with employee initials
+  - Quick percentage buttons (25%, 50%, 75%, Full)
+  - Maximum refundable amount calculation
+  - Transaction status updates (partially_refunded, refunded)
+  - Stripe metadata tracking (transaction_id, employee_id, reason)
+  - Cash and card payment support
+  - Backend permission enforcement to prevent API bypass
+  - Reusable PIN authorization dialog component
+
 TODO:
 - basic reporting
-- refunds
 
 22.9.25
 

@@ -89,6 +89,11 @@ export default function FeaturesPage() {
       id: 'transactions',
       title: 'Transaction Management',
       Icon: Receipt
+    },
+    {
+      id: 'refunds',
+      title: 'Refund System',
+      Icon: XCircle
     }
   ];
 
@@ -2163,6 +2168,277 @@ tail -f tmp/stripe-webhooks.log
                   <li>Receipt customization per transaction</li>
                   <li>Transaction splitting (divide bill)</li>
                   <li>Gift receipt generation</li>
+                </ul>
+              </section>
+
+              {/* Refund System */}
+              <section id="refunds" className="mb-16 scroll-mt-20">
+                <div className="bg-primary text-primary-foreground p-4 rounded-lg mb-6 flex items-center gap-3">
+                  <XCircle className="h-6 w-6 shrink-0" />
+                  <h2 className="text-2xl font-semibold m-0">Refund System</h2>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Overview</h3>
+                <p className="text-muted-foreground mb-4">
+                  Comprehensive refund processing system with full and partial refund support, Stripe integration for card payments, role-based authorization, and complete audit trail. Every refund is tracked with employee information, reason, and timestamp for accountability and reporting.
+                </p>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Key Features</h3>
+                <ul className="space-y-2 text-muted-foreground mb-4">
+                  <li><strong>Full & Partial Refunds:</strong> Process complete refunds or partial amounts with quick percentage buttons (25%, 50%, 75%, 100%)</li>
+                  <li><strong>Stripe Integration:</strong> Automatic refund processing for card payments with real-time status updates</li>
+                  <li><strong>Role-Based Authorization:</strong> STAFF role requires manager/admin PIN approval to process refunds</li>
+                  <li><strong>Employee Tracking:</strong> Records which employee (or authorizer) processed each refund</li>
+                  <li><strong>Refund History:</strong> Complete refund log displayed on transaction detail page with employee initials</li>
+                  <li><strong>Reason Tracking:</strong> Optional reason field for documentation and reporting</li>
+                  <li><strong>Maximum Refundable Calculation:</strong> Automatically calculates remaining refundable amount based on previous refunds</li>
+                  <li><strong>Cash & Card Support:</strong> Handles both payment methods appropriately (Stripe for card, manual tracking for cash)</li>
+                  <li><strong>Status Updates:</strong> Transaction status automatically updates to "partially_refunded" or "refunded"</li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Permission System</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Role Permissions</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground list-disc list-inside">
+                    <li><strong>ADMIN & MANAGER:</strong> Can process refunds directly without approval</li>
+                    <li><strong>STAFF:</strong> Restricted - requires manager/admin PIN authorization</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">Backend Enforcement</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground list-disc list-inside">
+                    <li>Frontend checks role and shows PIN dialog when needed</li>
+                    <li>Backend validates authorizer has proper permissions</li>
+                    <li>Prevents STAFF from bypassing PIN by calling API directly</li>
+                    <li>Records authorizer's employee ID when PIN is used</li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Refund Processing Flow</h3>
+                <div className="space-y-3 mb-4">
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">For ADMIN/MANAGER</h4>
+                    <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                      <li>Open transaction detail page</li>
+                      <li>Click "Refund transaction" from actions menu</li>
+                      <li>Enter refund amount (or use quick percentage buttons)</li>
+                      <li>Optionally enter reason</li>
+                      <li>Click "Process Refund"</li>
+                      <li>System creates Stripe refund (if card payment) and updates database</li>
+                    </ol>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">For STAFF (with PIN Authorization)</h4>
+                    <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                      <li>Open transaction detail page</li>
+                      <li>Click "Refund transaction" from actions menu</li>
+                      <li>Enter refund amount and optional reason</li>
+                      <li>Click "Process Refund"</li>
+                      <li><strong>PIN Dialog appears:</strong> "Manager Authorization Required"</li>
+                      <li>Manager/Admin enters their 4-digit PIN</li>
+                      <li>System validates PIN and permissions</li>
+                      <li>Refund processes with authorizer's employee ID recorded</li>
+                      <li>Toast notification shows: "Refund authorized by [Name]"</li>
+                    </ol>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Stripe Integration Details</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">For Card Payments</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground list-disc list-inside">
+                    <li>Automatically creates Stripe refund via API</li>
+                    <li>Uses Connected Account for multi-tenant architecture</li>
+                    <li>Stores refund ID, status, and charge ID in database</li>
+                    <li>Metadata includes: transaction_id, employee_id, refund_reason</li>
+                    <li>Amount converted to cents for Stripe API (e.g., $10.00 → 1000)</li>
+                    <li>Reason set to "requested_by_customer" in Stripe</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">For Cash Payments</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground list-disc list-inside">
+                    <li>Skips Stripe API call (no payment intent)</li>
+                    <li>Records refund in database only</li>
+                    <li>Staff handles cash refund manually</li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Refund Record Structure</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Database Fields (Transaction.refunds array)</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground list-disc list-inside">
+                    <li><strong>date:</strong> Timestamp when refund was processed</li>
+                    <li><strong>amount:</strong> Refund amount in dollars</li>
+                    <li><strong>employeeId:</strong> Employee who processed refund (or authorizer if PIN used)</li>
+                    <li><strong>reason:</strong> Optional text explanation</li>
+                    <li><strong>paymentMethod:</strong> 'card' or 'cash'</li>
+                    <li><strong>stripeRefundId:</strong> Stripe refund ID (card only)</li>
+                    <li><strong>stripeStatus:</strong> Stripe status (succeeded, pending, failed)</li>
+                    <li><strong>stripeChargeId:</strong> Associated Stripe charge ID</li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Display & User Interface</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Refund Dialog</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground list-disc list-inside">
+                    <li>Shows original total, total refunded, remaining refundable</li>
+                    <li>Payment method badge (Card/Cash)</li>
+                    <li>Refund amount input with validation</li>
+                    <li>Quick percentage buttons (25%, 50%, 75%, Full)</li>
+                    <li>Optional reason textarea</li>
+                    <li>Alert if transaction is fully refunded</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">Transaction Summary (Detail Page)</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground list-disc list-inside">
+                    <li>Each refund shown with: amount, date, employee initials</li>
+                    <li>Net amount calculation (total - refunds)</li>
+                    <li>Example: "Refund #2 (03/10/25) - MB" → -$1.00</li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Example Scenarios</h3>
+                <div className="space-y-3 mb-4">
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 1: Manager Processing Full Refund</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Customer wants full refund for $5.50 coffee purchase (card payment)</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Manager opens transaction 68cbc335c66d14da7d0044ca</li>
+                      <li>Clicks "Refund transaction"</li>
+                      <li>Clicks "Full" button → Amount auto-fills to $5.50</li>
+                      <li>Enters reason: "Cold coffee"</li>
+                      <li>Clicks "Process Refund"</li>
+                      <li><strong>System actions:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>Creates Stripe refund for $5.50 (550 cents)</li>
+                          <li>Stores refund in DB with manager's employee ID</li>
+                          <li>Updates transaction status to "refunded"</li>
+                          <li>Displays success toast</li>
+                        </ul>
+                      </li>
+                      <li><strong>Result:</strong> Customer receives $5.50 back on card in 5-10 business days</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 2: Staff Processing Partial Refund (Requires PIN)</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Customer wants $1.00 refund from $5.50 purchase, staff member processing</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Staff opens transaction</li>
+                      <li>Clicks "Refund transaction"</li>
+                      <li>Enters $1.00 in refund amount</li>
+                      <li>Enters reason: "Item missing"</li>
+                      <li>Clicks "Process Refund"</li>
+                      <li><strong>PIN Dialog appears:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>"Refunds require manager approval"</li>
+                          <li>Manager enters PIN: 1234</li>
+                          <li>System validates manager has refund permission</li>
+                        </ul>
+                      </li>
+                      <li><strong>System actions:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>Creates Stripe refund for $1.00</li>
+                          <li>Stores refund with manager's employee ID (not staff's)</li>
+                          <li>Updates transaction status to "partially_refunded"</li>
+                          <li>Toast: "Refund authorized by John Smith"</li>
+                        </ul>
+                      </li>
+                      <li><strong>Result:</strong> $1.00 refunded, $4.50 remaining refundable</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 3: Multiple Partial Refunds</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Transaction with multiple refunds over time</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Original transaction: $5.50</li>
+                      <li>Refund #1 (03/10/25) - MB: -$1.00</li>
+                      <li>Refund #2 (03/10/25) - MB: -$1.00</li>
+                      <li>Refund #3 (03/10/25) - S: -$0.50 (different employee)</li>
+                      <li><strong>Summary display:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>Total: $5.50</li>
+                          <li>Refund #1 (03/10/25) - MB: -$1.00</li>
+                          <li>Refund #2 (03/10/25) - MB: -$1.00</li>
+                          <li>Refund #3 (03/10/25) - S: -$0.50</li>
+                          <li>Net Amount: $3.00</li>
+                        </ul>
+                      </li>
+                      <li><strong>Refund dialog shows:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>Original Total: $5.50</li>
+                          <li>Total Refunded: $2.50</li>
+                          <li>Remaining Refundable: $3.00</li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Files Reference</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Components</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/components/refund-dialog.jsx</code> - Refund dialog UI and logic</li>
+                    <li><code>/components/pin-dialog-discount.jsx</code> - Reusable PIN authorization dialog</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">API Routes</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/app/api/transactions/[id]/refund/route.js</code> - Refund processing endpoint with permission validation</li>
+                    <li><code>/app/api/auth/pincheck/route.js</code> - PIN verification endpoint</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">Business Logic</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/lib/refunds.js</code> - Core refund processing logic, Stripe integration, calculations</li>
+                    <li><code>/lib/permissions.js</code> - Permission checking (isActionRestricted function)</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">Models</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/models/Transaction.js</code> - Transaction schema with refunds subdocument array</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">Configuration</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/lib/permissions.json</code> - Role permissions including "process_refund" restriction</li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Security & Validation</h3>
+                <ul className="space-y-2 text-muted-foreground mb-4">
+                  <li><strong>Frontend Validation:</strong> Checks employee role and shows PIN dialog for STAFF</li>
+                  <li><strong>Backend Enforcement:</strong> API validates authorizer exists, is in same org, and has permissions</li>
+                  <li><strong>Amount Validation:</strong> Prevents refund amounts exceeding remaining refundable</li>
+                  <li><strong>Payment Intent Check:</strong> Only processes Stripe refund if stripePaymentIntentId exists</li>
+                  <li><strong>Metadata as Strings:</strong> Converts MongoDB ObjectIds to strings for Stripe metadata</li>
+                  <li><strong>Error Handling:</strong> Catches Stripe API errors and prevents database update if Stripe fails</li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Testing & Verification</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Verification Steps</p>
+                  <ol className="text-sm space-y-1 text-muted-foreground list-decimal list-inside">
+                    <li>Process refund in POS system</li>
+                    <li>Check database: refund record with Stripe IDs</li>
+                    <li>Check Stripe Dashboard: refund exists with correct amount and metadata</li>
+                    <li>Verify employee ID matches authorizer (if PIN was used)</li>
+                    <li>Confirm transaction status updated correctly</li>
+                  </ol>
+                  <p className="text-sm font-semibold mt-3 mb-2">Common Issues</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground list-disc list-inside">
+                    <li><strong>Field name mismatch:</strong> Ensure stripePaymentIntentId field exists (not paymentIntentId)</li>
+                    <li><strong>Metadata type error:</strong> All metadata values must be strings, not ObjectIds</li>
+                    <li><strong>Connected account:</strong> Must use stripeAccount parameter for multi-tenant</li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Future Enhancements</h3>
+                <ul className="space-y-1 text-muted-foreground mb-4 text-sm list-disc list-inside">
+                  <li>Refund approval workflow with pending status</li>
+                  <li>Bulk refund processing for classes/events</li>
+                  <li>Refund to store credit instead of payment method</li>
+                  <li>Automated refund emails to customers</li>
+                  <li>Refund reporting and analytics</li>
+                  <li>Partial refund with item-level detail</li>
+                  <li>Refund expiry/time limits per org settings</li>
+                  <li>Integration with accounting software</li>
                 </ul>
               </section>
 

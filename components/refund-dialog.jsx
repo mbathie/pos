@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, DollarSign, CreditCard, Banknote, AlertCircle } from 'lucide-react';
 import { toast } from "sonner";
 import DiscountPinDialog from './pin-dialog-discount';
+import { isActionRestricted } from '@/lib/permissions';
 
 export function RefundDialog({ transaction, onRefundComplete, trigger, currentEmployee }) {
   const [open, setOpen] = useState(false);
@@ -56,7 +57,7 @@ export function RefundDialog({ transaction, onRefundComplete, trigger, currentEm
     }
 
     // Check if current employee needs PIN authorization
-    const needsAuthorization = currentEmployee?.role === 'STAFF';
+    const needsAuthorization = currentEmployee ? isActionRestricted(currentEmployee.role, 'process_refund') : true;
 
     if (needsAuthorization) {
       // Store the refund details and show PIN dialog
@@ -68,14 +69,14 @@ export function RefundDialog({ transaction, onRefundComplete, trigger, currentEm
     }
   };
 
-  const processRefund = async (amount, refundReason) => {
+  const processRefund = async (amount, refundReason, authorizerId = null, refundEmployeeId = null) => {
     setLoading(true);
 
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/transactions/${transaction._id}/refund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, reason: refundReason })
+        body: JSON.stringify({ amount, reason: refundReason, authorizerId, refundEmployeeId })
       });
 
       if (res.ok) {
@@ -105,9 +106,10 @@ export function RefundDialog({ transaction, onRefundComplete, trigger, currentEm
   };
 
   const handlePinSuccess = (data) => {
-    // PIN verified, process the pending refund
+    // PIN verified, process the pending refund with authorizer ID
+    // Use authorizer's ID as the employee who performed the refund
     if (pendingRefund) {
-      processRefund(pendingRefund.amount, pendingRefund.reason);
+      processRefund(pendingRefund.amount, pendingRefund.reason, data.authorizer.id, data.authorizer.id);
     }
   };
 
@@ -280,31 +282,6 @@ export function RefundDialog({ transaction, onRefundComplete, trigger, currentEm
                   </Button>
                 </DialogFooter>
               </form>
-            )}
-
-            {/* Previous Refunds */}
-            {refundSummary.hasRefunds && (
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Refund History</h4>
-                <div className="space-y-2">
-                  {refundSummary.refunds.map((refund, index) => (
-                    <div key={index} className="p-3 border rounded-lg text-sm">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="font-medium">${refund.amount.toFixed(2)}</div>
-                          <div className="text-xs text-muted-foreground">{refund.formattedDate}</div>
-                          {refund.reason && (
-                            <div className="text-xs text-muted-foreground mt-1">{refund.reason}</div>
-                          )}
-                        </div>
-                        <Badge variant="secondary" className="text-xs">
-                          {refund.paymentMethod === 'card' ? 'Card' : 'Cash'}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
             )}
           </div>
         )}

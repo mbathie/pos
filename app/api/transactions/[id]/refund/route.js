@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { getEmployee } from "@/lib/auth";
-import { Transaction, Org } from "@/models";
+import { Transaction, Org, Employee } from "@/models";
 import { processRefund, getRefundSummary } from "@/lib/refunds";
+import { isActionRestricted } from "@/lib/permissions";
 
 export async function POST(req, { params }) {
   await connectDB();
@@ -13,9 +14,48 @@ export async function POST(req, { params }) {
   }
 
   const { id } = await params;
-  const { amount, reason } = await req.json();
+  const { amount, reason, authorizerId, refundEmployeeId } = await req.json();
 
   try {
+    // Check if refund action is restricted for this employee's role
+    const restricted = isActionRestricted(employee.role, 'process_refund');
+    let employeeIdForRefund = employee._id;
+
+    if (restricted) {
+      // If restricted, verify that an authorizer was provided
+      if (!authorizerId) {
+        return NextResponse.json({
+          error: 'Manager authorization required for refunds'
+        }, { status: 403 });
+      }
+
+      // Verify the authorizer exists and has proper permissions
+      const authorizer = await Employee.findById(authorizerId);
+      if (!authorizer) {
+        return NextResponse.json({
+          error: 'Invalid authorizer'
+        }, { status: 403 });
+      }
+
+      // Verify authorizer is in same org and has permission
+      if (authorizer.org.toString() !== employee.org._id.toString()) {
+        return NextResponse.json({
+          error: 'Authorizer must be from same organization'
+        }, { status: 403 });
+      }
+
+      if (isActionRestricted(authorizer.role, 'process_refund')) {
+        return NextResponse.json({
+          error: 'Authorizer does not have refund permissions'
+        }, { status: 403 });
+      }
+
+      console.log(`Refund authorized by ${authorizer.name} (${authorizer.role}) for employee ${employee.name} (${employee.role})`);
+
+      // Use the authorizer's ID as the employee who processed the refund
+      employeeIdForRefund = refundEmployeeId || authorizerId;
+    }
+
     // Fetch transaction and verify ownership
     const transaction = await Transaction.findById(id);
     if (!transaction) {
@@ -33,7 +73,7 @@ export async function POST(req, { params }) {
     const result = await processRefund({
       transactionId: id,
       amount: parseFloat(amount),
-      employeeId: employee._id,
+      employeeId: employeeIdForRefund,
       reason,
       org
     });

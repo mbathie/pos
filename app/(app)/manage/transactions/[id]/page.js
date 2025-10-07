@@ -12,35 +12,23 @@ import { RefundDialog } from '@/components/refund-dialog';
 import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import { useGlobals } from '@/lib/globals';
 
 dayjs.extend(relativeTime);
 
 export default function TransactionDetailsPage() {
   const params = useParams();
   const router = useRouter();
+  const { employee } = useGlobals();
   const [transaction, setTransaction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [resendReceiptDialog, setResendReceiptDialog] = useState(false);
-  const [currentEmployee, setCurrentEmployee] = useState(null);
 
   useEffect(() => {
-    fetchEmployee();
     if (params.id) {
       fetchTransaction();
     }
   }, [params.id]);
-
-  const fetchEmployee = async () => {
-    try {
-      const response = await fetch('/api/auth/employee');
-      if (response.ok) {
-        const data = await response.json();
-        setCurrentEmployee(data.employee);
-      }
-    } catch (error) {
-      console.error('Error fetching employee:', error);
-    }
-  };
 
   const fetchTransaction = async () => {
     setLoading(true);
@@ -544,7 +532,7 @@ export default function TransactionDetailsPage() {
             {(transaction?.status === 'succeeded' || transaction?.status === 'partially_refunded') && (
               <RefundDialog
                 transaction={transaction}
-                currentEmployee={currentEmployee}
+                currentEmployee={employee}
                 onRefundComplete={(updatedTransaction) => {
                   setTransaction(updatedTransaction);
                   fetchTransaction(); // Refresh to get latest data
@@ -654,6 +642,20 @@ export default function TransactionDetailsPage() {
                 <span className="font-medium">Total</span>
                 <span className="font-medium">{formatCurrency(transaction.total)}</span>
               </div>
+              {transaction.refunds && transaction.refunds.length > 0 && (
+                <>
+                  {transaction.refunds.map((refund, index) => (
+                    <div key={index} className="flex justify-between">
+                      <span>Refund {transaction.refunds.length > 1 ? `#${index + 1}` : ''} ({dayjs(refund.date).format('DD/MM/YY')}) - {getInitials(refund.employeeId?.name)}</span>
+                      <span>-{formatCurrency(refund.amount)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between border-t pt-2 font-medium">
+                    <span>Net Amount</span>
+                    <span>{formatCurrency(transaction.total - transaction.refunds.reduce((sum, r) => sum + r.amount, 0))}</span>
+                  </div>
+                </>
+              )}
               {transaction.paymentMethod === 'cash' && transaction.cash && (
                 <>
                   <div className="flex justify-between">
