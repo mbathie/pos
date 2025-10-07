@@ -132,12 +132,17 @@ export default function Page() {
   const sigContainerRef = useRef(null)
   
   const clear = () => {
+    console.log('🗑️ Signature manually cleared')
     sigRef.current.clear()
     setCustomer({...customer, signature: ""})
   }
   
   const getSig = () => {
     const dataURL = sigRef.current.getTrimmedCanvas().toDataURL('image/png')
+    console.log('✍️ Signature captured:', {
+      length: dataURL.length,
+      preview: dataURL.substring(0, 50)
+    })
     setCustomer({...customer, signature: dataURL})
   }
   
@@ -147,22 +152,23 @@ export default function Page() {
       const container = sigContainerRef.current
       const canvas = sigRef.current.getCanvas()
       const ratio = Math.max(window.devicePixelRatio || 1, 1)
-      
+
       // Get the actual width of the container
       const width = container.clientWidth
       const height = 200 // Fixed height
-      
+
       // Set the actual canvas size
       canvas.width = width * ratio
       canvas.height = height * ratio
       canvas.style.width = `${width}px`
       canvas.style.height = `${height}px`
-      
+
       // Scale the drawing context to match device pixel ratio
       const context = canvas.getContext('2d')
       context.scale(ratio, ratio)
-      
+
       // Clear and reset the signature
+      console.log('🔄 Canvas resized - signature cleared')
       sigRef.current.clear()
     }
   }
@@ -327,6 +333,10 @@ export default function Page() {
     dependentsValid,
     schemaValidation: result.success,
     schemaErrors: result.success ? null : result.error.issues,
+    signatureLength: customer.signature?.length || 0,
+    signaturePreview: customer.signature?.substring(0, 50) || 'empty',
+    photoLength: customer.photo?.length || 0,
+    photoPreview: customer.photo?.substring(0, 50) || 'empty',
     customer,
     address,
     isValid
