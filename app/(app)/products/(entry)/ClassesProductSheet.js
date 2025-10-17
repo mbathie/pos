@@ -656,32 +656,82 @@ export default function ClassesProductSheet({
                               </Button>
                             </div>
                           ))}
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              const newDaysOfWeek = [...(product.schedule?.daysOfWeek || [])];
-                              let allDayIndex = newDaysOfWeek.findIndex(d => d?.dayIndex === -1);
-                              
-                              if (allDayIndex === -1) {
-                                newDaysOfWeek.push({ dayIndex: -1, times: [{ time: '', label: '', selected: true }] });
-                              } else {
-                                // Create a new object for the day with updated times array
-                                newDaysOfWeek[allDayIndex] = {
-                                  ...newDaysOfWeek[allDayIndex],
-                                  times: [...(newDaysOfWeek[allDayIndex].times || []), { time: '', label: '', selected: true }]
-                                };
-                              }
-                              
-                              updateProduct({ 
-                                schedule: { 
-                                  ...product.schedule, 
-                                  daysOfWeek: newDaysOfWeek 
-                                } 
-                              });
-                            }}
-                          >
-                            <Plus className="h-4 w-4 mr-1" /> Add Time
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              type="button"
+                              onClick={() => {
+                                const newDaysOfWeek = [...(product.schedule?.daysOfWeek || [])];
+                                let allDayIndex = newDaysOfWeek.findIndex(d => d?.dayIndex === -1);
+
+                                if (allDayIndex === -1) {
+                                  newDaysOfWeek.push({ dayIndex: -1, times: [{ time: '', label: '', selected: true }] });
+                                } else {
+                                  // Create a new object for the day with updated times array
+                                  newDaysOfWeek[allDayIndex] = {
+                                    ...newDaysOfWeek[allDayIndex],
+                                    times: [...(newDaysOfWeek[allDayIndex].times || []), { time: '', label: '', selected: true }]
+                                  };
+                                }
+
+                                updateProduct({
+                                  schedule: {
+                                    ...product.schedule,
+                                    daysOfWeek: newDaysOfWeek
+                                  }
+                                });
+                              }}
+                              className="cursor-pointer"
+                            >
+                              <Plus className="h-4 w-4 mr-1" /> Add Time
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                const daysOfWeek = product.schedule?.daysOfWeek || [];
+                                const allDay = daysOfWeek.find(d => d?.dayIndex === -1) || { dayIndex: -1, times: [] };
+                                const allTimes = allDay.times || [];
+
+                                if (allTimes.length === 0) {
+                                  return; // No times to toggle
+                                }
+
+                                const newDaysOfWeek = [...daysOfWeek];
+
+                                // For each day (Mon-Sun, dayIdx 0-6), toggle all times to selected
+                                for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+                                  let existingDayIndex = newDaysOfWeek.findIndex(d => d?.dayIndex === dayIdx);
+
+                                  // Create times array with all times selected
+                                  const dayTimes = allTimes.map(t => ({
+                                    ...t,
+                                    selected: true
+                                  }));
+
+                                  if (existingDayIndex === -1) {
+                                    // Day doesn't exist yet, add it
+                                    newDaysOfWeek.push({ dayIndex: dayIdx, times: dayTimes });
+                                  } else {
+                                    // Day exists, update it
+                                    newDaysOfWeek[existingDayIndex] = {
+                                      dayIndex: dayIdx,
+                                      times: dayTimes
+                                    };
+                                  }
+                                }
+
+                                updateProduct({
+                                  schedule: {
+                                    ...product.schedule,
+                                    daysOfWeek: newDaysOfWeek
+                                  }
+                                });
+                              }}
+                              className="cursor-pointer"
+                            >
+                              Toggle All Days
+                            </Button>
+                          </div>
                         </>
                       );
                     })()}
