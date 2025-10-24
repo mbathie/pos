@@ -18,6 +18,7 @@ import ProductInstructions from './ProductInstructions';
 import ProductTerms from './ProductTerms';
 import dayjs from 'dayjs';
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 // Helper function to migrate old schedule format to new format
 function migrateScheduleFormat(schedule) {
@@ -686,26 +687,45 @@ export default function ClassesProductSheet({
                             </Button>
                             <Button
                               type="button"
-                              variant="outline"
                               onClick={() => {
                                 const daysOfWeek = product.schedule?.daysOfWeek || [];
                                 const allDay = daysOfWeek.find(d => d?.dayIndex === -1) || { dayIndex: -1, times: [] };
                                 const allTimes = allDay.times || [];
 
                                 if (allTimes.length === 0) {
-                                  return; // No times to toggle
+                                  toast.error('No time slots configured. Please add time slots first.');
+                                  return;
+                                }
+
+                                // Check if all days already have all times selected
+                                let allAreSelected = true;
+                                for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+                                  const day = daysOfWeek.find(d => d?.dayIndex === dayIdx);
+                                  if (!day) {
+                                    allAreSelected = false;
+                                    break;
+                                  }
+                                  // Check if all times are selected for this day
+                                  const hasAllTimesSelected = allTimes.every((_, timeIdx) =>
+                                    day.times?.[timeIdx]?.selected === true
+                                  );
+                                  if (!hasAllTimesSelected) {
+                                    allAreSelected = false;
+                                    break;
+                                  }
                                 }
 
                                 const newDaysOfWeek = [...daysOfWeek];
+                                const toggleToState = !allAreSelected; // If all are selected, turn off; otherwise turn on
 
-                                // For each day (Mon-Sun, dayIdx 0-6), toggle all times to selected
+                                // For each day (Mon-Sun, dayIdx 0-6), toggle all times
                                 for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
                                   let existingDayIndex = newDaysOfWeek.findIndex(d => d?.dayIndex === dayIdx);
 
-                                  // Create times array with all times selected
+                                  // Create times array with all times toggled to the new state
                                   const dayTimes = allTimes.map(t => ({
                                     ...t,
-                                    selected: true
+                                    selected: toggleToState
                                   }));
 
                                   if (existingDayIndex === -1) {
@@ -726,6 +746,13 @@ export default function ClassesProductSheet({
                                     daysOfWeek: newDaysOfWeek
                                   }
                                 });
+
+                                // Show toast notification
+                                if (toggleToState) {
+                                  toast.success('All days enabled for all time slots');
+                                } else {
+                                  toast.success('All days disabled for all time slots');
+                                }
                               }}
                               className="cursor-pointer"
                             >

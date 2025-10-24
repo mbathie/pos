@@ -7,12 +7,18 @@ export async function PUT(req, { params }) {
   await connectDB();
 
   const { employee } = await getEmployee();
-  const { name, color, category } = await req.json();
+  const { name, color, category, order } = await req.json();
   const { id } = await params;
+
+  const updateData = {};
+  if (name !== undefined) updateData.name = name;
+  if (color !== undefined) updateData.color = color;
+  if (category !== undefined) updateData.category = category;
+  if (order !== undefined) updateData.order = order;
 
   const folder = await Folder.findOneAndUpdate(
     { _id: id, org: employee.org._id },
-    { name, color, category },
+    updateData,
     { new: true }
   );
 

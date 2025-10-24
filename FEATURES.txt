@@ -204,5 +204,39 @@ NICE TO HAVES
 
 
 
+concept plan for dividers
 
+We want to have on our /products/shop2 page the concept of dividers. so
+
+Category -> Folders & Products + Dividers so you may have a series of products and folders within a category
+but to further breakup the visual layout we want dividers. So it might be
+
+product 1, folder 2
+
+----- divider XYX -----
+
+product 8, folder 7, folder 21, 
+
+----- divider abc ------
+
+etc, etc
+
+So I think what we need to do is update the model when it comes to shop products.
+
+so currently Category -> Products
+
+something like this
+
+Category -> groups (collection of products / folders) & dividers. With group & dividers having a display "order"
+so we know what order to display visually.
+
+still within each group, it needs its own sub order so we know what order to display folders and products in
+
+categorys don't necessarily need groups (optional) so it still works in other use cases for memberships and class products
+
+perhaps instead of creating a new groups model in the DB we can just have it reside at the products level
+i.e. products.group=object id as it doesn't need to be completes, doesn't need to be have a name
+
+for dividers they can be a type of product which has a category, a name and order (so we know what order to
+display groups and dividers)
 

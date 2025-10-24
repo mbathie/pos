@@ -1,784 +1,1267 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
 import { useImmer } from 'use-immer';
-
-// Removed unused sortable imports
-
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogOverlay, AlertDialogPortal, AlertDialogTitle, AlertDialogFooter, AlertDialogCancel, AlertDialogDescription } from '@/components/ui/alert-dialog';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button'
-import { Image as ImageIcon, Plus, Loader2, Save, Edit2, Trash2, MoreVertical, Folder as FolderIcon, Check, ExternalLink, Tag } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-
-
-import { actions } from './actions'
-import Delete from '../Delete'
-import ProductsTable from './ProductsTable'
-import ProductSheet from './ProductSheet'
-import { FolderManagementSheet } from './FolderManagementSheet'
-import IconSelect from '@/components/icon-select'
+import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, rectSortingStrategy } from '@dnd-kit/sortable';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Plus, FolderPlus, PackagePlus, Minus, Trash2, GripVertical, ArrowUp, ArrowDown } from 'lucide-react';
+import { toast } from "sonner";
 import colors from '@/lib/tailwind-colors';
-import { useAutoSave } from '../useAutoSave';
-import { CategoryFolderMenu } from './CategoryFolderMenu';
-import { SvgIcon } from '@/components/ui/svg-icon';
+import SortableCategory from './SortableCategory';
+import IconSelect from '@/components/icon-select';
+import { FolderManagementSheet } from '../shopold/FolderManagementSheet';
+import StandaloneProductSheet from '../StandaloneProductSheet';
 import { ProductThumbnail } from '@/components/product-thumbnail';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
-// Note: An older SortableCategory component was removed as it was unused
+// Draggable folder product component
+function DraggableFolderProduct({ product, onProductClick, borderColor, tintColor }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: `folder-product-${product._id}`,
+    data: {
+      type: 'folder-product',
+      product: product
+    },
+    animateLayoutChanges: () => false,
+  });
 
-export default function Page() {
-  const [categories, setCategories] = useState([]);
-  const [folders, setFolders] = useState([]);
-  const [selectedFolder, setSelectedFolder] = useState(null);
-  const [category, setCategory] = useState({});
-  const [product, setProduct] = useState({});
-  const [products, setProducts] = useImmer([]);
-  const [allProducts, setAllProducts] = useImmer([]);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [toDelete, setToDelete] = useState({});
-  // const [categoriesExpanded, setCategoriesExpanded] = useState(false); // No longer needed
-  const [editMode, setEditMode] = useState(false);
-
-  const [ addItem, setAddItem ] = useState({})
-  const [ addItemOpen, setAddItemOpen ] = useState(false)
-  
-  // Category dialog state
-  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [newCategoryThumbnail, setNewCategoryThumbnail] = useState('');
-  const [editingCategory, setEditingCategory] = useState(null);
-  const [editCategoryDialogOpen, setEditCategoryDialogOpen] = useState(false);
-  const [editCategoryName, setEditCategoryName] = useState('');
-  const [editCategoryThumbnail, setEditCategoryThumbnail] = useState('');
-  
-  // Category icon dialog state
-  const [categoryIconDialogOpen, setCategoryIconDialogOpen] = useState(false);
-  const [categoryIconMode, setCategoryIconMode] = useState('create'); // 'create' or 'edit'
-
-  // Icon dialog state
-  const [iconDialogOpen, setIconDialogOpen] = useState(false);
-  const [iconDialogProductIdx, setIconDialogProductIdx] = useState(null);
-  const [iconDialogQuery, setIconDialogQuery] = useState('');
-  
-  // Sheet state for product details
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [selectedProductId, setSelectedProductId] = useState(null);
-  
-  // Folder management sheet state
-  const [folderSheetOpen, setFolderSheetOpen] = useState(false);
-  const [folderRefreshTrigger, setFolderRefreshTrigger] = useState(0);
-
-  const { 
-    addVariation, updateVariation, 
-    updateProduct, saveProduct, addProduct, deleteProduct,
-    deleteVariation, addModCat, deleteCategory,
-    addMod, updateMod, saveMod, updateModCat, setFolder } = actions({category, setProducts, setAllProducts})
-
-  // Wrapper function for auto-save that matches the expected signature
-  const autoSaveProduct = async (product) => {
-    const pIdx = products.findIndex(p => p._id === product._id);
-    if (pIdx !== -1) {
-      const oldId = product._id;
-      const result = await saveProduct({ product, pIdx });
-
-      // If this was a new product, the ID will have changed
-      if (result && result._id && result._id !== oldId) {
-        // Update the selected product ID if this is the product being viewed
-        if (selectedProductId === oldId) {
-          setSelectedProductId(result._id);
-        }
-      }
-
-      return result;
-    }
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
   };
 
-  // Use the auto-save hook - shop products don't support creating new products via auto-save
-  const { isDirty, saving, isAnySaving, hasAnyUnsaved, markAsSaved } = useAutoSave(
-    products,
-    setProducts,
-    autoSaveProduct,
-    null, // createProduct - not needed for shop products
-    null, // categoryName - not needed for shop products
-    1000, // Auto-save every 1 second
-    null  // onProductCreated - not needed for shop products
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="w-24 h-32 flex flex-col text-center text-xs relative group flex-shrink-0"
+    >
+      {/* Drag handle - grip icon at top right */}
+      <div
+        className="absolute -top-1 -right-1 w-6 h-6 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-10"
+        {...attributes}
+        {...listeners}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical className="w-3 h-3" />
+      </div>
+      
+      {/* Clickable product content */}
+      <div
+        className="w-full h-full flex flex-col text-center cursor-pointer"
+        onClick={(e) => {
+          e.stopPropagation();
+          onProductClick();
+        }}
+      >
+        <div
+          className="size-24 rounded-lg overflow-hidden relative"
+          style={borderColor ? { border: `2px solid ${borderColor}` } : undefined}
+        >
+          <ProductThumbnail
+            src={product.thumbnail || product.image}
+            alt={product.name}
+            size="2xl"
+            className="size-24"
+          />
+          {tintColor && (
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{ backgroundColor: tintColor, opacity: 0.15 }}
+            />
+          )}
+        </div>
+        <div className="mt-1 font-medium">{product.name}</div>
+        {/* Price not shown inside expanded folder panel */}
+      </div>
+    </div>
   );
+}
 
-  // Drag and drop sensors - NO LONGER USED
-  // const sensors = useSensors(
-  //   useSensor(PointerSensor),
-  //   useSensor(KeyboardSensor, {
-  //     coordinateGetter: sortableKeyboardCoordinates,
-  //   })
-  // );
+// Simplified SortableItem component
+function SortableItem({ item, isExpanded, onFolderClick, onProductClick, onDividerDelete, isDraggedOver, draggedItemType, isAdjacentToDragged, activeId, overId }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: item._id,
+    data: {
+      type: item.type,
+      item: item
+    },
+    // Disable layout change animations to avoid visual stretching when
+    // crossing a full-width divider within the grid.
+    animateLayoutChanges: () => false,
+  });
 
-  // Handle drag end for categories - NO LONGER USED
-  // const handleDragEnd = async (event) => {
-  //   const { active, over } = event;
-  //   ...
-  // };
+  // Fixed dimensions to prevent stretching during drag
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    width: item.type === 'divider' ? '100%' : '96px',
+    height: item.type === 'divider' ? '48px' : '128px',
+    minWidth: item.type === 'divider' ? '100%' : '96px',
+    minHeight: item.type === 'divider' ? '48px' : '128px',
+    maxWidth: item.type === 'divider' ? '100%' : '96px',
+    maxHeight: item.type === 'divider' ? '48px' : '128px',
+    // Ensure grid items never stretch across the row when a full-width
+    // divider participates in sorting animations.
+    justifySelf: 'start',
+    alignSelf: 'start',
+    contain: 'layout paint',
+    willChange: 'transform',
+  };
 
-  const handleDelete = async () => {
-    if (toDelete.variationIdx !== undefined) {
-      deleteVariation(toDelete)
-    } else if (toDelete.category) {
-      await deleteCategory({
-        category: toDelete.category, 
-        setCategory, 
-        setCategories, 
-        categories
-      });
-    }
-    setToDelete({})
+  // Don't show drop indicator at all - let the user rely on visual placement
+  // The adjacency check in handleDragEnd will handle adding to folder
+  const showDropIndicator = false;
+
+  // Divider rendering handled by separate non-sortable component below
+  if (item.type === 'divider') return null;
+
+  // Folder rendering
+  if (item.type === 'folder') {
+    const itemCount = item.products?.length || 0;
+    const folderColor = colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500];
+    // Highlight folder only when it's expanded, a product is being dragged, AND hovering over it or its children
+    const isHoveringOverFolder = overId === item._id;
+    const isHoveringOverFolderChild = overId && overId.startsWith('folder-product-') && item.products?.some(p => `folder-product-${p._id}` === overId);
+
+    const isExpandedAndReceivingDrag =
+      isExpanded &&
+      activeId &&
+      draggedItemType === 'product' &&
+      !activeId.startsWith('folder-product-') &&
+      (isHoveringOverFolder || isHoveringOverFolderChild);
+
+    // Folder tile (same rendering when expanded or collapsed; icon toggles)
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        className="w-24 h-32 flex flex-col text-center text-xs relative group"
+      >
+        {/* Drag handle - grip icon at top right */}
+        <div
+          className="absolute -top-1 -right-1 w-6 h-6 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-10"
+          {...attributes}
+          {...listeners}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="w-3 h-3" />
+        </div>
+
+        {/* Clickable folder content */}
+        <div
+          className="w-full h-full flex flex-col text-center cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            onFolderClick();
+          }}
+        >
+          <div
+            className={`size-24 rounded-lg flex items-center justify-center transition-all ${
+              isExpandedAndReceivingDrag ? 'ring-2 ring-primary ring-offset-2 opacity-80' : ''
+            }`}
+            style={{ backgroundColor: folderColor }}
+          >
+            {isExpanded ? (
+              <Minus strokeWidth={1} className="size-10 opacity-60" />
+            ) : (
+              <Plus strokeWidth={1} className="size-10 opacity-60" />
+            )}
+          </div>
+          <div className="mt-1 font-medium">{item.name}</div>
+          <div className="text-muted-foreground text-xs">
+            {itemCount} {itemCount === 1 ? 'item' : 'items'}
+          </div>
+        </div>
+      </div>
+    );
   }
 
+  // Product rendering
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="w-24 h-32 flex flex-col text-center text-xs relative group"
+    >
+      {/* Drag handle - grip icon at top right */}
+      <div
+        className="absolute -top-1 -right-1 w-6 h-6 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-10"
+        {...attributes}
+        {...listeners}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <GripVertical className="w-3 h-3" />
+      </div>
+      
+      {/* Clickable product content */}
+      <div
+        className="w-full h-full flex flex-col text-center cursor-pointer"
+        onClick={(e) => {
+          e.stopPropagation();
+          onProductClick();
+        }}
+      >
+        <ProductThumbnail
+          src={item.thumbnail || item.image}
+          alt={item.name}
+          size="2xl"
+          className="size-24"
+        />
+        <div className="mt-1 font-medium">{item.name}</div>
+        {item.variations && item.variations.length > 0 && (
+          <div className="text-muted-foreground">
+            ${parseFloat(item.variations[0].amount || 0).toFixed(2)}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Drag overlay component with fixed dimensions
+function DragOverlayItem({ item }) {
+  if (!item) return null;
+
+  // Common container styles to prevent stretching
+  const containerStyle = {
+    position: 'fixed',
+    pointerEvents: 'none',
+    zIndex: 9999,
+    transform: 'rotate(5deg)',
+  };
+
+  if (item.type === 'divider') {
+    return (
+      <div 
+        className="w-48 h-12 bg-background border rounded-lg shadow-lg flex items-center justify-center flex-shrink-0"
+        style={containerStyle}
+      >
+        <span className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+          {item.name}
+        </span>
+      </div>
+    );
+  }
+
+  if (item.type === 'folder') {
+    const itemCount = item.products?.length || 0;
+    return (
+      <div 
+        className="w-24 h-32 flex flex-col text-center text-xs bg-background border rounded-lg shadow-lg p-2 flex-shrink-0"
+        style={containerStyle}
+      >
+        <div
+          className="size-20 rounded-lg flex items-center justify-center flex-shrink-0"
+          style={{
+            backgroundColor: colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]
+          }}
+        >
+          <Plus strokeWidth={1} className="size-8 opacity-60" />
+        </div>
+        <div className="mt-1 font-medium text-xs truncate">{item.name}</div>
+        <div className="text-muted-foreground text-xs">
+          {itemCount} {itemCount === 1 ? 'item' : 'items'}
+        </div>
+      </div>
+    );
+  }
+
+  // Product
+  return (
+    <div 
+      className="w-24 h-32 flex flex-col text-center text-xs bg-background border rounded-lg shadow-lg p-2 flex-shrink-0"
+      style={containerStyle}
+    >
+      <ProductThumbnail
+        src={item.thumbnail || item.image}
+        alt={item.name}
+        size="2xl"
+        className="size-20 flex-shrink-0"
+      />
+      <div className="mt-1 font-medium text-xs truncate">{item.name}</div>
+      {item.variations && item.variations.length > 0 && (
+        <div className="text-muted-foreground text-xs">
+          ${parseFloat(item.variations[0].amount || 0).toFixed(2)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Non-sortable, full-width divider row. We keep it out of the SortableContext
+// to avoid dnd-kit displacement artifacts across a 100% width row.
+function DividerRow({ item, onDividerDelete, onMoveUp, onMoveDown }) {
+  if (!item) return null;
+  return (
+    <div className="w-full col-span-full relative h-12">
+      {/* Full-width line + label, rendered underneath the controls */}
+      <div className="absolute inset-0 flex items-center">
+        <div className="flex-1 h-px bg-border" />
+        <div className="mx-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          {item.name}
+        </div>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+      {/* Controls overlayed on the right so the line continues underneath */}
+      <div className="absolute inset-y-0 right-0 flex items-center gap-1">
+        <Button variant="ghost" size="icon" className="h-6 w-6 cursor-pointer" onClick={() => onMoveUp?.(item)}>
+          <ArrowUp className="h-3 w-3" />
+        </Button>
+        <Button variant="ghost" size="icon" className="h-6 w-6 cursor-pointer" onClick={() => onMoveDown?.(item)}>
+          <ArrowDown className="h-3 w-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="cursor-pointer h-6 w-6 text-muted-foreground hover:text-destructive"
+          onClick={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            onDividerDelete?.(item._id);
+          }}
+        >
+          <Trash2 className="h-3 w-3" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export default function Page() {
+  const [categories, setCategories] = useImmer([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [items, setItems] = useImmer([]); // All folders, products, and dividers in order
+  const [expandedFolders, setExpandedFolders] = useState(new Set());
+  const [activeId, setActiveId] = useState(null);
+  const [overId, setOverId] = useState(null);
+  const [draggedItem, setDraggedItem] = useState(null);
+
+  // Dialog states
+  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
+  const [editCategoryOpen, setEditCategoryOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryThumbnail, setNewCategoryThumbnail] = useState('');
+  const [categoryIconDialogOpen, setCategoryIconDialogOpen] = useState(false);
+
+  const [folderSheetOpen, setFolderSheetOpen] = useState(false);
+  const [productSheetOpen, setProductSheetOpen] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState(null);
+  const [productIconDialogOpen, setProductIconDialogOpen] = useState(false);
+  const [productIconQuery, setProductIconQuery] = useState('');
+  const [dividerDialogOpen, setDividerDialogOpen] = useState(false);
+  const [dividerName, setDividerName] = useState('');
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Fetch categories on mount
   useEffect(() => {
     async function fetchCategories() {
-      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/categories?menu=shop');
-      const c = await res.json();
-      // Categories are already sorted by order from the API
-      setCategories(c.categories);
-      
-      // Fetch all folders for all categories
-      if (c.categories && c.categories.length > 0) {
-        fetchAllFolders();
-        
-        // Default select the first category
-        setCategory(c.categories[0]);
-        getCategoryProducts(c.categories[0]);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories?menu=shop`);
+      const data = await res.json();
+      if (data.categories && Array.isArray(data.categories)) {
+        // Sort categories by order
+        const sortedCategories = data.categories.sort((a, b) => (a.order || 0) - (b.order || 0));
+        setCategories(sortedCategories);
+        if (sortedCategories.length > 0) {
+          handleSelectCategory(sortedCategories[0]);
+        }
       }
     }
-    
     fetchCategories();
   }, []);
 
+  const handleSelectCategory = async (category) => {
+    setSelectedCategory(category);
 
-  const saveCategory = async () => {
-    if (!newCategoryName.trim()) return;
-    
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${newCategoryName}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        menu: 'shop',
-        thumbnail: newCategoryThumbnail 
-      }),
-    });
-    const data = await res.json();
-    console.log("Category saved response:", data);
-    if (data.category && data.category._id) {
-      const updatedCategory = { ...data.category };
-      setCategory(updatedCategory);
-      setCategories([updatedCategory, ...categories]);
-      getCategoryProducts(updatedCategory);
-      setCategoryDialogOpen(false);
-      setNewCategoryName('');
-      setNewCategoryThumbnail('');
-    }
-  }
+    // Fetch folders for this category
+    const foldersRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders?category=${category._id}`);
+    const foldersData = await foldersRes.json();
 
-  const updateCategory = async () => {
-    if (!editCategoryName.trim() || !editingCategory) return;
-    
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${editingCategory._id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        name: editCategoryName,
-        thumbnail: editCategoryThumbnail 
-      }),
-    });
+    // Fetch products for this category
+    const categoryIdentifier = category.slug || category.name;
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${categoryIdentifier}/products`);
     const data = await res.json();
+
+    // Create unified items array
+    const allItems = [];
+    const foldersMap = {};
+
+    // Process folders
+    const allFolders = Array.isArray(foldersData) ? foldersData : [];
+    allFolders.forEach(folder => {
+      const folderItem = {
+        ...folder,
+        type: 'folder',
+        products: []
+      };
+      foldersMap[folder._id] = folderItem;
+      allItems.push(folderItem);
+    });
+
+    // Process products
+    const productsData = Array.isArray(data.products) ? data.products : (data.products ? [data.products] : []);
     
-    if (data.category) {
-      // Update the category in the list
-      setCategories(categories.map(c => 
-        c._id === editingCategory._id ? { ...c, name: editCategoryName, thumbnail: editCategoryThumbnail } : c
-      ));
-      
-      // Update the current category if it's the one being edited
-      if (category._id === editingCategory._id) {
-        setCategory({ ...category, name: editCategoryName });
+    for (const product of productsData) {
+      if (product.type === 'divider') {
+        allItems.push({
+          ...product,
+          type: 'divider'
+        });
+      } else if (product.folder && product.folder._id && foldersMap[product.folder._id]) {
+        // Add to folder's products array
+        foldersMap[product.folder._id].products.push(product);
+      } else {
+        // Standalone product
+        allItems.push({
+          ...product,
+          type: 'product'
+        });
       }
-      
-      setEditCategoryDialogOpen(false);
-      setEditingCategory(null);
-      setEditCategoryName('');
     }
-  }
 
-  const getCategoryProducts = async (c) => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${c._id}/products`);
-    const _products = await res.json()
-    setAllProducts(_products.products);
-    setProducts(_products.products);
-    setSelectedFolder(null);
+    // Sort all items by order
+    allItems.sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    // Sort products within folders
+    Object.values(foldersMap).forEach(folder => {
+      folder.products.sort((a, b) => (a.order || 0) - (b.order || 0));
+    });
+
+    setItems(allItems);
   };
-  
-  const fetchFolders = async (categoryId) => {
-    const url = categoryId 
-      ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders?category=${categoryId}`
-      : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders?search=`;
-    const res = await fetch(url);
-    const data = await res.json();
-    if (Array.isArray(data)) {
-      setFolders(data);
+
+  // Move divider up or down by one slot (non-sortable control)
+  const moveDivider = async (divider, delta) => {
+    const index = items.findIndex(i => i._id === divider._id);
+    if (index === -1) return;
+    const newIndex = Math.max(0, Math.min(items.length - 1, index + delta));
+    if (newIndex === index) return;
+
+    // Update UI optimistically
+    setItems(draft => {
+      const [moved] = draft.splice(index, 1);
+      draft.splice(newIndex, 0, moved);
+      draft.forEach((it, idx) => { it.order = idx; });
+    });
+
+    // Persist divider order
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${divider._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product: { order: newIndex } })
+      });
+    } catch (err) {
+      console.error('Error moving divider:', err);
     }
   };
-  
-  const fetchAllFolders = async () => {
-    // Fetch all folders regardless of category to show chevrons
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders`);
-    const data = await res.json();
-    if (data.folders && Array.isArray(data.folders)) {
-      setFolders(data.folders);
-    } else if (Array.isArray(data)) {
-      setFolders(data);
-    }
-  };
-  
-  const handleFolderClick = (folder) => {
-    if (selectedFolder?._id === folder._id) {
-      setSelectedFolder(null);
-      setProducts(allProducts);
+
+  const handleDragStart = (event) => {
+    const { active } = event;
+    setActiveId(active.id);
+
+    // Find the dragged item
+    const category = categories.find(c => c._id === active.id);
+    const item = items.find(i => i._id === active.id);
+
+    // Check if it's a folder product
+    if (active.id.startsWith('folder-product-')) {
+      const productId = active.id.replace('folder-product-', '');
+      const folderProduct = items
+        .filter(i => i.type === 'folder')
+        .flatMap(folder => folder.products || [])
+        .find(p => p._id === productId);
+
+      setDraggedItem(folderProduct || null);
     } else {
-      setSelectedFolder(folder);
-      const filtered = allProducts.filter(p => p.folder?._id === folder._id);
-      setProducts(filtered);
+      setDraggedItem(category || item || null);
+    }
+  };
+
+  const handleDragOver = (event) => {
+    const { over } = event;
+    setOverId(over?.id || null);
+  };
+
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+    setActiveId(null);
+    setOverId(null);
+    setDraggedItem(null);
+
+    if (!over || active.id === over.id) return;
+
+    // Handle dragging a standalone product and dropping on a folder product (add to folder)
+    if (!active.id.startsWith('folder-product-') && over.id.startsWith('folder-product-')) {
+      const overProductId = over.id.replace('folder-product-', '');
+
+      console.log('Dragging standalone product onto folder product:', {
+        activeId: active.id,
+        overId: over.id,
+        overProductId
+      });
+
+      // Find the folder that contains the over product
+      let targetFolder = null;
+      for (const item of items) {
+        if (item.type === 'folder') {
+          const hasProduct = item.products?.some(p => p._id === overProductId);
+          if (hasProduct) {
+            targetFolder = item;
+            break;
+          }
+        }
+      }
+
+      console.log('Target folder found:', targetFolder?.name);
+
+      if (targetFolder) {
+        try {
+          // Add product to the folder
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${active.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              product: {
+                folder: targetFolder._id,
+                order: targetFolder.products?.length || 0
+              }
+            })
+          });
+
+          if (res.ok) {
+            console.log('Successfully added product to folder');
+            if (selectedCategory) {
+              await handleSelectCategory(selectedCategory);
+            }
+          }
+        } catch (error) {
+          console.error('Error adding product to folder:', error);
+        }
+        return;
+      }
+    }
+
+    // Handle dragging folder products
+    if (active.id.startsWith('folder-product-')) {
+      const productId = active.id.replace('folder-product-', '');
+
+      // Check if dropping on another folder product (reordering within folder)
+      if (over.id.startsWith('folder-product-')) {
+        const overProductId = over.id.replace('folder-product-', '');
+
+        // Find both products and their parent folder
+        let activeProduct = null;
+        let overProduct = null;
+        let parentFolder = null;
+
+        for (const item of items) {
+          if (item.type === 'folder') {
+            const activeIdx = item.products?.findIndex(p => p._id === productId);
+            const overIdx = item.products?.findIndex(p => p._id === overProductId);
+
+            if (activeIdx !== -1) {
+              activeProduct = item.products[activeIdx];
+            }
+            if (overIdx !== -1) {
+              overProduct = item.products[overIdx];
+              parentFolder = item;
+            }
+          }
+        }
+
+        // If both products are in the same folder, reorder them
+        if (activeProduct && overProduct && parentFolder) {
+          try {
+            const activeIdx = parentFolder.products.findIndex(p => p._id === productId);
+            const overIdx = parentFolder.products.findIndex(p => p._id === overProductId);
+
+            if (activeIdx !== -1 && overIdx !== -1) {
+              // Move the product within the folder
+              const newProducts = [...parentFolder.products];
+              const [movedProduct] = newProducts.splice(activeIdx, 1);
+              newProducts.splice(overIdx, 0, movedProduct);
+
+              // Update order values for all products in the folder
+              const updates = newProducts.map((product, index) =>
+                fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${product._id}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ product: { order: index } })
+                })
+              );
+
+              await Promise.all(updates);
+
+              if (selectedCategory) {
+                await handleSelectCategory(selectedCategory);
+              }
+            }
+          } catch (error) {
+            console.error('Error reordering products in folder:', error);
+          }
+          return;
+        }
+      }
+
+      // Otherwise, drag product out of folder
+      let newOrder = items.length; // Default to end
+      const overIndex = items.findIndex(i => i._id === over.id);
+      if (overIndex !== -1) {
+        newOrder = overIndex;
+      }
+
+      try {
+        // Remove product from folder (set folder to null) and set correct order
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${productId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            product: {
+              folder: null,
+              order: newOrder
+            }
+          })
+        });
+
+        if (res.ok) {
+          if (selectedCategory) {
+            await handleSelectCategory(selectedCategory);
+          }
+        }
+      } catch (error) {
+        console.error('Error moving product out of folder:', error);
+      }
+      return;
+    }
+
+    // Handle category reordering
+    if (categories.find(c => c._id === active.id)) {
+      const oldIndex = categories.findIndex(c => c._id === active.id);
+      const newIndex = categories.findIndex(c => c._id === over.id);
+
+      // Update UI optimistically
+      setCategories(draft => {
+        const [movedCategory] = draft.splice(oldIndex, 1);
+        draft.splice(newIndex, 0, movedCategory);
+      });
+
+      // Save to database
+      try {
+        const reorderedCategories = [...categories];
+        const [movedCategory] = reorderedCategories.splice(oldIndex, 1);
+        reorderedCategories.splice(newIndex, 0, movedCategory);
+
+        // Update order values for all categories
+        const updates = reorderedCategories.map((category, index) =>
+          fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${category._id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ order: index })
+          })
+        );
+
+        await Promise.all(updates);
+      } catch (error) {
+        console.error('Error updating category order:', error);
+      }
+
+      return;
+    }
+
+    // Handle item reordering
+    const activeIndex = items.findIndex(i => i._id === active.id);
+    const overIndex = items.findIndex(i => i._id === over.id);
+
+    if (activeIndex === -1 || overIndex === -1) return;
+
+    const activeItem = items[activeIndex];
+    const overItem = items[overIndex];
+
+    // Handle dropping a product onto an EXPANDED empty folder
+    // If folder is expanded and empty, allow adding to it
+    if (activeItem.type === 'product' && overItem.type === 'folder') {
+      const isFolderExpanded = expandedFolders.has(overItem._id);
+      const isFolderEmpty = !overItem.products || overItem.products.length === 0;
+
+      console.log('Dropping on folder:', {
+        folderName: overItem.name,
+        isExpanded: isFolderExpanded,
+        isEmpty: isFolderEmpty
+      });
+
+      if (isFolderExpanded && isFolderEmpty) {
+        try {
+          // Add product to the empty folder
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${activeItem._id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              product: {
+                folder: overItem._id,
+                order: 0
+              }
+            })
+          });
+
+          if (res.ok) {
+            console.log('Successfully added product to empty folder');
+            if (selectedCategory) {
+              await handleSelectCategory(selectedCategory);
+            }
+          }
+        } catch (error) {
+          console.error('Error adding product to folder:', error);
+        }
+        return;
+      }
+      // If folder is collapsed or not empty, treat as reordering (fall through below)
+    }
+
+    // Regular reordering (not dropping on folder)
+    // Update items order
+    setItems(draft => {
+      // Move the item within the draft array
+      const [movedItem] = draft.splice(activeIndex, 1);
+      draft.splice(overIndex, 0, movedItem);
+      
+      // Update order values
+      draft.forEach((item, index) => {
+        item.order = index;
+      });
+    });
+
+    // Save order to database
+    try {
+      const newOrder = overIndex;
+
+      if (activeItem.type === 'folder') {
+        await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders/${activeItem._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order: newOrder })
+        });
+      } else {
+        await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${activeItem._id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product: { order: newOrder } })
+        });
+      }
+
+    } catch (error) {
+      console.error('Error updating order:', error);
+    }
+  };
+
+  const handleAddCategory = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newCategoryName,
+          thumbnail: newCategoryThumbnail,
+          menu: 'shop'
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(draft => {
+          draft.push(data.category);
+        });
+        setNewCategoryName('');
+        setNewCategoryThumbnail('');
+        setAddCategoryOpen(false);
+      }
+    } catch (error) {
+      console.error('Error creating category:', error);
+    }
+  };
+
+  const handleEditCategory = (category) => {
+    setEditingCategory(category);
+    setNewCategoryName(category.name);
+    setNewCategoryThumbnail(category.thumbnail || '');
+    setEditCategoryOpen(true);
+  };
+
+  const handleUpdateCategory = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${editingCategory._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newCategoryName,
+          thumbnail: newCategoryThumbnail,
+          slug: newCategoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(draft => {
+          const index = draft.findIndex(c => c._id === editingCategory._id);
+          if (index !== -1) {
+            draft[index] = data.category;
+          }
+        });
+        setNewCategoryName('');
+        setNewCategoryThumbnail('');
+        setEditCategoryOpen(false);
+        setEditingCategory(null);
+      }
+    } catch (error) {
+      console.error('Error updating category:', error);
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${categoryId}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        setCategories(draft => draft.filter(c => c._id !== categoryId));
+        if (selectedCategory?._id === categoryId) {
+          setSelectedCategory(categories[0] || null);
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting category:', error);
+    }
+  };
+
+  const handleFolderClick = (folderId) => {
+    setExpandedFolders(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(folderId)) {
+        newSet.delete(folderId);
+      } else {
+        newSet.add(folderId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleFolderUpdated = async () => {
+    if (selectedCategory) {
+      await handleSelectCategory(selectedCategory);
+    }
+  };
+
+  const handleFolderDeleted = async () => {
+    if (selectedCategory) {
+      await handleSelectCategory(selectedCategory);
+    }
+  };
+
+  const handleProductClick = (productId) => {
+    setSelectedProductId(productId);
+    setProductSheetOpen(true);
+  };
+
+  const handleNewProduct = () => {
+    if (!selectedCategory) {
+      toast.error('Please select a category first');
+      return;
+    }
+    const tempId = `new-${Date.now()}`;
+    setSelectedProductId(tempId);
+    setProductSheetOpen(true);
+  };
+
+  const handleNewDivider = () => {
+    if (!selectedCategory) {
+      toast.error('Please select a category first');
+      return;
+    }
+    setDividerName('');
+    setDividerDialogOpen(true);
+  };
+
+  const handleCreateDivider = async () => {
+    if (!dividerName.trim()) {
+      toast.error('Please enter a divider name');
+      return;
+    }
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          product: {
+            name: dividerName,
+            type: 'divider',
+            category: selectedCategory._id,
+            order: items.length
+          }
+        })
+      });
+
+      if (res.ok) {
+        setDividerDialogOpen(false);
+        setDividerName('');
+        await handleSelectCategory(selectedCategory);
+      }
+    } catch (error) {
+      console.error('Error creating divider:', error);
+    }
+  };
+
+  const handleProductSaved = async () => {
+    if (selectedCategory) {
+      await handleSelectCategory(selectedCategory);
+    }
+  };
+
+  const handleDividerDelete = async (dividerId) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${dividerId}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        if (selectedCategory) {
+          await handleSelectCategory(selectedCategory);
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting divider:', error);
     }
   };
 
   return (
-    <>
-      {/* Create Category Dialog */}
-      <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
+    <div className="flex h-full">
+      {/* Left Panel - Categories */}
+      <div className="flex flex-col w-56 bg-accent rounded-tr-lg overflow-y-auto h-full">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={categories.map(c => c._id)}>
+            {categories.map((category) => (
+              <SortableCategory
+                key={category._id}
+                category={category}
+                isSelected={selectedCategory?._id === category._id}
+                onSelect={() => handleSelectCategory(category)}
+                onEdit={handleEditCategory}
+                onDelete={handleDeleteCategory}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
+
+        <Button
+          variant="outline"
+          onClick={() => setAddCategoryOpen(true)}
+          className="cursor-pointer h-12 rounded-none border-t border-x-0 border-b-0 justify-start gap-2"
+        >
+          <Plus className="size-4" />
+          Add Category
+        </Button>
+      </div>
+
+      {/* Right Panel - Items */}
+      <div className="flex-1 p-4 overflow-y-auto">
+        <div className="flex items-center justify-end mb-4">
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={() => setFolderSheetOpen(true)}
+              className="cursor-pointer"
+            >
+              <FolderPlus className="size-4 mr-1" />
+              New Folder
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleNewProduct}
+              className="cursor-pointer"
+            >
+              <PackagePlus className="size-4 mr-1" />
+              New Product
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleNewDivider}
+              className="cursor-pointer"
+            >
+              <Plus className="size-4 mr-1" />
+              New Divider
+            </Button>
+          </div>
+        </div>
+
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={[
+            // Exclude dividers from sortable list to avoid grid stretch artifacts
+            ...items.filter(i => i.type !== 'divider').map(i => i._id),
+            ...items.filter(i => i.type === 'folder' && expandedFolders.has(i._id))
+              .flatMap(folder => folder.products?.map(p => `folder-product-${p._id}`) || [])
+          ]} strategy={rectSortingStrategy}>
+            {/*
+              Prevent grid children from stretching when a full-width divider
+              is involved during drag-and-drop by explicitly aligning items
+              to the start on both axes. This avoids the first item below a
+              divider visually expanding to the full row width while dragging.
+            */}
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(96px,1fr))] gap-4 auto-rows-min justify-start items-start justify-items-start">
+              {items.map((item) => (
+                <React.Fragment key={item._id}>
+                  {item.type === 'divider' ? (
+                    <DividerRow
+                      item={item}
+                      onDividerDelete={handleDividerDelete}
+                      onMoveUp={(div) => moveDivider(div, -1)}
+                      onMoveDown={(div) => moveDivider(div, +1)}
+                    />
+                  ) : (
+                    <SortableItem
+                      item={item}
+                      isExpanded={expandedFolders.has(item._id)}
+                      onFolderClick={() => handleFolderClick(item._id)}
+                      onProductClick={() => handleProductClick(item._id)}
+                      onDividerDelete={handleDividerDelete}
+                      isDraggedOver={false}
+                      draggedItemType={draggedItem?.type}
+                      isAdjacentToDragged={false}
+                      activeId={activeId}
+                      overId={overId}
+                    />
+                  )}
+                  {/* When folder is expanded, render its items as peer grid items to keep spacing consistent */}
+                  {item.type === 'folder' && expandedFolders.has(item._id) && item.products && item.products.length > 0 && (
+                    item.products.map((product) => (
+                      <DraggableFolderProduct
+                        key={`inline-${product._id}`}
+                        product={product}
+                        onProductClick={() => handleProductClick(product._id)}
+                        borderColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]}
+                        tintColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]}
+                      />
+                    ))
+                  )}
+                </React.Fragment>
+              ))}
+            </div>
+          </SortableContext>
+
+          <DragOverlay>
+            <DragOverlayItem item={draggedItem} />
+          </DragOverlay>
+        </DndContext>
+      </div>
+
+      {/* Add Category Dialog */}
+      <Dialog open={addCategoryOpen} onOpenChange={setAddCategoryOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Category</DialogTitle>
-            <DialogDescription>
-              Enter a name for the new product category
-            </DialogDescription>
+            <DialogTitle>Add Category</DialogTitle>
+            <DialogDescription>Create a new shop category</DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-16 w-16 rounded-lg bg-primary"
-                onClick={() => {
-                  setCategoryIconMode('create');
-                  setCategoryIconDialogOpen(true);
-                }}
-              >
-                {newCategoryThumbnail ? (
-                  <img src={newCategoryThumbnail} alt="Icon" className="w-full h-full rounded-lg object-cover" />
-                ) : (
-                  <ImageIcon className="size-8" />
-                )}
-              </Button>
-              <Input 
-                placeholder="e.g., Coffees, Pastries, Sandwiches" 
-                value={newCategoryName} 
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Name</label>
+              <Input
+                value={newCategoryName}
                 onChange={(e) => setNewCategoryName(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    saveCategory();
-                  }
-                }}
-                className="flex-1"
+                placeholder="Category name"
               />
             </div>
+            <div>
+              <label className="text-sm font-medium">Icon</label>
+              <div className="flex items-center gap-2">
+                {newCategoryThumbnail && (
+                  <img src={newCategoryThumbnail} alt="Selected icon" className="size-8" />
+                )}
+                <Button
+                  onClick={() => setCategoryIconDialogOpen(true)}
+                  className="cursor-pointer"
+                >
+                  {newCategoryThumbnail ? 'Change Icon' : 'Select Icon'}
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => {
-              setCategoryDialogOpen(false);
-              setNewCategoryName('');
-              setNewCategoryThumbnail('');
-            }}>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddCategoryOpen(false)} className="cursor-pointer">
               Cancel
             </Button>
-            <Button onClick={saveCategory} disabled={!newCategoryName.trim()}>
-              Create Category
+            <Button onClick={handleAddCategory} className="cursor-pointer" disabled={!newCategoryName}>
+              Create
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Edit Category Dialog */}
-      <Dialog open={editCategoryDialogOpen} onOpenChange={setEditCategoryDialogOpen}>
+      <Dialog open={editCategoryOpen} onOpenChange={setEditCategoryOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Category</DialogTitle>
-            <DialogDescription>
-              Update the category name
-            </DialogDescription>
+            <DialogDescription>Update category information</DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-16 w-16 rounded-lg bg-primary"
-                onClick={() => {
-                  setCategoryIconMode('edit');
-                  setCategoryIconDialogOpen(true);
-                }}
-              >
-                {editCategoryThumbnail ? (
-                  <img src={editCategoryThumbnail} alt="Icon" className="w-full h-full rounded-lg object-cover" />
-                ) : (
-                  <ImageIcon className="size-8 text-black" />
-                )}
-              </Button>
-              <Input 
-                placeholder="Category name" 
-                value={editCategoryName} 
-                onChange={(e) => setEditCategoryName(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    updateCategory();
-                  }
-                }}
-                className="flex-1"
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Name</label>
+              <Input
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Category name"
               />
             </div>
+            <div>
+              <label className="text-sm font-medium">Icon</label>
+              <div className="flex items-center gap-2">
+                {newCategoryThumbnail && (
+                  <img src={newCategoryThumbnail} alt="Selected icon" className="size-8" />
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => setCategoryIconDialogOpen(true)}
+                  className="cursor-pointer"
+                >
+                  {newCategoryThumbnail ? 'Change Icon' : 'Select Icon'}
+                </Button>
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => {
-              setEditCategoryDialogOpen(false);
-              setEditingCategory(null);
-              setEditCategoryName('');
-              setEditCategoryThumbnail('');
-            }}>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditCategoryOpen(false)} className="cursor-pointer">
               Cancel
             </Button>
-            <Button onClick={updateCategory} disabled={!editCategoryName.trim()}>
-              Update Category
+            <Button onClick={handleUpdateCategory} className="cursor-pointer" disabled={!newCategoryName}>
+              Update
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* FOR ADDING SOMETHING */}
-      <Dialog
-        open={addItemOpen} onOpenChange={setAddItemOpen}
-      >
-        <DialogTrigger asChild>
-          <span style={{ display: "none" }} />
-        </DialogTrigger>
+      {/* New Divider Dialog */}
+      <Dialog open={dividerDialogOpen} onOpenChange={setDividerDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Enter New Modification Name</DialogTitle>
-            <DialogDescription>
-              Enter a Modification, i.e. Milk, Extras, Sugar, etc
-            </DialogDescription>
+            <DialogTitle>Create Divider</DialogTitle>
+            <DialogDescription>Add a visual divider to organize your products</DialogDescription>
           </DialogHeader>
-          <Input placeholder="Milk" value={addItem.name || ""} 
-            onChange={(e) => {
-              setAddItem({...addItem, name: e.target.value})
-            }}
-          />
-          <Button
-            onClick={() => {
-              addModCat({pIdx: addItem.pIdx, name: addItem.name, multi: false})
-              setAddItemOpen(false)
-              setAddItem({})
-            }}
-          >
-            Save
-          </Button>
-
-        </DialogContent>
-      </Dialog>
-
-      {/* FOR DELETING SOMETHING */}
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-        <AlertDialogPortal>
-          <AlertDialogOverlay />
-          <AlertDialogContent
-            onCloseAutoFocus={(event) => {
-              event.preventDefault();
-              document.body.style.pointerEvents = '';
-            }}
-          >
-            <AlertDialogTitle>Delete</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete?
-            </AlertDialogDescription>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={() => handleDelete()}>
-                Delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialogPortal>
-      </AlertDialog>
-
-      <div className="p-2 pl-0 pr-4 pb-0 h-full flex flex-col">
-        {/* Top header row */}
-        <div className="p-4 pt-0">Manage Shop Products</div>
-        
-        {/* Main content area */}
-        <div className="flex gap-4- flex-1 overflow-hidden">
-          {/* Categories and Folders Menu */}
-          <div className="flex flex-col w-64 rounded-tr-lg h-full bg-accent/30">
-            <div className="p-2 flex items-center">
-              <div className="text-xs text-muted-foreground font-semibold ml-2">Categories</div>
-              <div className="flex-1" />
-              {editMode ? (
-                <div className="flex gap-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setEditMode(false)}
-                    className="rounded-lg"
-                  >
-                    <Check className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant=""
-                      size="icon"
-                      className="rounded-lg mr-1"
-                    >
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => setCategoryDialogOpen(true)}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      New Category
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setEditMode(true)}>
-                      <Edit2 className="h-4 w-4 mr-2" />
-                      Edit List
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link href="/products/mods" className="flex cursor-pointer">
-                        <ExternalLink className="h-4 w-4 mr-2" />
-                        Manage Mods
-                      </Link>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-            <div className="flex-1 overflow-y-auto min-h-0 px-2">
-              <CategoryFolderMenu
-                categories={categories}
-                folders={folders}
-                selectedCategory={category}
-                selectedFolder={selectedFolder}
-                editMode={editMode}
-                onCategoriesReorder={(reorderedCategories) => {
-                  setCategories(reorderedCategories);
-                }}
-                onCategorySelect={(cat) => {
-                  if (!editMode) {
-                    setCategory(cat);
-                    setSelectedFolder(null);
-                    getCategoryProducts(cat);
-                  }
-                }}
-                onFolderSelect={async (folder, cat) => {
-                  setSelectedFolder(folder);
-                  if (category._id !== cat._id) {
-                    // Switching to a different category
-                    setCategory(cat);
-                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${cat._id}/products`);
-                    const data = await res.json();
-                    const categoryProducts = data.products || [];
-                    setAllProducts(categoryProducts);
-                    
-                    // Filter by the selected folder
-                    const filtered = categoryProducts.filter(p => p.folder?._id === folder._id);
-                    setProducts(filtered);
-                  } else {
-                    // Same category, just filter by folder
-                    const filtered = allProducts.filter(p => p.folder?._id === folder._id);
-                    setProducts(filtered);
-                  }
-                }}
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium">Divider Name</label>
+              <Input
+                value={dividerName}
+                onChange={(e) => setDividerName(e.target.value)}
+                placeholder="e.g., Hot Drinks, Cold Drinks"
               />
             </div>
           </div>
-          
-          {/* Products Content */}
-          <div className="flex-1 pl-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-start gap-2">
-                    {category?.name && (
-                      <>
-                        <div className="flex flex-col gap-2">
-                          <div className="text-sm font-medium">
-                            {category.name}
-                          </div>
-                          <ProductThumbnail
-                            src={category.thumbnail}
-                            alt={category.name}
-                            size="md"
-                            fallbackIcon={Tag}
-                          />
-                        </div>
-                        
-                        {/* Category actions menu */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start">
-                            <DropdownMenuItem onClick={() => {
-                              setCategory(category);
-                              setFolderSheetOpen(true);
-                            }}>
-                              <Plus className="h-4 w-4 mr-2" />
-                              Add Folder
-                            </DropdownMenuItem>
-                            {folders.length > 0 && (
-                              <DropdownMenuItem onClick={() => {
-                                setCategory(category);
-                                setFolderSheetOpen(true);
-                              }}>
-                                <FolderIcon className="h-4 w-4 mr-2" />
-                                Manage Folders
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem onClick={() => {
-                              setEditingCategory(category);
-                              setEditCategoryName(category.name);
-                              setEditCategoryThumbnail(category.thumbnail || '');
-                              setCategoryIconMode('edit');
-                              setCategoryIconDialogOpen(true);
-                            }}>
-                              <ImageIcon className="h-4 w-4 mr-2" />
-                              Edit Icon
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
-                              setEditingCategory(category);
-                              setEditCategoryName(category.name);
-                              setEditCategoryThumbnail(category.thumbnail || '');
-                              setEditCategoryDialogOpen(true);
-                            }}>
-                              <Edit2 className="h-4 w-4 mr-2" />
-                              Edit Category
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => {
-                                setToDelete({ category: category });
-                                setDeleteOpen(true);
-                              }}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </>
-                    )}
-                    {selectedFolder && (
-                      <div className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted">
-                        <div
-                          style={{ 
-                            backgroundColor: colors?.[selectedFolder.color?.split('-')[0]]?.[selectedFolder.color?.split('-')[1]] 
-                          }}
-                          className="w-3 h-3 rounded-sm"
-                        />
-                        <span className="text-sm">{selectedFolder.name}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                {/* New Product Button - moved to right */}
-                {category._id && (
-                   <Button
-                     className="cursor-pointer"
-                     size="sm"
-                     onClick={() => {
-                       const newProductId = addProduct(selectedFolder);
-                       setSelectedProductId(newProductId);
-                       setSheetOpen(true);
-                     }}
-                   >
-                     <Plus className="size-4" /> Product
-                   </Button>
-                 )}
-              </div>
-              
-            {/* Save status indicator (removed All changes saved) */}
-            {/* {category._id && products.length > 0 && (
-              <div className="pb-2">
-                {isAnySaving && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    <span>Saving changes...</span>
-                  </div>
-                )}
-                {!isAnySaving && hasAnyUnsaved && (
-                  <div className="flex items-center gap-2 text-sm text-orange-500">
-                    <Save className="h-3 w-3 animate-pulse" />
-                    <span>Unsaved changes</span>
-                  </div>
-                )}
-              </div>
-            )} */}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDividerDialogOpen(false)} className="cursor-pointer">
+              Cancel
+            </Button>
+            <Button onClick={handleCreateDivider} className="cursor-pointer" disabled={!dividerName.trim()}>
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-              <div className="mt-6">
-                {/* Products Table */}
-                  {products && products.length > 0 ? (
-                    <div className="">
-                      <ProductsTable
-                        products={products}
-                        onProductClick={(product, idx) => {
-                          setSelectedProductId(product._id || idx);
-                          setSheetOpen(true);
-                        }}
-                        onProductsReorder={(reorderedProducts) => {
-                          setProducts(draft => {
-                            // Replace the entire array with reordered products
-                            draft.length = 0;
-                            reorderedProducts.forEach((p, idx) => {
-                              draft.push({
-                                ...p,
-                                order: idx,
-                                updated: true
-                              });
-                            });
-                          });
-                        }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No products found. Click "New Product" to add one.
-                    </div>
-                  )}
-              </div>
-                  
-                  {/* Product Details Sheet */}
-                  <ProductSheet
-                    open={sheetOpen}
-                    onOpenChange={setSheetOpen}
-                    products={products}
-                    selectedProductId={selectedProductId}
-                    category={category}
-                    setProducts={setProducts}
-                    isDirty={isDirty}
-                    saving={saving}
-                    markAsSaved={markAsSaved}
-                    setIconDialogOpen={setIconDialogOpen}
-                    setIconDialogProductIdx={setIconDialogProductIdx}
-                    setIconDialogQuery={setIconDialogQuery}
-                    setAddItem={setAddItem}
-                    setAddItemOpen={setAddItemOpen}
-                    setDeleteOpen={setDeleteOpen}
-                    setToDelete={setToDelete}
-                  />
-          </div>
-        </div>
-      </div>
-
-      <Delete
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        name={toDelete?.category ? `${toDelete.category.name} category` : `${toDelete?.product?.name}`}
-        onConfirm={() => {
-          console.log(toDelete);
-          if (toDelete.category) {
-            deleteCategory({
-              category: toDelete.category,
-              setCategory,
-              setCategories,
-              categories
-            });
-          } else {
-            deleteProduct({...toDelete});
-          }
-          setDeleteOpen(false);
-        }}
-      />
-      <IconSelect
-        open={iconDialogOpen}
-        setOpen={setIconDialogOpen}
-        pIdx={iconDialogProductIdx}
-        query={iconDialogQuery}
-        updateProduct={updateProduct}
-      />
-      
       {/* Folder Management Sheet */}
       <FolderManagementSheet
         open={folderSheetOpen}
         onOpenChange={setFolderSheetOpen}
-        category={category}
-        onFolderUpdated={(folder, isNew) => {
-          // Refresh the folders list
-          fetchAllFolders();
-          setFolderRefreshTrigger(prev => prev + 1);
-        }}
-        onFolderDeleted={(deletedFolderId) => {
-          // If the deleted folder was selected, clear the selection
-          if (selectedFolder?._id === deletedFolderId) {
-            setSelectedFolder(null);
-            setProducts(allProducts);
-          }
-          // Refresh the folders list
-          fetchAllFolders();
-          setFolderRefreshTrigger(prev => prev + 1);
-        }}
+        onFolderUpdated={handleFolderUpdated}
+        onFolderDeleted={handleFolderDeleted}
+        category={selectedCategory}
       />
-      
+
+      {/* Product Sheet */}
+      <StandaloneProductSheet
+        open={productSheetOpen}
+        onOpenChange={setProductSheetOpen}
+        productId={selectedProductId}
+        category={selectedCategory}
+        onProductSaved={handleProductSaved}
+        onIconClick={() => setProductIconDialogOpen(true)}
+      />
+
       {/* Category Icon Select Dialog */}
       <IconSelect
         open={categoryIconDialogOpen}
         setOpen={setCategoryIconDialogOpen}
-        query={categoryIconMode === 'create' ? newCategoryName : editCategoryName}
-        title="Select Category Icon"
-        onIconSelected={async (thumbnail) => {
-          if (categoryIconMode === 'create') {
-            setNewCategoryThumbnail(thumbnail);
-          } else {
-            setEditCategoryThumbnail(thumbnail);
-            // Immediately save the icon when selected in edit mode
-            if (editingCategory) {
-              const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories/${editingCategory._id}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                  thumbnail: thumbnail 
-                }),
-              });
-              const data = await res.json();
-              
-              if (data.category) {
-                // Update the category in the list
-                setCategories(categories.map(c => 
-                  c._id === editingCategory._id ? { ...c, thumbnail: thumbnail } : c
-                ));
-                
-                // Update the current category if it's the one being edited
-                if (category._id === editingCategory._id) {
-                  setCategory({ ...category, thumbnail: thumbnail });
-                }
-              }
-            }
-          }
+        onIconSelected={(icon) => {
+          setNewCategoryThumbnail(icon);
           setCategoryIconDialogOpen(false);
         }}
+        query=""
       />
-    </>
+
+      {/* Product Icon Select Dialog */}
+      <IconSelect
+        open={productIconDialogOpen}
+        setOpen={setProductIconDialogOpen}
+        onIconSelected={async (icon) => {
+          if (selectedProductId) {
+            try {
+              const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${selectedProductId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product: { thumbnail: icon } })
+              });
+
+              if (res.ok) {
+                if (selectedCategory) {
+                  await handleSelectCategory(selectedCategory);
+                }
+              }
+            } catch (error) {
+              console.error('Error updating product icon:', error);
+            }
+          }
+          setProductIconDialogOpen(false);
+        }}
+        query={productIconQuery}
+      />
+    </div>
   );
 }

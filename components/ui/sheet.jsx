@@ -51,6 +51,21 @@ function SheetContent({
   side = "right",
   ...props
 }) {
+  // Check if children contains a SheetTitle
+  const hasTitle = React.Children.toArray(children).some(child => {
+    if (React.isValidElement(child)) {
+      // Check if it's a SheetHeader containing a SheetTitle
+      if (child.type === SheetHeader) {
+        return React.Children.toArray(child.props.children).some(headerChild => 
+          React.isValidElement(headerChild) && headerChild.type === SheetTitle
+        );
+      }
+      // Check if it's a direct SheetTitle
+      return child.type === SheetTitle;
+    }
+    return false;
+  });
+
   return (
     <SheetPortal>
       <SheetOverlay />
@@ -69,6 +84,12 @@ function SheetContent({
           className
         )}
         {...props}>
+        {/* Add a visually hidden title for accessibility if no title is provided */}
+        {!hasTitle && (
+          <SheetPrimitive.Title className="sr-only">
+            Dialog
+          </SheetPrimitive.Title>
+        )}
         {children}
         <SheetPrimitive.Close
           className="ring-offset-background focus:ring-ring data-[state=open]:bg-secondary absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none">

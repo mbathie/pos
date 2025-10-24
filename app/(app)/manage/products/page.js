@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from '@/components/ui/label';
 import { Search, X, ChevronsUpDown, Edit, Warehouse, Image, Tag } from 'lucide-react';
 import colors from '@/lib/tailwind-colors';
-import AccountingSelect from '@/app/(app)/products/shop/accounting-select';
+import AccountingSelect from '@/app/(app)/products/shopold/accounting-select';
 
 export default function ManageProductsPage() {
   const [allProducts, setAllProducts] = useState([]);
@@ -279,11 +279,12 @@ export default function ManageProductsPage() {
 
   // Filter and sort products locally
   const filteredProducts = allProducts
+    .filter(product => product.type !== 'divider') // Exclude dividers from product management
     .filter(product => {
       const matchesCategory = filters.category === 'all' || product.category?._id === filters.category;
-      const matchesSearch = !filters.search || 
+      const matchesSearch = !filters.search ||
         product.name.toLowerCase().includes(filters.search.toLowerCase());
-      const matchesPublish = filters.publish === 'all' || 
+      const matchesPublish = filters.publish === 'all' ||
         (filters.publish === 'published' && product.publish !== false) ||
         (filters.publish === 'unpublished' && product.publish === false);
       return matchesCategory && matchesSearch && matchesPublish;

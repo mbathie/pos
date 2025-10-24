@@ -20,10 +20,12 @@ export default function Page() {
   const [products, setProducts] = useState([])
   const [productsInit, setProductsInit] = useState([])
   const [folders, setFolders] = useState([])
+  const [items, setItems] = useState([]) // Ordered list of folders, products, and dividers
   const [product, setProduct] = useImmer(null)
   const [open , setOpen] = useState(false)
 
   const [folder, setFolder] = useState(null)
+  const [expandedFolders, setExpandedFolders] = useState(new Set())
 
   const [total, setTotal] = useState(0)
   const router = useRouter();
@@ -37,29 +39,70 @@ export default function Page() {
 
   const handleSetCat = async (c) => {
     setCategory(c);
-    setFolder(null); // Reset the selected folder when changing categories
+    setFolder(null);
+    setExpandedFolders(new Set());
+
     const p = await getProducts({ category: c });
 
-    const foldersMap = {};
-    const folderArray = [];
-    const productArray = [];
+    // Fetch folders for this category
+    const foldersRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders?category=${c._id}`);
+    const foldersData = await foldersRes.json();
 
-    for (const product of p.products) {
-      if (product.folder && product.folder._id) {
-        if (!foldersMap[product.folder._id]) {
-          foldersMap[product.folder._id] = {
-            name: product.folder.name,
-            _id: product.folder._id,
-            color: product.folder.color,
-            products: []
-          };
-          folderArray.push(foldersMap[product.folder._id]);
-        }
+    // Build unified items array (folders, products, dividers) in order
+    const allItems = [];
+    const foldersMap = {};
+
+    // Process folders
+    const allFolders = Array.isArray(foldersData) ? foldersData : [];
+    allFolders.forEach(folder => {
+      const folderItem = {
+        ...folder,
+        type: 'folder',
+        products: []
+      };
+      foldersMap[folder._id] = folderItem;
+      allItems.push(folderItem);
+    });
+
+    // Process products
+    const productsData = Array.isArray(p.products) ? p.products : [];
+
+    for (const product of productsData) {
+      if (product.type === 'divider') {
+        allItems.push({
+          ...product,
+          type: 'divider'
+        });
+      } else if (product.folder && product.folder._id && foldersMap[product.folder._id]) {
+        // Add to folder's products array
         foldersMap[product.folder._id].products.push(product);
       } else {
-        productArray.push(product);
+        // Standalone product
+        allItems.push({
+          ...product,
+          type: 'product'
+        });
       }
     }
+
+    // Sort all items by order
+    allItems.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+    // Sort products within folders
+    Object.values(foldersMap).forEach(folder => {
+      folder.products.sort((a, b) => (a.order || 0) - (b.order || 0));
+    });
+
+    setItems(allItems);
+
+    // Keep legacy state for backward compatibility
+    const folderArray = allFolders.map(f => ({
+      name: f.name,
+      _id: f._id,
+      color: f.color,
+      products: foldersMap[f._id]?.products || []
+    }));
+    const productArray = allItems.filter(i => i.type === 'product');
 
     setProducts(productArray);
     setProductsInit(productArray);
@@ -81,58 +124,100 @@ export default function Page() {
         {/* Right Panel */}
 
         <div className='flex flex-1 flex-wrap gap-4 text-sm content-start'>
+          {items.map((item) => {
+            // Render dividers
+            if (item.type === 'divider') {
+              return (
+                <div key={item._id} className='w-full'>
+                  <div className='flex items-center gap-4 my-4'>
+                    <div className='flex-1 h-px bg-border' />
+                    <div className='text-sm font-medium text-muted-foreground uppercase tracking-wide'>
+                      {item.name}
+                    </div>
+                    <div className='flex-1 h-px bg-border' />
+                  </div>
+                </div>
+              );
+            }
 
-          <div className='flex flex-wrap gap-4 text-sm content-start'>
-
-            {folders?.map((f) => {
-              const isOpen = folder?._id === f._id;
-              if (!folder || isOpen) {
-                return (
-                  <div key={f._id} className='relative w-24 flex flex-col text-center text-xs'>
+            // Render folders
+            if (item.type === 'folder') {
+              // Hide empty folders in retail view
+              if (!item.products || item.products.length === 0) {
+                return null;
+              }
+              const isExpanded = expandedFolders.has(item._id);
+              return (
+                <React.Fragment key={item._id}>
+                  <div className='relative w-24 flex flex-col text-center text-xs'>
                     <div
                       onClick={() => {
-                        setFolder(isOpen ? null : f);
-                        setProducts(isOpen ? productsInit : f.products);
+                        const newExpanded = new Set(expandedFolders);
+                        if (isExpanded) {
+                          newExpanded.delete(item._id);
+                        } else {
+                          newExpanded.add(item._id);
+                        }
+                        setExpandedFolders(newExpanded);
                       }}
                       className='cursor-pointer size-24 rounded-lg flex items-center justify-center'
                       style={{
-                        backgroundColor: colors?.[f.color?.split('-')[0]]?.[f.color?.split('-')[1]]
+                        backgroundColor: colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]]
                       }}
                     >
-                      {isOpen ? (
+                      {isExpanded ? (
                         <Minus strokeWidth={1} className='size-10 opacity-60' />
                       ) : (
                         <Plus strokeWidth={1} className='size-10 opacity-60' />
                       )}
                     </div>
-                    <div>{f.name}</div>
+                    <div className='mt-1'>{item.name}</div>
+                    <div className='text-muted-foreground text-xs'>
+                      {item.products?.length || 0} {item.products?.length === 1 ? 'item' : 'items'}
+                    </div>
                   </div>
-                );
-              }
-              return null;
-            })}
+                  {/* When expanded, emit products inline so spacing is consistent */}
+                  {isExpanded && item.products && item.products.length > 0 && (
+                    item.products.map((p) => (
+                      <Product
+                        key={`inline-${p._id}`}
+                        product={p}
+                        borderColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]]}
+                        tintColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]]}
+                        onClick={() => {
+                          const cartProduct = {
+                            ...p,
+                            stockQty: p.qty,
+                            qty: 1
+                          }
+                          setProduct(cartProduct)
+                          setOpen(true)
+                        }}
+                      />
+                    ))
+                  )}
+                </React.Fragment>
+              );
+            }
 
-            {products?.map((p) => (
+            // Render products
+            return (
               <Product
-                key={p._id}
-                product={p}
+                key={item._id}
+                product={item}
                 onClick={() => {
-                  console.log(p)
-                  // Initialize product for cart with separate cart quantity
+                  console.log(item)
                   const cartProduct = {
-                    ...p,
-                    stockQty: p.qty, // Preserve original stock quantity
-                    qty: 1 // Initialize cart quantity to 1
+                    ...item,
+                    stockQty: item.qty,
+                    qty: 1
                   }
                   setProduct(cartProduct)
                   setOpen(true)
                 }}
               />
-            ))}
-          </div>
-
-
-
+            );
+          })}
         </div>
 
         {/* cart */}
