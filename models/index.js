@@ -18,6 +18,7 @@ import Membership from './Membership.js';
 import Checkin from './Checkin.js';
 import ModGroup from './ModGroup.js';
 import Mod from './Mod.js';
+import ProductGroup from './ProductGroup.js';
 
 // Export all models
 export {
@@ -39,5 +40,6 @@ export {
   Membership,
   Checkin,
   ModGroup,
-  Mod
+  Mod,
+  ProductGroup
 };
