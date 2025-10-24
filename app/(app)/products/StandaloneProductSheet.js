@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { FolderSelect } from './shopold/FolderSelect';
 import { FolderManagementSheet } from './shopold/FolderManagementSheet';
 import AccountingSelect from './shopold/accounting-select';
+import ModsManager from '@/components/mods/mods-manager';
 import {
   MultiSelect,
   MultiSelectTrigger,
@@ -40,6 +41,7 @@ export default function StandaloneProductSheet({
   const [isDirty, setIsDirty] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [folderSheetOpen, setFolderSheetOpen] = useState(false);
+  const [modsSheetOpen, setModsSheetOpen] = useState(false);
   const [folderRefreshTrigger, setFolderRefreshTrigger] = useState(0);
   const [availableModGroups, setAvailableModGroups] = useState([]);
   const [selectedModGroups, setSelectedModGroups] = useState([]);
@@ -524,11 +526,9 @@ export default function StandaloneProductSheet({
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label>Mods</Label>
-                <Link href="/products/mods">
-                  <Button variant="outline" size="sm" className="cursor-pointer">
-                    Manage Mods
-                  </Button>
-                </Link>
+                <Button variant="outline" size="sm" className="cursor-pointer" onClick={() => setModsSheetOpen(true)}>
+                  Manage Mods
+                </Button>
               </div>
               <MultiSelect
                 values={selectedModGroups}
@@ -625,6 +625,36 @@ export default function StandaloneProductSheet({
           setFolderRefreshTrigger(prev => prev + 1);
         }}
       />
+
+      {/* Mods Management Sheet */}
+      <Sheet open={modsSheetOpen} onOpenChange={(open) => {
+        setModsSheetOpen(open);
+        // Refresh mod groups when sheet closes
+        if (!open) {
+          const fetchModGroups = async () => {
+            try {
+              setLoadingModGroups(true);
+              const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/modgroups`, {
+                credentials: 'include'
+              });
+              const data = await res.json();
+              setAvailableModGroups(data.modGroups || []);
+            } catch (error) {
+              console.error('Error fetching mod groups:', error);
+            } finally {
+              setLoadingModGroups(false);
+            }
+          };
+          fetchModGroups();
+        }
+      }}>
+        <SheetContent className="w-[75vw] sm:max-w-[75vw] overflow-y-auto p-4">
+          <SheetHeader>
+            <SheetTitle>Manage Product Modifications</SheetTitle>
+          </SheetHeader>
+          <ModsManager />
+        </SheetContent>
+      </Sheet>
     </>
   );
 }
