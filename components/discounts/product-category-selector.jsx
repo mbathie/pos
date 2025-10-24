@@ -16,7 +16,8 @@ export default function ProductCategorySelector({
   selectedCategories = new Set(),
   onSelectionChange,
   placeholder = "Select categories and/or products",
-  className = ""
+  className = "",
+  excludeTypes = []
 }) {
   const handleValuesChange = (values) => {
     const newProducts = new Set();
@@ -79,7 +80,10 @@ export default function ProductCategorySelector({
               );
 
               // Add products in this category
-              const sortedProducts = [...(category.products || [])].sort((a, b) =>
+              const sortedProducts = [...(category.products || [])]
+                // Optional filter to exclude types (e.g., 'divider')
+                .filter(p => !excludeTypes.includes(p.type))
+                .sort((a, b) =>
                 (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
               );
               

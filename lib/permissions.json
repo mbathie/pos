@@ -26,6 +26,7 @@
         "/manage/accounting",
         "/manage/terminals",
         "/manage/adjustments",
+        "/products/groups",
         "/sample-table",
         "/style-guide"
       ],
