@@ -102,21 +102,47 @@ export default function TransactionDetailsPage() {
     }
   };
 
-  // Group products by type
+  // Group products by type, handling product groups (gId)
   const groupProductsByType = (products) => {
     const grouped = {};
+    const processedGIds = new Set();
+
     products?.forEach(product => {
       const type = product.type || 'unknown';
       if (!grouped[type]) {
         grouped[type] = [];
       }
-      grouped[type].push(product);
+
+      // Check if this is a grouped product
+      if (product.gId) {
+        // Only add the group once (first product with this gId)
+        if (!processedGIds.has(product.gId)) {
+          processedGIds.add(product.gId);
+
+          // Collect all products with the same gId
+          const groupProducts = products.filter(p => p.gId === product.gId);
+
+          // Add a group wrapper
+          grouped[type].push({
+            isGroup: true,
+            gId: product.gId,
+            groupName: product.groupName,
+            groupAmount: product.groupAmount,
+            products: groupProducts,
+            adjustments: product.adjustments
+          });
+        }
+      } else {
+        // Regular product
+        grouped[type].push(product);
+      }
     });
+
     return grouped;
   };
 
-  const ShopProductsCard = ({ products }) => (
-    <Card>
+  const ShopProductsCard = ({ products, isGrouped }) => (
+    <Card className={isGrouped ? 'ml-4' : ''}>
       <CardHeader>
         <CardTitle>Shop Items</CardTitle>
       </CardHeader>
@@ -142,7 +168,7 @@ export default function TransactionDetailsPage() {
                 <TableCell>
                   <div className="flex flex-wrap gap-1">
                     {product.item?.modGroups?.length > 0 ? (
-                      product.item.modGroups.map((group) => 
+                      product.item.modGroups.map((group) =>
                         group.mods.filter(mod => mod.selected).map((mod, modIndex) => (
                           <Badge key={`${group._id}-${modIndex}`} variant="secondary" className="text-xs">
                             {mod.name}
@@ -155,18 +181,34 @@ export default function TransactionDetailsPage() {
                 </TableCell>
                 <TableCell>{product.qty}</TableCell>
                 <TableCell className="text-right">
-                  {formatCurrency(product.amount?.subtotal)}
+                  {isGrouped ? (
+                    <span className="line-through text-muted-foreground">
+                      {formatCurrency(product.amount?.subtotal)}
+                    </span>
+                  ) : (
+                    formatCurrency(product.amount?.subtotal)
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
-                  {product.adjustments?.surcharges?.total > 0 ? 
-                    `+${formatCurrency(product.adjustments.surcharges.total)}` : '-'}
+                  {isGrouped ? '-' : (
+                    product.adjustments?.surcharges?.total > 0 ?
+                      `+${formatCurrency(product.adjustments.surcharges.total)}` : '-'
+                  )}
                 </TableCell>
                 <TableCell className="text-right">
-                  {product.adjustments?.discounts?.total > 0 ? 
-                    `-${formatCurrency(product.adjustments.discounts.total)}` : '-'}
+                  {isGrouped ? '-' : (
+                    product.adjustments?.discounts?.total > 0 ?
+                      `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
+                  )}
                 </TableCell>
                 <TableCell className="text-right font-medium">
-                  {formatCurrency((product.amount?.subtotal || 0) + (product.adjustments?.surcharges?.total || 0) - (product.adjustments?.discounts?.total || 0))}
+                  {isGrouped ? (
+                    <span className="line-through text-muted-foreground">
+                      {formatCurrency((product.amount?.subtotal || 0) + (product.adjustments?.surcharges?.total || 0) - (product.adjustments?.discounts?.total || 0))}
+                    </span>
+                  ) : (
+                    formatCurrency((product.amount?.subtotal || 0) + (product.adjustments?.surcharges?.total || 0) - (product.adjustments?.discounts?.total || 0))
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -176,8 +218,8 @@ export default function TransactionDetailsPage() {
     </Card>
   );
 
-  const ClassProductsCard = ({ products }) => (
-    <Card>
+  const ClassProductsCard = ({ products, isGrouped }) => (
+    <Card className={isGrouped ? 'ml-4' : ''}>
       <CardHeader>
         <CardTitle>Class Bookings</CardTitle>
       </CardHeader>
@@ -230,13 +272,27 @@ export default function TransactionDetailsPage() {
                   </div>
                 </TableCell>
                 <TableCell className="text-right align-top">
-                  {formatCurrency(product.amount?.subtotal)}
+                  {isGrouped ? (
+                    <span className="line-through text-muted-foreground">
+                      {formatCurrency(product.amount?.subtotal)}
+                    </span>
+                  ) : (
+                    formatCurrency(product.amount?.subtotal)
+                  )}
                 </TableCell>
                 <TableCell className="text-right align-top">
-                  {product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'}
+                  {isGrouped ? '-' : (
+                    product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
+                  )}
                 </TableCell>
                 <TableCell className="text-right align-top font-medium">
-                  {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
+                  {isGrouped ? (
+                    <span className="line-through text-muted-foreground">
+                      {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
+                    </span>
+                  ) : (
+                    formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -246,8 +302,8 @@ export default function TransactionDetailsPage() {
     </Card>
   );
 
-  const CourseProductsCard = ({ products }) => (
-    <Card>
+  const CourseProductsCard = ({ products, isGrouped }) => (
+    <Card className={isGrouped ? 'ml-4' : ''}>
       <CardHeader>
         <CardTitle>Courses</CardTitle>
       </CardHeader>
@@ -300,13 +356,27 @@ export default function TransactionDetailsPage() {
                   </div>
                 </TableCell>
                 <TableCell className="text-right align-top">
-                  {formatCurrency(product.amount?.subtotal)}
+                  {isGrouped ? (
+                    <span className="line-through text-muted-foreground">
+                      {formatCurrency(product.amount?.subtotal)}
+                    </span>
+                  ) : (
+                    formatCurrency(product.amount?.subtotal)
+                  )}
                 </TableCell>
                 <TableCell className="text-right align-top">
-                  {product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'}
+                  {isGrouped ? '-' : (
+                    product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
+                  )}
                 </TableCell>
                 <TableCell className="text-right align-top font-medium">
-                  {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
+                  {isGrouped ? (
+                    <span className="line-through text-muted-foreground">
+                      {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
+                    </span>
+                  ) : (
+                    formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -316,8 +386,8 @@ export default function TransactionDetailsPage() {
     </Card>
   );
 
-  const GeneralProductsCard = ({ products }) => (
-    <Card>
+  const GeneralProductsCard = ({ products, isGrouped }) => (
+    <Card className={isGrouped ? 'ml-4' : ''}>
       <CardHeader>
         <CardTitle>General Entries</CardTitle>
       </CardHeader>
@@ -357,13 +427,27 @@ export default function TransactionDetailsPage() {
                   </div>
                 </TableCell>
                 <TableCell className="text-right align-top">
-                  {formatCurrency(product.amount?.subtotal)}
+                  {isGrouped ? (
+                    <span className="line-through text-muted-foreground">
+                      {formatCurrency(product.amount?.subtotal)}
+                    </span>
+                  ) : (
+                    formatCurrency(product.amount?.subtotal)
+                  )}
                 </TableCell>
                 <TableCell className="text-right align-top">
-                  {product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'}
+                  {isGrouped ? '-' : (
+                    product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
+                  )}
                 </TableCell>
                 <TableCell className="text-right align-top font-medium">
-                  {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
+                  {isGrouped ? (
+                    <span className="line-through text-muted-foreground">
+                      {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
+                    </span>
+                  ) : (
+                    formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -373,8 +457,8 @@ export default function TransactionDetailsPage() {
     </Card>
   );
 
-  const MembershipProductsCard = ({ products }) => (
-    <Card>
+  const MembershipProductsCard = ({ products, isGrouped }) => (
+    <Card className={isGrouped ? 'ml-4' : ''}>
       <CardHeader>
         <CardTitle>Membership Subscriptions</CardTitle>
       </CardHeader>
@@ -413,8 +497,8 @@ export default function TransactionDetailsPage() {
                         {price.customers?.map((customer, cIndex) => (
                           customer.customer && (
                             <div key={cIndex}>
-                              {customer.dependent ? 
-                                `${customer.dependent.name} (${price.name})` : 
+                              {customer.dependent ?
+                                `${customer.dependent.name} (${price.name})` :
                                 `${customer.customer.name} (${price.name})`
                               }
                             </div>
@@ -426,19 +510,33 @@ export default function TransactionDetailsPage() {
                 </TableCell>
                 <TableCell className="align-top">
                   <Badge variant="outline" className="text-xs">
-                    {transaction.status === 'subscription_active' ? 'Active' : 
-                     transaction.status === 'first_period_paid' ? 'Setup Complete' : 
+                    {transaction.status === 'subscription_active' ? 'Active' :
+                     transaction.status === 'first_period_paid' ? 'Setup Complete' :
                      'Processing'}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right align-top">
-                  {formatCurrency(product.amount?.subtotal)}
+                  {isGrouped ? (
+                    <span className="line-through text-muted-foreground">
+                      {formatCurrency(product.amount?.subtotal)}
+                    </span>
+                  ) : (
+                    formatCurrency(product.amount?.subtotal)
+                  )}
                 </TableCell>
                 <TableCell className="text-right align-top">
-                  {product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'}
+                  {isGrouped ? '-' : (
+                    product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
+                  )}
                 </TableCell>
                 <TableCell className="text-right align-top font-medium">
-                  {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
+                  {isGrouped ? (
+                    <span className="line-through text-muted-foreground">
+                      {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
+                    </span>
+                  ) : (
+                    formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -675,23 +773,303 @@ export default function TransactionDetailsPage() {
 
       {/* Product Cards by Type */}
       {productGroups.shop && (
-        <ShopProductsCard products={productGroups.shop} />
+        <>
+          {productGroups.shop.map((item, index) => {
+            if (item.isGroup) {
+              const groupSubtotal = item.groupAmount || 0;
+              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
+              const groupDiscounts = item.adjustments?.discounts?.total || 0;
+              const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
+
+              // Separate products by type within the group
+              const shopProducts = item.products.filter(p => p.type === 'shop');
+              const classProducts = item.products.filter(p => p.type === 'class');
+              const courseProducts = item.products.filter(p => p.type === 'course');
+              const generalProducts = item.products.filter(p => p.type === 'general');
+              const membershipProducts = item.products.filter(p => p.type === 'membership');
+
+              return (
+                <div key={`shop-group-${item.gId}`} className="space-y-2">
+                  <Card className="bg-muted/30">
+                    <CardHeader>
+                      <CardTitle>{item.groupName}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Subtotal</span>
+                          <span>{formatCurrency(groupSubtotal)}</span>
+                        </div>
+                        {groupSurcharges > 0 && (
+                          <div className="flex justify-between">
+                            <span>Surcharges</span>
+                            <span>+{formatCurrency(groupSurcharges)}</span>
+                          </div>
+                        )}
+                        {groupDiscounts > 0 && (
+                          <div className="flex justify-between">
+                            <span>Discounts</span>
+                            <span>-{formatCurrency(groupDiscounts)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between pt-2 border-t font-semibold">
+                          <span>Total</span>
+                          <span>{formatCurrency(groupTotal)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} />}
+                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} />}
+                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} />}
+                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} />}
+                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} />}
+                </div>
+              );
+            }
+            return <ShopProductsCard key={`shop-${index}`} products={[item]} isGrouped={false} />;
+          })}
+        </>
       )}
 
       {productGroups.class && (
-        <ClassProductsCard products={productGroups.class} />
+        <>
+          {productGroups.class.map((item, index) => {
+            if (item.isGroup) {
+              const groupSubtotal = item.groupAmount || 0;
+              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
+              const groupDiscounts = item.adjustments?.discounts?.total || 0;
+              const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
+
+              // Separate products by type within the group
+              const shopProducts = item.products.filter(p => p.type === 'shop');
+              const classProducts = item.products.filter(p => p.type === 'class');
+              const courseProducts = item.products.filter(p => p.type === 'course');
+              const generalProducts = item.products.filter(p => p.type === 'general');
+              const membershipProducts = item.products.filter(p => p.type === 'membership');
+
+              return (
+                <div key={`class-group-${item.gId}`} className="space-y-2">
+                  <Card className="bg-muted/30">
+                    <CardHeader>
+                      <CardTitle>{item.groupName}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Subtotal</span>
+                          <span>{formatCurrency(groupSubtotal)}</span>
+                        </div>
+                        {groupSurcharges > 0 && (
+                          <div className="flex justify-between">
+                            <span>Surcharges</span>
+                            <span>+{formatCurrency(groupSurcharges)}</span>
+                          </div>
+                        )}
+                        {groupDiscounts > 0 && (
+                          <div className="flex justify-between">
+                            <span>Discounts</span>
+                            <span>-{formatCurrency(groupDiscounts)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between pt-2 border-t font-semibold">
+                          <span>Total</span>
+                          <span>{formatCurrency(groupTotal)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} />}
+                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} />}
+                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} />}
+                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} />}
+                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} />}
+                </div>
+              );
+            }
+            return <ClassProductsCard key={`class-${index}`} products={[item]} isGrouped={false} />;
+          })}
+        </>
       )}
 
       {productGroups.course && (
-        <CourseProductsCard products={productGroups.course} />
+        <>
+          {productGroups.course.map((item, index) => {
+            if (item.isGroup) {
+              const groupSubtotal = item.groupAmount || 0;
+              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
+              const groupDiscounts = item.adjustments?.discounts?.total || 0;
+              const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
+
+              // Separate products by type within the group
+              const shopProducts = item.products.filter(p => p.type === 'shop');
+              const classProducts = item.products.filter(p => p.type === 'class');
+              const courseProducts = item.products.filter(p => p.type === 'course');
+              const generalProducts = item.products.filter(p => p.type === 'general');
+              const membershipProducts = item.products.filter(p => p.type === 'membership');
+
+              return (
+                <div key={`course-group-${item.gId}`} className="space-y-2">
+                  <Card className="bg-muted/30">
+                    <CardHeader>
+                      <CardTitle>{item.groupName}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Subtotal</span>
+                          <span>{formatCurrency(groupSubtotal)}</span>
+                        </div>
+                        {groupSurcharges > 0 && (
+                          <div className="flex justify-between">
+                            <span>Surcharges</span>
+                            <span>+{formatCurrency(groupSurcharges)}</span>
+                          </div>
+                        )}
+                        {groupDiscounts > 0 && (
+                          <div className="flex justify-between">
+                            <span>Discounts</span>
+                            <span>-{formatCurrency(groupDiscounts)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between pt-2 border-t font-semibold">
+                          <span>Total</span>
+                          <span>{formatCurrency(groupTotal)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} />}
+                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} />}
+                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} />}
+                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} />}
+                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} />}
+                </div>
+              );
+            }
+            return <CourseProductsCard key={`course-${index}`} products={[item]} isGrouped={false} />;
+          })}
+        </>
       )}
 
       {productGroups.general && (
-        <GeneralProductsCard products={productGroups.general} />
+        <>
+          {productGroups.general.map((item, index) => {
+            if (item.isGroup) {
+              const groupSubtotal = item.groupAmount || 0;
+              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
+              const groupDiscounts = item.adjustments?.discounts?.total || 0;
+              const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
+
+              // Separate products by type within the group
+              const shopProducts = item.products.filter(p => p.type === 'shop');
+              const classProducts = item.products.filter(p => p.type === 'class');
+              const courseProducts = item.products.filter(p => p.type === 'course');
+              const generalProducts = item.products.filter(p => p.type === 'general');
+              const membershipProducts = item.products.filter(p => p.type === 'membership');
+
+              return (
+                <div key={`general-group-${item.gId}`} className="space-y-2">
+                  <Card className="bg-muted/30">
+                    <CardHeader>
+                      <CardTitle>{item.groupName}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Subtotal</span>
+                          <span>{formatCurrency(groupSubtotal)}</span>
+                        </div>
+                        {groupSurcharges > 0 && (
+                          <div className="flex justify-between">
+                            <span>Surcharges</span>
+                            <span>+{formatCurrency(groupSurcharges)}</span>
+                          </div>
+                        )}
+                        {groupDiscounts > 0 && (
+                          <div className="flex justify-between">
+                            <span>Discounts</span>
+                            <span>-{formatCurrency(groupDiscounts)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between pt-2 border-t font-semibold">
+                          <span>Total</span>
+                          <span>{formatCurrency(groupTotal)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} />}
+                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} />}
+                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} />}
+                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} />}
+                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} />}
+                </div>
+              );
+            }
+            return <GeneralProductsCard key={`general-${index}`} products={[item]} isGrouped={false} />;
+          })}
+        </>
       )}
 
       {productGroups.membership && (
-        <MembershipProductsCard products={productGroups.membership} />
+        <>
+          {productGroups.membership.map((item, index) => {
+            if (item.isGroup) {
+              const groupSubtotal = item.groupAmount || 0;
+              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
+              const groupDiscounts = item.adjustments?.discounts?.total || 0;
+              const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
+
+              // Separate products by type within the group
+              const shopProducts = item.products.filter(p => p.type === 'shop');
+              const classProducts = item.products.filter(p => p.type === 'class');
+              const courseProducts = item.products.filter(p => p.type === 'course');
+              const generalProducts = item.products.filter(p => p.type === 'general');
+              const membershipProducts = item.products.filter(p => p.type === 'membership');
+
+              return (
+                <div key={`membership-group-${item.gId}`} className="space-y-2">
+                  <Card className="bg-muted/30">
+                    <CardHeader>
+                      <CardTitle>{item.groupName}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Subtotal</span>
+                          <span>{formatCurrency(groupSubtotal)}</span>
+                        </div>
+                        {groupSurcharges > 0 && (
+                          <div className="flex justify-between">
+                            <span>Surcharges</span>
+                            <span>+{formatCurrency(groupSurcharges)}</span>
+                          </div>
+                        )}
+                        {groupDiscounts > 0 && (
+                          <div className="flex justify-between">
+                            <span>Discounts</span>
+                            <span>-{formatCurrency(groupDiscounts)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between pt-2 border-t font-semibold">
+                          <span>Total</span>
+                          <span>{formatCurrency(groupTotal)}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} />}
+                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} />}
+                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} />}
+                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} />}
+                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} />}
+                </div>
+              );
+            }
+            return <MembershipProductsCard key={`membership-${index}`} products={[item]} isGrouped={false} />;
+          })}
+        </>
       )}
 
       {/* Resend Receipt Dialog - only for transactions without email */}

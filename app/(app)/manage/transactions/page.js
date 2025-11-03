@@ -42,25 +42,32 @@ dayjs.extend(relativeTime);
 
 export default function TransactionsPage() {
   const router = useRouter();
-  const { location: globalLocation, locations } = useGlobals();
+  const {
+    location: globalLocation,
+    locations,
+    transactionFilters,
+    setTransactionFilters
+  } = useGlobals();
   const [transactions, setTransactions] = useState([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState(null);
-  const [filters, setFilters] = useState({
-    status: 'all',
-    paymentMethod: 'all',
-    dateRange: '24'
-  });
   const [loading, setLoading] = useState(false);
-  const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
-  const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(20);
   const [resendReceiptDialog, setResendReceiptDialog] = useState({ open: false, transaction: null });
 
-  // Initialize selected location from global location
+  // Convenience accessors for global filter state
+  const searchQuery = transactionFilters.searchQuery;
+  const selectedLocation = transactionFilters.selectedLocation;
+  const filters = {
+    status: transactionFilters.status,
+    paymentMethod: transactionFilters.paymentMethod,
+    dateRange: transactionFilters.dateRange
+  };
+  const sortConfig = transactionFilters.sortConfig;
+  const currentPage = transactionFilters.currentPage;
+
+  // Initialize selected location from global location if not set
   useEffect(() => {
-    if (globalLocation && !selectedLocation) {
-      setSelectedLocation(globalLocation._id);
+    if (globalLocation && !transactionFilters.selectedLocation) {
+      setTransactionFilters({ selectedLocation: globalLocation._id });
     }
   }, [globalLocation]);
 
@@ -69,7 +76,7 @@ export default function TransactionsPage() {
     if (selectedLocation) {
       fetchTransactions();
     }
-  }, [filters, selectedLocation]);
+  }, [transactionFilters.status, transactionFilters.paymentMethod, transactionFilters.dateRange, transactionFilters.selectedLocation]);
 
   const fetchTransactions = async () => {
     setLoading(true);
@@ -93,16 +100,17 @@ export default function TransactionsPage() {
   };
 
   const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+    setTransactionFilters({ [key]: value, currentPage: 1 });
   };
 
   const clearFilters = () => {
-    setFilters({
+    setTransactionFilters({
       status: 'all',
       paymentMethod: 'all',
-      dateRange: '24'
+      dateRange: '24',
+      searchQuery: '',
+      currentPage: 1
     });
-    setSearchQuery('');
   };
 
   // Handle sorting
@@ -111,7 +119,7 @@ export default function TransactionsPage() {
     if (sortConfig.key === key && sortConfig.direction === 'asc') {
       direction = 'desc';
     }
-    setSortConfig({ key, direction });
+    setTransactionFilters({ sortConfig: { key, direction } });
   };
 
   // Get sort icon
@@ -184,10 +192,10 @@ export default function TransactionsPage() {
   const endIndex = startIndex + itemsPerPage;
   const currentData = processedData.slice(startIndex, endIndex);
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when itemsPerPage changes
   React.useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, filters, itemsPerPage]);
+    setTransactionFilters({ currentPage: 1 });
+  }, [itemsPerPage]);
 
   // Generate page numbers for pagination
   const getPageNumbers = () => {
@@ -290,7 +298,7 @@ export default function TransactionsPage() {
             <Input
               placeholder="Search transactions..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => setTransactionFilters({ searchQuery: e.target.value, currentPage: 1 })}
               className="pl-10"
             />
           </div>
@@ -325,7 +333,7 @@ export default function TransactionsPage() {
           </Select>
 
           {/* Location Filter */}
-          <Select value={selectedLocation || ''} onValueChange={setSelectedLocation}>
+          <Select value={selectedLocation || ''} onValueChange={(value) => setTransactionFilters({ selectedLocation: value, currentPage: 1 })}>
             <SelectTrigger className="w-[140px]">
               <SelectValue placeholder="Select location" />
             </SelectTrigger>
@@ -577,16 +585,16 @@ export default function TransactionsPage() {
             <Pagination>
               <PaginationContent className="ml-auto">
                 <PaginationItem>
-                  <PaginationPrevious 
+                  <PaginationPrevious
                     href="#"
                     onClick={(e) => {
                       e.preventDefault();
-                      if (currentPage > 1) setCurrentPage(currentPage - 1);
+                      if (currentPage > 1) setTransactionFilters({ currentPage: currentPage - 1 });
                     }}
                     className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                   />
                 </PaginationItem>
-                
+
                 {getPageNumbers().map((page, index) => (
                   <PaginationItem key={index}>
                     {page === 'ellipsis' ? (
@@ -596,7 +604,7 @@ export default function TransactionsPage() {
                         href="#"
                         onClick={(e) => {
                           e.preventDefault();
-                          setCurrentPage(page);
+                          setTransactionFilters({ currentPage: page });
                         }}
                         isActive={currentPage === page}
                         className="cursor-pointer"
@@ -606,13 +614,13 @@ export default function TransactionsPage() {
                     )}
                   </PaginationItem>
                 ))}
-                
+
                 <PaginationItem>
-                  <PaginationNext 
+                  <PaginationNext
                     href="#"
                     onClick={(e) => {
                       e.preventDefault();
-                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                      if (currentPage < totalPages) setTransactionFilters({ currentPage: currentPage + 1 });
                     }}
                     className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
                   />
