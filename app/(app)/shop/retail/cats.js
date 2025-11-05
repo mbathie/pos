@@ -13,10 +13,17 @@ import ProductDetail from './productDetail'
 import { useRouter } from 'next/navigation';
 import { SvgIcon } from '@/components/ui/svg-icon';
 
-export default function Page({handleSetCat, selected}) {
+export default function Page({handleSetCat, selected, posCategories}) {
   const [categories, setCategories] = useState([])
 
   useEffect(() => {
+    // If POS categories are provided, use them instead of fetching
+    if (posCategories && posCategories.length > 0) {
+      setCategories(posCategories)
+      return
+    }
+
+    // Otherwise, fetch from old API
     async function start() {
       const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/categories?menu=shop');
       const c = await res.json();
@@ -24,7 +31,7 @@ export default function Page({handleSetCat, selected}) {
       handleSetCat(c.categories[0])
     }
     start()
-  },[])
+  },[posCategories])
 
   return (
     <div className="flex flex-col w-40 bg-accent rounded-tr-lg overflow-y-auto h-full">

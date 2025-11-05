@@ -273,7 +273,9 @@ export default function CustomerSelectionSheet({
                       return (
                         <CommandItem
                           key={customer._id}
-                          value={customer.name}
+                          // Include multiple searchable tokens so the Command
+                          // component matches by name, email, phone, or ID.
+                          value={`${customer.name} ${customer.email ?? ''} ${customer.phone ?? ''} ${customer.memberId ?? ''}`}
                           onSelect={() => handleSelectCustomer(customer)}
                         >
                           <div className="flex flex-col">

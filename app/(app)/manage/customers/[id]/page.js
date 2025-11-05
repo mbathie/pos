@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge"
-import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt, Users, DollarSign, Plus, ExternalLink, MoreVertical, Pause, X, Ban, Play } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, CreditCard, Calendar, MapPin, Receipt, Users, DollarSign, Plus, ExternalLink, MoreVertical, Pause, X, Ban, Play, AlertCircle } from "lucide-react";
 import TransactionsTable from '@/components/transactions-table';
 import { CustomerAvatar } from '@/components/customer-avatar';
 import { useGlobals } from '@/lib/globals';
@@ -32,14 +32,39 @@ import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { MembershipPauseDialog } from '@/components/membership-pause-dialog';
+import { MembershipPaymentRecoveryDialog } from '@/components/membership-payment-recovery-dialog';
+import { MembershipCardOnFile } from '@/components/membership-card-on-file';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 dayjs.extend(relativeTime);
+
+// Helper function to calculate minimum cancellation date
+function calculateMinCancellationDate(startDate, billingFrequency, minContract) {
+  if (!minContract || minContract <= 0) {
+    return null;
+  }
+
+  const date = dayjs(startDate);
+
+  switch (billingFrequency) {
+    case 'weekly':
+      return date.add(minContract * 7, 'day');
+    case 'fortnightly':
+      return date.add(minContract * 14, 'day');
+    case 'monthly':
+      return date.add(minContract, 'month');
+    case 'yearly':
+      return date.add(minContract, 'year');
+    default:
+      return null;
+  }
+}
 
 export default function CustomerDetailPage({ params }) {
   const router = useRouter();
@@ -58,6 +83,9 @@ export default function CustomerDetailPage({ params }) {
   const [selectedMembership, setSelectedMembership] = useState(null);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [membershipToCancel, setMembershipToCancel] = useState(null);
+  const [paymentRecoveryDialogOpen, setPaymentRecoveryDialogOpen] = useState(false);
+  const [membershipForRecovery, setMembershipForRecovery] = useState(null);
+  const [failedTransactions, setFailedTransactions] = useState([]);
   const [org, setOrg] = useState(null);
 
   // Handle async params in Next.js 15+
@@ -74,6 +102,7 @@ export default function CustomerDetailPage({ params }) {
       fetchCustomer();
       fetchMemberships();
       fetchOrgSettings();
+      fetchFailedTransactions();
     }
   }, [customerId]);
 
@@ -129,6 +158,20 @@ export default function CustomerDetailPage({ params }) {
       }
     } catch (error) {
       console.error('Error fetching org settings:', error);
+    }
+  };
+
+  const fetchFailedTransactions = async () => {
+    try {
+      const response = await fetch(`/api/transactions?customerId=${customerId}&status=failed`);
+      if (response.ok) {
+        const transactions = await response.json();
+        // Filter out transactions that have been recovered
+        const unrecoveredTransactions = transactions.filter(t => !t.metadata?.recoveredBy);
+        setFailedTransactions(unrecoveredTransactions);
+      }
+    } catch (error) {
+      console.error('Error fetching failed transactions:', error);
     }
   };
 
@@ -217,8 +260,6 @@ export default function CustomerDetailPage({ params }) {
   const handleCancelMembership = async () => {
     if (!membershipToCancel) return;
 
-    const nextBillingDate = dayjs(membershipToCancel.nextBillingDate).format('DD/MM/YYYY');
-
     try {
       const response = await fetch(`/api/memberships/${membershipToCancel._id}/cancel`, {
         method: 'POST',
@@ -226,7 +267,9 @@ export default function CustomerDetailPage({ params }) {
       });
 
       if (response.ok) {
-        toast.success(`Membership will be cancelled on ${nextBillingDate}`);
+        const data = await response.json();
+        const cancellationDate = dayjs(data.membership.cancellationScheduledFor).format('DD/MM/YYYY');
+        toast.success(`Membership will be cancelled on ${cancellationDate}`);
         fetchMemberships();
         setCancelDialogOpen(false);
         setMembershipToCancel(null);
@@ -393,9 +436,34 @@ export default function CustomerDetailPage({ params }) {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Failed Payment Alert */}
+            {failedTransactions.length > 0 && parentMemberships.some(m =>
+              failedTransactions.some(t => t.stripe?.subscriptionId === m.stripeSubscriptionId)
+            ) && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Outstanding Payment</p>
+                      <p className="text-sm mt-1">
+                        One or more membership payments have failed. Please process the payment below.
+                      </p>
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
             {parentMemberships.length > 0 ? (
               <div className="space-y-3">
-                {parentMemberships.map((membership, index) => (
+                {parentMemberships.map((membership, index) => {
+                  // Check if this membership has a failed transaction
+                  const hasFailedPayment = failedTransactions.some(t =>
+                    t.stripe?.subscriptionId === membership.stripeSubscriptionId
+                  );
+
+                  return (
                   <div key={membership._id || index} className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div>
@@ -422,14 +490,28 @@ export default function CustomerDetailPage({ params }) {
                               </button>
                             </Badge>
                           )}
-                          {membership.cancelAtPeriodEnd && membership.status === 'active' && (
+                          {membership.cancellationScheduledFor && membership.status === 'active' && (
                             <Badge variant="destructive" className="text-xs flex items-center gap-1">
                               <Ban className="h-3 w-3" />
                               Cancels: {dayjs(membership.cancellationScheduledFor).format('DD/MM')}
                             </Badge>
                           )}
                         </div>
-                        {membership.status === 'active' && !membership.cancelAtPeriodEnd && (
+                        {hasFailedPayment && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setMembershipForRecovery(membership);
+                              setPaymentRecoveryDialogOpen(true);
+                            }}
+                            className="cursor-pointer"
+                          >
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            Pay Outstanding Balance
+                          </Button>
+                        )}
+                        {membership.status === 'active' && !membership.cancellationScheduledFor && (
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -486,7 +568,7 @@ export default function CustomerDetailPage({ params }) {
                         <label className="text-sm font-medium text-muted-foreground">Started</label>
                         <p className="text-sm">{dayjs(membership.subscriptionStartDate).format('DD/MM/YYYY')}</p>
                       </div>
-                      {!membership.cancelAtPeriodEnd && (
+                      {!membership.cancellationScheduledFor && (
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">
                             {membership.status === 'suspended' ? 'Resumes' :
@@ -513,7 +595,7 @@ export default function CustomerDetailPage({ params }) {
                           </p>
                         </div>
                       )}
-                      {membership.subscriptionEndDate && !membership.cancelAtPeriodEnd && (
+                      {membership.subscriptionEndDate && !membership.cancellationScheduledFor && (
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">Ends</label>
                           <p className="text-sm">{dayjs(membership.subscriptionEndDate).format('DD/MM/YYYY')}</p>
@@ -525,8 +607,16 @@ export default function CustomerDetailPage({ params }) {
                       <label className="text-sm font-medium text-muted-foreground">Amount</label>
                       <p className="text-sm font-medium">${membership.amount}</p>
                     </div>
+
+                    {/* Card on File */}
+                    <MembershipCardOnFile
+                      membership={membership}
+                      customerId={customerId}
+                      onCardUpdated={() => fetchCustomer()}
+                    />
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-4">
@@ -788,14 +878,112 @@ export default function CustomerDetailPage({ params }) {
         />
       )}
 
+      {/* Payment Recovery Dialog */}
+      {membershipForRecovery && customer && (
+        <MembershipPaymentRecoveryDialog
+          open={paymentRecoveryDialogOpen}
+          onOpenChange={setPaymentRecoveryDialogOpen}
+          membership={membershipForRecovery}
+          customer={customer}
+          onSuccess={() => {
+            fetchMemberships();
+            fetchCustomer();
+            fetchFailedTransactions();
+          }}
+        />
+      )}
+
       {/* Cancel Membership Dialog */}
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <AlertDialogContent>
           <AlertDialogTitle>Cancel {membershipToCancel?.product?.name}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            The membership will remain active until{' '}
-            <strong>{membershipToCancel && dayjs(membershipToCancel.nextBillingDate).format('DD/MM/YYYY')}</strong>{' '}
-            and will not be renewed after that date.
+          <AlertDialogDescription asChild>
+            {(() => {
+              if (!membershipToCancel) return null;
+
+              console.log('=== CANCEL DIALOG DEBUG ===');
+              console.log('Membership:', {
+                id: membershipToCancel._id,
+                priceId: membershipToCancel.priceId,
+                priceName: membershipToCancel.priceName,
+                unit: membershipToCancel.unit,
+                subscriptionStartDate: membershipToCancel.subscriptionStartDate,
+                nextBillingDate: membershipToCancel.nextBillingDate
+              });
+
+              console.log('Product prices:', membershipToCancel.product?.prices);
+
+              // Find the matching price to get minContract value
+              // Try matching by priceId first, then fallback to priceName
+              let price = null;
+              if (membershipToCancel.priceId) {
+                price = membershipToCancel.product?.prices?.find(
+                  p => p._id?.toString() === membershipToCancel.priceId?.toString()
+                );
+              }
+
+              // Fallback: match by priceName if priceId match fails
+              if (!price && membershipToCancel.priceName) {
+                price = membershipToCancel.product?.prices?.find(
+                  p => p.name === membershipToCancel.priceName
+                );
+              }
+
+              // Fallback: if only one price exists, use it
+              if (!price && membershipToCancel.product?.prices?.length === 1) {
+                price = membershipToCancel.product.prices[0];
+              }
+
+              console.log('Matched price:', price);
+
+              // Calculate minimum cancellation date
+              let cancellationDate = dayjs(membershipToCancel.nextBillingDate);
+              let isMinContractEnforced = false;
+
+              if (price && price.minContract) {
+                console.log('Min contract settings:', {
+                  minContract: price.minContract,
+                  billingFrequency: price.billingFrequency,
+                  subscriptionStartDate: membershipToCancel.subscriptionStartDate
+                });
+
+                const minContractDate = calculateMinCancellationDate(
+                  membershipToCancel.subscriptionStartDate,
+                  price.billingFrequency,
+                  price.minContract
+                );
+
+                console.log('Calculated min contract date:', minContractDate?.format('DD/MM/YYYY'));
+                console.log('Next billing date:', cancellationDate.format('DD/MM/YYYY'));
+
+                // Use the later of nextBillingDate or minContractDate
+                if (minContractDate && minContractDate.isAfter(cancellationDate)) {
+                  cancellationDate = minContractDate;
+                  isMinContractEnforced = true;
+                  console.log('Min contract enforced! Using:', cancellationDate.format('DD/MM/YYYY'));
+                } else {
+                  console.log('Min contract NOT enforced. Using next billing date.');
+                }
+              } else {
+                console.log('No min contract found or minContract is 0/null');
+              }
+
+              return (
+                <div className="space-y-3">
+                  <div>
+                    The membership will remain active until{' '}
+                    <strong>{cancellationDate.format('DD/MM/YYYY')}</strong>{' '}
+                    and will not be renewed after that date.
+                  </div>
+                  {isMinContractEnforced && price && (
+                    <div className="text-xs text-muted-foreground mt-2 pt-2 border-t">
+                      This membership has a minimum contract of {price.minContract} {price.billingFrequency} billing {price.minContract === 1 ? 'cycle' : 'cycles'}.
+                      The cancellation date is based on this minimum commitment period starting from {dayjs(membershipToCancel.subscriptionStartDate).format('DD/MM/YYYY')}.
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </AlertDialogDescription>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => {

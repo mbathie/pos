@@ -782,6 +782,7 @@ export default function DiscountForm({
                   form.setValue('mustCategories', Array.from(categories));
                 }}
                 placeholder="Select required products/categories"
+                excludeTypes={['divider']}
               />
             </CardContent>
           </Card>
@@ -834,6 +835,7 @@ export default function DiscountForm({
                       updateAdjustment(adj.id, { products, categories });
                     }}
                     placeholder="Select products/categories (leave blank for all)"
+                    excludeTypes={['divider']}
                   />
                   
                   <div className="grid grid-cols-3 gap-6">

@@ -20,6 +20,37 @@ export default function Cart({ asSheet = false, onClose }) {
   if ((cart.products.length < 1 || isStale) && !asSheet)
     return null
 
+  // Group products by gId (for grouped products)
+  const groupedProducts = []
+  const processedGIds = new Set()
+
+  cart?.products?.forEach((p, pIdx) => {
+    if (p.gId && !processedGIds.has(p.gId)) {
+      // This is the first product of a group - collect all products with same gId
+      processedGIds.add(p.gId)
+      const groupProducts = cart.products
+        .map((prod, idx) => ({ ...prod, originalIndex: idx }))
+        .filter(prod => prod.gId === p.gId)
+
+      groupedProducts.push({
+        type: 'grouped',
+        gId: p.gId,
+        groupId: p.groupId,
+        groupName: p.groupName,
+        groupAmount: p.groupAmount, // in dollars
+        groupThumbnail: p.groupThumbnail,
+        products: groupProducts
+      })
+    } else if (!p.gId) {
+      // Regular product (not part of a group)
+      groupedProducts.push({
+        type: 'regular',
+        product: p,
+        originalIndex: pIdx
+      })
+    }
+  })
+
   return (
     <div className="flex flex-col h-full text-sm bg-muted w-[380px] rounded-tl-lg">
       {isStale && (
@@ -28,7 +59,73 @@ export default function Cart({ asSheet = false, onClose }) {
         </div>
       )}
       <div className="space-y-1 w-full flex-1 overflow-y-auto p-4">
-        {cart?.products?.map((p, pIdx) => {
+        {groupedProducts.map((item, itemIdx) => {
+          if (item.type === 'grouped') {
+            // Render group
+            const groupTotal = (item.groupAmount || 0) // Group amount is already in dollars
+            return (
+              <div key={`group-${item.gId}`} className="flex flex-col border-l-2 border-primary pl-2 space-y-1">
+                {/* Group header with name, total price, and delete */}
+                <div className="flex">
+                  <div className='flex'>
+                    {item.groupName}
+                  </div>
+                  <div
+                    className='ml-2 cursor-pointer mt-0.5'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Remove all products with this gId
+                      const indicesToRemove = item.products.map(p => p.originalIndex).sort((a, b) => b - a)
+                      indicesToRemove.forEach(idx => removeFromCart(idx));
+                    }}
+                  >
+                    <Trash2 className='size-4'/>
+                  </div>
+                  <div className='flex-1' />
+                  <div>${groupTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                </div>
+
+                {/* Display individual products within the group */}
+                {item.products.map((product, productIdx) => (
+                  <div key={productIdx} className="flex flex-col ml-2 text-sm">
+                    <div className="flex items-center text-muted-foreground">
+                      <div className='flex-1'>
+                        {product.name}
+                        {product.selectedTimes && product.selectedTimes.length > 0 && (
+                          <span className="ml-1 text-xs">
+                            ({product.selectedTimes.length} session{product.selectedTimes.length !== 1 ? 's' : ''})
+                          </span>
+                        )}
+                      </div>
+                      {/* Show individual price crossed out if it exists */}
+                      {product.amount?.total != null && (
+                        <div className='line-through text-xs'>
+                          ${(product.amount.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Show selected times for classes if applicable */}
+                    {product.selectedTimes?.map((time, timeIdx) => (
+                      <div key={timeIdx} className="text-xs text-muted-foreground ml-2">
+                        {new Date(time.datetime).toLocaleString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit'
+                        })}
+                        {time.label && ` - ${time.label}`}
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )
+          }
+
+          // Render regular product
+          const p = item.product
+          const pIdx = item.originalIndex
 
           // for shop product item
           if (p.type == 'shop' ) return (
@@ -37,7 +134,7 @@ export default function Cart({ asSheet = false, onClose }) {
                 <div className='flex'>
                   {p.qty}x {p.name}
                 </div>
-                <div className='ml-1'> ({p.item.variation})</div>
+                {p.item?.variation && <div className='ml-1'> ({p.item.variation})</div>}
                 <div
                   className='ml-2 cursor-pointer mt-0.5'
                   onClick={(e) => {
@@ -48,9 +145,9 @@ export default function Cart({ asSheet = false, onClose }) {
                   <Trash2 className='size-4'/>
                 </div>
                 <div className='flex-1' />
-                <div>${p.amount.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                {p.amount?.total != null && <div>${p.amount.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>}
               </div>
-              {p.item.mods && p.item.mods.length > 0 && (
+              {p.item?.mods && p.item.mods.length > 0 && (
                 <div className='text-xs ml-1 text-muted-foreground'>
                   {p.item.mods.map(mod => mod.name).join(', ')}
                 </div>
@@ -59,7 +156,9 @@ export default function Cart({ asSheet = false, onClose }) {
 
           );
 
-          else if (p.type=='course') return (
+          // Old nested group handling removed - groups are now flat with gId
+
+          if (p.type=='course') return (
             <div key={pIdx} className="flex flex-col space-y-1">
               <div className="flex">
                 <div>{p.name}</div>

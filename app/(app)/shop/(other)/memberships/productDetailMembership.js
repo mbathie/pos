@@ -8,8 +8,8 @@ import { useGlobals } from '@/lib/globals'
 import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 
-export default function ProductDetailMembership({ product, setProduct, setOpen, open }) {
-  
+export default function ProductDetailMembership({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false }) {
+
   const { addToCart } = useGlobals()
   const [total, setTotal] = useState(0)
 
@@ -29,6 +29,10 @@ export default function ProductDetailMembership({ product, setProduct, setOpen, 
     setProduct(draft => {
       if (!draft.prices[priceIdx].qty) {
         draft.prices[priceIdx].qty = 0;
+      }
+      // For group products, limit to 1
+      if (isPartOfGroup && draft.prices[priceIdx].qty >= 1 && change > 0) {
+        return;
       }
       draft.prices[priceIdx].qty = Math.max(0, draft.prices[priceIdx].qty + change);
     });
@@ -71,14 +75,16 @@ export default function ProductDetailMembership({ product, setProduct, setOpen, 
               return (
                 <div key={priceIdx} className='flex'>
                   <div className='flex gap-2 w-full items-center'>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => updateQuantity(priceIdx, -1)}
-                      disabled={!price.qty}
-                    >
-                      <Minus />
-                    </Button>
+                    {!isPartOfGroup && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => updateQuantity(priceIdx, -1)}
+                        disabled={!price.qty}
+                      >
+                        <Minus />
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -93,7 +99,9 @@ export default function ProductDetailMembership({ product, setProduct, setOpen, 
                     )}
                     <div className='flex-1' />
                     {price.qty || 0}x
-                    ${parseFloat(price.value || 0).toFixed(2)}{billingLabel}
+                    <span className={isPartOfGroup ? 'line-through text-muted-foreground' : ''}>
+                      ${parseFloat(price.value || 0).toFixed(2)}{billingLabel}
+                    </span>
                   </div>
                 </div>
               )
@@ -115,9 +123,9 @@ export default function ProductDetailMembership({ product, setProduct, setOpen, 
             </div>
           </div>
 
-          <SheetClose asChild>
-            <Button 
-              type="submit" 
+          {onAddToCart ? (
+            <Button
+              type="submit"
               disabled={!total || total === 0}
               onClick={async () => {
                 // Create a cleaned product for the cart
@@ -132,14 +140,41 @@ export default function ProductDetailMembership({ product, setProduct, setOpen, 
 
                 // Only add to cart if there are selected items
                 if (cartProduct.prices.length > 0) {
-                  await addToCart(cartProduct);
+                  await onAddToCart(cartProduct);
+                  setOpen(false);
                 }
               }}
-              className="w-full"
+              className="w-full cursor-pointer"
             >
-              Add
+              {isPartOfGroup ? 'Ok' : 'Add'}
             </Button>
-          </SheetClose>
+          ) : (
+            <SheetClose asChild>
+              <Button
+                type="submit"
+                disabled={!total || total === 0}
+                onClick={async () => {
+                  // Create a cleaned product for the cart
+                  const cartProduct = {
+                    ...product,
+                    prices: product.prices?.filter(price => (price.qty ?? 0) > 0) || [],
+                    amount: {
+                      subtotal: total,
+                      total: total
+                    }
+                  };
+
+                  // Only add to cart if there are selected items
+                  if (cartProduct.prices.length > 0) {
+                    await addToCart(cartProduct);
+                  }
+                }}
+                className="w-full cursor-pointer"
+              >
+                {isPartOfGroup ? 'Ok' : 'Add'}
+              </Button>
+            </SheetClose>
+          )}
         </SheetFooter>
 
       </SheetContent>

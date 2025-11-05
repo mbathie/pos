@@ -1,9 +1,8 @@
 'use client'
 import { useRef, useState, useEffect } from 'react';
-import { loadStripeTerminal } from '@stripe/terminal-js';
 import { useGlobals } from '@/lib/globals';
+import { initTerminal as initSharedTerminal, getTerminalInstance } from '@/lib/stripe-terminal';
 
-let terminalInstance = null;
 let discoveredReaders = [];
 let connecting = false
 
@@ -21,21 +20,20 @@ export function useCard({ cart, employee, location }) {
   useEffect(() => {
     const checkCachedConnection = async () => {
       const currentLocationId = location?._id || employee?.selectedLocationId || employee?.location?._id;
-      
+
       // Check if cached connection is valid AND for the current location
-      if (isTerminalConnectionValid() && 
+      if (isTerminalConnectionValid() &&
           terminalConnection.locationId === currentLocationId) {
         console.log('🔄 Found valid cached terminal connection for current location:', terminalConnection);
         setTerminalStatus('connecting'); // Show connecting status while checking
-        
+
         // Initialize terminal if not already initialized
-        if (!terminalInstance) {
-          await initTerminal();
-        }
-        
+        await initSharedTerminal();
+        const terminal = getTerminalInstance();
+
         // Check if the cached reader is still connected
-        if (terminalInstance) {
-          const connected = await terminalInstance.getConnectedReader();
+        if (terminal) {
+          const connected = await terminal.getConnectedReader();
           if (connected && connected.id === terminalConnection.readerId) {
             console.log('✅ Using cached terminal connection:', connected.label);
             setTerminalStatus('connected');
@@ -52,11 +50,12 @@ export function useCard({ cart, employee, location }) {
         if (terminalConnection.locationId && terminalConnection.locationId !== currentLocationId) {
           console.log('📍 Location changed, disconnecting from previous location terminal...');
           // If there's an active terminal connection for a different location, disconnect it
-          if (terminalInstance) {
-            const connected = await terminalInstance.getConnectedReader();
+          const terminal = getTerminalInstance();
+          if (terminal) {
+            const connected = await terminal.getConnectedReader();
             if (connected) {
               console.log('🔌 Disconnecting reader from previous location...');
-              await terminalInstance.disconnectReader();
+              await terminal.disconnectReader();
             }
           }
           clearTerminalConnection();
@@ -64,87 +63,64 @@ export function useCard({ cart, employee, location }) {
         setTerminalStatus('disconnected');
       }
     };
-    
+
     checkCachedConnection();
   }, [location?._id, employee?.selectedLocationId, employee?.location?._id]); // Re-check when location changes
-
-  const initTerminal = async () => {
-    if (!terminalInstance && typeof window !== 'undefined') {
-      const StripeTerminal = await loadStripeTerminal();
-      if (!StripeTerminal) {
-        throw new Error('StripeTerminal failed to load.');
-      }
-
-      terminalInstance = StripeTerminal.create({
-        onFetchConnectionToken: async () => {
-          const res = await fetch('/api/payments/token', { method: 'POST' });
-          const data = await res.json();
-          if (!res.ok || !data.secret) {
-            throw new Error(data.error || 'Failed to fetch connection token');
-          }
-          console.log('Token fetched:', data);
-          return data.secret;
-        },
-        onUnexpectedReaderDisconnect: () => {
-          console.warn('Reader disconnected unexpectedly');
-        },
-      });
-    }
-    return terminalInstance;
-  };
 
   const discoverReaders = async () => {
     try {
       setTerminalStatus('discovering')
-      const terminal = await initTerminal();
+      await initSharedTerminal();
+      const terminal = getTerminalInstance();
 
-      // Try to discover readers - physical by default, simulated for development
-      const isDevMode = process.env.NEXT_PUBLIC_IS_DEV === 'true';
-      const config = { simulated: isDevMode };
-      
-      console.log(`🔍 Discovering ${isDevMode ? 'simulated' : 'physical'} readers...`);
-      const result = await terminal.discoverReaders(config);
+      // Always try to discover physical readers first
+      console.log('🔍 Discovering physical readers...');
+      const physicalResult = await terminal.discoverReaders({ simulated: false });
 
-      if (result.error) {
-        console.log('Failed to discover readers:', result.error);
-        
-        // If in production and physical readers fail, try simulated as fallback
-        if (!isDevMode) {
-          console.log('📱 Falling back to simulated readers...');
-          const simResult = await terminal.discoverReaders({ simulated: true });
-          
-          if (!simResult.error && simResult.discoveredReaders.length > 0) {
-            discoveredReaders.current = simResult.discoveredReaders;
-            console.log('📡 Found simulated readers:', simResult.discoveredReaders.length);
-            setTerminalStatus('disconnected');
-            return;
-          }
-        }
-        
-        setTerminalStatus('disconnected');
-      } else if (result.discoveredReaders.length === 0) {
-        console.log('No readers found');
-        setTerminalStatus('disconnected');
-      } else {
-        discoveredReaders.current = result.discoveredReaders;
-        console.log(`📡 Found ${result.discoveredReaders.length} reader(s)`);
+      if (!physicalResult.error && physicalResult.discoveredReaders.length > 0) {
+        // Found physical readers
+        discoveredReaders.current = physicalResult.discoveredReaders;
+        console.log(`📡 Found ${physicalResult.discoveredReaders.length} physical reader(s)`);
         setTerminalStatus('disconnected'); // Ready to connect
+        return;
       }
+
+      // If no physical readers found, try simulated (only in dev mode)
+      const isDevMode = process.env.NEXT_PUBLIC_IS_DEV === 'true';
+      if (isDevMode) {
+        console.log('📱 No physical readers found, trying simulated readers...');
+        const simResult = await terminal.discoverReaders({ simulated: true });
+
+        if (!simResult.error && simResult.discoveredReaders.length > 0) {
+          discoveredReaders.current = simResult.discoveredReaders;
+          console.log('📡 Found simulated readers:', simResult.discoveredReaders.length);
+          setTerminalStatus('disconnected');
+          return;
+        }
+      }
+
+      // No readers found at all - throw error to trigger retry logic
+      console.log('No readers found');
+      setTerminalStatus('disconnected');
+      throw new Error('No readers found');
     } catch (error) {
       console.log('Terminal discovery error:', error.message || 'Unknown error');
       setTerminalStatus('disconnected');
+      throw error; // Re-throw to allow retry logic to catch it
     }
   };
 
   const connectReader = async () => {
     try {
-      if (!terminalInstance || discoveredReaders.current.length === 0) {
+      const terminal = getTerminalInstance();
+
+      if (!terminal || discoveredReaders.current.length === 0) {
         console.log('Terminal not initialized or no readers discovered.');
         setTerminalStatus('disconnected')
-        return;
+        throw new Error('Terminal not initialized or no readers discovered');
       }
 
-      const connected = await terminalInstance.getConnectedReader();
+      const connected = await terminal.getConnectedReader();
       console.log(connecting)
       if (connected) {
         console.log('Already connected to a reader.');
@@ -161,14 +137,13 @@ export function useCard({ cart, employee, location }) {
       setTerminalStatus('connecting')
 
       const selectedReader = discoveredReaders.current[0];
-      const result = await terminalInstance.connectReader(selectedReader);
+      const result = await terminal.connectReader(selectedReader);
 
       if (result.error) {
-        console.log('Terminal connection failed:', result.error);
+        console.warn('⚠️ Terminal connection failed:', result.error.message);
         connecting = false
         setTerminalStatus('disconnected')
-        // Don't throw the error, just return gracefully
-        return;
+        return { error: result.error };
       } else {
         console.log('Connected to reader:', result.reader.label);
         connecting = false
@@ -188,8 +163,7 @@ export function useCard({ cart, employee, location }) {
       console.log('Terminal connection error:', error.message || 'Unknown error');
       connecting = false
       setTerminalStatus('disconnected')
-      // Don't throw the error, handle it gracefully
-      return;
+      throw error; // Re-throw to allow retry logic to catch it
     }
   };
 
@@ -264,20 +238,25 @@ export function useCard({ cart, employee, location }) {
         clientSecret.current = intent.clientSecret
         
         console.log('💰 Payment intent created for membership first period:', intent.paymentIntentId)
-        
+
+        const terminal = getTerminalInstance();
+        if (!terminal) {
+          throw new Error('Terminal not initialized');
+        }
+
         // Only set simulator configuration for simulated readers
-        const connectedReader = await terminalInstance.getConnectedReader();
+        const connectedReader = await terminal.getConnectedReader();
         if (connectedReader && connectedReader.device_type === 'simulated_wpe') {
           console.log('🧪 Setting simulator configuration for test card')
-          terminalInstance.setSimulatorConfiguration({testCardNumber: '4242424242424242'});
+          terminal.setSimulatorConfiguration({testCardNumber: '4242424242424242'});
         } else {
           console.log('💳 Using physical terminal - no simulator configuration needed')
         }
-        
+
         setPaymentStatus('collecting')
         console.log('💳 Starting payment collection for membership first period...')
-        
-        const collectResult = await terminalInstance.collectPaymentMethod(intent.clientSecret);
+
+        const collectResult = await terminal.collectPaymentMethod(intent.clientSecret);
         
         if (collectResult.error) {
           const msg = collectResult.error.message || ''
@@ -294,8 +273,8 @@ export function useCard({ cart, employee, location }) {
         console.log('✅ Payment method collected successfully for membership')
         setPaymentStatus('processing')
         console.log('⚙️ Processing membership first period payment...')
-        
-        const processResult = await terminalInstance.processPayment(collectResult.paymentIntent);
+
+        const processResult = await terminal.processPayment(collectResult.paymentIntent);
         
         if (processResult.error) {
           const msg = processResult.error.message || ''
@@ -341,20 +320,28 @@ export function useCard({ cart, employee, location }) {
       clientSecret.current = intent.clientSecret
       
       console.log('💰 Payment intent created:', intent.id)
-      
+
+      const terminal = getTerminalInstance();
+      console.log('🔍 Terminal instance:', terminal ? 'exists' : 'null');
+
+      if (!terminal) {
+        throw new Error('Terminal not initialized');
+      }
+
       // Only set simulator configuration for simulated readers
-      const connectedReader = await terminalInstance.getConnectedReader();
+      const connectedReader = await terminal.getConnectedReader();
+      console.log('🔍 Connected reader:', connectedReader);
       if (connectedReader && connectedReader.device_type === 'simulated_wpe') {
         console.log('🧪 Setting simulator configuration for test card')
-        terminalInstance.setSimulatorConfiguration({testCardNumber: '4242424242424242'});
+        terminal.setSimulatorConfiguration({testCardNumber: '4242424242424242'});
       } else {
         console.log('💳 Using physical terminal - no simulator configuration needed')
       }
-      
+
       setPaymentStatus('collecting')
       console.log('💳 Starting payment collection...')
-      
-      const collectResult = await terminalInstance.collectPaymentMethod(intent.clientSecret);
+
+      const collectResult = await terminal.collectPaymentMethod(intent.clientSecret);
       
       if (collectResult.error) {
         const msg = collectResult.error.message || ''
@@ -371,8 +358,8 @@ export function useCard({ cart, employee, location }) {
       console.log('✅ Payment method collected successfully')
       setPaymentStatus('processing')
       console.log('⚙️ Processing payment...')
-      
-      const processResult = await terminalInstance.processPayment(collectResult.paymentIntent);
+
+      const processResult = await terminal.processPayment(collectResult.paymentIntent);
       
       if (processResult.error) {
         const msg = processResult.error.message || ''
@@ -427,10 +414,11 @@ export function useCard({ cart, employee, location }) {
 
   const disconnectReader = async () => {
     try {
-      if (terminalInstance) {
-        const connected = await terminalInstance.getConnectedReader();
+      const terminal = getTerminalInstance();
+      if (terminal) {
+        const connected = await terminal.getConnectedReader();
         if (connected) {
-          const result = await terminalInstance.disconnectReader();
+          const result = await terminal.disconnectReader();
           if (result.error) {
             console.error('Failed to disconnect reader:', result.error);
           } else {
@@ -447,10 +435,11 @@ export function useCard({ cart, employee, location }) {
 
   const cancelPayment = async () => {
     // First try to cancel any active terminal collection
-    if (terminalInstance) {
+    const terminal = getTerminalInstance();
+    if (terminal) {
       try {
         console.log('🚫 Attempting to cancel terminal collection...')
-        const cancelResult = await terminalInstance.cancelCollectPaymentMethod()
+        const cancelResult = await terminal.cancelCollectPaymentMethod()
         if (cancelResult.error) {
           console.warn('Terminal cancellation warning:', cancelResult.error.message)
           // Don't throw here - the error might just mean no active collection

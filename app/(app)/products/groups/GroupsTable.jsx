@@ -1,6 +1,7 @@
 import React from 'react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { ChevronRight } from 'lucide-react'
+import { ProductThumbnail } from '@/components/product-thumbnail'
 
 export default function GroupsTable({ groups = [], onRowClick }) {
   return (
@@ -24,7 +25,16 @@ export default function GroupsTable({ groups = [], onRowClick }) {
           ) : (
             groups.map((g) => (
               <TableRow key={g._id} className="cursor-pointer hover:bg-muted/30" onClick={() => onRowClick?.(g)}>
-                <TableCell className="font-medium">{g.name}</TableCell>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <ProductThumbnail
+                      src={g.thumbnail}
+                      alt={g.name}
+                      size="sm"
+                    />
+                    {g.name}
+                  </div>
+                </TableCell>
                 <TableCell>${(g.amount || 0).toFixed(2)}</TableCell>
                 <TableCell>{g.products?.length || 0}</TableCell>
                 <TableCell><ChevronRight className="h-4 w-4 text-muted-foreground" /></TableCell>

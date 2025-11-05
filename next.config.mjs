@@ -2,6 +2,7 @@
 const nextConfig = {
   "devIndicators": false,
   "reactStrictMode": false,
+  allowedDevOrigins: ['*.ngrok-free.app', '*.ngrok.io', '*.ngrok.app'],
   images: {
     remotePatterns: [
       {

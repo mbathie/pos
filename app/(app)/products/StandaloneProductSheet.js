@@ -34,7 +34,9 @@ export default function StandaloneProductSheet({
   category,
   onProductSaved,
   onIconClick,
-  productType = 'shop'
+  productType = 'shop',
+  refreshTrigger = 0,
+  onThumbnailUpdate
 }) {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -72,6 +74,21 @@ export default function StandaloneProductSheet({
       });
     }
   }, [open, productId]);
+
+  // Re-fetch product when refreshTrigger changes (e.g., after thumbnail update)
+  useEffect(() => {
+    if (open && productId && !productId.startsWith('new-') && refreshTrigger > 0) {
+      fetchProduct();
+    }
+  }, [refreshTrigger]);
+
+  // Handle thumbnail update from parent
+  const handleThumbnailChange = (thumbnail) => {
+    if (product) {
+      setProduct({ ...product, thumbnail });
+      setIsDirty(true);
+    }
+  };
 
   // Fetch available ModGroups when sheet opens
   useEffect(() => {
@@ -327,7 +344,7 @@ export default function StandaloneProductSheet({
         <SheetContent className="w-[75vw] sm:max-w-[75vw] overflow-y-auto p-4">
           <SheetHeader className='m-0 p-0 mt-4'>
             <SheetTitle className="flex items-center gap-4">
-              <div onClick={onIconClick}>
+              <div onClick={() => onIconClick && onIconClick(handleThumbnailChange)}>
                 {!product?.thumbnail ? (
                   <Button className="rounded-lg size-16 cursor-pointer">
                     <Tag className="!w-8 !h-8" />

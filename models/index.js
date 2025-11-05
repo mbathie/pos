@@ -19,6 +19,7 @@ import Checkin from './Checkin.js';
 import ModGroup from './ModGroup.js';
 import Mod from './Mod.js';
 import ProductGroup from './ProductGroup.js';
+import POSInterface from './POSInterface.js';
 
 // Export all models
 export {
@@ -41,5 +42,6 @@ export {
   Checkin,
   ModGroup,
   Mod,
-  ProductGroup
+  ProductGroup,
+  POSInterface
 };

@@ -40,6 +40,13 @@ export function MultiSelect({
   const [selectedValues, setSelectedValues] = useState(new Set(values ?? defaultValues))
   const [items, setItems] = useState(new Map())
 
+  // Sync internal state with external values prop when it changes
+  useEffect(() => {
+    if (values !== undefined) {
+      setSelectedValues(new Set(values))
+    }
+  }, [values])
+
   function toggleValue(value) {
     const getNewSet = (prev) => {
       const newSet = new Set(prev)
@@ -50,8 +57,9 @@ export function MultiSelect({
       }
       return newSet
     }
-    setSelectedValues(getNewSet)
-    onValuesChange?.([...getNewSet(selectedValues)])
+    const newSet = getNewSet(selectedValues)
+    setSelectedValues(newSet)
+    onValuesChange?.([...newSet])
   }
 
   const onItemAdded = useCallback((value, label) => {
@@ -66,7 +74,7 @@ export function MultiSelect({
       value={{
         open,
         setOpen,
-        selectedValues: values ? new Set(values) : selectedValues,
+        selectedValues,
         toggleValue,
         items,
         onItemAdded,

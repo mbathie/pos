@@ -10,12 +10,12 @@ import { useGlobals } from '@/lib/globals'
 import { Checkbox } from '@/components/ui/checkbox'
 import { calcCartValueShop } from '@/lib/product'
 
-export default function ProductDetail({ product, setProduct, setOpen, open }) {
+export default function ProductDetail({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false }) {
   const [total, setTotal] = useState(0)
   const [modGroups, setModGroups] = useState([])
   const [loadingMods, setLoadingMods] = useState(false)
-  const { 
-    getProducts, selectVariation, 
+  const {
+    getProducts, selectVariation,
     selectMod, getProductTotal, setQty } = useHandler()
   const { addToCart } = useGlobals()
 
@@ -199,38 +199,68 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
             <div className='flex flex-col gap-2'>
               <div className='text-sm font-medium'>Qty</div>
               <div className='flex gap-2 items-center'>
-                <Button size="icon" onClick={() => setQty({ setProduct, type: 'decrement' })} disabled={product?.qty <= 1}>
-                  <Minus className='h-4 w-4' />
-                </Button>
-                <Button size="icon" onClick={() => setQty({ setProduct, type: 'increment' })}>
+                {!isPartOfGroup && (
+                  <Button size="icon" onClick={() => setQty({ setProduct, type: 'decrement' })} disabled={product?.qty <= 1}>
+                    <Minus className='h-4 w-4' />
+                  </Button>
+                )}
+                <Button size="icon" onClick={() => {
+                  if (isPartOfGroup && product?.qty >= 1) {
+                    // For group products, limit to 1
+                    return;
+                  }
+                  setQty({ setProduct, type: 'increment' });
+                }}>
                   <Plus className='h-4 w-4' />
                 </Button>
                 <div className='flex-1' />
-                <div className='font-semibold'>{product?.qty || 1}</div>
+                <div className='font-semibold'>{product?.qty || (isPartOfGroup ? 0 : 1)}</div>
               </div>
             </div>
 
             <div className='flex items-center'>
               <div className='uppercase'>total</div>
               <div className='ml-auto'>
-                ${total.toFixed(2)}
+                <span className={isPartOfGroup ? 'line-through text-muted-foreground' : ''}>
+                  ${total.toFixed(2)}
+                </span>
               </div>
             </div>
 
-            <SheetClose asChild>
-              <Button 
-                type="submit" 
-                className='w-full'
+            {onAddToCart ? (
+              <Button
+                type="submit"
+                className='w-full cursor-pointer'
                 size='lg'
                 disabled={!product?.variations?.some(v => v.selected) || !(product?.qty >= 1)}
                 onClick={async () => {
                   const _product = await calcCartValueShop({product})
-                  await addToCart({..._product, type: "shop"})
+                  const productWithType = {..._product, type: "shop"}
+
+                  await onAddToCart(productWithType)
+                  setOpen(false)
                 }}
               >
-                Add to Cart
+                {isPartOfGroup ? 'Ok' : 'Add to Cart'}
               </Button>
-            </SheetClose>
+            ) : (
+              <SheetClose asChild>
+                <Button
+                  type="submit"
+                  className='w-full cursor-pointer'
+                  size='lg'
+                  disabled={!product?.variations?.some(v => v.selected) || !(product?.qty >= 1)}
+                  onClick={async () => {
+                    const _product = await calcCartValueShop({product})
+                    const productWithType = {..._product, type: "shop"}
+
+                    await addToCart(productWithType)
+                  }}
+                >
+                  Add to Cart
+                </Button>
+              </SheetClose>
+            )}
           </div>
         </div>
       </SheetContent>

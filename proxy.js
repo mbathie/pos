@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-export async function middleware(req) {
+export async function proxy(req) {
   const JWT_SECRET = process.env.JWT_SECRET ? new TextEncoder().encode(process.env.JWT_SECRET) : null;
   const { pathname } = req.nextUrl;
   const token = req.cookies.get("token")?.value;
-  
-  // console.log('[Middleware] Processing path:', pathname);
-  // console.log('[Middleware] Has token:', !!token);
+
+  // console.log('[Proxy] Processing path:', pathname);
+  // console.log('[Proxy] Has token:', !!token);
 
   // Check if user is authenticated
   let isAuthenticated = false;
@@ -15,10 +15,10 @@ export async function middleware(req) {
     try {
       const { payload } = await jwtVerify(token, JWT_SECRET);
       isAuthenticated = !!(payload?.employeeId);
-      // console.log('[Middleware] Token valid, employeeId:', payload?.employeeId);
+      // console.log('[Proxy] Token valid, employeeId:', payload?.employeeId);
     } catch (err) {
       // Token is invalid, user is not authenticated
-      // console.log('[Middleware] Token invalid:', err.message);
+      // console.log('[Proxy] Token invalid:', err.message);
       isAuthenticated = false;
     }
   }
@@ -27,11 +27,11 @@ export async function middleware(req) {
   if (pathname === "/login" || pathname === "/signup") {
     // console.log(`isAuthenticated: ${isAuthenticated}`);
     if (isAuthenticated) {
-      // console.log('[Middleware] User authenticated on login/signup page, redirecting to /shop');
+      // console.log('[Proxy] User authenticated on login/signup page, redirecting to /shop');
       return NextResponse.redirect(new URL("/shop", req.url));
     }
     // Not authenticated, allow access to login/signup
-    // console.log('[Middleware] User not authenticated, allowing access to:', pathname);
+    // console.log('[Proxy] User not authenticated, allowing access to:', pathname);
     return NextResponse.next();
   }
 

@@ -3,6 +3,7 @@
 
 import { ChevronsUpDown, LogOut, Moon, Sun, TriangleAlert } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -34,9 +35,14 @@ export function NavUser({
   const { employee } = useGlobals()
 
   const { setTheme, resolvedTheme } = useTheme()
+  const [mounted, setMounted] = useState(false)
   const isDarkMode = resolvedTheme === "dark"
 
   const { resetCart, resetBreadcrumb, hasLowStock, lowStockCount } = useGlobals()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   return (
     <div>
@@ -92,8 +98,18 @@ export function NavUser({
               <DropdownMenuSeparator />
 
               <DropdownMenuItem onClick={() => setTheme(isDarkMode ? "light" : "dark")}>
-                {isDarkMode ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-                {isDarkMode ? "Light Mode" : "Dark Mode"}
+                {mounted && (
+                  <>
+                    {isDarkMode ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
+                    {isDarkMode ? "Light Mode" : "Dark Mode"}
+                  </>
+                )}
+                {!mounted && (
+                  <>
+                    <Moon className="mr-2 h-4 w-4" />
+                    Toggle Theme
+                  </>
+                )}
               </DropdownMenuItem>
               
               <DropdownMenuSeparator />

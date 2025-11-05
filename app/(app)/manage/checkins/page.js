@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,6 +16,7 @@ import relativeTime from 'dayjs/plugin/relativeTime'
 dayjs.extend(relativeTime)
 
 export default function CheckinsPage() {
+  const router = useRouter()
   const [checkins, setCheckins] = useState([])
   const [loading, setLoading] = useState(true)
   const [filterMethod, setFilterMethod] = useState('all')
@@ -267,10 +269,13 @@ export default function CheckinsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="w-1/4">
-                          <div className="flex items-center gap-3">
+                          <div
+                            className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => checkin.customer?._id && router.push(`/manage/customers/${checkin.customer._id}`)}
+                          >
                             {checkin.customer?.photo ? (
-                              <img 
-                                src={checkin.customer.photo} 
+                              <img
+                                src={checkin.customer.photo}
                                 alt={checkin.customer.name}
                                 className="w-8 h-8 rounded-full object-cover"
                               />

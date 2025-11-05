@@ -3,7 +3,7 @@ import mongooseDelete from 'mongoose-delete';
 
 const ProductSchema = new mongoose.Schema({
   name: String,
-  category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
+  org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
   locations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Location' }],
   folder: { type: mongoose.Schema.Types.ObjectId, ref: 'Folder' },
   group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group' },
@@ -20,8 +20,8 @@ const ProductSchema = new mongoose.Schema({
   strict: false  // allow any additional fields
 });
 
-// Indexes for category, folder, group, locations, and accounting
-ProductSchema.index({ category: 1 });
+// Indexes for org, folder, group, locations, and accounting
+ProductSchema.index({ org: 1 });
 ProductSchema.index({ folder: 1 });
 ProductSchema.index({ group: 1 });
 ProductSchema.index({ locations: 1 });

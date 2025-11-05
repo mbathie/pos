@@ -51,7 +51,7 @@ export function AppSidebar(props) {
     // { title: "Waiver", url: `${process.env.NEXT_PUBLIC_DOMAIN}/org/${employee?.org?._id || 'default'}/waiver`, icon: QrCode },
     { title: "Transactions", url: "/manage/transactions", icon: Receipt },
     { groupLabel: "Setup", permission: "group:setup"},
-    { 
+    {
       title: "Products", icon: Tag,
       items: [
         { title: "General Entry", url: "/products/general" },
@@ -60,6 +60,7 @@ export function AppSidebar(props) {
         { title: "Shop", url: "/products/shop" },
         { title: "Shop Mods", url: "/products/mods" },
         { title: "Groups", url: "/products/groups" },
+        { title: "POS Interfaces", url: "/products/pos" },
         { title: "Adjustments", url: "/manage/adjustments" },
         { title: "All Products", url: "/manage/products" },
       ]
@@ -94,7 +95,7 @@ export function AppSidebar(props) {
       <SidebarContent suppressHydrationWarning>
         <NavMenu settings={settings} />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter suppressHydrationWarning>
         <NavUser />
       </SidebarFooter>
       <SidebarRail />

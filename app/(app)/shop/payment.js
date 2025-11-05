@@ -32,18 +32,22 @@ const keypad = ['1','2','3','4','5','6','7','8','9','.','0','AC'];
 
 export default function Page() {
   const { cart, resetCart, markCartAsStale, setCart, employee, setEmployee, location, appliedAdjustments, setAppliedAdjustments, clearAppliedAdjustments } = useGlobals();
+  const [mounted, setMounted] = useState(false);
   const [cashInput, setCashInput] = useState('0');
   const [tab, setTab] = useState('card');
   const router = useRouter();
   const pathname = usePathname();
   const hasSuccessfulPayment = useRef(false);
+  const isAttemptingConnection = useRef(false);
   const [stripeEnabled, setStripeEnabled] = useState(null);
   const [hasTerminals, setHasTerminals] = useState(false);
-  const { 
-    discoverReaders, 
-    connectReader, 
+  const [terminalRetryCount, setTerminalRetryCount] = useState(0);
+  const [terminalRetryExhausted, setTerminalRetryExhausted] = useState(false);
+  const {
+    discoverReaders,
+    connectReader,
     disconnectReader,
-    collectPayment, 
+    collectPayment,
     capturePayment,
     cancelPayment,
     terminalStatus,
@@ -100,28 +104,57 @@ export default function Page() {
 
   // Check if cart contains only shop products
   const hasOnlyShopProducts = cart.products.length > 0 && cart.products.every(product => product.type === 'shop')
-  
+
   // Check if any products in cart require a waiver
   const hasWaiverRequiredProducts = cart.products.some(product => product.waiverRequired === true)
-  
+
   // Check if all required customers are assigned for products with waivers
   const needsCustomerAssignment = cart.products.some(product => {
-    if (!product.waiverRequired) return false
-    
+    console.log('🔍 Checking product:', product.name, {
+      type: product.type,
+      waiverRequired: product.waiverRequired,
+      hasCustomer: !!cart.customer?._id,
+      isGrouped: !!product.gId
+    })
+
+    if (!product.waiverRequired) {
+      console.log('  ✅ No waiver required, skipping')
+      return false
+    }
+
     // For class, course, membership - check if all slots have customers
     if (['class', 'course', 'membership'].includes(product.type)) {
-      return product.prices?.some(price => 
-        price.customers?.some(c => !c.customer?._id)
-      )
+      const missingCustomers = product.prices?.some(price => {
+        const hasMissing = price.customers?.some(c => !c.customer?._id)
+        console.log('  📋 Price:', price.name, {
+          qty: price.qty,
+          customers: price.customers?.length,
+          hasMissing,
+          customerDetails: price.customers?.map(c => ({ hasCustomer: !!c?.customer?._id, customerName: c?.customer?.name }))
+        })
+        return hasMissing
+      })
+      console.log('  🎯 Missing customers:', missingCustomers)
+      return missingCustomers
     }
-    
+
     // For shop items with waiver requirement, check if cart has a customer
     if (product.type === 'shop') {
-      return !cart.customer?._id
+      const needsCustomer = !cart.customer?._id
+      console.log('  🛒 Shop item needs customer:', needsCustomer)
+      return needsCustomer
     }
-    
+
+    console.log('  ⚠️ Unknown type, returning false')
     return false
   })
+
+  console.log('🚦 Final needsCustomerAssignment:', needsCustomerAssignment)
+
+  // Set mounted to true on client to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Validate email whenever it changes
   useEffect(() => {
@@ -272,18 +305,21 @@ export default function Page() {
     
     setCart(draft => {
       console.log('📦 Current cart products:', draft.products.length)
-      
-      // Find the product and price by the unique price ID
+
+      // Find the product and price by the unique price ID (all products are now flat)
       let targetProductIdx = -1
       let targetPriceIdx = -1
-      
+
       console.log('🔍 Searching for price ID:', priceId)
       console.log('🔍 Cart products:', draft.products.map((p, idx) => ({
         idx,
         name: p.name,
+        type: p.type,
+        isGrouped: !!p.gId,
+        groupName: p.groupName,
         priceIds: p.prices?.map(pr => pr._id)
       })))
-      
+
       for (let pIdx = 0; pIdx < draft.products.length; pIdx++) {
         const product = draft.products[pIdx]
         if (product.prices) {
@@ -291,34 +327,37 @@ export default function Page() {
           if (priceIdx !== -1) {
             targetProductIdx = pIdx
             targetPriceIdx = priceIdx
-            console.log(`✅ Found price at product[${pIdx}].prices[${priceIdx}]`)
+            console.log(`✅ Found price at product[${pIdx}].prices[${priceIdx}]${product.gId ? ` [grouped: ${product.groupName}]` : ''}`)
             break
           }
         }
       }
-      
+
       if (targetProductIdx === -1 || targetPriceIdx === -1) {
         console.log('❌ Price not found in cart with ID:', priceId)
         return
       }
-      
+
+      const targetProduct = draft.products[targetProductIdx]
+
       console.log('📦 Target product index:', targetProductIdx)
-      console.log('📦 Target product:', draft.products[targetProductIdx]?.name)
+      console.log('📦 Target product:', targetProduct?.name)
       console.log('📦 Target price ID:', priceId)
-      console.log('📦 Target price:', draft.products[targetProductIdx]?.prices?.[targetPriceIdx]?.name)
-      
+      console.log('📦 Target price:', targetProduct?.prices?.[targetPriceIdx]?.name)
+      console.log('📦 Is grouped:', !!targetProduct.gId)
+
       // Initialize customers array if needed
-      if (!draft.products[targetProductIdx].prices[targetPriceIdx].customers) {
-        const qty = draft.products[targetProductIdx].prices[targetPriceIdx].qty || 0
+      if (!targetProduct.prices[targetPriceIdx].customers) {
+        const qty = targetProduct.prices[targetPriceIdx].qty || 0
         console.log(`📦 Initializing customers array with ${qty} slots`)
-        draft.products[targetProductIdx].prices[targetPriceIdx].customers = Array(qty).fill(null).map(() => ({
+        targetProduct.prices[targetPriceIdx].customers = Array(qty).fill(null).map(() => ({
           customer: null,
           dependent: null
         }))
       }
-      
-      console.log('📦 Before assignment - customers at this price:', 
-        draft.products[targetProductIdx].prices[targetPriceIdx].customers?.map((c, i) => 
+
+      console.log('📦 Before assignment - customers at this price:',
+        targetProduct.prices[targetPriceIdx].customers?.map((c, i) =>
           `Slot ${i}: ${c?.customer?.name || 'empty'}`
         )
       )
@@ -326,7 +365,7 @@ export default function Page() {
       // Multi-minor selection handling
       if (selectedCustomer?.minors && Array.isArray(selectedCustomer.minors) && selectedCustomer.minors.length > 0) {
         let i = 0
-        const productRef = draft.products[targetProductIdx]
+        const productRef = targetProduct
         // Determine where to place minors: if current price is minor, fill here; else fill all sibling minor prices
         const fillTargets = []
         if (productRef.prices[targetPriceIdx].minor) {
@@ -364,14 +403,14 @@ export default function Page() {
         }
       } else {
         // Single assignment (adult or single dependent)
-        draft.products[targetProductIdx].prices[targetPriceIdx].customers[slotIdx] = {
+        targetProduct.prices[targetPriceIdx].customers[slotIdx] = {
           customer: selectedCustomer.customer,
           dependent: selectedCustomer.dependent || null
         }
       }
-      
-      console.log('📦 After assignment - customers at this price:', 
-        draft.products[targetProductIdx].prices[targetPriceIdx].customers?.map((c, i) => 
+
+      console.log('📦 After assignment - customers at this price:',
+        targetProduct.prices[targetPriceIdx].customers?.map((c, i) =>
           `Slot ${i}: ${c?.customer?.name || 'empty'}`
         )
       )
@@ -389,7 +428,7 @@ export default function Page() {
         if (product.prices) {
           product.prices.forEach((price, priceIdx) => {
             if (price.customers) {
-              console.log(`  Product ${pIdx} (${product.name}), Price ${priceIdx} (${price.name}):`)
+              console.log(`  Product ${pIdx} (${product.name})${product.gId ? ` [grouped: ${product.groupName}]` : ''}, Price ${priceIdx} (${price.name}):`)
               price.customers.forEach((cust, slotIdx) => {
                 console.log(`    Slot ${slotIdx}: ${cust?.customer?.name || 'empty'} (ID: ${cust?.customer?._id || 'none'})`)
               })
@@ -636,33 +675,38 @@ export default function Page() {
     const checkStripeAndTerminals = async () => {
       console.log('🔍 Checking terminals - Employee object:', employee);
       console.log('🔍 Checking terminals - Cart object:', cart);
-      
+
+      // Reset retry count and attempting flag when location changes
+      setTerminalRetryCount(0);
+      setTerminalRetryExhausted(false);
+      isAttemptingConnection.current = false;
+
       try {
         // Check Stripe status
         const stripeRes = await fetch('/api/payments');
         const stripeData = await stripeRes.json();
         setStripeEnabled(stripeData.charges_enabled || false);
-        
+
         // Use the location from globals which is updated by the location switcher
         const currentLocationId = location?._id || employee?.selectedLocationId || employee?.location?._id;
-        
+
         if (stripeData.charges_enabled && currentLocationId) {
           const terminalsRes = await fetch('/api/terminals');
           const terminals = await terminalsRes.json();
           console.log('🔍 All terminals from API:', terminals);
           console.log('📍 Current location ID (using selectedLocationId):', currentLocationId);
-          
+
           // Filter terminals for the current location only
           const locationTerminals = terminals?.filter(t => {
-            const locationMatch = t.location?._id === currentLocationId || 
+            const locationMatch = t.location?._id === currentLocationId ||
                                  t.location === currentLocationId;
             console.log(`  Terminal ${t.label}: location ${t.location?._id || t.location} === ${currentLocationId}? ${locationMatch}`);
             return locationMatch;
           }) || [];
-          
+
           setHasTerminals(locationTerminals.length > 0);
           console.log(`📍 Found ${locationTerminals.length} terminal(s) for location ${currentLocationId}:`, locationTerminals);
-          
+
           // If no terminals for this location, ensure we disconnect any existing connection
           if (locationTerminals.length === 0 && terminalStatus === 'connected') {
             console.log('📍 No terminals at new location, disconnecting...');
@@ -676,7 +720,7 @@ export default function Page() {
             hasLocation: !!currentLocationId
           });
           setHasTerminals(false);
-          
+
           // Disconnect if we have no location
           if (terminalStatus === 'connected' && disconnectReader) {
             console.log('📍 No location selected, disconnecting terminal...');
@@ -694,53 +738,107 @@ export default function Page() {
 
   // Only attempt terminal connection if terminals are actually configured
   useEffect(() => {
+    const MAX_RETRIES = 3;
+    
+    // Early check: if already attempting, skip immediately to prevent re-entry
+    if (isAttemptingConnection.current) {
+      console.log('⏭️ Already attempting connection, skipping...');
+      return;
+    }
+    
     console.log('🔄 Terminal auto-connect check:', {
       stripeEnabled,
       hasTerminals,
       terminalStatus,
+      retryCount: terminalRetryCount,
+      retryExhausted: terminalRetryExhausted,
+      isAttempting: isAttemptingConnection.current,
       locationId: location?._id || employee?.selectedLocationId || employee?.location?._id
     });
-    
+
+    // Reset retry count when terminal connects successfully
+    if (terminalStatus === 'connected') {
+      if (terminalRetryCount > 0 || terminalRetryExhausted) {
+        setTerminalRetryCount(0);
+        setTerminalRetryExhausted(false);
+      }
+      isAttemptingConnection.current = false;
+      return;
+    }
+
     // Only try to initialize if:
     // 1. Stripe is enabled
     // 2. Terminals are configured in the system
     // 3. Terminal is currently disconnected
-    if (stripeEnabled && hasTerminals && terminalStatus === 'disconnected') {
+    // 4. Haven't exceeded max retries
+    // 5. Not currently attempting a connection
+    if (stripeEnabled && hasTerminals && terminalStatus === 'disconnected' && !terminalRetryExhausted && !isAttemptingConnection.current) {
       console.log('✅ Conditions met for auto-connect, initializing terminal...');
-      
-      // Single async function to handle both discovery and connection
-      const initializeTerminal = async () => {
-        try {
-          // Discover readers
-          console.log('🔍 Discovering readers...');
-          await discoverReaders();
-          
-          // Minimal delay to ensure discovery completes
-          await new Promise(resolve => setTimeout(resolve, 100));
-          
-          // Connect to the discovered reader
-          console.log('🔌 Connecting to reader...');
-          await connectReader();
-        } catch (error) {
-          console.error('Terminal initialization error:', error);
-          // Only show error if terminals are supposed to exist
-          if (hasTerminals) {
-            toast.error('Failed to connect to payment terminal. Please check the terminal and try again.');
+
+      // Mark that we're attempting a connection to prevent re-entry
+      isAttemptingConnection.current = true;
+
+      // Async function to handle retry logic
+      const attemptConnectionWithRetries = async () => {
+        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+          try {
+            // Discover readers
+            console.log(`🔍 Discovering readers... (Attempt ${attempt + 1}/${MAX_RETRIES})`);
+            await discoverReaders();
+
+            // Minimal delay to ensure discovery completes
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // Connect to the discovered reader
+            console.log('🔌 Connecting to reader...');
+            const connectionResult = await connectReader();
+
+            // Check if connection failed
+            if (connectionResult?.error) {
+              throw new Error(connectionResult.error.message);
+            }
+
+            // Success - reset attempting flag and exit retry loop
+            isAttemptingConnection.current = false;
+            setTerminalRetryCount(0);
+            setTerminalRetryExhausted(false);
+            console.log('✅ Terminal connected successfully');
+            return;
+          } catch (error) {
+            console.warn(`⚠️ Terminal initialization error (Attempt ${attempt + 1}/${MAX_RETRIES}):`, error.message);
+
+            // Check if this was the last attempt
+            if (attempt === MAX_RETRIES - 1) {
+              console.warn(`⚠️ Terminal connection failed after ${MAX_RETRIES} attempts. Card payments unavailable.`);
+              setTerminalRetryCount(MAX_RETRIES);
+              setTerminalRetryExhausted(true);
+              isAttemptingConnection.current = false;
+              return;
+            } else {
+              // Not the last attempt, continue retrying
+              setTerminalRetryCount(attempt + 1);
+              // Wait before next retry
+              await new Promise(resolve => setTimeout(resolve, 1500));
+            }
           }
         }
       };
 
-      // Minimal initial delay to ensure state is ready
-      const timer = setTimeout(initializeTerminal, 200);
-      return () => clearTimeout(timer);
+      // Start the retry sequence after a short delay
+      const timer = setTimeout(attemptConnectionWithRetries, 200);
+      return () => {
+        clearTimeout(timer);
+      };
     } else {
       console.log('⏭️ Skipping auto-connect:', {
         stripeNotEnabled: !stripeEnabled,
         noTerminals: !hasTerminals,
-        notDisconnected: terminalStatus !== 'disconnected'
+        notDisconnected: terminalStatus !== 'disconnected',
+        retryExhausted: terminalRetryExhausted,
+        isAttempting: isAttemptingConnection.current
       });
     }
-  }, [stripeEnabled, hasTerminals, terminalStatus, location?._id, employee?.selectedLocationId, employee?.location?._id]); // Also trigger when location changes
+  }, [stripeEnabled, hasTerminals, terminalStatus, terminalRetryExhausted, location?._id, employee?.selectedLocationId, employee?.location?._id]); // Also trigger when location changes
 
   // Always use live cart for display
   const displayCart = cart
@@ -905,40 +1003,45 @@ export default function Page() {
     const hasWaiverProduct = cart.products.some(p => p.waiverRequired === true)
     setRequiresCustomerAssignment(hasWaiverProduct)
   }, [cart.products])
-  
+
   // Check if all products are shop or general items (customer is optional)
-  const isShopOnly = cart.products.length > 0 && 
+  const isShopOnly = cart.products.length > 0 &&
     cart.products.every(p => (p.type === 'shop' || p.type === 'general') && !p.waiverRequired)
 
   // Initialize customer slots for products that need them
   useEffect(() => {
+    console.log('🔧 Initializing customer slots for cart products...')
     setCart(draft => {
       draft.products.forEach((product, pIdx) => {
         if (['class', 'course', 'membership'].includes(product.type)) {
+          console.log(`  🎯 Product "${product.name}" (${product.type})${product.gId ? ` [grouped: ${product.groupName}]` : ''} needs customer slots`)
           product.prices?.forEach((price, priceIdx) => {
             const qty = price.qty || 0
-            
+
             if (!draft.products[pIdx].prices[priceIdx].customers) {
+              console.log(`    ➕ Creating customers array for "${price.name}" (qty: ${qty})`)
               draft.products[pIdx].prices[priceIdx].customers = []
             }
-            
+
             const currentLength = draft.products[pIdx].prices[priceIdx].customers.length
-            
+
             if (currentLength < qty) {
               // Add empty slots
+              console.log(`    ➕ Adding ${qty - currentLength} empty customer slots`)
               for (let i = currentLength; i < qty; i++) {
                 draft.products[pIdx].prices[priceIdx].customers.push({customer: null, dependent: null})
               }
             } else if (currentLength > qty) {
               // Remove excess slots
-              draft.products[pIdx].prices[priceIdx].customers = 
+              console.log(`    ➖ Removing ${currentLength - qty} excess customer slots`)
+              draft.products[pIdx].prices[priceIdx].customers =
                 draft.products[pIdx].prices[priceIdx].customers.slice(0, qty)
             }
           })
         }
       })
     })
-  }, [])
+  }, [cart.products.length])
 
   // Handle custom discount application
   const applyCustomDiscount = async () => {
@@ -1083,6 +1186,11 @@ export default function Page() {
       return updated;
     });
   };
+
+  // Prevent hydration mismatch by not rendering until mounted
+  if (!mounted) {
+    return null;
+  }
 
   return (
     <div className="gap-4 flex flex-row -justify-start mx-4 mt-4">
@@ -1380,13 +1488,14 @@ export default function Page() {
                                   onClick={() => {
                                     if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
                                       setCart(draft => {
+                                        // Find the product by price ID (all products are flat now)
                                         for (let prodIdx = 0; prodIdx < draft.products.length; prodIdx++) {
                                           const dProd = draft.products[prodIdx]
                                           const dPriceIndex = dProd.prices?.findIndex(p => p._id === price._id)
                                           if (dPriceIndex !== -1) {
                                             const count = dProd.prices[dPriceIndex].customers?.length || 0
                                             dProd.prices[dPriceIndex].customers = Array(count).fill(null).map(() => ({}))
-                                            break
+                                            return
                                           }
                                         }
                                       })
@@ -1428,12 +1537,13 @@ export default function Page() {
                                 onClick={() => {
                                   if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
                                     setCart(draft => {
+                                      // Find the product by price ID (all products are flat now)
                                       for (let prodIdx = 0; prodIdx < draft.products.length; prodIdx++) {
                                         const dProd = draft.products[prodIdx]
                                         const dPriceIndex = dProd.prices?.findIndex(p => p._id === price._id)
                                         if (dPriceIndex !== -1) {
-                                          draft.products[prodIdx].prices[dPriceIndex].customers[slotIdx] = {}
-                                          break
+                                          dProd.prices[dPriceIndex].customers[slotIdx] = {}
+                                          return
                                         }
                                       }
                                     })
@@ -1451,8 +1561,15 @@ export default function Page() {
 
                       // Adult slots stay with + Customer
                       return Array.from({ length: qty }, (_, slotIdx) => {
+                        console.log(`🎨 Rendering customer slot for ${product.name} (${price.name}) slot ${slotIdx}:`, {
+                          hasCustomersArray: !!price.customers,
+                          customersLength: price.customers?.length,
+                          slotData: price.customers?.[slotIdx],
+                          customerName: price.customers?.[slotIdx]?.customer?.name
+                        })
                         const customerSlot = price.customers && price.customers[slotIdx] ? price.customers[slotIdx] : {}
                         const customerData = customerSlot.customer || null
+                        console.log(`  👤 Customer data:`, customerData?.name || 'NO CUSTOMER')
                         return (
                           <div className="flex items-center gap-2" key={`${pIdx}-${priceIdx}-${slotIdx}`}>
                             <div className="flex-1 flex items-center gap-2">
@@ -1469,12 +1586,13 @@ export default function Page() {
                                     onClick={() => {
                                       if (paymentStatus !== 'succeeded' && cardPaymentStatus !== 'succeeded') {
                                         setCart(draft => {
+                                          // Find the product by price ID (all products are flat now)
                                           for (let prodIdx = 0; prodIdx < draft.products.length; prodIdx++) {
                                             const dProd = draft.products[prodIdx]
                                             const dPriceIndex = dProd.prices?.findIndex(p => p._id === price._id)
                                             if (dPriceIndex !== -1) {
-                                              draft.products[prodIdx].prices[dPriceIndex].customers[slotIdx] = {}
-                                              break
+                                              dProd.prices[dPriceIndex].customers[slotIdx] = {}
+                                              return
                                             }
                                           }
                                         })
@@ -1505,7 +1623,7 @@ export default function Page() {
                   }
                   return []
                 })}
-                
+
                 {/* Show main customer if there are shop items with waiver requirement */}
                 {cart.products.some(p => p.type === 'shop' && p.waiverRequired) && (
                   <div className="flex items-center gap-2">
@@ -1861,6 +1979,11 @@ export default function Page() {
                     
                     // If terminal is disconnected and terminals exist, retry connection
                     if (terminalStatus === 'disconnected') {
+                      // Reset retry counter and attempting flag on manual retry
+                      setTerminalRetryCount(0);
+                      setTerminalRetryExhausted(false);
+                      isAttemptingConnection.current = false;
+
                       try {
                         await discoverReaders();
                         setTimeout(async () => {
@@ -1896,18 +2019,19 @@ export default function Page() {
                   }}
                 >
                   {isCollectingPayment && <Loader2 className="size-4 animate-spin mr-2" />}
-                  {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') ? 
+                  {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') ?
                     'Payment Complete' :
                     cart.total === 0 ? 'Process Free Transaction' :
-                    terminalStatus === 'connected' ? 
-                      (cardPaymentStatus === 'collecting' ? 'Waiting for Card...' : 
+                    terminalStatus === 'connected' ?
+                      (cardPaymentStatus === 'collecting' ? 'Waiting for Card...' :
                        cardPaymentStatus === 'processing' ? 'Processing...' :
                        cardPaymentStatus === 'creating' ? 'Creating Payment...' :
-                       isCollectingPayment ? 'Starting...' : 'Collect Payment') : 
+                       isCollectingPayment ? 'Starting...' : 'Collect Payment') :
                       terminalStatus === 'checking' ? 'Checking...' :
                       terminalStatus === 'connecting' ? 'Connecting...' :
                       terminalStatus === 'discovering' ? 'Discovering...' :
                       !hasTerminals ? 'Setup Terminal' :
+                      terminalRetryExhausted ? 'Connection Failed - Setup Terminal' :
                       'Retry Connection'
                   }
                 </Button>
@@ -2073,6 +2197,21 @@ export default function Page() {
                   </Button>
                 ))}
                 <div className="col-span-3 w-full gap-2 flex flex-col">
+                  {/* Debug logging for Accept button */}
+                  {console.log('💰 Accept button disabled check:', {
+                    noProducts: cart.products.length === 0,
+                    insufficientCash: parseFloat(changeInfo.received) < cart.total,
+                    cashReceived: changeInfo.received,
+                    total: cart.total,
+                    alreadySucceeded: paymentStatus === 'succeeded',
+                    processing: isProcessingCash,
+                    needsCustomer: needsCustomerAssignment,
+                    FINAL_DISABLED: cart.products.length === 0 ||
+                      parseFloat(changeInfo.received) < cart.total ||
+                      paymentStatus === 'succeeded' ||
+                      isProcessingCash ||
+                      needsCustomerAssignment
+                  })}
                   <Button
                     className="w-full h-12"
                     disabled={

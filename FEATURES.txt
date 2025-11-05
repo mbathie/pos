@@ -1,4 +1,40 @@
+27.10.2025
+
+DONE - membership card management (27.10.2025)
+  - Display card on file (brand, last 4 digits, expiration) for active memberships
+  - Secure card entry dialog using Stripe Elements for PCI compliance
+  - Manual card update capability from customer detail page
+  - Automatic payment method cloning from platform to connected accounts
+  - Subscription payment method updates via Stripe API
+  - Green "Update" button for clear call-to-action
+  - Real-time card validation with Stripe
+  - Support for updating card before subscription renewal
+  - Proper handling of Stripe Connected Accounts architecture
+  - Customer-specific payment method retrieval and display
+  - Frontend: /components/membership-card-on-file.jsx, /components/membership-card-update-dialog.jsx
+  - Backend: /api/customers/[id]/memberships/[membershipId]/payment-method/route.js (GET)
+  - Backend: /api/customers/[id]/memberships/[membershipId]/payment-method/update/route.js (POST)
+  - Environment: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY for frontend Stripe initialization
+  - Tested: Successfully updated card and verified subsequent subscription charges use new card
+
 01.10.2025
+
+DONE - membership payment recovery (03.10.2025)
+  - Failed payment detection via Stripe webhooks (invoice.payment_failed)
+  - Failed transaction record creation with comprehensive metadata
+  - Outstanding payment alerts on customer detail pages
+  - Standalone "Pay Outstanding Balance" button with clear visibility
+  - Payment recovery dialog with simulated and terminal payment options
+  - Automatic payment method attachment and subscription updates
+  - Invoice settlement via Stripe API
+  - Transaction linking (failed transactions marked with recoveredBy reference)
+  - Membership reactivation for suspended memberships after successful recovery
+  - Billing date advancement after successful payment
+  - Email notifications to customers for failed payments
+  - Recovery transaction records with full audit trail
+  - Location field tracking on all transaction types for proper filtering
+  - UI filtering to hide recovered failed transactions from outstanding alerts
+  - Test customer generation script (bin/create-test-customer.js) for testing
 
 DONE - membership cancellations (01.10.2025)
   - Cancel active memberships at end of billing period (cancel_at_period_end)

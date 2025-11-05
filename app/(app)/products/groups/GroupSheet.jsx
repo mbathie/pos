@@ -8,8 +8,9 @@ import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { Loader2, Save, CheckCircle, Trash2 } from 'lucide-react'
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import { ProductThumbnail } from '@/components/product-thumbnail'
 
-export default function GroupSheet({ open, onOpenChange, group, categoriesWithProducts, onSaved, onDeleted }) {
+export default function GroupSheet({ open, onOpenChange, group, categoriesWithProducts, onSaved, onDeleted, setIconDialogOpen, setIconDialogQuery }) {
   const [name, setName] = useState(group?.name || '')
   const [amount, setAmount] = useState(group?.amount != null ? String(group.amount) : '')
   const [selected, setSelected] = useState(new Set(group?.products?.map(p => p._id || p) || []))
@@ -138,8 +139,25 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
       <SheetContent className="w-[75vw] sm:max-w-[75vw] overflow-y-auto p-4">
 
         <SheetHeader className='m-0 p-0 mt-4'>
-          <div className='flex items-center justify-between'>
-            <SheetTitle>{group?._id ? 'Edit Group' : 'New Group'}</SheetTitle>
+          <SheetTitle className="flex items-center gap-4">
+            <div
+              className="cursor-pointer"
+              onClick={() => {
+                setIconDialogOpen(true);
+                setIconDialogQuery(name);
+              }}
+            >
+              <ProductThumbnail
+                src={group?.thumbnail}
+                alt={name || 'Group'}
+                size="lg"
+              />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold">{group?._id ? 'Edit Group' : 'New Group'}</h2>
+            </div>
+
+            {/* Auto-save indicator */}
             {group?._id && (
               <TooltipProvider>
                 <Tooltip>
@@ -162,7 +180,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
                 </Tooltip>
               </TooltipProvider>
             )}
-          </div>
+          </SheetTitle>
         </SheetHeader>
         <div className='space-y-4 mt-4'>
           <div>

@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 const ProductGroupSchema = new mongoose.Schema({
   name: { type: String, required: true },
   description: String,
+  thumbnail: String,
   products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
   amount: { type: Number, required: true },
   active: { type: Boolean, default: true },

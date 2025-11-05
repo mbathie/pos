@@ -15,16 +15,9 @@ export async function GET(request, { params }) {
     
     const { id } = await params;
 
-    // Find the product and populate its category to get the organization
+    // Find the product and populate its organization directly
     const product = await Product.findById(id)
-      .populate({
-        path: 'category',
-        select: 'org',
-        populate: {
-          path: 'org',
-          select: 'tandcContent'
-        }
-      })
+      .populate('org', 'tandcContent')
       .lean();
 
     if (!product) {
@@ -34,7 +27,7 @@ export async function GET(request, { params }) {
       );
     }
 
-    const orgTerms = product.category?.org?.tandcContent || null;
+    const orgTerms = product.org?.tandcContent || null;
 
     return NextResponse.json({
       tandcContent: orgTerms

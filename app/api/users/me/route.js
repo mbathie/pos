@@ -12,7 +12,13 @@ export async function GET() {
     const cookieStore = await cookies()
     const token = cookieStore.get('token')
 
+    console.log('🔍 /api/users/me - Checking token:', {
+      tokenExists: !!token,
+      timestamp: new Date().toISOString()
+    });
+
     if (!token) {
+      console.log('❌ /api/users/me - No token found in cookies');
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 

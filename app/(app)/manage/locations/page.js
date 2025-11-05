@@ -345,7 +345,7 @@ export default function Page() {
                     {getSortIcon('address')}
                   </div>
                 </th>
-                <th 
+                <th
                   scope="col"
                   aria-sort={sortConfig.key==='phone' ? (sortConfig.direction==='asc' ? 'ascending' : 'descending') : 'none'}
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
@@ -358,37 +358,19 @@ export default function Page() {
                     {getSortIcon('phone')}
                   </div>
                 </th>
-                <th 
-                  scope="col"
-                  className="h-12 px-4 text-center align-middle font-medium text-muted-foreground"
-                >
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="flex items-center justify-center gap-1 cursor-help">
-                          <span>This POS</span>
-                          <Info className="h-3 w-3" />
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs">
-                        <p>Indicates for this POS which location it is tied to. Anyone logging into this POS will be tied to the selected location</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </th>
                 <th scope="col" className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">Actions</th>
               </tr>
             </thead>
             <tbody className="[&_tr:last-child]:border-0">
               {loading ? (
                 <tr className="border-b">
-                  <td colSpan={5} className="p-4 text-center py-8">
+                  <td colSpan={4} className="p-4 text-center py-8">
                     <p className="text-muted-foreground">Loading locations...</p>
                   </td>
                 </tr>
               ) : currentData.length === 0 ? (
                 <tr className="border-b">
-                  <td colSpan={5} className="p-4 text-center py-8">
+                  <td colSpan={4} className="p-4 text-center py-8">
                     <p className="text-muted-foreground">
                       {searchQuery ? 'No locations found matching your search' : 'No locations found. Add your first location to get started.'}
                     </p>
@@ -417,16 +399,6 @@ export default function Page() {
                     </td>
                     <td className="px-4 py-3 align-middle">
                       {loc.phone || '—'}
-                    </td>
-                    <td className="px-4 py-3 align-middle text-center" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex justify-center">
-                        <Checkbox
-                          checked={selectedPOSLocation === loc._id}
-                          onCheckedChange={() => handlePOSSelection(loc._id)}
-                          className="cursor-pointer"
-                          aria-label={`Set ${loc.name} as this POS location`}
-                        />
-                      </div>
                     </td>
                     <td className="px-4 py-3 text-right align-middle">
                       <ChevronRight className="h-5 w-5 text-muted-foreground inline-block" />

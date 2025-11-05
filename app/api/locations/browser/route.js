@@ -27,9 +27,9 @@ export async function GET(req) {
       });
     }
 
-    // Find location with this browser ID
+    // Find location with this browser ID in devices array
     const location = await Location.findOne({
-      browser: browserId,
+      'devices.browserId': browserId,
       org: employee.org._id
     });
 

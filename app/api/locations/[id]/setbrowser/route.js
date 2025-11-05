@@ -13,7 +13,7 @@ export async function POST(req, { params }) {
   try {
     await connectDB();
     const { id } = await params;
-    
+
     // Authenticate user
     const { employee } = await getEmployee();
     if (!employee) {
@@ -23,28 +23,43 @@ export async function POST(req, { params }) {
     // Get or generate browser ID
     const browserId = await getOrCreateBrowserId();
 
-    // Clear any existing browser associations for this browser ID
-    await Location.updateMany(
-      { browser: browserId, org: employee.org._id },
-      { $unset: { browser: 1 } }
-    );
-
-    // Update the selected location with the browser ID
-    const location = await Location.findOneAndUpdate(
-      { _id: id, org: employee.org._id },
-      { browser: browserId },
-      { new: true }
-    );
+    // Find the location
+    const location = await Location.findOne({
+      _id: id,
+      org: employee.org._id
+    });
 
     if (!location) {
       return NextResponse.json({ error: "Location not found" }, { status: 404 });
     }
 
+    // Check if device already exists in this location
+    const existingDeviceIndex = location.devices.findIndex(
+      d => d.browserId === browserId
+    );
+
+    if (existingDeviceIndex >= 0) {
+      // Update last seen
+      location.devices[existingDeviceIndex].lastSeen = new Date();
+    } else {
+      // Add new device to this location
+      location.devices.push({
+        browserId,
+        name: `Device ${location.devices.length + 1}`,
+        lastSeen: new Date(),
+        metadata: {
+          userAgent: req.headers.get('user-agent')
+        }
+      });
+    }
+
+    await location.save();
+
     // Update auth with new location and set all cookies (including updated JWT)
-    await updateAuth({ 
-      employee, 
-      locationId: id, 
-      browserId 
+    await updateAuth({
+      employee,
+      locationId: id,
+      browserId
     });
 
     console.log('🖥️ Browser location set:', {
@@ -53,7 +68,7 @@ export async function POST(req, { params }) {
       browserId: browserId
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       locationId: id,
       browserId: browserId,
@@ -69,8 +84,8 @@ export async function POST(req, { params }) {
 export async function DELETE(req, { params }) {
   try {
     await connectDB();
-    const { id } = params;
-    
+    const { id } = await params;
+
     // Authenticate user
     const { employee } = await getEmployee();
     if (!employee) {
@@ -81,11 +96,18 @@ export async function DELETE(req, { params }) {
     const browserId = await getBrowserId();
 
     if (browserId) {
-      // Remove browser association from the location
-      await Location.findOneAndUpdate(
-        { _id: id, org: employee.org._id },
-        { $unset: { browser: 1 } }
-      );
+      // Find the location and remove the device with this browserId
+      const location = await Location.findOne({
+        _id: id,
+        org: employee.org._id
+      });
+
+      if (location) {
+        location.devices = location.devices.filter(
+          d => d.browserId !== browserId
+        );
+        await location.save();
+      }
     }
 
     // Remove the pos_location_id cookie
@@ -93,7 +115,7 @@ export async function DELETE(req, { params }) {
 
     console.log('🖥️ Browser location cleared for location:', id);
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: "Browser location association cleared"
     });

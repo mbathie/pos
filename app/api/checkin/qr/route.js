@@ -16,32 +16,87 @@ export async function POST(request) {
     }
 
     const { customerId, test = false } = await request.json();
+
+    // DEBUG: Log raw QR code data
+    console.log('=== QR CODE SCAN DEBUG ===');
+    console.log('Raw customerId from QR code:', customerId);
+    console.log('Type of customerId:', typeof customerId);
+    console.log('Length:', customerId?.length);
+    console.log('First 100 chars:', customerId?.substring(0, 100));
+
     if (!customerId) {
       return NextResponse.json({ error: 'Customer ID is required' }, { status: 400 });
     }
 
     // Parse and validate member ID
     const memberId = parseInt(customerId, 10);
+    console.log('Parsed memberId:', memberId);
+    console.log('Is NaN?:', isNaN(memberId));
+
     if (isNaN(memberId)) {
-      return NextResponse.json({ error: 'Invalid member ID' }, { status: 400 });
+      console.log('❌ Failed to parse member ID from:', customerId);
+      return NextResponse.json({
+        error: 'Invalid member ID',
+        debug: {
+          received: customerId,
+          type: typeof customerId,
+          parseAttempt: memberId
+        }
+      }, { status: 400 });
     }
 
+    console.log('✅ Successfully parsed member ID:', memberId);
+
     // Find customer
+    console.log('Searching for customer with memberId:', memberId, 'in org:', employee.org._id);
     let customer = await Customer.findOne({
       memberId: memberId,
       orgs: employee.org._id
     });
 
+    console.log('First query result:', customer ? `Found: ${customer.name} (${customer._id})` : 'Not found');
+
     if (!customer) {
+      console.log('Trying fallback search without org filter...');
       customer = await Customer.findOne({ memberId });
-      if (customer?.orgs && !customer.orgs.some(orgId => orgId.toString() === employee.org._id.toString())) {
-        customer = null;
+      console.log('Fallback query result:', customer ? `Found: ${customer.name} (${customer._id})` : 'Not found');
+
+      if (customer?.orgs) {
+        console.log('Customer orgs:', customer.orgs);
+        console.log('Employee org:', employee.org._id);
+        const hasOrgAccess = customer.orgs.some(orgId => orgId.toString() === employee.org._id.toString());
+        console.log('Has org access:', hasOrgAccess);
+
+        if (!hasOrgAccess) {
+          customer = null;
+        }
       }
     }
 
     if (!customer) {
-      return NextResponse.json({ error: 'Customer not found' }, { status: 404 });
+      console.log('❌ Customer not found for memberId:', memberId);
+
+      // Additional debug: check if customer exists with different memberId
+      const allCustomersWithSimilarId = await Customer.find({
+        memberId: { $gte: memberId - 10, $lte: memberId + 10 }
+      }).select('memberId name').limit(5);
+      console.log('Nearby member IDs in database:', allCustomersWithSimilarId);
+
+      return NextResponse.json({
+        error: 'Customer not found',
+        debug: {
+          searchedMemberId: memberId,
+          orgId: employee.org._id.toString(),
+          nearbyIds: allCustomersWithSimilarId
+        }
+      }, { status: 404 });
     }
+
+    console.log('✅ Customer found:', {
+      id: customer._id,
+      name: customer.name,
+      memberId: customer.memberId
+    });
 
     // Time window setup
     const now = new Date();

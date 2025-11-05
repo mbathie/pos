@@ -16,10 +16,10 @@ import { cn } from '@/lib/utils'
 import { useClass } from './useClass'
 import dayjs from 'dayjs'
 
-export default function ProductDetail({ product, setProduct, setOpen, open }) {
-  
+export default function ProductDetail({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false }) {
+
   if (!product) return null;
-  
+
   const { addToCart } = useGlobals()
   const { getAvailableDates, getTimesForDate } = useClass({ product, setProduct })
   const [total, setTotal] = useState(0)
@@ -91,6 +91,25 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
             {product.prices?.map((price, priceIdx) => (
               <div key={priceIdx} className='flex'>
                 <div className='flex gap-2 w-full items-center'>
+                  {!isPartOfGroup && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setProduct(draft => {
+                          if (!draft.prices[priceIdx].qty) {
+                            draft.prices[priceIdx].qty = 0;
+                          }
+                          if (draft.prices[priceIdx].qty > 0) {
+                            draft.prices[priceIdx].qty--;
+                          }
+                        });
+                      }}
+                      disabled={!price.qty}
+                    >
+                      <Minus />
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -99,22 +118,9 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
                         if (!draft.prices[priceIdx].qty) {
                           draft.prices[priceIdx].qty = 0;
                         }
-                        if (draft.prices[priceIdx].qty > 0) {
-                          draft.prices[priceIdx].qty--;
-                        }
-                      });
-                    }}
-                    disabled={!price.qty}
-                  >
-                    <Minus />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setProduct(draft => {
-                        if (!draft.prices[priceIdx].qty) {
-                          draft.prices[priceIdx].qty = 0;
+                        if (isPartOfGroup && draft.prices[priceIdx].qty >= 1) {
+                          // For group products, limit to 1
+                          return;
                         }
                         draft.prices[priceIdx].qty++;
                       });
@@ -129,7 +135,9 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
                   )}
                   <div className='flex-1' />
                   {price.qty || 0}x
-                  ${parseFloat(price.value || 0).toFixed(2)}
+                  <span className={isPartOfGroup ? 'line-through text-muted-foreground' : ''}>
+                    ${parseFloat(price.value || 0).toFixed(2)}
+                  </span>
                 </div>
               </div>
             ))}
@@ -291,14 +299,15 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
             </div>
           </div>
 
-          <SheetClose asChild>
-            <Button 
-              type="submit" 
+          {onAddToCart ? (
+            <Button
+              type="submit"
+              className='cursor-pointer'
               disabled={(() => {
                 // Check if we have selected prices and times
                 const hasSelectedPrices = product.prices?.some(p => (p.qty || 0) > 0);
                 const hasSelectedTimes = selectedTimes && selectedTimes.length > 0;
-                
+
                 // Need both: selected prices AND selected times
                 return !hasSelectedPrices || !hasSelectedTimes;
               })()}
@@ -313,12 +322,43 @@ export default function ProductDetail({ product, setProduct, setOpen, open }) {
                 const _product = await calcCartValueClass({product: cartProduct})
                 const _productCleaned = await cleanupProduct({product:_product})
 
-                await addToCart(_productCleaned)
+                await onAddToCart(_productCleaned)
+                // Don't call setOpen(false) here - let the parent component handle it
               }}
             >
-              Add
+              {isPartOfGroup ? 'Ok' : 'Add'}
             </Button>
-          </SheetClose>
+          ) : (
+            <SheetClose asChild>
+              <Button
+                type="submit"
+                className='cursor-pointer'
+                disabled={(() => {
+                  // Check if we have selected prices and times
+                  const hasSelectedPrices = product.prices?.some(p => (p.qty || 0) > 0);
+                  const hasSelectedTimes = selectedTimes && selectedTimes.length > 0;
+
+                  // Need both: selected prices AND selected times
+                  return !hasSelectedPrices || !hasSelectedTimes;
+                })()}
+                onClick={async () => {
+                  // Prepare product for cart
+                  const cartProduct = {
+                    ...product,
+                    selectedTimes: selectedTimes, // Already in the correct format
+                    prices: product.prices?.filter(p => (p.qty || 0) > 0)
+                  };
+
+                  const _product = await calcCartValueClass({product: cartProduct})
+                  const _productCleaned = await cleanupProduct({product:_product})
+
+                  await addToCart(_productCleaned)
+                }}
+              >
+                Add
+              </Button>
+            </SheetClose>
+          )}
         </SheetFooter>
 
       </SheetContent>

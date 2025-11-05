@@ -8,7 +8,6 @@ const TerminalSchema = new mongoose.Schema({
   status: { type: String, enum: ['online', 'offline', 'unknown'], default: 'unknown' },
   location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location', required: true },
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
-  browser: String, // Unique browser ID for terminal-browser linking
   lastSeen: Date,
   serialNumber: String,
   deviceType: String,

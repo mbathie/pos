@@ -20,7 +20,7 @@ export async function POST(req) {
   const { employee } = result;
 
   const body = await req.json();
-  const { name, description, products = [], amount, active = true } = body || {};
+  const { name, description, thumbnail, products = [], amount, active = true } = body || {};
   if (!name || typeof amount !== 'number') {
     return NextResponse.json({ error: 'Name and amount are required' }, { status: 400 });
   }
@@ -28,6 +28,7 @@ export async function POST(req) {
   const group = await ProductGroup.create({
     name,
     description,
+    thumbnail,
     products,
     amount,
     active,

@@ -8,17 +8,10 @@ export async function GET(request, { params }) {
     
     const { id } = await params
 
-    // Find the product and populate its category to get the organization
+    // Find the product and populate its organization directly
     const product = await Product.findById(id)
-      .select('name desc thumbnail tandcContent category')
-      .populate({
-        path: 'category',
-        select: 'org',
-        populate: {
-          path: 'org',
-          select: 'name logo tandcContent addressLine suburb state postcode phone email'
-        }
-      })
+      .select('name desc thumbnail tandcContent org')
+      .populate('org', 'name logo tandcContent addressLine suburb state postcode phone email')
       .lean()
 
     if (!product) {
@@ -28,7 +21,7 @@ export async function GET(request, { params }) {
       )
     }
 
-    const org = product.category?.org
+    const org = product.org
 
     // Determine which terms to show - product specific or organization general
     const terms = product.tandcContent || org?.tandcContent || null

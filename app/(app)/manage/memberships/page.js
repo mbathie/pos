@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/pagination"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Filter, MoreHorizontal, User, CreditCard, Calendar, DollarSign, Ban, Pause } from "lucide-react";
 import { TypographyLarge } from '@/components/ui/typography';
 import dayjs from 'dayjs';
@@ -102,6 +103,13 @@ export default function MembershipsPage() {
     }
     setSortConfig({ key, direction });
     setCurrentPage(1); // Reset to first page when sorting
+  };
+
+  const handleHeaderKey = (e, key) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleSort(key);
+    }
   };
 
   const getSortIcon = (column) => {
@@ -248,55 +256,75 @@ export default function MembershipsPage() {
           <table className="w-full caption-bottom text-sm">
             <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
               <tr className="border-b bg-muted/50 hover:bg-muted/50">
-                <th 
+                <th
+                  scope="col"
+                  aria-sort={sortConfig.key === 'customer.name' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  tabIndex={0}
                   onClick={() => handleSort('customer.name')}
+                  onKeyDown={(e) => handleHeaderKey(e, 'customer.name')}
                 >
                   <div className="flex items-center">
                     Member
                     {getSortIcon('customer.name')}
                   </div>
                 </th>
-                <th 
+                <th
+                  scope="col"
+                  aria-sort={sortConfig.key === 'product.name' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  tabIndex={0}
                   onClick={() => handleSort('product.name')}
+                  onKeyDown={(e) => handleHeaderKey(e, 'product.name')}
                 >
                   <div className="flex items-center">
                     Membership
                     {getSortIcon('product.name')}
                   </div>
                 </th>
-                <th 
+                <th
+                  scope="col"
+                  aria-sort={sortConfig.key === 'amount' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  tabIndex={0}
                   onClick={() => handleSort('amount')}
+                  onKeyDown={(e) => handleHeaderKey(e, 'amount')}
                 >
                   <div className="flex items-center">
                     Value
                     {getSortIcon('amount')}
                   </div>
                 </th>
-                <th 
+                <th
+                  scope="col"
+                  aria-sort={sortConfig.key === 'nextBillingDate' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  tabIndex={0}
                   onClick={() => handleSort('nextBillingDate')}
+                  onKeyDown={(e) => handleHeaderKey(e, 'nextBillingDate')}
                 >
                   <div className="flex items-center">
                     Next Billing
                     {getSortIcon('nextBillingDate')}
                   </div>
                 </th>
-                <th 
+                <th
+                  scope="col"
+                  aria-sort={sortConfig.key === 'subscriptionStartDate' ? (sortConfig.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  tabIndex={0}
                   onClick={() => handleSort('subscriptionStartDate')}
+                  onKeyDown={(e) => handleHeaderKey(e, 'subscriptionStartDate')}
                 >
                   <div className="flex items-center">
                     Started
                     {getSortIcon('subscriptionStartDate')}
                   </div>
                 </th>
-                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                <th scope="col" className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
                   Status
                 </th>
-                <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
+                <th scope="col" className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
                   Actions
                 </th>
               </tr>
@@ -328,19 +356,20 @@ export default function MembershipsPage() {
                       }
                     }}
                   >
-                    <td className="px-4 py-3 align-middle">
-                      <div className="flex items-center gap-3">
-                        {membership.customer?.photo ? (
-                          <img 
-                            src={membership.customer.photo} 
-                            alt={membership.dependent?.name || membership.customer?.name} 
-                            className="h-8 w-8 rounded-full object-cover flex-shrink-0"
-                          />
-                        ) : (
-                          <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium flex-shrink-0">
-                            {getInitials(membership.dependent?.name || membership.customer?.name)}
-                          </div>
-                        )}
+                    <td className="px-4 py-3 font-medium align-middle">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-8 w-8 flex-shrink-0">
+                          {membership.customer?.photo ? (
+                            <AvatarImage
+                              src={membership.customer.photo}
+                              alt={membership.dependent?.name || membership.customer?.name}
+                            />
+                          ) : (
+                            <AvatarFallback className="bg-primary/10">
+                              {getInitials(membership.dependent?.name || membership.customer?.name)}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
                         <div className="flex flex-col min-w-0">
                           <div className="font-medium">
                             {membership.dependent?.name || membership.customer?.name || 'Unknown'}
@@ -394,7 +423,7 @@ export default function MembershipsPage() {
                     </td>
                     
                     <td className="px-4 py-3 align-middle">
-                      {membership.cancelAtPeriodEnd ? (
+                      {membership.cancellationScheduledFor ? (
                         <div className="flex flex-col gap-1">
                           <Badge variant="destructive" className="text-xs flex items-center gap-1 w-fit">
                             <Ban className="h-3 w-3" />
@@ -455,8 +484,7 @@ export default function MembershipsPage() {
                     <td className="px-4 py-3 text-right align-middle" data-actions>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0 cursor-pointer">
-                            <span className="sr-only">Open menu</span>
+                          <Button variant="ghost" size="icon" className="cursor-pointer h-8 w-8" aria-label="Row actions" title="Row actions">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>

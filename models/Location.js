@@ -8,6 +8,13 @@ const LocationSchema = new mongoose.Schema({
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org' },
   employees: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Employee' }],
   customers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Customer' }],
+  devices: [{
+    browserId: { type: String, required: true },
+    name: String,
+    terminal: { type: mongoose.Schema.Types.ObjectId, ref: 'Terminal' },
+    lastSeen: Date,
+    metadata: mongoose.Schema.Types.Mixed
+  }]
 }, { timestamps: true, strict: false });
 
 // Index for org reference

@@ -213,6 +213,19 @@ export default function MembershipsProductSheet({
                     <Label className="w-24">Amount ($)</Label>
                     <Label className="w-40">Billing Frequency</Label>
                     <Label className="flex items-center gap-2 w-24">
+                      Min Contract
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="size-4 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p>The minimum number of billing cycles the customer must commit to before being able to cancel</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </Label>
+                    <Label className="flex items-center gap-2 w-24">
                       Billing Max
                       <TooltipProvider>
                         <Tooltip>
@@ -286,6 +299,19 @@ export default function MembershipsProductSheet({
                           </SelectGroup>
                         </SelectContent>
                       </Select>
+
+                      <NumberInput
+                        placeholder=""
+                        value={price.minContract || null}
+                        min={0}
+                        step={1}
+                        className="w-24 text-sm"
+                        onChange={(value) => {
+                          setProducts((draft) => {
+                            draft[productIdx].prices[priceIdx].minContract = value;
+                          });
+                        }}
+                      />
 
                       <NumberInput
                         placeholder=""

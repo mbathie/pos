@@ -14,14 +14,14 @@ export default function LoginPage() {
   const [ email, setEmail ] = useState("")
   const [ password, setPassword ] = useState("")
 
-  const { setEmployee, setLocation, setLocations } = useGlobals()
+  const { setEmployee, setLocation, setLocations, setDevice } = useGlobals()
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
 
     try {
-      const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + "/api/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -34,27 +34,32 @@ export default function LoginPage() {
       }
 
       // Only proceed if login was successful
-      const userRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/me`);
-      
+      // Small delay to ensure cookies are set (Safari fix)
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const userRes = await fetch("/api/users/me");
+
       if (!userRes.ok) {
-        setError("Failed to load user data");
+        const userData = await userRes.json();
+        console.error('Failed to load user data:', userData);
+        setError(`Failed to load user data: ${userData.error || 'Unknown error'}`);
         return;
       }
-      
+
       const data = await userRes.json();
       // Only set pinAuth if employee has a PIN configured
       const employeeData = { ...data.employee };
       // if (data.employee.pin != null) {
       //   employeeData.pinAuth = new Date();
       // }
-      
+
       setEmployee(employeeData)
-      
+
       // Fetch all locations
       const locationsRes = await fetch(`/api/locations`, { method: "GET" });
       const _l = await locationsRes.json()
       setLocations(_l)
-      
+
       // Set the location based on selectedLocationId (which comes from browser tie)
       if (data.employee.selectedLocationId) {
         const selectedLocation = _l.find(loc => loc._id === data.employee.selectedLocationId);
@@ -67,6 +72,26 @@ export default function LoginPage() {
       } else if (_l.length > 0) {
         // Fallback to first location
         setLocation(_l[0]);
+      }
+
+      // Find and set the current device
+      try {
+        const browserRes = await fetch(`/api/auth/browser-id`)
+        if (browserRes.ok) {
+          const { browserId } = await browserRes.json()
+          if (browserId) {
+            // Search for device with matching browserId across all locations
+            for (const loc of _l) {
+              const device = loc.devices?.find(d => d.browserId === browserId)
+              if (device) {
+                setDevice(device)
+                break
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error setting device:', err)
       }
 
       window.location.href = "/shop"

@@ -13,7 +13,7 @@ import { calcCartValueCourse } from '@/lib/product'
 import { useClass } from './useClass'
 import dayjs from 'dayjs';
 
-export default function ProductDetail({ open, setOpen, product, setProduct }) {
+export default function ProductDetail({ open, setOpen, product, setProduct, onAddToCart, isPartOfGroup = false }) {
 
   if (!product) return null;
 
@@ -66,20 +66,28 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
                   {product.prices.map((price, priceIdx) => (
                     <div key={priceIdx} className='flex'>
                       <div className='flex gap-2 w-full items-center'>
+                        {!isPartOfGroup && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setQty({ type: '-', vIdx: 0, priceIdx })}
+                            disabled={!price.qty}
+                          >
+                            <Minus />
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setQty({ type: '-', vIdx: 0, priceIdx })}
-                          disabled={!price.qty}
-                        >
-                          <Minus />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setQty({ type: '+', vIdx: 0, priceIdx })}
+                          onClick={() => {
+                            if (isPartOfGroup && price.qty >= 1) {
+                              // For group products, limit to 1
+                              return;
+                            }
+                            setQty({ type: '+', vIdx: 0, priceIdx });
+                          }}
                           disabled={
-                            product.prices.reduce((sum, p) => sum + (p.qty ?? 0), 0) >= (product.available || 999)
+                            !isPartOfGroup && product.prices.reduce((sum, p) => sum + (p.qty ?? 0), 0) >= (product.available || 999)
                           }
                         >
                           <Plus />
@@ -87,7 +95,9 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
                         {price.name}
                         <div className='flex-1' />
                         {price.qty || 0}x
-                        ${parseFloat(price.value).toFixed(2)}
+                        <span className={isPartOfGroup ? 'line-through text-muted-foreground' : ''}>
+                          ${parseFloat(price.value).toFixed(2)}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -196,7 +206,7 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
                   if (product.schedule?.times?.length > 1 && !product.selectedTimeSlot) {
                     return; // Don't proceed without time slot selection
                   }
-                  
+
                   // Clean up the product before adding to cart
                   const cleanProduct = {
                     ...product,
@@ -208,23 +218,30 @@ export default function ProductDetail({ open, setOpen, product, setProduct }) {
                     // Include selected time slot
                     selectedTimeSlot: product.selectedTimeSlot
                   };
-                  
+
                   // Only add if there's something selected
                   const hasItems = cleanProduct.prices.some(p => p.qty > 0);
                   if (hasItems) {
                     // Calculate the amount for the cart
                     const productWithAmount = await calcCartValueCourse({ product: cleanProduct });
-                    addToCart(productWithAmount);
+
+                    if (onAddToCart) {
+                      // Custom callback for group sheets - returns configured product
+                      await onAddToCart(productWithAmount);
+                    } else {
+                      // Default behavior - add directly to cart
+                      addToCart(productWithAmount);
+                    }
                     setOpen(false);
                   }
                 }}
                 disabled={
-                  !product.prices?.some(p => p.qty > 0) || 
+                  !product.prices?.some(p => p.qty > 0) ||
                   (product.schedule?.times?.length > 1 && !selectedTimeSlot)
                 }
-                className='w-full mt-2'
+                className='w-full mt-2 cursor-pointer'
               >
-                Add
+                {isPartOfGroup ? 'Ok' : 'Add'}
               </Button>
             </div>
           </div>

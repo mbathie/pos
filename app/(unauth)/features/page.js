@@ -10,7 +10,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronRight, ChevronDown, FileText, PauseCircle, XCircle, CheckCircle, Clock, Bell, Package, ShoppingCart, Calendar, Percent, FileCheck, Folder, Users, Receipt } from 'lucide-react';
+import { ChevronRight, ChevronDown, FileText, PauseCircle, XCircle, CheckCircle, Clock, Bell, Package, ShoppingCart, Calendar, Percent, FileCheck, Folder, Users, Receipt, CreditCard } from 'lucide-react';
 // Flowchart removed
 
 export default function FeaturesPage() {
@@ -28,6 +28,11 @@ export default function FeaturesPage() {
       id: 'membership-cancellation',
       title: 'Membership Cancellation',
       Icon: XCircle
+    },
+    {
+      id: 'membership-card-management',
+      title: 'Membership Card Management',
+      Icon: CreditCard
     },
     {
       id: 'checkin-system',
@@ -375,68 +380,111 @@ export default function FeaturesPage() {
 
                 <h3 className="text-lg font-semibold mt-6 mb-3">Overview</h3>
                 <p className="text-muted-foreground mb-4">
-                  Allows staff to cancel active membership subscriptions at the end of the current billing period. Cancellations are processed through Stripe's <code className="text-sm bg-muted px-1.5 py-0.5 rounded">cancel_at_period_end</code> API, ensuring members retain access until their paid period expires.
+                  Allows staff to cancel active membership subscriptions while enforcing minimum contract commitments. Cancellations are intelligently processed through Stripe using either <code className="text-sm bg-muted px-1.5 py-0.5 rounded">cancel_at_period_end</code> or <code className="text-sm bg-muted px-1.5 py-0.5 rounded">cancel_at</code> APIs based on minimum contract requirements, ensuring members retain access until their paid period or minimum contract expires.
                 </p>
 
                 <h3 className="text-lg font-semibold mt-6 mb-3">Key Features</h3>
                 <ul className="space-y-2 text-muted-foreground mb-4">
-                  <li><strong>End-of-Period Cancellation:</strong> Memberships remain active until next billing date</li>
-                  <li><strong>Stripe Integration:</strong> Seamlessly integrates with Stripe's cancel_at_period_end for connected accounts</li>
-                  <li><strong>Visual Indicators:</strong> Clear UI badges showing cancellation status and date</li>
-                  <li><strong>Employee Tracking:</strong> Records which employee initiated the cancellation</li>
-                  <li><strong>AlertDialog Confirmation:</strong> User-friendly confirmation dialog with cancellation details</li>
+                  <li><strong>Minimum Contract Enforcement:</strong> Honors minimum billing cycle commitments configured per price</li>
+                  <li><strong>Smart Cancellation Scheduling:</strong> Automatically calculates cancellation date as the later of next billing date or minimum contract end date</li>
+                  <li><strong>Dual Stripe API Support:</strong> Uses <code className="text-sm bg-muted px-1.5 py-0.5 rounded">cancel_at_period_end</code> for standard cancellations or <code className="text-sm bg-muted px-1.5 py-0.5 rounded">cancel_at</code> with specific timestamp for minimum contract enforcement</li>
+                  <li><strong>Visual Indicators:</strong> Clear UI badges showing cancellation status and date on both customer detail and memberships management pages</li>
+                  <li><strong>Employee Tracking:</strong> Records which employee initiated the cancellation and optional cancellation reason</li>
+                  <li><strong>Reactivation Support:</strong> Allows undoing scheduled cancellations before they take effect</li>
+                  <li><strong>AlertDialog Confirmation:</strong> User-friendly confirmation dialog showing calculated cancellation date with minimum contract footnote when applicable</li>
                 </ul>
 
                 <h3 className="text-lg font-semibold mt-6 mb-3">How It Works</h3>
                 <ol className="space-y-2 text-muted-foreground mb-4 list-decimal list-inside">
-                  <li>Staff navigates to customer detail page</li>
+                  <li>Staff navigates to customer detail page or memberships management page</li>
                   <li>Clicks ellipsis menu (⋮) next to active membership</li>
                   <li>Selects "Cancel Membership" option</li>
-                  <li>Reviews confirmation dialog</li>
-                  <li>System updates Stripe subscription with <code className="text-sm bg-muted px-1.5 py-0.5 rounded">cancel_at_period_end: true</code></li>
-                  <li>UI updates to show Active badge + Cancels badge</li>
+                  <li>System calculates minimum contract date based on subscription start date + (billing frequency × minimum contract cycles)</li>
+                  <li>Reviews confirmation dialog showing calculated cancellation date</li>
+                  <li>If minimum contract extends beyond next billing date, system uses Stripe's <code className="text-sm bg-muted px-1.5 py-0.5 rounded">cancel_at</code> with specific timestamp; otherwise uses <code className="text-sm bg-muted px-1.5 py-0.5 rounded">cancel_at_period_end</code></li>
+                  <li>System records cancellation metadata including employee ID, reason, and whether minimum contract was enforced</li>
+                  <li>UI updates to show Active badge + Cancels badge with calculated date</li>
                 </ol>
 
                 <h3 className="text-lg font-semibold mt-6 mb-3">Example Scenarios</h3>
 
                 <div className="space-y-6 mb-6">
                   <div className="bg-muted p-4 rounded-lg">
-                    <h4 className="font-semibold text-sm mb-2">Scenario 1: Standard Cancellation</h4>
-                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Customer has active $70/month membership, paid through Oct 31</p>
+                    <h4 className="font-semibold text-sm mb-2">Scenario 1: Standard Cancellation (No Minimum Contract)</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Customer has active $70/month membership, paid through Oct 31, no minimum contract</p>
                     <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
                       <li>Current date: Oct 15</li>
                       <li>Next billing date: Oct 31</li>
+                      <li>Minimum contract: 0 (none)</li>
                       <li>Staff initiates cancellation via ellipsis menu</li>
                       <li><strong>System action:</strong> Sets <code className="text-xs bg-background px-1 py-0.5 rounded">cancel_at_period_end: true</code> in Stripe</li>
-                      <li><strong>UI updates:</strong> Shows "Active" + "Cancels Oct 31" badges</li>
+                      <li><strong>UI updates:</strong> Shows "Active" + "Cancels: 31/10" badges</li>
                       <li><strong>Customer access:</strong> Retains full membership access until Oct 31</li>
                       <li><strong>Oct 31 result:</strong> Membership expires, no renewal charge</li>
                     </ul>
                   </div>
 
                   <div className="bg-muted p-4 rounded-lg">
-                    <h4 className="font-semibold text-sm mb-2">Scenario 2: Cancellation Reactivation</h4>
-                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Customer cancelled membership but changed their mind before cancellation date</p>
+                    <h4 className="font-semibold text-sm mb-2">Scenario 2: Minimum Contract Enforcement</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Customer signed up 2 weeks ago with 2-month minimum contract</p>
                     <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                      <li>Original cancellation: Oct 15, scheduled to cancel Oct 31</li>
-                      <li>Reactivation date: Oct 20 (11 days before cancellation)</li>
-                      <li>Staff clicks "Undo Cancellation" in ellipsis menu</li>
-                      <li><strong>System action:</strong> Sets <code className="text-xs bg-background px-1 py-0.5 rounded">cancel_at_period_end: false</code> in Stripe</li>
-                      <li><strong>UI updates:</strong> Removes "Cancels" badge, shows only "Active"</li>
-                      <li><strong>Billing resumes:</strong> Oct 31 renewal charge processes normally</li>
+                      <li>Subscription start: Oct 1</li>
+                      <li>Current date: Oct 15</li>
+                      <li>Next billing date: Nov 1</li>
+                      <li>Billing frequency: Monthly</li>
+                      <li>Minimum contract: 2 cycles</li>
+                      <li>Staff initiates cancellation via ellipsis menu</li>
+                      <li><strong>System calculates:</strong> Min contract date = Oct 1 + 2 months = Dec 1</li>
+                      <li><strong>System action:</strong> Uses <code className="text-xs bg-background px-1 py-0.5 rounded">cancel_at</code> with timestamp for Dec 1 in Stripe (later than Nov 1)</li>
+                      <li><strong>Stripe metadata:</strong> Includes <code className="text-xs bg-background px-1 py-0.5 rounded">min_contract_enforced: true</code></li>
+                      <li><strong>UI updates:</strong> Shows "Active" + "Cancels: 01/12" badges with footnote explaining minimum contract</li>
+                      <li><strong>Billing continues:</strong> Nov 1 renewal charge processes normally</li>
+                      <li><strong>Dec 1 result:</strong> Membership expires after minimum contract fulfilled</li>
                     </ul>
                   </div>
 
                   <div className="bg-muted p-4 rounded-lg">
-                    <h4 className="font-semibold text-sm mb-2">Scenario 3: Cancellation with Employee Tracking</h4>
-                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Manager cancels membership and records reason for audit trail</p>
+                    <h4 className="font-semibold text-sm mb-2">Scenario 3: Minimum Contract Already Satisfied</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Long-time customer with 2-month minimum contract cancels after 6 months</p>
                     <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
-                      <li>Employee: Jane Smith (Manager)</li>
-                      <li>Cancellation reason: "Customer relocating to different city"</li>
-                      <li>Cancellation date: Nov 5</li>
-                      <li><strong>System records:</strong> Employee ID, timestamp, and cancellation reason</li>
-                      <li><strong>Audit log:</strong> "Cancelled by Jane Smith on Nov 5, 2025 - Customer relocating"</li>
-                      <li><strong>Reporting:</strong> Cancellation data available for analytics and reporting</li>
+                      <li>Subscription start: Apr 1</li>
+                      <li>Current date: Oct 15</li>
+                      <li>Next billing date: Nov 1</li>
+                      <li>Billing frequency: Monthly</li>
+                      <li>Minimum contract: 2 cycles</li>
+                      <li><strong>System calculates:</strong> Min contract date = Apr 1 + 2 months = Jun 1 (already passed)</li>
+                      <li><strong>System action:</strong> Uses <code className="text-xs bg-background px-1 py-0.5 rounded">cancel_at_period_end: true</code> in Stripe (minimum contract already satisfied)</li>
+                      <li><strong>UI updates:</strong> Shows "Active" + "Cancels: 01/11" badges (no footnote needed)</li>
+                      <li><strong>Nov 1 result:</strong> Membership expires at next billing date</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 4: Cancellation Reactivation</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Customer cancelled membership but changed their mind before cancellation date</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Original cancellation: Oct 15, scheduled to cancel Dec 1 (min contract enforced)</li>
+                      <li>Reactivation date: Oct 20</li>
+                      <li>Staff clicks "Undo Cancellation" in ellipsis menu</li>
+                      <li><strong>System action:</strong> Sets <code className="text-xs bg-background px-1 py-0.5 rounded">cancel_at_period_end: false</code> and clears <code className="text-xs bg-background px-1 py-0.5 rounded">cancel_at</code> in Stripe</li>
+                      <li><strong>UI updates:</strong> Removes "Cancels" badge, shows only "Active"</li>
+                      <li><strong>Billing resumes:</strong> All future renewal charges process normally</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 5: Weekly Billing with Minimum Contract</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Customer with weekly $25 membership and 4-week minimum contract</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Subscription start: Oct 1</li>
+                      <li>Current date: Oct 10</li>
+                      <li>Next billing date: Oct 15</li>
+                      <li>Billing frequency: Weekly</li>
+                      <li>Minimum contract: 4 cycles</li>
+                      <li><strong>System calculates:</strong> Min contract date = Oct 1 + (4 × 7 days) = Oct 29</li>
+                      <li><strong>System action:</strong> Uses <code className="text-xs bg-background px-1 py-0.5 rounded">cancel_at</code> with timestamp for Oct 29</li>
+                      <li><strong>Billing continues:</strong> Oct 15, Oct 22 renewals process normally</li>
+                      <li><strong>Oct 29 result:</strong> Membership expires after 4 weeks</li>
                     </ul>
                   </div>
                 </div>
@@ -445,12 +493,19 @@ export default function FeaturesPage() {
                 <div className="bg-muted p-4 rounded-lg mb-4">
                   <p className="text-sm font-semibold mb-2">Core Business Logic</p>
                   <ul className="text-sm space-y-1 text-muted-foreground">
-                    <li><code>/lib/payments/cancel.js</code> - Cancellation logic</li>
+                    <li><code>/lib/payments/cancel.js</code> - Cancellation logic with minimum contract calculation and Stripe integration</li>
+                    <li><code>/lib/memberships.js</code> - Membership data operations (includes price population for min contract)</li>
                   </ul>
                   <p className="text-sm font-semibold mt-3 mb-2">API Routes</p>
                   <ul className="text-sm space-y-1 text-muted-foreground">
-                    <li><code>/app/api/memberships/[id]/cancel/route.js</code></li>
-                    <li><code>/app/api/memberships/[id]/reactivate/route.js</code></li>
+                    <li><code>/app/api/memberships/[id]/cancel/route.js</code> - Cancel membership endpoint</li>
+                    <li><code>/app/api/memberships/[id]/reactivate/route.js</code> - Reactivate cancelled membership endpoint</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">UI Components</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/app/(app)/manage/customers/[id]/page.js</code> - Customer detail page with cancellation dialog and badges</li>
+                    <li><code>/app/(app)/manage/memberships/page.js</code> - Memberships management page with cancellation status display</li>
+                    <li><code>/app/(app)/products/(entry)/MembershipsProductSheet.js</code> - Membership product configuration with Min Contract field</li>
                   </ul>
                 </div>
 
@@ -464,6 +519,173 @@ export default function FeaturesPage() {
                   <li>Customer self-service cancellation in mobile app</li>
                   <li>Cancellation survey/feedback collection</li>
                   <li>Reactivation offer before cancellation takes effect</li>
+                </ul>
+              </section>
+
+              {/* Membership Card Management */}
+              <section id="membership-card-management" className="mb-16 scroll-mt-20">
+                <div className="bg-primary text-primary-foreground p-4 rounded-lg mb-6 flex items-center gap-3">
+                  <CreditCard className="h-6 w-6 shrink-0" />
+                  <h2 className="text-2xl font-semibold m-0">Membership Card Management</h2>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Overview</h3>
+                <p className="text-muted-foreground mb-4">
+                  Allows staff to view and update payment methods for active membership subscriptions directly from the customer detail page. Provides a secure, PCI-compliant way to manually enter or update credit/debit cards for future subscription payments using Stripe Elements, with full support for Stripe Connected Accounts architecture.
+                </p>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Key Features</h3>
+                <ul className="space-y-2 text-muted-foreground mb-4">
+                  <li><strong>Card Display:</strong> Shows current card on file with brand, last 4 digits, and expiration date</li>
+                  <li><strong>Secure Card Entry:</strong> PCI-compliant card input using Stripe Elements (no card data touches your servers)</li>
+                  <li><strong>Manual Updates:</strong> Staff can update payment methods before subscription renewal or when customer provides new card</li>
+                  <li><strong>Connected Accounts Support:</strong> Automatically clones payment methods from platform to connected accounts</li>
+                  <li><strong>Subscription Updates:</strong> Updates subscription's default payment method in Stripe</li>
+                  <li><strong>Real-time Validation:</strong> Stripe validates card details as they're entered</li>
+                  <li><strong>Visual Feedback:</strong> Green "Update" button and clear card display for easy access</li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">How It Works</h3>
+                <ol className="space-y-2 text-muted-foreground mb-4 list-decimal list-inside">
+                  <li>Staff navigates to customer detail page</li>
+                  <li>Views membership status section showing "Card on File"</li>
+                  <li>Clicks green "Update" button next to card information</li>
+                  <li>Dialog opens showing current card (if any) and Stripe Elements form</li>
+                  <li>Staff enters new card details (number, expiry, CVC)</li>
+                  <li>Stripe validates card in real-time (shows errors for invalid input)</li>
+                  <li>Clicks "Update Card" button</li>
+                  <li>System creates payment method via Stripe API</li>
+                  <li>System clones payment method to connected account (if platform-owned)</li>
+                  <li>System attaches payment method to Stripe customer</li>
+                  <li>System updates subscription's default payment method</li>
+                  <li>UI refreshes showing updated card information</li>
+                </ol>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Example Scenarios</h3>
+
+                <div className="space-y-6 mb-6">
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 1: Failed Payment - Customer Provides New Card</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Customer's card failed, they come in with a new card</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Current card on file: Visa ••0341 (expired)</li>
+                      <li>Staff opens customer detail page</li>
+                      <li>Sees "Card on File: Visa •••• 0341 1/2024" (expired)</li>
+                      <li>Clicks "Update" button</li>
+                      <li>Enters customer's new card: 4242424242424242, 12/27, 123</li>
+                      <li><strong>System action:</strong> Creates payment method, clones to connected account, updates subscription</li>
+                      <li><strong>Result:</strong> Card on file now shows "Visa •••• 4242 12/2027"</li>
+                      <li><strong>Next billing:</strong> Future subscription payments will use new card</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 2: Proactive Update Before Expiry</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Customer's card expires soon, they provide updated expiry</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Current card: Visa ••5566 expires 02/2026 (next month)</li>
+                      <li>Customer gets new card with updated expiry: same number, new expiry 05/2029</li>
+                      <li>Staff updates card through dialog</li>
+                      <li><strong>System action:</strong> Updates payment method with new expiry date</li>
+                      <li><strong>Result:</strong> Prevents payment failure from expired card</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 3: New Membership Without Card</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Customer signed up in person without providing card, wants to add it now</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Membership active but showing "No card on file"</li>
+                      <li>Staff clicks "Add Card" button</li>
+                      <li>Enters customer's card details</li>
+                      <li><strong>System action:</strong> Adds card to subscription for future payments</li>
+                      <li><strong>Result:</strong> Future renewal payments will process automatically</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Technical Details</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Stripe Connected Accounts</p>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    This system properly handles Stripe's Connected Accounts architecture:
+                  </p>
+                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside ml-4">
+                    <li>Payment methods created via Stripe Elements belong to platform account</li>
+                    <li>System automatically clones payment methods to connected account</li>
+                    <li>Subscriptions always use connected account's payment methods</li>
+                    <li>Proper error handling for cross-account payment method issues</li>
+                  </ul>
+
+                  <p className="text-sm font-semibold mt-3 mb-2">Security & Compliance</p>
+                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside ml-4">
+                    <li>PCI DSS compliant - card data never touches your servers</li>
+                    <li>Stripe Elements provides secure, hosted input fields</li>
+                    <li>HTTPS required for Stripe Elements to function</li>
+                    <li>Real-time validation prevents invalid card submissions</li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Files Reference</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Frontend Components</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/components/membership-card-on-file.jsx</code> - Card display component with update button</li>
+                    <li><code>/components/membership-card-update-dialog.jsx</code> - Dialog with Stripe Elements for secure card entry</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">API Routes</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/app/api/customers/[id]/memberships/[membershipId]/payment-method/route.js</code> - GET: Retrieve current payment method</li>
+                    <li><code>/app/api/customers/[id]/memberships/[membershipId]/payment-method/update/route.js</code> - POST: Update subscription payment method</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">Environment Configuration</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY</code> - Stripe publishable key for frontend initialization</li>
+                    <li><code>STRIPE_SECRET_KEY</code> - Stripe secret key for backend API calls</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">NPM Packages</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>@stripe/stripe-js</code> - Stripe.js library for loading Stripe</li>
+                    <li><code>@stripe/react-stripe-js</code> - React components for Stripe Elements</li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Testing</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Test Cards (Stripe Test Mode)</p>
+                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside ml-4">
+                    <li><strong>4242 4242 4242 4242</strong> - Visa (succeeds)</li>
+                    <li><strong>5555 5555 5555 4444</strong> - Mastercard (succeeds)</li>
+                    <li><strong>4000 0000 0000 0002</strong> - Visa (card declined)</li>
+                    <li>Any future expiry date (e.g., 12/27)</li>
+                    <li>Any 3-digit CVC (e.g., 123)</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">Verification Steps</p>
+                  <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside ml-4">
+                    <li>Update card through UI</li>
+                    <li>Verify card displays updated information</li>
+                    <li>Check Stripe dashboard - subscription should show new payment method</li>
+                    <li>Advance test clock (or wait for next billing) to verify charges use new card</li>
+                  </ol>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Limitations</h3>
+                <ul className="space-y-1 text-muted-foreground mb-4 text-sm list-disc list-inside">
+                  <li>Terminal payments (card_present) cannot be saved for future use - Stripe limitation</li>
+                  <li>Requires HTTPS connection for Stripe Elements to function</li>
+                  <li>Only supports card payments (credit/debit cards)</li>
+                  <li>Cannot display full card number for security reasons (only last 4 digits)</li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Future Enhancements</h3>
+                <ul className="space-y-1 text-muted-foreground mb-4 text-sm list-disc list-inside">
+                  <li>Support for ACH/bank account payments</li>
+                  <li>Customer self-service card updates via mobile app</li>
+                  <li>Automatic email notifications when card expires soon</li>
+                  <li>Card update reminders before renewal date</li>
+                  <li>Support for digital wallets (Apple Pay, Google Pay)</li>
+                  <li>Payment method history/audit log</li>
+                  <li>Bulk card update for family memberships</li>
                 </ul>
               </section>
 

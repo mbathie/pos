@@ -242,6 +242,8 @@ export function useClass({product, setProduct}) {
     const schedule = res.ok ? await res.json() : {}
 
     setProduct(draft => {
+      if (!draft) return;
+
       draft.available = schedule.available;
       // For courses, we might want to handle this differently
       // But for now, keeping the available field update
@@ -253,6 +255,8 @@ export function useClass({product, setProduct}) {
     const scheduleData = res.ok ? await res.json() : [];
 
     setProduct(draft => {
+      if (!draft) return;
+
       const now = new Date();
       const twoMonthsLater = new Date();
       twoMonthsLater.setMonth(twoMonthsLater.getMonth() + 2);
@@ -330,6 +334,8 @@ export function useClass({product, setProduct}) {
 
   const setQty = ({ type, vIdx, priceIdx }) => {
     setProduct(draft => {
+      if (!draft) return;
+
       // For courses, prices are at the root level
       const price = draft.prices?.[priceIdx];
       if (!price) return;

@@ -83,12 +83,12 @@ export async function GET(req) {
   };
 
   if (search) {
+    // Escape special regex characters for MongoDB regex
     const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const regex = new RegExp(escaped, "i");
     baseQuery.$or = [
-      { name: { $regex: regex } },
-      { email: { $regex: regex } },
-      { phone: { $regex: regex } },
+      { name: { $regex: escaped, $options: 'i' } },
+      { email: { $regex: escaped, $options: 'i' } },
+      { phone: { $regex: escaped, $options: 'i' } },
     ];
 
     const asNumber = Number(search);

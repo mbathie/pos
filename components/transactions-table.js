@@ -44,11 +44,19 @@ export default function TransactionsTable({
   const finalTransactions = data || transactions;
   const finalLoading = data ? externalLoading : loading;
 
+  // Ensure chronological (newest first) ordering client-side too
+  // Sort by latest activity (updatedAt preferred over createdAt)
+  const sortedTransactions = [...finalTransactions].sort((a, b) => {
+    const aTime = new Date(a?.updatedAt || a?.createdAt || 0).getTime();
+    const bTime = new Date(b?.updatedAt || b?.createdAt || 0).getTime();
+    return bTime - aTime; // Newest first
+  });
+
   // Calculate pagination
-  const totalPages = Math.ceil(finalTransactions.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedTransactions.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
-  const paginatedTransactions = finalTransactions.slice(startIndex, endIndex);
+  const paginatedTransactions = sortedTransactions.slice(startIndex, endIndex);
 
   // Fetch transactions on component mount (only if no external data provided)
   useEffect(() => {
@@ -121,6 +129,19 @@ export default function TransactionsTable({
       .map(word => word.charAt(0).toUpperCase())
       .slice(0, 2)
       .join('');
+  };
+
+  // Choose a sensible display timestamp for each transaction
+  const getDisplayTimestamp = (t) => {
+    const created = t?.createdAt ? new Date(t.createdAt) : null;
+    const updated = t?.updatedAt ? new Date(t.updatedAt) : null;
+    const now = new Date();
+
+    // Prefer updated time if it's after created or when created is in the future
+    if (updated && (!created || updated > created || (created && created > now))) {
+      return updated;
+    }
+    return created || updated || now;
   };
 
   // Generate page numbers for pagination
@@ -237,10 +258,10 @@ export default function TransactionsTable({
                     <td className="px-4 py-3 align-middle">
                       <div>
                         <div className="font-medium">
-                          {dayjs(transaction.createdAt).format('MMM DD, YYYY')}
+                          {dayjs(getDisplayTimestamp(transaction)).format('MMM DD, YYYY')}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {dayjs(transaction.createdAt).format('h:mm A')}
+                          {dayjs(getDisplayTimestamp(transaction)).format('h:mm A')}
                         </div>
                       </div>
                     </td>

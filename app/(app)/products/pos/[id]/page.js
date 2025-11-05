@@ -30,7 +30,7 @@ import { useProduct } from '../../(entry)/useProduct';
 import { useAutoSave } from '../../useAutoSave';
 
 // Draggable folder product component
-function DraggableFolderProduct({ product, onProductClick, borderColor, tintColor }) {
+function DraggableFolderProduct({ product, folderId, onProductClick, borderColor, tintColor }) {
   const {
     attributes,
     listeners,
@@ -39,9 +39,10 @@ function DraggableFolderProduct({ product, onProductClick, borderColor, tintColo
     transition,
     isDragging,
   } = useSortable({
-    id: `folder-product-${product._id}`,
+    id: `folder-${folderId}-product-${product._id}`,
     data: {
       type: 'folder-product',
+      folderId: folderId,
       product: product
     },
     animateLayoutChanges: () => false,
@@ -59,21 +60,29 @@ function DraggableFolderProduct({ product, onProductClick, borderColor, tintColo
       style={style}
       className="w-24 h-32 flex flex-col text-center text-xs group flex-shrink-0 relative"
     >
-      {/* Drag handle - positioned absolutely to avoid interfering with click */}
-      <div
-        className="absolute top-1 right-1 w-6 h-6 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-20"
-        {...attributes}
-        {...listeners}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <GripVertical className="w-3 h-3" />
-      </div>
+      <div className="relative size-24">
+        {/* Drag handle - positioned absolutely */}
+        <div
+          className="absolute top-1 right-1 w-6 h-6 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-20"
+          {...attributes}
+          {...listeners}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="w-3 h-3" />
+        </div>
 
-      {/* Product content */}
-      <div className="cursor-pointer" onClick={(e) => {
-        e.stopPropagation();
-        onProductClick();
-      }}>
+        {/* Edit icon - positioned absolutely */}
+        <div
+          className="absolute bottom-1 right-1 w-6 h-6 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-20"
+          onClick={(e) => {
+            e.stopPropagation();
+            onProductClick();
+          }}
+        >
+          <Pencil className="w-3 h-3" />
+        </div>
+
+        {/* Product thumbnail */}
         <div
           className="size-24 rounded-lg overflow-hidden relative"
           style={borderColor ? { border: `2px solid ${borderColor}` } : undefined}
@@ -93,10 +102,7 @@ function DraggableFolderProduct({ product, onProductClick, borderColor, tintColo
         </div>
       </div>
 
-      <div className="mt-1 cursor-pointer" onClick={(e) => {
-        e.stopPropagation();
-        onProductClick();
-      }}>
+      <div className="mt-1">
         <div className="font-medium">{product.name}</div>
       </div>
     </div>
@@ -144,13 +150,13 @@ function SortableItem({ item, isExpanded, onFolderClick, onFolderEdit, onProduct
     const itemCount = item.items?.length || ((item.products?.length || 0) + (item.groups?.length || 0));
     const folderColor = colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500];
     const isHoveringOverFolder = overId === item._id;
-    const isHoveringOverFolderChild = overId && overId.startsWith('folder-product-') && item.products?.some(p => `folder-product-${p._id}` === overId);
+    const isHoveringOverFolderChild = overId && overId.startsWith(`folder-${item._id}-product-`);
 
     const isExpandedAndReceivingDrag =
       isExpanded &&
       activeId &&
       draggedItemType === 'product' &&
-      !activeId.startsWith('folder-product-') &&
+      !activeId.match(/^folder-.+-product-.+$/) &&
       (isHoveringOverFolder || isHoveringOverFolderChild);
 
     return (
@@ -414,6 +420,7 @@ export default function POSInterfaceDetailPage({ params }) {
   const [newProductSheetOpen, setNewProductSheetOpen] = useState(false);
   const [newProductType, setNewProductType] = useState(null); // 'shop', 'membership', 'class'
   const [newProductId, setNewProductId] = useState(null);
+  const [productRefreshTrigger, setProductRefreshTrigger] = useState(0);
 
   // Membership and Class product states
   const [membershipProducts, setMembershipProducts] = useImmer([]);
@@ -425,8 +432,12 @@ export default function POSInterfaceDetailPage({ params }) {
   const [iconDialogOpen, setIconDialogOpen] = useState(false);
   const [iconDialogProductIdx, setIconDialogProductIdx] = useState(null);
   const [iconDialogQuery, setIconDialogQuery] = useState('');
+  const [shopProductIconDialogOpen, setShopProductIconDialogOpen] = useState(false);
+  const [shopProductThumbnailHandler, setShopProductThumbnailHandler] = useState(null);
 
-  // Product management hooks for memberships and classes
+  // Product management hooks for shop, memberships and classes
+  const [shopProducts, setShopProducts] = useState([]);
+  const { updateProduct: updateShopProduct, updateProductKey: updateShopProductKey, addProduct: addShopProduct, createProduct: createShopProduct } = useProduct(setShopProducts);
   const { updateProduct: updateMembershipProduct, updateProductKey: updateMembershipProductKey, addProduct: addMembershipProduct, createProduct: createMembershipProduct } = useProduct(setMembershipProducts);
   const { updateProduct: updateClassProduct, updateProductKey: updateClassProductKey, addProduct: addClassProduct, createProduct: createClassProduct } = useProduct(setClassProducts);
 
@@ -484,9 +495,18 @@ export default function POSInterfaceDetailPage({ params }) {
     // Process items (folders and products)
     const allItems = [];
     const foldersMap = {};
+    const seenIds = new Set(); // Track seen IDs to prevent duplicates
 
     // Create folder items
     category.items?.forEach(item => {
+      // Skip if we've already seen this ID
+      const itemIdStr = String(item.itemId);
+      if (seenIds.has(itemIdStr)) {
+        console.warn(`Duplicate item detected and skipped: ${itemIdStr}`);
+        return;
+      }
+      seenIds.add(itemIdStr);
+
       if (item.itemType === 'folder' && item.data) {
         const folderItem = {
           ...item.data,
@@ -744,36 +764,30 @@ export default function POSInterfaceDetailPage({ params }) {
     const category = categories.find(c => c._id === active.id);
     const item = items.find(i => i._id === active.id);
 
-    if (active.id.startsWith('folder-product-')) {
-      const itemId = active.id.replace('folder-product-', '');
+    // Check if it's a folder product with pattern: folder-{folderId}-product-{productId}
+    const folderProductMatch = active.id.match(/^folder-(.+)-product-(.+)$/);
+    if (folderProductMatch) {
+      const folderId = folderProductMatch[1];
+      const productId = folderProductMatch[2];
 
-      // Search in unified items array first
-      let foundItem = null;
-      for (const folder of items.filter(i => i.type === 'folder')) {
+      // Find the specific folder
+      const folder = items.find(i => i.type === 'folder' && String(i._id) === String(folderId));
+      if (folder) {
+        // Search in unified items array first
+        let foundItem = null;
         if (folder.items && folder.items.length > 0) {
-          foundItem = folder.items.find(i => String(i._id) === String(itemId));
-          if (foundItem) break;
+          foundItem = folder.items.find(i => String(i._id) === String(productId));
         }
-      }
 
-      // Fallback to products/groups
-      if (!foundItem) {
-        const folderProduct = items
-          .filter(i => i.type === 'folder')
-          .flatMap(folder => folder.products || [])
-          .find(p => String(p._id) === String(itemId));
-
-        if (folderProduct) {
-          foundItem = folderProduct;
-        } else {
-          foundItem = items
-            .filter(i => i.type === 'folder')
-            .flatMap(folder => folder.groups || [])
-            .find(g => String(g._id) === String(itemId));
+        // Fallback to products/groups
+        if (!foundItem) {
+          foundItem = [...(folder.products || []), ...(folder.groups || [])].find(
+            p => String(p._id) === String(productId)
+          );
         }
-      }
 
-      setDraggedItem(foundItem || null);
+        setDraggedItem(foundItem || null);
+      }
     } else {
       setDraggedItem(category || item || null);
     }
@@ -792,27 +806,223 @@ export default function POSInterfaceDetailPage({ params }) {
 
     if (!over || active.id === over.id) return;
 
+    // Parse folder product IDs
+    const activeFolderProductMatch = active.id.match(/^folder-(.+)-product-(.+)$/);
+    const overFolderProductMatch = over.id.match(/^folder-(.+)-product-(.+)$/);
 
-    // Handle reordering products/groups within a folder (unified approach)
-    if (active.id.startsWith('folder-product-') && over.id.startsWith('folder-product-')) {
-      const activeItemId = active.id.replace('folder-product-', '');
-      const overItemId = over.id.replace('folder-product-', '');
+    // Case 1: Dragging a folder product OUT to the main area (loose product or another folder)
+    if (activeFolderProductMatch && !overFolderProductMatch) {
+      const sourceFolderId = activeFolderProductMatch[1];
+      const activeItemId = activeFolderProductMatch[2];
+
+      // Find the source folder using the folderId from the drag ID
+      const sourceFolder = items.find(item => item.type === 'folder' && String(item._id) === String(sourceFolderId));
+
+      if (!sourceFolder) return;
+
+      // Find the product being moved
+      let movedProduct;
+      if (sourceFolder.items && sourceFolder.items.length > 0) {
+        movedProduct = sourceFolder.items.find(i => String(i._id) === String(activeItemId));
+      } else {
+        movedProduct = [...(sourceFolder.products || []), ...(sourceFolder.groups || [])].find(
+          p => String(p._id) === String(activeItemId)
+        );
+      }
+
+      if (!movedProduct) return;
+
+      // Check if dropping onto another folder (expanded)
+      const targetFolder = items.find(item => item.type === 'folder' && item._id === over.id);
+
+      if (targetFolder && expandedFolders.has(targetFolder._id)) {
+        // Moving from one folder to another folder
+        // Remove from source folder
+        const sourceContains = (sourceFolder.items || [])
+          .filter(item => String(item._id) !== String(activeItemId))
+          .map((item, index) => ({
+            itemType: item.itemType || (item.amount ? 'group' : 'product'),
+            itemId: item._id,
+            order: index
+          }));
+
+        // Add to target folder
+        const targetContains = [
+          ...(targetFolder.items || []).map(item => ({
+            itemType: item.itemType || (item.amount ? 'group' : 'product'),
+            itemId: item._id,
+            order: 0
+          })),
+          {
+            itemType: movedProduct.itemType || (movedProduct.amount ? 'group' : 'product'),
+            itemId: movedProduct._id,
+            order: (targetFolder.items || []).length
+          }
+        ];
+
+        // Update both folders
+        try {
+          await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders/${sourceFolder._id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contains: sourceContains })
+          });
+
+          await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders/${targetFolder._id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contains: targetContains })
+          });
+
+          await fetchPOSInterface();
+          toast.success('Product moved to folder');
+        } catch (error) {
+          console.error('Error moving product between folders:', error);
+          toast.error('Failed to move product');
+          await fetchPOSInterface();
+        }
+      } else {
+        // Moving from folder to main area
+        // Remove from folder
+        const updatedContains = (sourceFolder.items || [])
+          .filter(item => String(item._id) !== String(activeItemId))
+          .map((item, index) => ({
+            itemType: item.itemType || (item.amount ? 'group' : 'product'),
+            itemId: item._id,
+            order: index
+          }));
+
+        // Add to category items
+        const overIndex = items.findIndex(i => i._id === over.id);
+        const insertIndex = overIndex !== -1 ? overIndex : items.length;
+
+        const updatedCategoryItems = items
+          .filter(i => i._id !== sourceFolder._id)
+          .slice(0, insertIndex)
+          .concat([{
+            ...movedProduct,
+            type: 'product',
+            order: insertIndex
+          }])
+          .concat(items.filter(i => i._id !== sourceFolder._id).slice(insertIndex));
+
+        updatedCategoryItems.forEach((item, idx) => { item.order = idx; });
+
+        const updatedCategories = categories.map(cat => {
+          if (cat._id === selectedCategory._id) {
+            return {
+              ...cat,
+              items: [
+                ...updatedCategoryItems.map((item, idx) => ({
+                  itemType: item.type === 'folder' ? 'folder' : item.type === 'divider' ? 'divider' : 'product',
+                  itemId: item._id,
+                  order: idx
+                })),
+                // Keep the folder reference
+                ...(cat.items || []).filter(item => item.itemId === sourceFolder._id)
+              ]
+            };
+          }
+          return cat;
+        });
+
+        try {
+          // Update folder
+          await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders/${sourceFolder._id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contains: updatedContains })
+          });
+
+          // Update category
+          await savePOSInterface(updatedCategories);
+          await fetchPOSInterface();
+          toast.success('Product moved out of folder');
+        } catch (error) {
+          console.error('Error moving product out of folder:', error);
+          toast.error('Failed to move product');
+          await fetchPOSInterface();
+        }
+      }
+      return;
+    }
+
+    // Case 2: Dragging a loose product INTO a folder
+    if (!activeFolderProductMatch) {
+      const activeItem = items.find(i => i._id === active.id);
+
+      // Check if dropping on a folder directly OR on a product inside a folder
+      let targetFolder = null;
+      const overItem = items.find(i => i._id === over.id);
+
+      if (overItem && overItem.type === 'folder' && expandedFolders.has(overItem._id)) {
+        // Dropping directly on the folder
+        targetFolder = overItem;
+      } else if (overFolderProductMatch) {
+        // Dropping on a product inside a folder - get the folder
+        const overFolderId = overFolderProductMatch[1];
+        targetFolder = items.find(i => i.type === 'folder' && String(i._id) === String(overFolderId));
+      }
+
+      if (activeItem && activeItem.type === 'product' && targetFolder) {
+        // Add product to folder
+        const contains = [
+          ...(targetFolder.items || []).map((item, index) => ({
+            itemType: item.itemType || (item.amount ? 'group' : 'product'),
+            itemId: item._id,
+            order: index
+          })),
+          {
+            itemType: 'product',
+            itemId: activeItem._id,
+            order: (targetFolder.items || []).length
+          }
+        ];
+
+        // Remove product from category items
+        const updatedCategories = categories.map(cat => {
+          if (cat._id === selectedCategory._id) {
+            return {
+              ...cat,
+              items: (cat.items || []).filter(item => item.itemId !== activeItem._id)
+            };
+          }
+          return cat;
+        });
+
+        try {
+          // Update folder
+          await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders/${targetFolder._id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contains })
+          });
+
+          // Update category
+          await savePOSInterface(updatedCategories);
+          await fetchPOSInterface();
+          toast.success('Product added to folder');
+        } catch (error) {
+          console.error('Error adding product to folder:', error);
+          toast.error('Failed to add product to folder');
+          await fetchPOSInterface();
+        }
+        return;
+      }
+    }
+
+    // Case 3: Reordering products/groups within a folder (unified approach)
+    if (activeFolderProductMatch && overFolderProductMatch) {
+      const activeFolderId = activeFolderProductMatch[1];
+      const activeItemId = activeFolderProductMatch[2];
+      const overFolderId = overFolderProductMatch[1];
+      const overItemId = overFolderProductMatch[2];
+
+      // Ensure both items are in the same folder
+      if (activeFolderId !== overFolderId) return;
 
       // Find the folder
-      const folder = items.find(item => {
-        if (item.type !== 'folder') return false;
-
-        // Check in unified items array first
-        if (item.items && item.items.length > 0) {
-          return item.items.some(i => String(i._id) === String(activeItemId) || String(i._id) === String(overItemId));
-        }
-
-        // Fallback to products/groups
-        return (
-          item.products?.some(p => String(p._id) === String(activeItemId) || String(p._id) === String(overItemId)) ||
-          item.groups?.some(g => String(g._id) === String(activeItemId) || String(g._id) === String(overItemId))
-        );
-      });
+      const folder = items.find(item => item.type === 'folder' && String(item._id) === String(activeFolderId));
 
       if (!folder) return;
 
@@ -880,7 +1090,7 @@ export default function POSInterfaceDetailPage({ params }) {
       return;
     }
 
-    // Handle category reordering
+    // Case 4: Handle category reordering
     if (categories.find(c => c._id === active.id)) {
       const oldIndex = categories.findIndex(c => c._id === active.id);
       const newIndex = categories.findIndex(c => c._id === over.id);
@@ -900,7 +1110,7 @@ export default function POSInterfaceDetailPage({ params }) {
       return;
     }
 
-    // Handle item reordering (folders, products, dividers within a category)
+    // Case 5: Handle item reordering (folders, products, dividers within a category)
     const activeIndex = items.findIndex(i => i._id === active.id);
     const overIndex = items.findIndex(i => i._id === over.id);
 
@@ -1034,13 +1244,24 @@ export default function POSInterfaceDetailPage({ params }) {
       let createdProduct;
 
       if (type === 'shop') {
-        // Open shop product sheet with temp ID - it will handle creation
-        const tempId = `new-${Date.now()}`;
-        setNewProductId(tempId);
-        setNewProductType('shop');
-        setNewProductSheetOpen(true);
-        // Don't add to POS interface yet - wait for save callback
-        return;
+        // Create shop product immediately (same pattern as memberships/classes)
+        const newProduct = {
+          name: 'New Shop Item',
+          type: 'shop',
+          variations: [{ name: '', amount: '' }],
+          publish: true,
+          bump: true
+        };
+        const categoryName = 'shop';
+
+        // Create shop product in database first
+        createdProduct = await createShopProduct(categoryName, newProduct);
+        if (createdProduct && createdProduct._id) {
+          setNewProductId(createdProduct._id);
+          setNewProductType('shop');
+          setNewProductSheetOpen(true);
+        }
+        // Will be added to POS interface below
 
       } else if (type === 'membership') {
         const newProduct = {
@@ -1082,6 +1303,12 @@ export default function POSInterfaceDetailPage({ params }) {
       if (createdProduct?._id && selectedCategory?._id) {
         const updatedCategories = categories.map(cat => {
           if (cat._id === selectedCategory._id) {
+            // Check if product already exists in this category
+            const productExists = cat.items?.some(item => item.itemId === createdProduct._id);
+            if (productExists) {
+              return cat; // Don't add duplicate
+            }
+            
             return {
               ...cat,
               items: [
@@ -1107,33 +1334,31 @@ export default function POSInterfaceDetailPage({ params }) {
   };
 
   const handleNewProductSaved = async (savedProduct) => {
-    if (!savedProduct?._id || !selectedCategory?._id) return;
+    // Don't refresh on auto-save to prevent sheet from flickering
+    // Data will be refreshed when sheet closes
+  };
 
-    // Add the newly created product to the current category
-    const updatedCategories = categories.map(cat => {
-      if (cat._id === selectedCategory._id) {
-        return {
-          ...cat,
-          items: [
-            ...(cat.items || []),
-            {
-              itemType: 'product',
-              itemId: savedProduct._id,
-              order: items.length
-            }
-          ]
-        };
-      }
-      return cat;
-    });
-
-    try {
-      await savePOSInterface(updatedCategories);
+  const handleShopProductSheetClose = async (isOpen) => {
+    setNewProductSheetOpen(isOpen);
+    // Refresh when sheet closes to show updated product data
+    if (!isOpen) {
       await fetchPOSInterface();
-      toast.success('Product added to interface');
-    } catch (error) {
-      console.error('Error adding product to interface:', error);
-      toast.error('Failed to add product to interface');
+    }
+  };
+
+  const handleMembershipSheetClose = async (isOpen) => {
+    setMembershipSheetOpen(isOpen);
+    // Refresh when sheet closes
+    if (!isOpen) {
+      await fetchPOSInterface();
+    }
+  };
+
+  const handleClassSheetClose = async (isOpen) => {
+    setClassSheetOpen(isOpen);
+    // Refresh when sheet closes
+    if (!isOpen) {
+      await fetchPOSInterface();
     }
   };
 
@@ -1283,12 +1508,12 @@ export default function POSInterfaceDetailPage({ params }) {
                     .flatMap(folder => {
                       // Use unified items array if available
                       if (folder.items && folder.items.length > 0) {
-                        return folder.items.map(item => `folder-product-${item._id}`);
+                        return folder.items.map(item => `folder-${folder._id}-product-${item._id}`);
                       }
                       // Fallback to products + groups
                       return [
-                        ...(folder.products?.map(p => `folder-product-${p._id}`) || []),
-                        ...(folder.groups?.map(g => `folder-product-${g._id}`) || [])
+                        ...(folder.products?.map(p => `folder-${folder._id}-product-${p._id}`) || []),
+                        ...(folder.groups?.map(g => `folder-${folder._id}-product-${g._id}`) || [])
                       ];
                     })
                 ]} strategy={rectSortingStrategy}>
@@ -1328,7 +1553,8 @@ export default function POSInterfaceDetailPage({ params }) {
                                 <DraggableFolderProduct
                                   key={`inline-${folderItem._id}`}
                                   product={folderItem}
-                                  onProductClick={() => {}}
+                                  folderId={item._id}
+                                  onProductClick={() => handleEditProduct(folderItem)}
                                   borderColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]}
                                   tintColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]}
                                 />
@@ -1340,7 +1566,8 @@ export default function POSInterfaceDetailPage({ params }) {
                                   <DraggableFolderProduct
                                     key={`inline-${product._id}`}
                                     product={product}
-                                    onProductClick={() => {}}
+                                    folderId={item._id}
+                                    onProductClick={() => handleEditProduct(product)}
                                     borderColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]}
                                     tintColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]}
                                   />
@@ -1349,7 +1576,8 @@ export default function POSInterfaceDetailPage({ params }) {
                                   <DraggableFolderProduct
                                     key={`inline-group-${group._id}`}
                                     product={group}
-                                    onProductClick={() => {}}
+                                    folderId={item._id}
+                                    onProductClick={() => handleEditProduct(group)}
                                     borderColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]}
                                     tintColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]}
                                   />
@@ -1519,18 +1747,22 @@ export default function POSInterfaceDetailPage({ params }) {
       {/* New Product Sheet */}
       <StandaloneProductSheet
         open={newProductSheetOpen}
-        onOpenChange={setNewProductSheetOpen}
+        onOpenChange={handleShopProductSheetClose}
         productId={newProductId}
         category={null}
         productType={newProductType}
         onProductSaved={handleNewProductSaved}
-        onIconClick={() => {}}
+        onIconClick={(thumbnailHandler) => {
+          setShopProductThumbnailHandler(() => thumbnailHandler);
+          setShopProductIconDialogOpen(true);
+        }}
+        refreshTrigger={productRefreshTrigger}
       />
 
       {/* Membership Product Sheet */}
       <MembershipsProductSheet
         open={membershipSheetOpen}
-        onOpenChange={setMembershipSheetOpen}
+        onOpenChange={handleMembershipSheetClose}
         products={membershipProducts}
         selectedProductId={selectedMembershipId}
         setProducts={setMembershipProducts}
@@ -1547,7 +1779,7 @@ export default function POSInterfaceDetailPage({ params }) {
       {/* Class Product Sheet */}
       <ClassesProductSheet
         open={classSheetOpen}
-        onOpenChange={setClassSheetOpen}
+        onOpenChange={handleClassSheetClose}
         products={classProducts}
         selectedProductId={selectedClassId}
         setProducts={setClassProducts}
@@ -1568,6 +1800,20 @@ export default function POSInterfaceDetailPage({ params }) {
         pIdx={iconDialogProductIdx}
         query={iconDialogQuery}
         updateProduct={membershipSheetOpen ? updateMembershipProductKey : updateClassProductKey}
+      />
+
+      {/* Shop Product Icon Select Dialog */}
+      <IconSelect
+        open={shopProductIconDialogOpen}
+        setOpen={setShopProductIconDialogOpen}
+        onIconSelected={async (icon) => {
+          // Update the thumbnail in the sheet directly
+          if (shopProductThumbnailHandler) {
+            shopProductThumbnailHandler(icon);
+          }
+          setShopProductIconDialogOpen(false);
+        }}
+        query=""
       />
 
       {/* Category Icon Select Dialog */}

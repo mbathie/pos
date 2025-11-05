@@ -37,7 +37,7 @@ async function logWebhookEvent(eventType, data) {
 /**
  * Creates a transaction record for a subscription renewal payment
  */
-async function createRenewalTransaction({ invoice, subscription, customer, organization, product }) {
+async function createRenewalTransaction({ invoice, subscription, customer, organization, product, membership }) {
   // Build a minimal cart for the renewal transaction
   const cart = {
     products: [{
@@ -61,6 +61,7 @@ async function createRenewalTransaction({ invoice, subscription, customer, organ
   const transaction = await Transaction.create({
     customer: customer._id,
     org: organization._id,
+    location: membership?.location || null,
     total: invoice.total / 100,
     tax: (invoice.tax || 0) / 100,
     subtotal: invoice.subtotal / 100,
@@ -75,8 +76,7 @@ async function createRenewalTransaction({ invoice, subscription, customer, organ
     metadata: {
       type: 'subscription_renewal',
       billingReason: invoice.billing_reason
-    },
-    createdAt: new Date(invoice.created * 1000)
+    }
   });
 
   return transaction;
@@ -244,7 +244,8 @@ async function handleInvoicePaid(invoiceOrPayment, stripeAccount) {
     subscription,
     customer,
     organization,
-    product
+    product,
+    membership
   });
 
   console.log(`✅ Created transaction record: ${transaction._id}`);
@@ -393,6 +394,322 @@ async function handleInvoicePaid(invoiceOrPayment, stripeAccount) {
 }
 
 /**
+ * Handles invoice.payment_failed event for subscription renewals
+ */
+async function handleInvoicePaymentFailed(invoiceOrPayment, stripeAccount) {
+  console.log('📄 Processing invoice.payment_failed event:', invoiceOrPayment.id);
+
+  // Determine the invoice ID
+  let invoiceId;
+  if (invoiceOrPayment.id && invoiceOrPayment.id.startsWith('inpay_')) {
+    if (!invoiceOrPayment.invoice) {
+      console.log('⏭️ InvoicePayment missing invoice reference');
+      return { skipped: true, reason: 'no_invoice_reference' };
+    }
+    invoiceId = invoiceOrPayment.invoice;
+  } else {
+    invoiceId = invoiceOrPayment.id;
+  }
+
+  // Retrieve the full invoice
+  const invoice = await stripe.invoices.retrieve(
+    invoiceId,
+    { expand: ['subscription'] },
+    { stripeAccount }
+  );
+  console.log('✅ Retrieved full invoice:', invoice.id);
+
+  // Extract subscription ID
+  let subscriptionId = invoice.subscription;
+  if (!subscriptionId && invoice.parent?.subscription_details?.subscription) {
+    subscriptionId = invoice.parent.subscription_details.subscription;
+  }
+  if (!subscriptionId && invoice.lines?.data?.[0]?.parent?.subscription_item_details?.subscription) {
+    subscriptionId = invoice.lines.data[0].parent.subscription_item_details.subscription;
+  }
+
+  console.log('📄 Failed invoice details:', {
+    subscriptionId,
+    billing_reason: invoice.billing_reason,
+    customer: invoice.customer,
+    amount: invoice.amount_due / 100,
+    attempt_count: invoice.attempt_count
+  });
+
+  // Skip if no subscription
+  if (!subscriptionId) {
+    console.log('⏭️ Skipping invoice without subscription');
+    return { skipped: true, reason: 'no_subscription' };
+  }
+
+  // Get the subscription
+  const subscription = await stripe.subscriptions.retrieve(
+    subscriptionId,
+    null,
+    { stripeAccount }
+  );
+
+  if (!subscription) {
+    throw new Error(`Subscription not found: ${subscriptionId}`);
+  }
+
+  // Get customer and organization from database
+  const customerId = subscription.metadata.customerId;
+  const orgId = subscription.metadata.orgId;
+  const productId = subscription.metadata.productId;
+
+  if (!customerId || !orgId) {
+    throw new Error('Missing customer or organization ID in subscription metadata');
+  }
+
+  await connectDB();
+
+  const customer = await Customer.findById(customerId);
+  const organization = await Org.findById(orgId);
+  const product = productId ? await Product.findById(productId) : null;
+
+  if (!customer || !organization) {
+    throw new Error(`Customer or organization not found: ${customerId}, ${orgId}`);
+  }
+
+  // Find the membership record
+  const membership = await Membership.findOne({
+    customer: customerId,
+    product: productId,
+    stripeSubscriptionId: subscription.id,
+    status: { $in: ['active', 'suspended'] }
+  });
+
+  // Create failed transaction record
+  const cart = {
+    products: [{
+      type: 'membership',
+      name: product?.name || subscription.metadata.productName || 'Membership Renewal',
+      _id: subscription.metadata.productId,
+      prices: [{
+        name: subscription.metadata.priceName || 'Subscription',
+        value: invoice.amount_due / 100,
+        billingFrequency: subscription.metadata.billingFrequency || 'monthly'
+      }]
+    }],
+    total: invoice.total / 100,
+    tax: (invoice.tax || 0) / 100,
+    subtotal: invoice.subtotal / 100
+  };
+
+  const cleanCart = prepareCartForTransaction(cart);
+
+  const transaction = await Transaction.create({
+    customer: customer._id,
+    org: organization._id,
+    location: membership?.location || null,
+    total: invoice.total / 100,
+    tax: (invoice.tax || 0) / 100,
+    subtotal: invoice.subtotal / 100,
+    status: 'failed',
+    paymentMethod: 'stripe',
+    cart: cleanCart,
+    stripe: {
+      paymentIntentId: invoice.payment_intent,
+      invoiceId: invoice.id,
+      subscriptionId: subscription.id
+    },
+    metadata: {
+      type: 'subscription_renewal_failed',
+      billingReason: invoice.billing_reason,
+      attemptCount: invoice.attempt_count,
+      failureMessage: invoice.last_finalization_error?.message || 'Payment failed'
+    }
+  });
+
+  console.log(`✅ Created failed transaction record: ${transaction._id}`);
+
+  // Send failure notification email
+  let emailInfo = null;
+  if (customer.email) {
+    try {
+      const emailResult = await sendPaymentFailedEmail({
+        customer,
+        organization,
+        invoice,
+        subscription,
+        product,
+        membership
+      });
+
+      emailInfo = {
+        sent: true,
+        email: customer.email,
+        provider: process.env.EMAIL_PLATFORM || 'unknown',
+        messageId: emailResult?.messageId || null
+      };
+
+      console.log(`📧 Payment failed email sent to ${customer.email}`);
+    } catch (error) {
+      console.error('❌ Failed to send payment failed email:', error);
+      emailInfo = {
+        sent: false,
+        email: customer.email,
+        error: error.message
+      };
+    }
+  }
+
+  // Log to file
+  await logWebhookEvent('invoice.payment_failed', {
+    eventType: 'invoice.payment_failed',
+    customerId: customer._id.toString(),
+    customerName: customer.name,
+    customerEmail: customer.email,
+    subscriptionId: subscription.id,
+    invoiceId: invoice.id,
+    billingDetails: {
+      amount: invoice.amount_due / 100,
+      currency: invoice.currency.toUpperCase(),
+      attemptCount: invoice.attempt_count
+    },
+    transactionId: transaction._id.toString(),
+    membershipId: membership?._id?.toString() || null,
+    email: emailInfo,
+    metadata: {
+      productId: subscription.metadata.productId,
+      productName: subscription.metadata.productName,
+      organizationId: orgId,
+      failureMessage: invoice.last_finalization_error?.message || 'Payment failed'
+    }
+  });
+
+  return {
+    success: true,
+    transactionId: transaction._id,
+    emailSent: emailInfo?.sent || false
+  };
+}
+
+/**
+ * Send payment failed notification email
+ */
+async function sendPaymentFailedEmail({ customer, organization, invoice, subscription, product, membership }) {
+  const { sendEmail, getFromAddress } = await import('@/lib/mailer.js');
+  const dayjs = (await import('dayjs')).default;
+
+  const amount = invoice.amount_due / 100;
+  const nextRetryDate = invoice.next_payment_attempt
+    ? dayjs(invoice.next_payment_attempt * 1000).format('MMMM D, YYYY')
+    : null;
+
+  const emailHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Payment Failed - ${organization?.name || 'Membership'}</title>
+    </head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #424770; background-color: #f6f9fc; margin: 0; padding: 0;">
+      <div style="max-width: 600px; margin: 40px auto; background-color: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.07);">
+
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); border-radius: 8px 8px 0 0; padding: 40px; text-align: center;">
+          <h1 style="color: white; margin: 0; font-size: 24px; font-weight: 500;">
+            Payment Failed
+          </h1>
+        </div>
+
+        <!-- Content -->
+        <div style="padding: 40px;">
+          <p style="font-size: 16px; margin-bottom: 20px;">Hi ${customer.name},</p>
+
+          <p style="font-size: 16px; margin-bottom: 20px;">
+            We were unable to process your payment for your ${product?.name || 'membership'} subscription.
+          </p>
+
+          <div style="background-color: #f6f9fc; border-radius: 6px; padding: 20px; margin: 30px 0;">
+            <table width="100%" cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="padding: 8px 0; color: #8898aa; font-size: 14px;">Amount Due</td>
+                <td style="padding: 8px 0; text-align: right; font-weight: bold; font-size: 16px;">$${amount.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #8898aa; font-size: 14px;">Membership</td>
+                <td style="padding: 8px 0; text-align: right;">${product?.name || 'Membership'}</td>
+              </tr>
+              ${nextRetryDate ? `
+              <tr>
+                <td style="padding: 8px 0; color: #8898aa; font-size: 14px;">Next Retry</td>
+                <td style="padding: 8px 0; text-align: right;">${nextRetryDate}</td>
+              </tr>
+              ` : ''}
+            </table>
+          </div>
+
+          <div style="background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; font-size: 14px; color: #856404;">
+              <strong>What happens next?</strong><br>
+              ${nextRetryDate
+                ? `We'll automatically retry your payment on ${nextRetryDate}. Please ensure your payment method has sufficient funds.`
+                : 'Please update your payment method to continue your membership.'
+              }
+            </p>
+          </div>
+
+          <p style="font-size: 16px; margin-top: 30px;">
+            To update your payment method or if you have any questions, please contact us at ${organization?.email || 'support'}.
+          </p>
+
+          <p style="font-size: 16px; margin-top: 30px;">
+            Thank you,<br>
+            <strong>${organization?.name || 'The Team'}</strong>
+          </p>
+        </div>
+
+        <!-- Footer -->
+        <div style="padding: 30px 40px; background-color: #f6f9fc; border-radius: 0 0 8px 8px; text-align: center;">
+          ${organization?.name ? `<p style="margin: 0 0 8px 0; color: #6b7280; font-size: 12px;">${organization.name}</p>` : ''}
+          ${organization?.phone ? `<p style="margin: 0 0 4px 0; color: #6b7280; font-size: 12px;">Phone: ${organization.phone}</p>` : ''}
+          ${organization?.email ? `<p style="margin: 0 0 4px 0; color: #6b7280; font-size: 12px;">Email: ${organization.email}</p>` : ''}
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const emailText = `
+Payment Failed
+
+Hi ${customer.name},
+
+We were unable to process your payment for your ${product?.name || 'membership'} subscription.
+
+Amount Due: $${amount.toFixed(2)}
+Membership: ${product?.name || 'Membership'}
+${nextRetryDate ? `Next Retry: ${nextRetryDate}` : ''}
+
+What happens next?
+${nextRetryDate
+  ? `We'll automatically retry your payment on ${nextRetryDate}. Please ensure your payment method has sufficient funds.`
+  : 'Please update your payment method to continue your membership.'
+}
+
+To update your payment method or if you have any questions, please contact us at ${organization?.email || 'support'}.
+
+Thank you,
+${organization?.name || 'The Team'}
+  `.trim();
+
+  const mailOptions = {
+    from: getFromAddress(organization?.name || 'Membership'),
+    to: customer.email,
+    replyTo: organization?.email || 'noreply@cultcha.app',
+    subject: `Payment Failed - ${organization?.name || 'Membership'}`,
+    text: emailText,
+    html: emailHTML
+  };
+
+  return await sendEmail(mailOptions);
+}
+
+/**
  * Main webhook handler
  */
 export async function POST(req) {
@@ -436,12 +753,8 @@ export async function POST(req) {
 
       case 'invoice.payment_failed':
         console.log('❌ Invoice payment failed:', event.data.object.id);
-        // TODO: Handle failed payments (notify customer, update membership status)
-        await logWebhookEvent('invoice.payment_failed', {
-          invoiceId: event.data.object.id,
-          customerId: event.data.object.customer,
-          amount: event.data.object.amount_due / 100
-        });
+        const failedResult = await handleInvoicePaymentFailed(event.data.object, stripeAccount);
+        console.log(`❌ invoice.payment_failed processed:`, failedResult);
         break;
 
       case 'customer.subscription.deleted':

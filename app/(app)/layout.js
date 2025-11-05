@@ -1,7 +1,7 @@
 'use client'
 import Cookies from 'js-cookie'
 import { useEffect, useState } from 'react'
-import { MapPin } from 'lucide-react'
+import { MapPin, CreditCard, Monitor } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useGlobals } from '@/lib/globals'
 import { hasPermission, requiresAuth, getDefaultPath } from '@/lib/permissions'
@@ -13,11 +13,12 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { Badge } from "@/components/ui/badge"
 
 import { CartSheet } from '@/components/cart-sheet'
 
 export default function Page({children}) {
-  const { location, employee, resetCart, setLowStockData, clearLowStockData } = useGlobals()
+  const { location, device, terminalConnection, employee, resetCart, setLowStockData, clearLowStockData } = useGlobals()
   const [ open, setOpen ] = useState(false)
   const [ isRedirecting, setIsRedirecting ] = useState(false)
   const [ isInitializing, setIsInitializing ] = useState(true)
@@ -182,9 +183,21 @@ export default function Page({children}) {
           <div className="flex items-center gap-4 px-4">
             <SidebarTrigger className="-ml-1" />
             {!open && (
-              <div className="flex items-center gap-2 text-sidebar-primary">
+              <div className="flex items-center gap-2 text-sidebar-primary text-sm">
                 <MapPin className="w-4 h-4" />
                 <span>{location?.name}</span>
+                {device?.name && (
+                  <>
+                    <Monitor className="w-4 h-4" />
+                    <span>{device.name}</span>
+                  </>
+                )}
+                {/* {(device?.terminal?.label || terminalConnection?.readerLabel) && (
+                  <Badge className="text-xs shrink-0">
+                    <CreditCard className="h-3 w-3 mr-1" />
+                    {device?.terminal?.label || terminalConnection?.readerLabel}
+                  </Badge>
+                )} */}
               </div>
             )}
 
