@@ -33,7 +33,8 @@ export default function StandaloneProductSheet({
   productId,
   category,
   onProductSaved,
-  onIconClick
+  onIconClick,
+  productType = 'shop'
 }) {
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -60,7 +61,7 @@ export default function StandaloneProductSheet({
         desc: '',
         category: category?._id || null,
         variations: [{ name: '', amount: '' }],
-        type: 'shop',
+        type: productType,
         publish: true,
         bump: true,
         qty: 0,
