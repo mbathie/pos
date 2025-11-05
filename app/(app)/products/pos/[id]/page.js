@@ -232,11 +232,17 @@ function SortableItem({ item, isExpanded, onFolderClick, onFolderEdit, onProduct
       </div>
 
       <div
-        className="w-full h-full flex flex-col text-center cursor-pointer"
+        className="absolute -bottom-1 -right-1 w-6 h-6 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-10"
         onClick={(e) => {
           e.stopPropagation();
           onProductClick();
         }}
+      >
+        <Pencil className="w-3 h-3" />
+      </div>
+
+      <div
+        className="w-full h-full flex flex-col text-center"
       >
         <ProductThumbnail
           src={item.thumbnail || item.image}
@@ -980,47 +986,54 @@ export default function POSInterfaceDetailPage({ params }) {
     }
   };
 
+  const handleEditProduct = async (product) => {
+    try {
+      // Determine product type and open appropriate sheet
+      const productType = product.type;
+
+      if (productType === 'shop') {
+        setNewProductId(product._id);
+        setNewProductType('shop');
+        setNewProductSheetOpen(true);
+      } else if (productType === 'membership') {
+        // Load into membership products state
+        setMembershipProducts([product]);
+        setSelectedMembershipId(product._id);
+        setMembershipSheetOpen(true);
+        membershipAutoSave.markAsSaved(product._id, product);
+      } else if (productType === 'class') {
+        // Load into class products state
+        setClassProducts([product]);
+        setSelectedClassId(product._id);
+        setClassSheetOpen(true);
+        classAutoSave.markAsSaved(product._id, product);
+      }
+    } catch (error) {
+      console.error('Error opening product for editing:', error);
+      toast.error('Failed to open product');
+    }
+  };
+
   const handleCreateNewProduct = async (type) => {
     try {
-      // Create the product via API first
-      let newProduct;
-      let categoryName;
       let createdProduct;
 
       if (type === 'shop') {
-        newProduct = {
-          name: 'New Shop Item',
-          type: 'shop',
-          variations: [{ name: '', amount: '' }],
-          publish: true,
-          bump: true,
-          qty: 0,
-          par: 0
-        };
-        categoryName = null;
-
-        // Create shop product
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ product: newProduct })
-        });
-        if (!res.ok) throw new Error('Failed to create product');
-        const data = await res.json();
-        createdProduct = data.product;
-
-        // Open shop product sheet
-        setNewProductId(createdProduct._id);
+        // Open shop product sheet with temp ID - it will handle creation
+        const tempId = `new-${Date.now()}`;
+        setNewProductId(tempId);
         setNewProductType('shop');
         setNewProductSheetOpen(true);
+        // Don't add to POS interface yet - wait for save callback
+        return;
 
       } else if (type === 'membership') {
-        newProduct = {
+        const newProduct = {
           name: 'New Membership',
           type: 'membership',
           prices: []
         };
-        categoryName = 'memberships';
+        const categoryName = 'memberships';
 
         // Create membership product
         createdProduct = await createMembershipProduct(categoryName, newProduct);
@@ -1032,13 +1045,13 @@ export default function POSInterfaceDetailPage({ params }) {
         }
 
       } else if (type === 'class') {
-        newProduct = {
+        const newProduct = {
           name: 'New Class',
           type: 'class',
           schedule: { daysOfWeek: [], times: [] },
           prices: []
         };
-        categoryName = 'classes';
+        const categoryName = 'classes';
 
         // Create class product
         createdProduct = await createClassProduct(categoryName, newProduct);
@@ -1283,7 +1296,7 @@ export default function POSInterfaceDetailPage({ params }) {
                               setSelectedFolderId(folderId);
                               setFolderSheetOpen(true);
                             }}
-                            onProductClick={() => {}}
+                            onProductClick={() => handleEditProduct(item)}
                             onDividerDelete={handleDividerDelete}
                             isDraggedOver={false}
                             draggedItemType={draggedItem?.type}
