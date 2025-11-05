@@ -986,30 +986,39 @@ export default function POSInterfaceDetailPage({ params }) {
 
   const handleEditProduct = async (product) => {
     try {
-      console.log('Editing product:', product);
-      // Determine product type and open appropriate sheet
-      const productType = product.type;
+      console.log('Editing product (from POS interface):', product);
+
+      // Fetch full product details from API to get the type and all other fields
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${product._id}`);
+      if (!res.ok) {
+        throw new Error('Failed to fetch product details');
+      }
+      const data = await res.json();
+      const fullProduct = data.product;
+
+      console.log('Full product data:', fullProduct);
+      const productType = fullProduct.type;
       console.log('Product type:', productType);
 
       if (productType === 'shop') {
-        console.log('Opening shop product sheet for:', product._id);
-        setNewProductId(product._id);
+        console.log('Opening shop product sheet for:', fullProduct._id);
+        setNewProductId(fullProduct._id);
         setNewProductType('shop');
         setNewProductSheetOpen(true);
       } else if (productType === 'membership') {
-        console.log('Opening membership sheet for:', product._id);
+        console.log('Opening membership sheet for:', fullProduct._id);
         // Load into membership products state
-        setMembershipProducts([product]);
-        setSelectedMembershipId(product._id);
+        setMembershipProducts([fullProduct]);
+        setSelectedMembershipId(fullProduct._id);
         setMembershipSheetOpen(true);
-        membershipAutoSave.markAsSaved(product._id, product);
+        membershipAutoSave.markAsSaved(fullProduct._id, fullProduct);
       } else if (productType === 'class') {
-        console.log('Opening class sheet for:', product._id);
+        console.log('Opening class sheet for:', fullProduct._id);
         // Load into class products state
-        setClassProducts([product]);
-        setSelectedClassId(product._id);
+        setClassProducts([fullProduct]);
+        setSelectedClassId(fullProduct._id);
         setClassSheetOpen(true);
-        classAutoSave.markAsSaved(product._id, product);
+        classAutoSave.markAsSaved(fullProduct._id, fullProduct);
       } else {
         console.warn('Unknown product type:', productType);
         toast.error('Unknown product type');
