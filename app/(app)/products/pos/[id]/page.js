@@ -220,11 +220,9 @@ function SortableItem({ item, isExpanded, onFolderClick, onFolderEdit, onProduct
     <div
       ref={setNodeRef}
       style={style}
-      className="w-24 h-32 flex flex-col text-center text-xs relative group"
+      className="w-24 h-32 flex flex-col text-center text-xs group"
     >
-      <div
-        className="w-full h-full flex flex-col text-center relative"
-      >
+      <div className="relative size-24">
         <div
           className="absolute top-1 right-1 w-6 h-6 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-10"
           {...attributes}
@@ -243,19 +241,20 @@ function SortableItem({ item, isExpanded, onFolderClick, onFolderEdit, onProduct
         >
           <Pencil className="w-3 h-3" />
         </div>
+
         <ProductThumbnail
           src={item.thumbnail || item.image}
           alt={item.name}
           size="2xl"
           className="size-24"
         />
-        <div className="mt-1 font-medium">{item.name}</div>
-        {item.variations && item.variations.length > 0 && (
-          <div className="text-muted-foreground">
-            ${parseFloat(item.variations[0].amount || 0).toFixed(2)}
-          </div>
-        )}
       </div>
+      <div className="mt-1 font-medium">{item.name}</div>
+      {item.variations && item.variations.length > 0 && (
+        <div className="text-muted-foreground">
+          ${parseFloat(item.variations[0].amount || 0).toFixed(2)}
+        </div>
+      )}
     </div>
   );
 }
