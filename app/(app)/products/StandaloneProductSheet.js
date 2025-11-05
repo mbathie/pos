@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Tag, Plus, Info, Loader2, Trash2, CheckCircle, Save } from 'lucide-react';
+import { Tag, Plus, Info, Loader2, Trash2, CheckCircle, Save, ChevronUp, ChevronDown } from 'lucide-react';
 import { toast } from "sonner";
 import { FolderSelect } from './shopold/FolderSelect';
 import { FolderManagementSheet } from './shopold/FolderManagementSheet';
@@ -58,7 +58,7 @@ export default function StandaloneProductSheet({
         _id: productId,
         name: '',
         desc: '',
-        category: category?._id,
+        category: category?._id || null,
         variations: [{ name: '', amount: '' }],
         type: 'shop',
         publish: true,
@@ -173,7 +173,9 @@ export default function StandaloneProductSheet({
       // Prepare the product data
       const productData = {
         ...product,
-        // Extract just the ID if folder is populated
+        // Extract just the ID if category is populated, otherwise null
+        category: product.category?._id || product.category || null,
+        // Extract just the ID if folder is populated, otherwise null
         folder: product.folder?._id || product.folder || null,
         // Extract just the ID if accounting is populated
         accounting: product.accounting?._id || product.accounting || null,
@@ -253,6 +255,26 @@ export default function StandaloneProductSheet({
       ...prev,
       variations: prev.variations.filter((_, i) => i !== index)
     }));
+    setIsDirty(true);
+  };
+
+  const moveVariationUp = (index) => {
+    if (index === 0) return; // Can't move first item up
+    setProduct(prev => {
+      const newVariations = [...prev.variations];
+      [newVariations[index - 1], newVariations[index]] = [newVariations[index], newVariations[index - 1]];
+      return { ...prev, variations: newVariations };
+    });
+    setIsDirty(true);
+  };
+
+  const moveVariationDown = (index) => {
+    if (index === product.variations.length - 1) return; // Can't move last item down
+    setProduct(prev => {
+      const newVariations = [...prev.variations];
+      [newVariations[index], newVariations[index + 1]] = [newVariations[index + 1], newVariations[index]];
+      return { ...prev, variations: newVariations };
+    });
     setIsDirty(true);
   };
 
@@ -410,17 +432,19 @@ export default function StandaloneProductSheet({
               />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label>Folder</Label>
-              <FolderSelect
-                pIdx={0}
-                product={product}
-                setFolder={({ folder }) => updateField('folder', folder)}
-                onManageFolders={() => setFolderSheetOpen(true)}
-                refreshTrigger={folderRefreshTrigger}
-                category={category}
-              />
-            </div>
+            {category && (
+              <div className="flex flex-col gap-2">
+                <Label>Folder</Label>
+                <FolderSelect
+                  pIdx={0}
+                  product={product}
+                  setFolder={({ folder }) => updateField('folder', folder)}
+                  onManageFolders={() => setFolderSheetOpen(true)}
+                  refreshTrigger={folderRefreshTrigger}
+                  category={category}
+                />
+              </div>
+            )}
 
             <div className="flex flex-col gap-2">
               <Label>Accounting Code</Label>
@@ -499,6 +523,26 @@ export default function StandaloneProductSheet({
                       className="w-24"
                       onChange={(value) => updateVariation(i, 'amount', value ? value.toString() : '')}
                     />
+                    <div className="flex gap-1">
+                      <Button
+                        className="cursor-pointer"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => moveVariationUp(i)}
+                        disabled={i === 0}
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        className="cursor-pointer"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => moveVariationDown(i)}
+                        disabled={i === product.variations.length - 1}
+                      >
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <Button
                       className="cursor-pointer"
                       variant="ghost"
