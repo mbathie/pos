@@ -223,27 +223,26 @@ function SortableItem({ item, isExpanded, onFolderClick, onFolderEdit, onProduct
       className="w-24 h-32 flex flex-col text-center text-xs relative group"
     >
       <div
-        className="absolute -top-1 -right-1 w-6 h-6 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-10"
-        {...attributes}
-        {...listeners}
-        onClick={(e) => e.stopPropagation()}
+        className="w-full h-full flex flex-col text-center relative"
       >
-        <GripVertical className="w-3 h-3" />
-      </div>
+        <div
+          className="absolute top-1 right-1 w-6 h-6 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-10"
+          {...attributes}
+          {...listeners}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <GripVertical className="w-3 h-3" />
+        </div>
 
-      <div
-        className="absolute -bottom-1 -right-1 w-6 h-6 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-10"
-        onClick={(e) => {
-          e.stopPropagation();
-          onProductClick();
-        }}
-      >
-        <Pencil className="w-3 h-3" />
-      </div>
-
-      <div
-        className="w-full h-full flex flex-col text-center"
-      >
+        <div
+          className="absolute bottom-1 right-1 w-6 h-6 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onProductClick();
+          }}
+        >
+          <Pencil className="w-3 h-3" />
+        </div>
         <ProductThumbnail
           src={item.thumbnail || item.image}
           alt={item.name}
