@@ -17,7 +17,8 @@ export default function ProductCategorySelector({
   onSelectionChange,
   placeholder = "Select categories and/or products",
   className = "",
-  excludeTypes = []
+  excludeTypes = [],
+  showCategories = true
 }) {
   const handleValuesChange = (values) => {
     const newProducts = new Set();
@@ -54,7 +55,10 @@ export default function ProductCategorySelector({
       <MultiSelectTrigger className="w-full">
         <MultiSelectValue placeholder={placeholder} />
       </MultiSelectTrigger>
-      <MultiSelectContent className="[&_[cmdk-list]]:max-h-[60vh] [&_[cmdk-list]]:overflow-y-auto [&_[cmdk-list]]:overscroll-contain">
+      <MultiSelectContent
+        search={{ placeholder: "Search products..." }}
+        className="[&_[cmdk-list]]:max-h-[60vh] [&_[cmdk-list]]:overflow-y-auto [&_[cmdk-list]]:overscroll-contain"
+      >
         <MultiSelectGroup>
           {(() => {
             const seen = new Set();
@@ -65,19 +69,21 @@ export default function ProductCategorySelector({
             const items = [];
             for (const category of sortedCategories) {
               const catLabel = category.name || '';
-              
-              // Add category
-              items.push(
-                <MultiSelectItem
-                  key={`cat-${category._id}`}
-                  value={`category-${category._id}`}
-                  keywords={[catLabel]}
-                  badgeLabel={catLabel?.toUpperCase?.() || catLabel}
-                  className="font-semibold uppercase"
-                >
-                  {catLabel}
-                </MultiSelectItem>
-              );
+
+              // Add category (only if showCategories is true)
+              if (showCategories) {
+                items.push(
+                  <MultiSelectItem
+                    key={`cat-${category._id}`}
+                    value={`category-${category._id}`}
+                    keywords={[catLabel]}
+                    badgeLabel={catLabel?.toUpperCase?.() || catLabel}
+                    className="font-semibold uppercase"
+                  >
+                    {catLabel}
+                  </MultiSelectItem>
+                );
+              }
 
               // Add products in this category
               const sortedProducts = [...(category.products || [])]
@@ -86,11 +92,11 @@ export default function ProductCategorySelector({
                 .sort((a, b) =>
                 (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
               );
-              
+
               for (const product of sortedProducts) {
                 if (seen.has(product._id)) continue; // avoid duplicates
                 seen.add(product._id);
-                
+
                 items.push(
                   <MultiSelectItem
                     key={product._id}
@@ -102,7 +108,7 @@ export default function ProductCategorySelector({
                 );
               }
             }
-            
+
             return items;
           })()}
         </MultiSelectGroup>
