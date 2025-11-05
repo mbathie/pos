@@ -25,6 +25,14 @@ export async function POST(request) {
     console.log(`[${new Date().toISOString()}] Processing scheduled pauses via API endpoint`);
 
     // Execute the script
+    // Note: Turbopack has issues with spawn during build, so we return a build-time response
+    if (typeof window === 'undefined' && process.env.NEXT_PHASE === 'phase-production-build') {
+      return NextResponse.json({
+        success: false,
+        message: 'Build time - script execution skipped',
+      });
+    }
+
     return new Promise((resolve) => {
       const scriptPath = path.join(process.cwd(), 'scripts', 'process-scheduled-pauses.js');
       const child = spawn('node', [scriptPath], {
