@@ -24,6 +24,10 @@ import POSFolderSheet from './POSFolderSheet';
 import POSProductSheet from './POSProductSheet';
 import POSInterfaceSettingsSheet from './POSInterfaceSettingsSheet';
 import StandaloneProductSheet from '../../StandaloneProductSheet';
+import MembershipsProductSheet from '../../(entry)/MembershipsProductSheet';
+import ClassesProductSheet from '../../(entry)/ClassesProductSheet';
+import { useProduct } from '../../(entry)/useProduct';
+import { useAutoSave } from '../../useAutoSave';
 
 // Draggable folder product component
 function DraggableFolderProduct({ product, onProductClick, borderColor, tintColor }) {
@@ -406,6 +410,30 @@ export default function POSInterfaceDetailPage({ params }) {
   const [newProductSheetOpen, setNewProductSheetOpen] = useState(false);
   const [newProductType, setNewProductType] = useState(null); // 'shop', 'membership', 'class'
   const [newProductId, setNewProductId] = useState(null);
+
+  // Membership and Class product states
+  const [membershipProducts, setMembershipProducts] = useImmer([]);
+  const [classProducts, setClassProducts] = useImmer([]);
+  const [membershipSheetOpen, setMembershipSheetOpen] = useState(false);
+  const [classSheetOpen, setClassSheetOpen] = useState(false);
+  const [selectedMembershipId, setSelectedMembershipId] = useState(null);
+  const [selectedClassId, setSelectedClassId] = useState(null);
+  const [iconDialogOpen, setIconDialogOpen] = useState(false);
+  const [iconDialogProductIdx, setIconDialogProductIdx] = useState(null);
+  const [iconDialogQuery, setIconDialogQuery] = useState('');
+
+  // Product management hooks for memberships and classes
+  const { updateProduct: updateMembershipProduct, updateProductKey: updateMembershipProductKey, addProduct: addMembershipProduct, createProduct: createMembershipProduct } = useProduct(setMembershipProducts);
+  const { updateProduct: updateClassProduct, updateProductKey: updateClassProductKey, addProduct: addClassProduct, createProduct: createClassProduct } = useProduct(setClassProducts);
+
+  // Auto-save hooks
+  const membershipAutoSave = useAutoSave(membershipProducts, setMembershipProducts, updateMembershipProduct, createMembershipProduct, 'memberships', 3000, (oldId, newId) => {
+    if (selectedMembershipId === oldId) setSelectedMembershipId(newId);
+  });
+
+  const classAutoSave = useAutoSave(classProducts, setClassProducts, updateClassProduct, createClassProduct, 'classes', 3000, (oldId, newId) => {
+    if (selectedClassId === oldId) setSelectedClassId(newId);
+  });
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -952,11 +980,102 @@ export default function POSInterfaceDetailPage({ params }) {
     }
   };
 
-  const handleCreateNewProduct = (type) => {
-    const tempId = `new-${Date.now()}`;
-    setNewProductType(type);
-    setNewProductId(tempId);
-    setNewProductSheetOpen(true);
+  const handleCreateNewProduct = async (type) => {
+    try {
+      // Create the product via API first
+      let newProduct;
+      let categoryName;
+      let createdProduct;
+
+      if (type === 'shop') {
+        newProduct = {
+          name: 'New Shop Item',
+          type: 'shop',
+          variations: [{ name: '', amount: '' }],
+          publish: true,
+          bump: true,
+          qty: 0,
+          par: 0
+        };
+        categoryName = null;
+
+        // Create shop product
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ product: newProduct })
+        });
+        if (!res.ok) throw new Error('Failed to create product');
+        const data = await res.json();
+        createdProduct = data.product;
+
+        // Open shop product sheet
+        setNewProductId(createdProduct._id);
+        setNewProductType('shop');
+        setNewProductSheetOpen(true);
+
+      } else if (type === 'membership') {
+        newProduct = {
+          name: 'New Membership',
+          type: 'membership',
+          prices: []
+        };
+        categoryName = 'memberships';
+
+        // Create membership product
+        createdProduct = await createMembershipProduct(categoryName, newProduct);
+        if (createdProduct && createdProduct._id) {
+          setMembershipProducts(prev => [createdProduct, ...prev]);
+          setSelectedMembershipId(createdProduct._id);
+          setMembershipSheetOpen(true);
+          membershipAutoSave.markAsSaved(createdProduct._id, createdProduct);
+        }
+
+      } else if (type === 'class') {
+        newProduct = {
+          name: 'New Class',
+          type: 'class',
+          schedule: { daysOfWeek: [], times: [] },
+          prices: []
+        };
+        categoryName = 'classes';
+
+        // Create class product
+        createdProduct = await createClassProduct(categoryName, newProduct);
+        if (createdProduct && createdProduct._id) {
+          setClassProducts(prev => [createdProduct, ...prev]);
+          setSelectedClassId(createdProduct._id);
+          setClassSheetOpen(true);
+          classAutoSave.markAsSaved(createdProduct._id, createdProduct);
+        }
+      }
+
+      // Add to POS interface
+      if (createdProduct?._id && selectedCategory?._id) {
+        const updatedCategories = categories.map(cat => {
+          if (cat._id === selectedCategory._id) {
+            return {
+              ...cat,
+              items: [
+                ...(cat.items || []),
+                {
+                  itemType: 'product',
+                  itemId: createdProduct._id,
+                  order: items.length
+                }
+              ]
+            };
+          }
+          return cat;
+        });
+
+        await savePOSInterface(updatedCategories);
+        await fetchPOSInterface();
+      }
+    } catch (error) {
+      console.error('Error creating product:', error);
+      toast.error('Failed to create product');
+    }
   };
 
   const handleNewProductSaved = async (savedProduct) => {
@@ -1378,6 +1497,49 @@ export default function POSInterfaceDetailPage({ params }) {
         productType={newProductType}
         onProductSaved={handleNewProductSaved}
         onIconClick={() => {}}
+      />
+
+      {/* Membership Product Sheet */}
+      <MembershipsProductSheet
+        open={membershipSheetOpen}
+        onOpenChange={setMembershipSheetOpen}
+        products={membershipProducts}
+        selectedProductId={selectedMembershipId}
+        setProducts={setMembershipProducts}
+        isDirty={membershipAutoSave.isDirty}
+        saving={membershipAutoSave.saving}
+        markAsSaved={membershipAutoSave.markAsSaved}
+        setIconDialogOpen={setIconDialogOpen}
+        setIconDialogProductIdx={setIconDialogProductIdx}
+        setIconDialogQuery={setIconDialogQuery}
+        createProduct={createMembershipProduct}
+        categoryName="memberships"
+      />
+
+      {/* Class Product Sheet */}
+      <ClassesProductSheet
+        open={classSheetOpen}
+        onOpenChange={setClassSheetOpen}
+        products={classProducts}
+        selectedProductId={selectedClassId}
+        setProducts={setClassProducts}
+        isDirty={classAutoSave.isDirty}
+        saving={classAutoSave.saving}
+        markAsSaved={classAutoSave.markAsSaved}
+        setIconDialogOpen={setIconDialogOpen}
+        setIconDialogProductIdx={setIconDialogProductIdx}
+        setIconDialogQuery={setIconDialogQuery}
+        createProduct={createClassProduct}
+        categoryName="classes"
+      />
+
+      {/* Icon Select Dialog for Memberships/Classes */}
+      <IconSelect
+        open={iconDialogOpen}
+        setOpen={setIconDialogOpen}
+        pIdx={iconDialogProductIdx}
+        query={iconDialogQuery}
+        updateProduct={membershipSheetOpen ? updateMembershipProductKey : updateClassProductKey}
       />
 
       {/* Category Icon Select Dialog */}
