@@ -986,25 +986,33 @@ export default function POSInterfaceDetailPage({ params }) {
 
   const handleEditProduct = async (product) => {
     try {
+      console.log('Editing product:', product);
       // Determine product type and open appropriate sheet
       const productType = product.type;
+      console.log('Product type:', productType);
 
       if (productType === 'shop') {
+        console.log('Opening shop product sheet for:', product._id);
         setNewProductId(product._id);
         setNewProductType('shop');
         setNewProductSheetOpen(true);
       } else if (productType === 'membership') {
+        console.log('Opening membership sheet for:', product._id);
         // Load into membership products state
         setMembershipProducts([product]);
         setSelectedMembershipId(product._id);
         setMembershipSheetOpen(true);
         membershipAutoSave.markAsSaved(product._id, product);
       } else if (productType === 'class') {
+        console.log('Opening class sheet for:', product._id);
         // Load into class products state
         setClassProducts([product]);
         setSelectedClassId(product._id);
         setClassSheetOpen(true);
         classAutoSave.markAsSaved(product._id, product);
+      } else {
+        console.warn('Unknown product type:', productType);
+        toast.error('Unknown product type');
       }
     } catch (error) {
       console.error('Error opening product for editing:', error);
