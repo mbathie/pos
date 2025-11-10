@@ -64,7 +64,7 @@ function migrateScheduleFormat(schedule) {
 
 export default function Page() {
   const {
-    getProducts, selectVariation,
+    selectVariation,
     selectMod, getProductTotal, setQty } = useHandler()
 
   const { addToCart } = useGlobals()
@@ -160,7 +160,7 @@ export default function Page() {
           allItems.push({
             ...item.data,
             _id: item.itemId,
-            type: 'product',
+            // Don't override the type - keep the original product type (shop, class, course, membership, etc.)
             order: item.order
           });
         }
@@ -293,8 +293,13 @@ export default function Page() {
                                 ...folderItem,
                                 stockQty: folderItem.qty,
                                 qty: folderItem.type === 'class' || folderItem.type === 'course' || folderItem.type === 'membership' ? 0 : 1,
-                                schedule: folderItem.type === 'course' ? migrateScheduleFormat(folderItem.schedule) : folderItem.schedule
+                                schedule: folderItem.type === 'course' ? migrateScheduleFormat(folderItem.schedule) : folderItem.schedule,
+                                // Initialize prices with qty for memberships
+                                ...(folderItem.type === 'membership' && folderItem.prices && {
+                                  prices: folderItem.prices.map(p => ({ ...p, qty: p.qty || 0 }))
+                                })
                               };
+
                               setProduct(cartProduct);
                               if (folderItem.type === 'class') setTimesClass(cartProduct);
                               else if (folderItem.type === 'course') setTimesCourse(cartProduct);
@@ -316,8 +321,13 @@ export default function Page() {
                                   ...p,
                                   stockQty: p.qty,
                                   qty: p.type === 'class' || p.type === 'course' || p.type === 'membership' ? 0 : 1,
-                                  schedule: p.type === 'course' ? migrateScheduleFormat(p.schedule) : p.schedule
+                                  schedule: p.type === 'course' ? migrateScheduleFormat(p.schedule) : p.schedule,
+                                  // Initialize prices with qty for memberships
+                                  ...(p.type === 'membership' && p.prices && {
+                                    prices: p.prices.map(price => ({ ...price, qty: price.qty || 0 }))
+                                  })
                                 }
+
                                 setProduct(cartProduct)
                                 if (p.type === 'class') setTimesClass(cartProduct)
                                 else if (p.type === 'course') setTimesCourse(cartProduct)
@@ -355,8 +365,13 @@ export default function Page() {
                     ...item,
                     stockQty: item.qty,
                     qty: item.type === 'class' || item.type === 'course' || item.type === 'membership' ? 0 : 1,
-                    schedule: item.type === 'course' ? migrateScheduleFormat(item.schedule) : item.schedule
+                    schedule: item.type === 'course' ? migrateScheduleFormat(item.schedule) : item.schedule,
+                    // Initialize prices with qty for memberships
+                    ...(item.type === 'membership' && item.prices && {
+                      prices: item.prices.map(price => ({ ...price, qty: price.qty || 0 }))
+                    })
                   }
+
                   setProduct(cartProduct)
                   if (item.type === 'class') setTimesClass(cartProduct)
                   else if (item.type === 'course') setTimesCourse(cartProduct)

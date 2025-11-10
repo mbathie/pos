@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongoose";
 import { getEmployee } from "@/lib/auth";
-import { Product, Category } from "@/models";
+import { Product } from "@/models";
 import { uploadBase64Image, deleteImage, getImageUrl } from "@/lib/spaces";
 
 export async function GET(req, { params }) {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getEmployee } from '@/lib/auth';
 import { connectDB } from '@/lib/mongoose';
-import { Product, Folder, Category } from '@/models';
+import { Product, Folder } from '@/models';
 
 // GET /api/posinterfaces/[id]/available-items - Get all products, folders, and categories for selection
 export async function GET(request, { params }) {
@@ -18,29 +18,33 @@ export async function GET(request, { params }) {
 
     await connectDB();
 
-    // Get all categories with their products
-    const categories = await Category.find({ org: employee.org._id, deleted: false })
-      .sort({ name: 1 });
+    // Get all products (no longer filtered by category - products are organized via POS interfaces)
+    const products = await Product.find({
+      org: employee.org._id,
+      deleted: { $ne: true },
+      type: { $in: ['shop', 'class', 'course', 'general', 'membership'] } // Exclude dividers
+    }).sort({ name: 1 });
 
-    // Get all products grouped by category
-    const categoriesWithProducts = await Promise.all(
-      categories.map(async (category) => {
-        const products = await Product.find({
-          category: category._id,
-          type: { $in: ['shop', 'class', 'course', 'general', 'membership'] } // Exclude dividers
-        }).sort({ name: 1 });
+    // Group products by type for better organization in the selector
+    const productsByType = {
+      shop: products.filter(p => p.type === 'shop'),
+      class: products.filter(p => p.type === 'class'),
+      course: products.filter(p => p.type === 'course'),
+      general: products.filter(p => p.type === 'general'),
+      membership: products.filter(p => p.type === 'membership')
+    };
 
-        return {
-          _id: category._id,
-          name: category.name,
-          products
-        };
-      })
-    );
+    // Create virtual categories based on product types
+    const categoriesWithProducts = [
+      { _id: 'shop', name: 'Shop Products', products: productsByType.shop },
+      { _id: 'class', name: 'Classes', products: productsByType.class },
+      { _id: 'course', name: 'Courses', products: productsByType.course },
+      { _id: 'general', name: 'General Entry', products: productsByType.general },
+      { _id: 'membership', name: 'Memberships', products: productsByType.membership }
+    ].filter(cat => cat.products.length > 0); // Only include categories with products
 
     // Get all folders
     const folders = await Folder.find({ org: employee.org._id })
-      .populate('category', 'name')
       .sort({ name: 1 });
 
     return NextResponse.json({

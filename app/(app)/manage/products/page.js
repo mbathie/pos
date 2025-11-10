@@ -14,10 +14,9 @@ import AccountingSelect from '@/app/(app)/products/shopold/accounting-select';
 
 export default function ManageProductsPage() {
   const [allProducts, setAllProducts] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
-    category: 'all',
+    type: 'all',
     search: '',
     publish: 'all',
   });
@@ -36,20 +35,7 @@ export default function ManageProductsPage() {
 
   useEffect(() => {
     fetchProducts();
-    fetchCategories();
   }, []);
-
-  const fetchCategories = async () => {
-    try {
-      const res = await fetch('/api/categories');
-      if (res.ok) {
-        const data = await res.json();
-        setCategories(data.categories || []);
-      }
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
-  };
 
   const fetchProducts = async () => {
     try {
@@ -72,7 +58,7 @@ export default function ManageProductsPage() {
 
   const clearFilters = () => {
     setFilters({
-      category: 'all',
+      type: 'all',
       search: '',
       publish: 'all',
     });
@@ -203,13 +189,13 @@ export default function ManageProductsPage() {
   const filteredProducts = allProducts
     .filter(product => product.type !== 'divider') // Exclude dividers from product management
     .filter(product => {
-      const matchesCategory = filters.category === 'all' || product.category?._id === filters.category;
+      const matchesType = filters.type === 'all' || product.type === filters.type;
       const matchesSearch = !filters.search ||
         product.name.toLowerCase().includes(filters.search.toLowerCase());
       const matchesPublish = filters.publish === 'all' ||
         (filters.publish === 'published' && product.publish !== false) ||
         (filters.publish === 'unpublished' && product.publish === false);
-      return matchesCategory && matchesSearch && matchesPublish;
+      return matchesType && matchesSearch && matchesPublish;
     })
     .sort((a, b) => {
       if (!sort.field) return 0;
@@ -221,9 +207,9 @@ export default function ManageProductsPage() {
           aValue = a.name?.toLowerCase() || '';
           bValue = b.name?.toLowerCase() || '';
           break;
-        case 'category':
-          aValue = a.category?.name?.toLowerCase() || '';
-          bValue = b.category?.name?.toLowerCase() || '';
+        case 'type':
+          aValue = a.type?.toLowerCase() || '';
+          bValue = b.type?.toLowerCase() || '';
           break;
         case 'accounting':
           aValue = a.accounting?.name?.toLowerCase() || '';
@@ -232,10 +218,6 @@ export default function ManageProductsPage() {
         case 'folder':
           aValue = a.folder?.name?.toLowerCase() || '';
           bValue = b.folder?.name?.toLowerCase() || '';
-          break;
-        case 'menu':
-          aValue = a.category?.menu?.toLowerCase() || '';
-          bValue = b.category?.menu?.toLowerCase() || '';
           break;
         case 'bump':
           aValue = a.bump === true ? 1 : 0;
@@ -254,7 +236,7 @@ export default function ManageProductsPage() {
       return 0;
     });
 
-  const hasActiveFilters = (filters.category && filters.category !== 'all') || filters.search || (filters.publish && filters.publish !== 'all');
+  const hasActiveFilters = (filters.type && filters.type !== 'all') || filters.search || (filters.publish && filters.publish !== 'all');
 
   return (
     <div className="mx-auto px-4 max-w-7xl h-screen flex flex-col py-4">
@@ -269,17 +251,17 @@ export default function ManageProductsPage() {
       {/* Filters */}
       <div className="flex gap-2 items-end mb-4 flex-shrink-0">
         <div className="max-w-xs">
-          <Select value={filters.category} onValueChange={(value) => handleFilterChange('category', value)}>
+          <Select value={filters.type} onValueChange={(value) => handleFilterChange('type', value)}>
             <SelectTrigger>
-              <SelectValue placeholder="All categories" />
+              <SelectValue placeholder="All types" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All categories</SelectItem>
-              {categories.map((category) => (
-                <SelectItem key={category._id} value={category._id}>
-                  {category.name}
-                </SelectItem>
-              ))}
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="shop">Shop</SelectItem>
+              <SelectItem value="class">Class</SelectItem>
+              <SelectItem value="course">Course</SelectItem>
+              <SelectItem value="general">General Entry</SelectItem>
+              <SelectItem value="membership">Membership</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -340,12 +322,12 @@ export default function ManageProductsPage() {
                       <ChevronsUpDown className="ml-2 h-4 w-4" />
                     </div>
                   </th>
-                  <th 
+                  <th
                     className="h-12 px-4 text-left align-middle text-muted-foreground cursor-pointer hover:bg-muted w-1/6"
-                    onClick={() => handleSort('category')}
+                    onClick={() => handleSort('type')}
                   >
                     <div className="flex items-center">
-                      Category
+                      Type
                       <ChevronsUpDown className="ml-2 h-4 w-4" />
                     </div>
                   </th>
@@ -418,20 +400,9 @@ export default function ManageProductsPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3 align-middle">
-                            <div className="flex items-center gap-2">
-                              {product.category?.thumbnail ? (
-                                <img
-                                  src={product.category.thumbnail}
-                                  alt={product.category?.name}
-                                  className="w-8 h-8 rounded object-cover invert flex-shrink-0"
-                                />
-                              ) : (
-                                <div className="w-8 h-8 rounded bg-muted flex items-center justify-center flex-shrink-0">
-                                  <Tag className="w-4 h-4 text-muted-foreground" />
-                                </div>
-                              )}
-                              <span>{product.category?.name || ''}</span>
-                            </div>
+                            <Badge variant="outline" className="capitalize">
+                              {product.type || 'Unknown'}
+                            </Badge>
                           </td>
                           <td className="px-4 py-3 align-middle w-1/6">
                             {product.accounting ? (

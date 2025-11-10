@@ -36,7 +36,7 @@ export async function GET(request, { params }) {
         const populatedItems = await Promise.all(
           category.items.map(async (item) => {
             if (item.itemType === 'folder') {
-              const folder = await Folder.findById(item.itemId);
+              const folder = await Folder.findById(item.itemId).lean();
               if (!folder) return { ...item.toObject(), data: null };
 
               // Populate items in contains array
@@ -46,20 +46,20 @@ export async function GET(request, { params }) {
 
                 for (const containedItem of sortedContains) {
                   if (containedItem.itemType === 'product') {
-                    const product = await Product.findById(containedItem.itemId);
+                    const product = await Product.findById(containedItem.itemId).lean();
                     if (product) {
                       populatedItems.push({
                         itemType: 'product',
-                        ...product.toObject()
+                        ...product
                       });
                     }
                   } else if (containedItem.itemType === 'group') {
                     const { ProductGroup } = await import('@/models');
-                    const group = await ProductGroup.findById(containedItem.itemId).populate('products');
+                    const group = await ProductGroup.findById(containedItem.itemId).populate('products').lean();
                     if (group) {
                       populatedItems.push({
                         itemType: 'group',
-                        ...group.toObject()
+                        ...group
                       });
                     }
                   }
@@ -69,17 +69,17 @@ export async function GET(request, { params }) {
               return {
                 ...item.toObject(),
                 data: {
-                  ...folder.toObject(),
+                  ...folder,
                   items: populatedItems, // Return unified array in order
                   products: populatedItems.filter(i => i.itemType === 'product'), // Legacy support
                   groups: populatedItems.filter(i => i.itemType === 'group') // Legacy support
                 }
               };
             } else if (item.itemType === 'product' || item.itemType === 'divider') {
-              const product = await Product.findById(item.itemId);
+              const product = await Product.findById(item.itemId).lean();
               return {
                 ...item.toObject(),
-                data: product?.toObject()
+                data: product
               };
             }
             return item;
