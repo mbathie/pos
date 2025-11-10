@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, MapPinCheckInside, Users, CircleDollarSign, Landmark, Settings, Calendar, QrCode, ChefHat, Receipt, Percent, Terminal, UserCheck, Tag, ScanLine, CreditCard, CheckCircle } from "lucide-react";
+import { MapPin, MapPinCheckInside, Users, CircleDollarSign, Landmark, Settings, Calendar, QrCode, ChefHat, Receipt, Percent, Terminal, UserCheck, Tag, ScanLine, CreditCard, CheckCircle, Building2 } from "lucide-react";
 import { NavMenu } from "@/components/nav-menu";
 import { NavUser } from "@/components/nav-user";
 import { LocationDisplay } from "@/components/location";
@@ -48,6 +48,7 @@ export function AppSidebar(props) {
     },
     { title: "Check-ins", url: "/manage/checkins", icon: CheckCircle },
     { title: "Customers", url: "/manage/customers", icon: UserCheck },
+    { title: "Companies", url: "/manage/companies", icon: Building2 },
     // { title: "Waiver", url: `${process.env.NEXT_PUBLIC_DOMAIN}/org/${employee?.org?._id || 'default'}/waiver`, icon: QrCode },
     { title: "Transactions", url: "/manage/transactions", icon: Receipt },
     { groupLabel: "Setup", permission: "group:setup"},
