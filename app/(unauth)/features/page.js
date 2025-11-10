@@ -10,7 +10,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronRight, ChevronDown, FileText, PauseCircle, XCircle, CheckCircle, Clock, Bell, Package, ShoppingCart, Calendar, Percent, FileCheck, Folder, Users, Receipt, CreditCard } from 'lucide-react';
+import { ChevronRight, ChevronDown, FileText, PauseCircle, XCircle, CheckCircle, Clock, Bell, Package, ShoppingCart, Calendar, Percent, FileCheck, Folder, Users, Receipt, CreditCard, Building2 } from 'lucide-react';
 // Flowchart removed
 
 export default function FeaturesPage() {
@@ -71,6 +71,11 @@ export default function FeaturesPage() {
 
   const systemFeatures = [
     {
+      id: 'pos-interfaces',
+      title: 'POS Interfaces & Product Organization',
+      Icon: Package
+    },
+    {
       id: 'discounts-adjustments',
       title: 'Discounts & Adjustments',
       Icon: Percent
@@ -89,6 +94,11 @@ export default function FeaturesPage() {
       id: 'customer-management',
       title: 'Customer Management',
       Icon: Users
+    },
+    {
+      id: 'company-payments',
+      title: 'Company/Group Payments',
+      Icon: Building2
     },
     {
       id: 'transactions',
@@ -2205,6 +2215,526 @@ tail -f tmp/stripe-webhooks.log
                   <li>Custom fields for business-specific data</li>
                   <li>Email marketing integration</li>
                   <li>SMS notifications for appointments/renewals</li>
+                </ul>
+              </section>
+
+              {/* Company/Group Payments */}
+              <section id="company-payments" className="mb-16 scroll-mt-20">
+                <div className="bg-primary text-primary-foreground p-4 rounded-lg mb-6 flex items-center gap-3">
+                  <Building2 className="h-6 w-6 shrink-0" />
+                  <h2 className="text-2xl font-semibold m-0">Company/Group Payments</h2>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Overview</h3>
+                <p className="text-muted-foreground mb-4">
+                  Enable organizations, schools, corporate clients, and groups to purchase classes or courses for multiple individuals with deferred payment and individual waiver collection. The system immediately blocks spots when the company purchases, and participants sign waivers via unique links to complete registration.
+                </p>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Key Features</h3>
+                <ul className="space-y-2 text-muted-foreground mb-4">
+                  <li><strong>Zero-Payment Checkout:</strong> Complete transactions without card payment when "Company" payment method is selected</li>
+                  <li><strong>Company Management:</strong> Store company profiles with ABN, contact person, email, and billing address</li>
+                  <li><strong>Immediate Spot Blocking:</strong> Placeholder customers created in schedule to prevent overbooking</li>
+                  <li><strong>Individual Waiver Links:</strong> Each participant gets unique link to sign waiver and register</li>
+                  <li><strong>Automatic Customer Creation:</strong> New customer accounts created when waivers are signed</li>
+                  <li><strong>Schedule Integration:</strong> Placeholders automatically replaced with real customers upon waiver completion</li>
+                  <li><strong>Email Notifications:</strong> Waiver links sent to company contact for distribution to participants</li>
+                  <li><strong>Transaction Tracking:</strong> Link transactions, customers, and schedules for full audit trail</li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">How It Works</h3>
+                <div className="space-y-4 mb-6">
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Step 1: Company Purchases Classes</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Staff adds "Yoga Class" to cart (e.g., 10 Adult spots for Nov 15, 3:30 PM)</li>
+                      <li>Selects "Company" as payment method on payment page</li>
+                      <li>Searches for existing company or creates new company profile</li>
+                      <li>Company details: Name, ABN, Contact Name, Email, Address</li>
+                      <li><strong>Transaction created:</strong> $250 total (10 × $25), payment deferred</li>
+                      <li><strong>Schedule updated:</strong> 10 placeholder customers added, available spots reduced from 20 to 10</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Step 2: Waiver Link Generation</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>System generates unique waiver link: <code>/schedule/{"{transactionId}"}/waiver</code></li>
+                      <li>Email sent to company contact: "Please distribute this link to your 10 participants"</li>
+                      <li>Link displays: Company name, class name, date/time, waiver form</li>
+                      <li>No authentication required - public link accessible to anyone</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Step 3: Participants Sign Waivers</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Participant opens link, sees: "Waiver for [Org Name] - Yoga Class - Nov 15, 2025 at 3:30 PM"</li>
+                      <li>Fills out form: First name, Last name, Email, Phone, DOB, Address</li>
+                      <li>Adds dependents if booking for children (name, DOB, guardian consent)</li>
+                      <li>Reviews waiver text, checks "I agree" checkbox</li>
+                      <li><strong>On submission:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>New customer account created and linked to org</li>
+                          <li>One placeholder in schedule replaced with real customer</li>
+                          <li>Customer marked as "confirmed" for class</li>
+                          <li>Success message: "Waiver submitted successfully! You have been registered for Yoga Class"</li>
+                        </ul>
+                      </li>
+                      <li>Same link can be reused by all 10 participants</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Step 4: Schedule Management</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li><strong>Schedule View (Staff):</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>Nov 15, 3:30 PM - Yoga Class (10/20 spots)</li>
+                          <li>Shows mix of confirmed customers and pending placeholders</li>
+                          <li>Placeholders display: "Pending waiver - Test Co (Transaction #123)"</li>
+                          <li>Real customers display: "John Doe - confirmed"</li>
+                        </ul>
+                      </li>
+                      <li><strong>Available spots calculation:</strong> Capacity (20) - Confirmed (3) - Placeholders (7) = 10 spots available</li>
+                      <li><strong>Prevents overbooking:</strong> Other customers can't book if placeholders fill the class</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Technical Implementation</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Placeholder Customer Structure</p>
+                  <pre className="text-xs bg-background p-3 rounded mt-2 overflow-x-auto">
+{`{
+  customer: null,
+  status: 'pending_waiver',
+  transaction: ObjectId("..."),
+  company: ObjectId("..."),
+  isPlaceholder: true
+}`}
+                  </pre>
+                  <p className="text-sm mt-3 text-muted-foreground">
+                    Placeholders are added to <code>schedule.locations[].classes[].customers[]</code> array immediately when company purchases. When a participant signs the waiver, the system finds a placeholder for that transaction and replaces it with the real customer record.
+                  </p>
+                </div>
+
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Transaction Metadata</p>
+                  <pre className="text-xs bg-background p-3 rounded mt-2 overflow-x-auto">
+{`companyPayment: {
+  companyName: "Test Co",
+  contactEmail: "contact@company.com",
+  contactName: "Jane Manager",
+  abn: "12 123 123 123",
+  paymentDeferred: true,
+  waiverLinkSent: false,
+  scheduleId: ObjectId("..."),
+  locationId: ObjectId("..."),
+  classDatetime: "2025-11-15T04:30:00.000Z"
+}`}
+                  </pre>
+                  <p className="text-sm mt-3 text-muted-foreground">
+                    The transaction stores all schedule metadata needed to link customers correctly when waivers are signed. The <code>scheduleId</code> is looked up from the Schedule collection (not the product ID) to ensure correct linking.
+                  </p>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Example Scenarios</h3>
+
+                <div className="space-y-6 mb-6">
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 1: Corporate Team Building Event</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> TechCorp wants to book 15 spots for Rock Climbing on Dec 10</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li><strong>Staff workflow:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>Add "Rock Climbing" class to cart (Dec 10, 2:00 PM)</li>
+                          <li>Select 15 Adult spots</li>
+                          <li>Choose "Company" payment method</li>
+                          <li>Search "TechCorp" → Select existing company</li>
+                          <li>Complete checkout: $375 total (15 × $25)</li>
+                        </ul>
+                      </li>
+                      <li><strong>System actions:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>15 placeholder customers added to Dec 10, 2:00 PM class</li>
+                          <li>Available spots: 30 → 15</li>
+                          <li>Email sent to hr@techcorp.com with waiver link</li>
+                        </ul>
+                      </li>
+                      <li><strong>Employee sign-ups:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>12 employees sign waivers over next 3 days</li>
+                          <li>Each gets customer account created automatically</li>
+                          <li>12 placeholders replaced with real customers</li>
+                          <li>3 placeholders remain "pending_waiver"</li>
+                        </ul>
+                      </li>
+                      <li><strong>Class status:</strong> 12 confirmed, 3 pending, 15 available to public</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 2: School Field Trip</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Springfield Elementary books 25 child spots for Swimming Course</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li><strong>Booking:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>Staff selects "Swimming Course" (8 weeks, Mondays 3 PM)</li>
+                          <li>25 × Child price ($15) = $375</li>
+                          <li>Company: Springfield Elementary School</li>
+                          <li>25 placeholders block spots immediately</li>
+                        </ul>
+                      </li>
+                      <li><strong>Parent sign-ups:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>School emails waiver link to all 25 parents</li>
+                          <li>Parents fill out child's info (name, DOB) + guardian details</li>
+                          <li>Parent marked as guardian, child as dependent</li>
+                          <li>Each submission creates parent account + child account</li>
+                          <li>Child linked to course schedule</li>
+                        </ul>
+                      </li>
+                      <li><strong>Result:</strong> 25 children registered, parents have login access to view schedules</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 3: Preventing Overbooking</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Class capacity = 20, Company A books 15, Public booking opens</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li><strong>Initial state:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>Capacity: 20</li>
+                          <li>Company A placeholders: 15</li>
+                          <li>Available to public: 5 spots</li>
+                        </ul>
+                      </li>
+                      <li><strong>Public customer tries to book:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>Opens class booking page</li>
+                          <li>Sees "5 spots available"</li>
+                          <li>Can only add up to 5 people (+ button disabled at limit)</li>
+                          <li>Cannot exceed capacity even though Company A participants haven't signed waivers yet</li>
+                        </ul>
+                      </li>
+                      <li><strong>Company B tries to book:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>Staff adds 10 spots to cart</li>
+                          <li>System prevents: "Only 5 spots available"</li>
+                          <li>Must reduce to 5 or choose different class time</li>
+                        </ul>
+                      </li>
+                      <li><strong>Protection:</strong> Placeholders ensure first-come, first-served integrity</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Files Reference</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Company Management</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/models/Company.js</code> - Company schema (name, ABN, contact details)</li>
+                    <li><code>/components/company-form.jsx</code> - Reusable company form component</li>
+                    <li><code>/app/(app)/manage/companies/page.js</code> - Company list and management</li>
+                    <li><code>/app/(app)/manage/companies/[id]/page.js</code> - Company detail page</li>
+                    <li><code>/app/api/companies/route.js</code> - Company CRUD API</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">Payment Flow</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/app/(app)/shop/payment/page.js</code> - Payment page with company selection</li>
+                    <li><code>/lib/payments/success.js</code> - createCompanyTransaction() function</li>
+                    <li><code>/lib/adjustments.js</code> - handleZeroPayment() for company checkouts</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">Waiver System</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/app/(unauth)/schedule/[id]/waiver/page.js</code> - Public waiver page</li>
+                    <li><code>/app/api/unauth/schedule-waiver/[id]/route.js</code> - Waiver submission API</li>
+                    <li><code>/components/waiver-form.jsx</code> - Reusable waiver form component</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">Schedule Integration</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/models/Schedule.js</code> - Schedule schema with placeholder support</li>
+                    <li><code>/lib/payments/success.js:771-823</code> - Placeholder creation logic</li>
+                    <li><code>/app/api/unauth/schedule-waiver/[id]/route.js:163-198</code> - Placeholder replacement logic</li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Key Technical Details</h3>
+                <ul className="space-y-2 text-muted-foreground mb-4">
+                  <li><strong>Schedule ID Lookup:</strong> System queries Schedule collection to find actual schedule ID (not product ID) for correct linking</li>
+                  <li><strong>Atomic Operations:</strong> Placeholder creation and spot decrement happen in single database transaction</li>
+                  <li><strong>Race Condition Prevention:</strong> Spots blocked immediately, preventing double-booking between purchase and waiver completion</li>
+                  <li><strong>Email Validation:</strong> Duplicate email check prevents multiple accounts for same participant</li>
+                  <li><strong>Fallback Logic:</strong> If no placeholder found (shouldn't happen), customer added normally with spot decrement</li>
+                  <li><strong>Transaction Linking:</strong> Every placeholder and customer links back to original transaction for audit trail</li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Future Enhancements</h3>
+                <ul className="space-y-1 text-muted-foreground mb-4 text-sm list-disc list-inside">
+                  <li>Automated placeholder cleanup (expire after X days)</li>
+                  <li>Waiver completion tracking dashboard for companies</li>
+                  <li>Bulk waiver reminder emails for unredeemed spots</li>
+                  <li>Company payment terms (Net 30, Net 60)</li>
+                  <li>Invoice generation and payment tracking</li>
+                  <li>Multi-event bookings in single transaction</li>
+                  <li>Company-specific pricing/discounts</li>
+                  <li>Attendance tracking integration</li>
+                  <li>Certificate generation upon course completion</li>
+                </ul>
+              </section>
+
+              {/* POS Interfaces & Product Organization */}
+              <section id="pos-interfaces" className="mb-16 scroll-mt-20">
+                <div className="bg-primary text-primary-foreground p-4 rounded-lg mb-6 flex items-center gap-3">
+                  <Package className="h-6 w-6 shrink-0" />
+                  <h2 className="text-2xl font-semibold m-0">POS Interfaces & Product Organization</h2>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Overview</h3>
+                <p className="text-muted-foreground mb-4">
+                  Flexible product organization system where products are organized by <strong>type</strong> (shop, class, course, membership, general) and displayed through customizable POS interfaces. Each device or location can have its own POS interface with unique layouts, categories, and product arrangements using folders, dividers, and product groups.
+                </p>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Key Concepts</h3>
+                <ul className="space-y-2 text-muted-foreground mb-4">
+                  <li><strong>Product Types:</strong> Products are classified by type (shop, class, course, membership, general) rather than traditional categories</li>
+                  <li><strong>POS Interfaces:</strong> Customizable layouts that control what products appear on specific devices or locations</li>
+                  <li><strong>Categories (POS-Level):</strong> Organizational tabs within a POS interface (e.g., "Coffees", "Cakes", "Memberships")</li>
+                  <li><strong>Folders:</strong> Visual containers within categories to group related products with color coding</li>
+                  <li><strong>Product Groups:</strong> Pre-configured bundles of products that can be added to cart as a set</li>
+                  <li><strong>Dividers:</strong> Visual separators within categories to organize layout</li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Architecture</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Product Organization Hierarchy</p>
+                  <pre className="text-xs bg-background p-3 rounded mt-2 overflow-x-auto">
+{`POS Interface
+└─ Categories (Tabs)
+   └─ Items (in display order)
+      ├─ Folder (collapsible)
+      │  ├─ Product
+      │  ├─ Product Group
+      │  └─ Product
+      ├─ Divider (visual separator)
+      ├─ Product (top-level)
+      └─ Product Group (top-level)`}
+                  </pre>
+                  <p className="text-sm mt-3 text-muted-foreground">
+                    Products are stored with a <code>type</code> field but NO category reference. Organization is handled entirely through POS interfaces, which reference products and arrange them into categories with folders and dividers.
+                  </p>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Key Features</h3>
+                <ul className="space-y-2 text-muted-foreground mb-4">
+                  <li><strong>Type-Based Filtering:</strong> Product management pages filter by type instead of category</li>
+                  <li><strong>Device Assignment:</strong> Assign specific POS interfaces to devices by browser ID</li>
+                  <li><strong>Location-Specific Layouts:</strong> Different locations can have different POS interfaces</li>
+                  <li><strong>Drag-and-Drop Ordering:</strong> Arrange products, folders, and dividers within categories</li>
+                  <li><strong>Unified Items Array:</strong> Folders contain an ordered <code>items</code> array mixing products and groups</li>
+                  <li><strong>Folder Color Coding:</strong> Visual organization with customizable folder colors</li>
+                  <li><strong>Dynamic Loading:</strong> POS interface data populated on-demand with full product details</li>
+                  <li><strong>Legacy Support:</strong> Old category-based API endpoints maintained for backward compatibility</li>
+                </ul>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">How It Works</h3>
+                <div className="space-y-4 mb-6">
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Step 1: Create Products by Type</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Navigate to Products → Shop, Classes, Memberships, or General Entry</li>
+                      <li>Each product type has its own management page</li>
+                      <li>Products created with <code>type</code> field (shop, class, course, membership, general)</li>
+                      <li>No category assignment required at product creation</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Step 2: Create Folders (Optional)</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Navigate to Setup → Folders</li>
+                      <li>Create folders with names and color codes (e.g., "Coffee" - brown, "Smoothies" - pink)</li>
+                      <li>Folders are organization containers, not data categories</li>
+                      <li>Assign products to folders via product editor or folder editor</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Step 3: Configure POS Interface</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Navigate to Setup → POS Interfaces</li>
+                      <li>Create new interface or edit existing (e.g., "Cafe", "Front Desk", "Events")</li>
+                      <li>Add categories (tabs): "Coffees", "Cakes", "Memberships", etc.</li>
+                      <li>Within each category, add:
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>Folders (with all their contained products)</li>
+                          <li>Individual products</li>
+                          <li>Product groups (bundles)</li>
+                          <li>Dividers (visual separators)</li>
+                        </ul>
+                      </li>
+                      <li>Drag and drop to reorder items within categories</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Step 4: Assign to Devices</h4>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Each device has a unique browser ID (auto-generated)</li>
+                      <li>In POS Interface editor, assign interface to specific devices</li>
+                      <li>Device identifies itself on load: <code>/api/posinterfaces/for-device</code></li>
+                      <li>Multiple devices can share the same POS interface</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Technical Implementation</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Data Structure</p>
+                  <pre className="text-xs bg-background p-3 rounded mt-2 overflow-x-auto">
+{`// Product Schema
+{
+  _id: ObjectId("..."),
+  name: "Cappuccino",
+  type: "shop",           // Required: shop|class|course|membership|general
+  folder: ObjectId("..."), // Optional: Reference to folder
+  org: ObjectId("..."),
+  // No category field - organization via POS interfaces
+}
+
+// POS Interface Schema
+{
+  _id: ObjectId("..."),
+  name: "Cafe POS",
+  org: ObjectId("..."),
+  devices: [
+    { locationId: ObjectId("..."), browserId: "browser_abc123" }
+  ],
+  categories: [
+    {
+      _id: ObjectId("..."),
+      name: "Coffees",
+      items: [
+        { itemType: "folder", itemId: ObjectId("..."), order: 0 },
+        { itemType: "product", itemId: ObjectId("..."), order: 1 },
+        { itemType: "divider", itemId: ObjectId("..."), order: 2 },
+        { itemType: "product", itemId: ObjectId("..."), order: 3 }
+      ]
+    }
+  ]
+}`}
+                  </pre>
+                </div>
+
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">Migration from Category-Based System</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground list-disc list-inside">
+                    <li><strong>Before:</strong> Products had <code>category</code> field (ObjectId reference)</li>
+                    <li><strong>After:</strong> Products have <code>type</code> field (string enum)</li>
+                    <li><strong>API Change:</strong> <code>/api/products?type=membership</code> instead of <code>/api/categories/{"{id}"}/products</code></li>
+                    <li><strong>Management Pages:</strong> Filter by type dropdown instead of category dropdown</li>
+                    <li><strong>POS Display:</strong> Controlled by POS interface configuration, not product category</li>
+                    <li><strong>Legacy Data:</strong> Old category references harmless (schema has <code>strict: false</code>)</li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Example Scenarios</h3>
+
+                <div className="space-y-6 mb-6">
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 1: Multi-Location Cafe</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Different POS layouts for different locations</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li><strong>Location A (Full Menu):</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>POS Interface: "Full Cafe"</li>
+                          <li>Categories: Coffees, Smoothies, Food, Snacks, Memberships</li>
+                          <li>All products available</li>
+                        </ul>
+                      </li>
+                      <li><strong>Location B (Limited Menu):</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>POS Interface: "Express Cafe"</li>
+                          <li>Categories: Coffees, Snacks only</li>
+                          <li>Subset of products</li>
+                        </ul>
+                      </li>
+                      <li><strong>Benefit:</strong> Same products, different presentations based on location needs</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 2: Department-Specific Devices</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Front desk vs. Retail shop</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li><strong>Front Desk Device:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>POS Interface: "Front Desk"</li>
+                          <li>Categories: Memberships, Classes, General Entry</li>
+                          <li>No retail products (shop type hidden)</li>
+                        </ul>
+                      </li>
+                      <li><strong>Retail Shop Device:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>POS Interface: "Retail"</li>
+                          <li>Categories: Merchandise, Supplements, Equipment</li>
+                          <li>Only shop-type products visible</li>
+                        </ul>
+                      </li>
+                      <li><strong>Result:</strong> Each staff member sees only relevant products for their role</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h4 className="font-semibold text-sm mb-2">Scenario 3: Seasonal Layout Changes</h4>
+                    <p className="text-sm text-muted-foreground mb-2"><strong>Setup:</strong> Reorganizing for summer season</p>
+                    <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                      <li><strong>Task:</strong> Promote cold drinks, hide hot chocolate products</li>
+                      <li><strong>Approach:</strong>
+                        <ul className="ml-4 mt-1 space-y-0.5">
+                          <li>Edit POS Interface "Cafe"</li>
+                          <li>Reorder categories: Move "Cold Drinks" category to first position</li>
+                          <li>Remove "Hot Chocolate" folder from "Coffees" category</li>
+                          <li>Add new "Iced Specials" divider</li>
+                          <li>Products still exist in database, just hidden from this POS interface</li>
+                        </ul>
+                      </li>
+                      <li><strong>Benefit:</strong> No product deletion, easy to restore in winter</li>
+                    </ul>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Files Reference</h3>
+                <div className="bg-muted p-4 rounded-lg mb-4">
+                  <p className="text-sm font-semibold mb-2">POS Interface Management</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/app/(app)/products/pos/[id]/page.js</code> - POS interface editor</li>
+                    <li><code>/app/api/posinterfaces/[id]/route.js</code> - POS interface CRUD + population</li>
+                    <li><code>/app/api/posinterfaces/[id]/available-items/route.js</code> - Products list for adding to interface</li>
+                    <li><code>/app/api/posinterfaces/for-device/route.js</code> - Device identification</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">Product Management</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/app/(app)/products/(entry)/shop/page.js</code> - Shop products management</li>
+                    <li><code>/app/(app)/products/(entry)/classes/page.js</code> - Class products management</li>
+                    <li><code>/app/(app)/products/(entry)/memberships/page.js</code> - Membership products management</li>
+                    <li><code>/app/api/products/route.js</code> - Product CRUD with type filtering (<code>?type=shop</code>)</li>
+                  </ul>
+                  <p className="text-sm font-semibold mt-3 mb-2">Shop Page (Consumer View)</p>
+                  <ul className="text-sm space-y-1 text-muted-foreground">
+                    <li><code>/app/(app)/shop/page.js</code> - Main checkout page loading POS interface for device</li>
+                  </ul>
+                </div>
+
+                <h3 className="text-lg font-semibold mt-6 mb-3">Key Improvements from Old System</h3>
+                <ul className="space-y-2 text-muted-foreground mb-4">
+                  <li><strong>Decoupled Organization:</strong> Products don't "belong" to categories; they're organized via POS interfaces</li>
+                  <li><strong>Flexible Reuse:</strong> Same product can appear in multiple POS interfaces with different presentation</li>
+                  <li><strong>Type-Based Management:</strong> Simpler product type dropdown (shop/class/course) vs category trees</li>
+                  <li><strong>Device Control:</strong> Precise control over what each device/location displays</li>
+                  <li><strong>Easier Testing:</strong> Type-based filtering (<code>/api/products?type=X</code>) more reliable than category lookups</li>
+                  <li><strong>Array Preservation:</strong> Using <code>.lean()</code> queries prevents Mongoose array-to-object conversion bugs</li>
                 </ul>
               </section>
 
