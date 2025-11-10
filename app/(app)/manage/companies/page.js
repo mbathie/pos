@@ -2,8 +2,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from 'next/navigation';
 import { useGlobals } from '@/lib/globals';
-import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button";
 import {
@@ -14,11 +12,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, MoreHorizontal, Building2 } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronRight, Building2 } from "lucide-react";
 import { AddCompanyDialog } from '@/components/add-company-dialog';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { CompanyForm } from '@/components/company-form';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -38,8 +33,6 @@ export default function CompaniesPage() {
     key: 'name',
     direction: 'asc',
   });
-  const [editingCompany, setEditingCompany] = useState(null);
-  const [editSheetOpen, setEditSheetOpen] = useState(false);
 
   // Fetch companies when search, page, or sort changes
   useEffect(() => {
@@ -116,38 +109,7 @@ export default function CompaniesPage() {
     setCurrentPage(1);
   };
 
-  const handleEdit = (company) => {
-    setEditingCompany(company);
-    setEditSheetOpen(true);
-  };
-
-  const handleDelete = async (companyId) => {
-    if (!confirm('Are you sure you want to delete this company?')) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/companies/${companyId}`, {
-        method: 'DELETE'
-      });
-
-      if (response.ok) {
-        fetchCompanies(); // Refresh list
-      } else {
-        console.error('Failed to delete company');
-      }
-    } catch (error) {
-      console.error('Error deleting company:', error);
-    }
-  };
-
   const handleCompanyAdded = () => {
-    fetchCompanies(); // Refresh list
-  };
-
-  const handleCompanyUpdated = () => {
-    setEditSheetOpen(false);
-    setEditingCompany(null);
     fetchCompanies(); // Refresh list
   };
 
@@ -178,119 +140,126 @@ export default function CompaniesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-4 p-6">
+    <div className="mr-auto px-4 pt-2 w-full h-full flex flex-col py-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold">Companies</h1>
-          <p className="text-sm text-muted-foreground">
-            Manage companies and organizations for group purchases
-          </p>
-        </div>
-        <AddCompanyDialog onCompanyAdded={handleCompanyAdded} />
+      <div className="mb-4 flex-shrink-0">
+        <h1 className="text-xl font-semibold mb-1">Companies</h1>
+        <p className="text-sm text-muted-foreground">
+          Manage companies and organizations for group purchases
+        </p>
       </div>
 
-      {/* Search */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      {/* Controls */}
+      <div className="flex-shrink-0">
+        <div className="flex flex-col md:flex-row gap-4 mb-4">
+          {/* Search */}
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input
-              placeholder="Search companies by name, ABN, contact..."
-              className="pl-8"
+              placeholder="Search companies..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
+              className="pl-10"
             />
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Table */}
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader className="bg-muted/50">
-              <TableRow>
-                <TableHead className="w-12"></TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('name')}>
+          {/* Add button */}
+          <div className="flex items-center gap-2 ml-auto">
+            <AddCompanyDialog onCompanyAdded={handleCompanyAdded} />
+          </div>
+        </div>
+      </div>
+
+      {/* Table Container - Scrollable */}
+      <div className="flex-1 flex flex-col relative">
+        {/* Table */}
+        <div className="rounded-md border flex-1 overflow-auto">
+          <table className="w-full caption-bottom text-sm">
+            <thead className="[&_tr]:border-b sticky top-0 z-10 bg-background">
+              <tr className="border-b bg-muted/50 hover:bg-muted/50">
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-12"></th>
+                <th
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  onClick={() => handleSort('name')}
+                >
                   <div className="flex items-center">
                     Company Name
                     {getSortIcon('name')}
                   </div>
-                </TableHead>
-                <TableHead>ABN</TableHead>
-                <TableHead>Contact Name</TableHead>
-                <TableHead>Contact Email</TableHead>
-                <TableHead>Contact Phone</TableHead>
-                <TableHead className="cursor-pointer" onClick={() => handleSort('createdAt')}>
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  ABN
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Contact Name
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Contact Email
+                </th>
+                <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+                  Contact Phone
+                </th>
+                <th
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  onClick={() => handleSort('createdAt')}
+                >
                   <div className="flex items-center">
                     Created
                     {getSortIcon('createdAt')}
                   </div>
-                </TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                </th>
+                <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="[&_tr:last-child]:border-0">
+              {loading && companies.length === 0 ? (
+                <tr className="border-b">
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
                     Loading companies...
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ) : companies.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <tr className="border-b">
+                  <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">
                     {searchQuery ? 'No companies found matching your search' : 'No companies yet. Add your first company to get started.'}
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ) : (
                 companies.map((company) => (
-                  <TableRow key={company._id} className="hover:bg-muted/50">
-                    <TableCell className="align-middle">
+                  <tr
+                    key={company._id}
+                    className="border-b transition-colors hover:bg-muted/50 cursor-pointer"
+                    onClick={() => router.push(`/manage/companies/${company._id}`)}
+                  >
+                    <td className="px-4 py-4 align-middle">
                       <div className="flex items-center justify-center">
                         <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                           <Building2 className="h-5 w-5 text-muted-foreground" />
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="align-middle font-medium">{company.name}</TableCell>
-                    <TableCell className="align-middle text-muted-foreground">{company.abn || '-'}</TableCell>
-                    <TableCell className="align-middle">{company.contactName}</TableCell>
-                    <TableCell className="align-middle text-muted-foreground">{company.contactEmail}</TableCell>
-                    <TableCell className="align-middle text-muted-foreground">{company.contactPhone || '-'}</TableCell>
-                    <TableCell className="align-middle text-muted-foreground">
+                    </td>
+                    <td className="px-4 py-4 align-middle font-medium">{company.name}</td>
+                    <td className="px-4 py-4 align-middle text-muted-foreground">{company.abn || '-'}</td>
+                    <td className="px-4 py-4 align-middle">{company.contactName}</td>
+                    <td className="px-4 py-4 align-middle text-muted-foreground">{company.contactEmail}</td>
+                    <td className="px-4 py-4 align-middle text-muted-foreground">{company.contactPhone || '-'}</td>
+                    <td className="px-4 py-4 align-middle text-muted-foreground">
                       {dayjs(company.createdAt).fromNow()}
-                    </TableCell>
-                    <TableCell className="align-middle">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" className="h-8 w-8 p-0 cursor-pointer">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-pointer" onClick={() => handleEdit(company)}>
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer text-destructive"
-                            onClick={() => handleDelete(company._id)}
-                          >
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
+                    </td>
+                    <td className="px-4 py-4 align-middle text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </td>
+                  </tr>
                 ))
               )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Pagination */}
       {totalPages > 1 && (
@@ -327,27 +296,6 @@ export default function CompaniesPage() {
           </Pagination>
         </div>
       )}
-
-      {/* Edit Sheet */}
-      <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
-        <SheetContent className="w-[600px] sm:max-w-[600px] overflow-y-auto">
-          <SheetHeader>
-            <SheetTitle>Edit Company</SheetTitle>
-            <SheetDescription>
-              Update company information
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-6">
-            {editingCompany && (
-              <CompanyForm
-                initialData={editingCompany}
-                onSuccess={handleCompanyUpdated}
-                onCancel={() => setEditSheetOpen(false)}
-              />
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
     </div>
   );
 }

@@ -23,7 +23,7 @@ const companySchema = z.object({
   notes: z.string().optional()
 });
 
-export function CompanyForm({ onSuccess, onCancel, initialData = null }) {
+export function CompanyForm({ onSuccess, onCancel, initialData = null, hideActions = false, formId = 'company-form' }) {
   const [submitting, setSubmitting] = useState(false);
   const [company, setCompany] = useState({
     name: initialData?.name || "",
@@ -108,7 +108,7 @@ export function CompanyForm({ onSuccess, onCancel, initialData = null }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form id={formId} onSubmit={handleSubmit} className="space-y-4">
       {/* Company Information */}
       <div className="space-y-4">
         <div className="flex flex-col gap-2">
@@ -245,16 +245,18 @@ export function CompanyForm({ onSuccess, onCancel, initialData = null }) {
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 pt-4">
-        {onCancel && (
-          <Button type="button" variant="outline" onClick={onCancel} className="cursor-pointer">
-            Cancel
+      {!hideActions && (
+        <div className="flex gap-2 pt-4">
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel} className="cursor-pointer">
+              Cancel
+            </Button>
+          )}
+          <Button type="submit" disabled={submitting} className="cursor-pointer flex-1">
+            {submitting ? "Saving..." : initialData?._id ? "Update Company" : "Add Company"}
           </Button>
-        )}
-        <Button type="submit" disabled={submitting} className="cursor-pointer flex-1">
-          {submitting ? "Saving..." : initialData?._id ? "Update Company" : "Add Company"}
-        </Button>
-      </div>
+        </div>
+      )}
     </form>
   );
 }

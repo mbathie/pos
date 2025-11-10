@@ -566,67 +566,71 @@ export default function ClassesProductSheet({
                       
                       return (
                         <>
-                          {allTimes.map((time, timeIdx) => (
-                            <div key={timeIdx} className='flex gap-2 items-center'>
-                              <Input
-                                type="time"
-                                value={time?.time || ''}
-                                onChange={(e) => {
-                                  const newDaysOfWeek = [...(product.schedule?.daysOfWeek || [])];
-                                  let allDayIndex = newDaysOfWeek.findIndex(d => d?.dayIndex === -1);
-                                  
-                                  if (allDayIndex === -1) {
-                                    newDaysOfWeek.push({ dayIndex: -1, times: [] });
-                                    allDayIndex = newDaysOfWeek.length - 1;
-                                  }
-                                  
-                                  const newTimes = [...(newDaysOfWeek[allDayIndex].times || [])];
-                                  newTimes[timeIdx] = { ...(newTimes[timeIdx] || {}), time: e.target.value };
-                                  // Always create a new object for the day
-                                  newDaysOfWeek[allDayIndex] = { 
-                                    ...newDaysOfWeek[allDayIndex], 
-                                    times: newTimes 
-                                  };
-                                  
-                                  updateProduct({ 
-                                    schedule: { 
-                                      ...product.schedule, 
-                                      daysOfWeek: newDaysOfWeek 
-                                    } 
-                                  });
-                                }}
-                                className="w-32"
-                              />
-                              <Input
-                                type="text"
-                                placeholder="Warm Up, Main, Cool Down"
-                                value={time?.label || ''}
-                                onChange={(e) => {
-                                  const newDaysOfWeek = [...(product.schedule?.daysOfWeek || [])];
-                                  let allDayIndex = newDaysOfWeek.findIndex(d => d?.dayIndex === -1);
-                                  
-                                  if (allDayIndex === -1) {
-                                    newDaysOfWeek.push({ dayIndex: -1, times: [] });
-                                    allDayIndex = newDaysOfWeek.length - 1;
-                                  }
-                                  
-                                  const newTimes = [...(newDaysOfWeek[allDayIndex].times || [])];
-                                  newTimes[timeIdx] = { ...(newTimes[timeIdx] || {}), label: e.target.value };
-                                  // Always create a new object for the day
-                                  newDaysOfWeek[allDayIndex] = { 
-                                    ...newDaysOfWeek[allDayIndex], 
-                                    times: newTimes 
-                                  };
-                                  
-                                  updateProduct({ 
-                                    schedule: { 
-                                      ...product.schedule, 
-                                      daysOfWeek: newDaysOfWeek 
-                                    } 
-                                  });
-                                }}
-                                className="w-64"
-                              />
+                          {allTimes.map((time, timeIdx) => {
+                            const isTimeEmpty = !time?.time || time.time.trim() === '';
+                            const isLabelEmpty = !time?.label || time.label.trim() === '';
+
+                            return (
+                              <div key={timeIdx} className='flex gap-2 items-center'>
+                                <Input
+                                  type="time"
+                                  value={time?.time || ''}
+                                  onChange={(e) => {
+                                    const newDaysOfWeek = [...(product.schedule?.daysOfWeek || [])];
+                                    let allDayIndex = newDaysOfWeek.findIndex(d => d?.dayIndex === -1);
+
+                                    if (allDayIndex === -1) {
+                                      newDaysOfWeek.push({ dayIndex: -1, times: [] });
+                                      allDayIndex = newDaysOfWeek.length - 1;
+                                    }
+
+                                    const newTimes = [...(newDaysOfWeek[allDayIndex].times || [])];
+                                    newTimes[timeIdx] = { ...(newTimes[timeIdx] || {}), time: e.target.value };
+                                    // Always create a new object for the day
+                                    newDaysOfWeek[allDayIndex] = {
+                                      ...newDaysOfWeek[allDayIndex],
+                                      times: newTimes
+                                    };
+
+                                    updateProduct({
+                                      schedule: {
+                                        ...product.schedule,
+                                        daysOfWeek: newDaysOfWeek
+                                      }
+                                    });
+                                  }}
+                                  className={cn("w-32", isTimeEmpty && "border-destructive focus-visible:ring-destructive")}
+                                />
+                                <Input
+                                  type="text"
+                                  placeholder="Warm Up, Main, Cool Down"
+                                  value={time?.label || ''}
+                                  onChange={(e) => {
+                                    const newDaysOfWeek = [...(product.schedule?.daysOfWeek || [])];
+                                    let allDayIndex = newDaysOfWeek.findIndex(d => d?.dayIndex === -1);
+
+                                    if (allDayIndex === -1) {
+                                      newDaysOfWeek.push({ dayIndex: -1, times: [] });
+                                      allDayIndex = newDaysOfWeek.length - 1;
+                                    }
+
+                                    const newTimes = [...(newDaysOfWeek[allDayIndex].times || [])];
+                                    newTimes[timeIdx] = { ...(newTimes[timeIdx] || {}), label: e.target.value };
+                                    // Always create a new object for the day
+                                    newDaysOfWeek[allDayIndex] = {
+                                      ...newDaysOfWeek[allDayIndex],
+                                      times: newTimes
+                                    };
+
+                                    updateProduct({
+                                      schedule: {
+                                        ...product.schedule,
+                                        daysOfWeek: newDaysOfWeek
+                                      }
+                                    });
+                                  }}
+                                  className={cn("w-64", isLabelEmpty && "border-destructive focus-visible:ring-destructive")}
+                                />
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -656,7 +660,8 @@ export default function ClassesProductSheet({
                                 <Trash className="h-4 w-4" />
                               </Button>
                             </div>
-                          ))}
+                            );
+                          })}
                           <div className="flex gap-2">
                             <Button
                               type="button"

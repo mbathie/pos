@@ -27,14 +27,16 @@ export function AddCompanySheet({ onCompanyAdded, trigger, open, setOpen }) {
           {trigger}
         </SheetTrigger>
       )}
-      <SheetContent className="w-[600px] sm:max-w-[600px] overflow-y-auto">
-        <SheetHeader>
+      {/* <SheetContent className="w-[600px] sm:max-w-[600px] overflow-y-auto"> */}
+      <SheetContent className="w-[75vw] sm:max-w-[75vw] overflow-y-auto p-4 pt-0">
+
+        <SheetHeader className="p-0 pt-4 mb-4">
           <SheetTitle>Add New Company</SheetTitle>
           <SheetDescription>
             Create a new company/organization for group purchases.
           </SheetDescription>
         </SheetHeader>
-        <div className="mt-6">
+        <div className="mt-6-">
           <CompanyForm
             onSuccess={handleSuccess}
             onCancel={() => handleOpenChange(false)}

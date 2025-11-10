@@ -1480,7 +1480,8 @@ export default function Page() {
             {requiresCustomerAssignment && (
               <div className="flex flex-col gap-4 mb-4">
                 <div className="flex items-center gap-4">
-                  <Label className="text-sm font-medium">Payment Type</Label>
+                  <div className="">Payment Type</div>
+                  <div className="flex-1" />
                   <RadioGroup
                     value={paymentType}
                     onValueChange={(value) => {
@@ -1498,7 +1499,7 @@ export default function Page() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="company" id="company" />
-                      <Label htmlFor="company" className="cursor-pointer">Company/Group</Label>
+                      <Label htmlFor="company" className="cursor-pointer">Group</Label>
                     </div>
                   </RadioGroup>
                 </div>
@@ -2358,6 +2359,9 @@ export default function Page() {
                     alreadySucceeded: paymentStatus === 'succeeded',
                     processing: isProcessingCash,
                     needsCustomer: needsCustomerAssignment,
+                    paymentType,
+                    isCompany: paymentType === 'company',
+                    hasCompany: !!selectedCompany,
                     FINAL_DISABLED: cart.products.length === 0 ||
                       parseFloat(changeInfo.received) < cart.total ||
                       paymentStatus === 'succeeded' ||
@@ -2368,29 +2372,60 @@ export default function Page() {
                     className="w-full h-12"
                     disabled={
                       cart.products.length === 0 ||
-                      parseFloat(changeInfo.received) < cart.total ||
+                      // For company payments, skip the cash requirement check
+                      (paymentType !== 'company' && parseFloat(changeInfo.received) < cart.total) ||
+                      // For company payments, require a company to be selected
+                      (paymentType === 'company' && !selectedCompany) ||
                       paymentStatus === 'succeeded' ||
                       isProcessingCash ||
-                      needsCustomerAssignment
+                      // For company payments, skip customer assignment requirement
+                      (paymentType !== 'company' && needsCustomerAssignment)
                     }
                     onClick={async () => {
                       setIsProcessingCash(true);
                       try {
-                        const tx = await receiveCash({ input: cashInput });
+                        let tx;
+
+                        if (paymentType === 'company') {
+                          // Company payment - zero payment upfront
+                          const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/payments/company', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              cart,
+                              company: selectedCompany,
+                              paymentType: 'company'
+                            }),
+                          });
+
+                          if (!res.ok) {
+                            throw new Error('Failed to process company payment');
+                          }
+
+                          tx = await res.json();
+                        } else {
+                          // Regular cash payment
+                          tx = await receiveCash({ input: cashInput });
+                        }
+
                         // console.log(cart)
                         setPaymentStatus(tx.transaction.status);
-                        
+
                         // Store transaction ID for receipt sending
                         if (tx.transaction && tx.transaction._id) {
                           setTransactionId(tx.transaction._id);
                         }
-                        
+
                         // Mark that we have a successful payment (PIN will be removed on navigation)
                         if (tx.transaction.status === 'succeeded') {
                           hasSuccessfulPayment.current = true;
-                          toast.success('Payment processed successfully!');
+                          if (paymentType === 'company') {
+                            toast.success(`Company purchase recorded! Waiver link sent to ${selectedCompany.contactEmail}`);
+                          } else {
+                            toast.success('Payment processed successfully!');
+                          }
                         }
-                        
+
                         markCartAsStale();
                       } catch (error) {
                         console.error('Cash payment failed:', error);

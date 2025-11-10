@@ -48,13 +48,15 @@ const TransactionSchema = new mongoose.Schema({
   location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
   employee: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
+  company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company' },
 }, { timestamps: true, strict: false });
 
-// Indexes for org, location, customer, employee
+// Indexes for org, location, customer, employee, company
 TransactionSchema.index({ org: 1 });
 TransactionSchema.index({ location: 1 });
 TransactionSchema.index({ customer: 1 });
 TransactionSchema.index({ employee: 1 });
+TransactionSchema.index({ company: 1 });
 TransactionSchema.index({ status: 1 });
 
 const Transaction = mongoose.models.Transaction || mongoose.model('Transaction', TransactionSchema);
