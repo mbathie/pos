@@ -3,14 +3,13 @@
 import { Sheet, SheetContent, SheetFooter, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import React from 'react'
-import { Minus, Plus, CalendarIcon, X } from "lucide-react"
+import { Minus, Plus, CalendarIcon } from "lucide-react"
 import { useGlobals } from '@/lib/globals'
 import { useState, useEffect } from 'react'
 import { calcCartValueClass, cleanupProduct } from '@/lib/product'
 import { Calendar } from '@/components/ui/calendar'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { useClass } from './useClass'
@@ -24,21 +23,26 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
   const { getAvailableDates, getTimesForDate } = useClass({ product, setProduct })
   const [total, setTotal] = useState(0)
   const [selectedDate, setSelectedDate] = useState(null)
-  const [selectedTimes, setSelectedTimes] = useState([])
+  const [selectedTimes, setSelectedTimes] = useState([]) // Array of { ...time, quantities: { [priceIdx]: qty } }
   const [availableDates, setAvailableDates] = useState([])
   const [timesForSelectedDate, setTimesForSelectedDate] = useState([])
   const [calendarOpen, setCalendarOpen] = useState(false)
 
-  // Calculate total
+  // Calculate total based on selected times and their quantities
   useEffect(() => {
-    async function fetch() {
-      if (product) {
-        const t = await calcCartValueClass({ product });
-        setTotal(t.amount.subtotal);
+    let subtotal = 0;
+    selectedTimes.forEach(time => {
+      if (time.quantities) {
+        Object.entries(time.quantities).forEach(([priceIdx, qty]) => {
+          const price = product.prices[parseInt(priceIdx)];
+          if (price && qty > 0) {
+            subtotal += price.value * qty;
+          }
+        });
       }
-    }
-    fetch()
-  }, [product, product?.prices, selectedTimes])
+    });
+    setTotal(subtotal);
+  }, [selectedTimes, product.prices])
   
   // Get available dates when product changes
   useEffect(() => {
@@ -83,211 +87,175 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
           </SheetDescription>
         </SheetHeader>
 
-        <div className='flex flex-col mx-4 gap-2'>
+        <div className='flex flex-col mx-4 gap-4'>
 
-          <div className='flex flex-col gap-2 text-sm w-full'>
-
-            {/* Display prices with quantity selectors */}
-            {product.prices?.map((price, priceIdx) => (
-              <div key={priceIdx} className='flex'>
-                <div className='flex gap-2 w-full items-center'>
-                  {!isPartOfGroup && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setProduct(draft => {
-                          if (!draft.prices[priceIdx].qty) {
-                            draft.prices[priceIdx].qty = 0;
-                          }
-                          if (draft.prices[priceIdx].qty > 0) {
-                            draft.prices[priceIdx].qty--;
-                          }
-                        });
-                      }}
-                      disabled={!price.qty}
-                    >
-                      <Minus />
-                    </Button>
+          {/* Date Selector */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-medium">Select Date</h3>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !selectedDate && "text-muted-foreground"
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setProduct(draft => {
-                        if (!draft.prices[priceIdx].qty) {
-                          draft.prices[priceIdx].qty = 0;
-                        }
-                        if (isPartOfGroup && draft.prices[priceIdx].qty >= 1) {
-                          // For group products, limit to 1
-                          return;
-                        }
-                        draft.prices[priceIdx].qty++;
-                      });
-                    }}
-                  >
-                    <Plus />
-                  </Button>
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? dayjs(selectedDate).format('MMM D, YYYY') : "Select date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    setSelectedDate(date);
+                    setCalendarOpen(false);
+                  }}
+                  disabled={(date) => {
+                    const dateStr = dayjs(date).format('YYYY-MM-DD');
+                    return !availableDates.includes(dateStr);
+                  }}
+                  initialFocus
+                  fromDate={new Date()}
+                  toDate={(() => {
+                    const date = new Date();
+                    date.setMonth(date.getMonth() + 6);
+                    return date;
+                  })()}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
 
-                  {price.name}
-                  {price.minor && (
-                    <Badge variant="secondary" className="text-xs ml-1">Minor</Badge>
-                  )}
-                  <div className='flex-1' />
-                  {price.qty || 0}x
-                  <span className={isPartOfGroup ? 'line-through text-muted-foreground' : ''}>
-                    ${parseFloat(price.value || 0).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            ))}
+          {/* Time Slots with +/- buttons per price */}
+          {selectedDate && timesForSelectedDate.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">
+                Available Times for {dayjs(selectedDate).format('dddd, MMMM D')}
+              </h3>
+              <ScrollArea className="h-[400px] border rounded-md p-3">
+                <div className="space-y-4">
+                  {timesForSelectedDate.map((time) => {
+                    const selectedTime = selectedTimes.find(t => t.datetime === time.datetime);
+                    const totalQtyForTime = selectedTime?.quantities
+                      ? Object.values(selectedTime.quantities).reduce((sum, q) => sum + q, 0)
+                      : 0;
 
-            {/* Show date and time selector if any price has quantity > 0 */}
-            {product.prices?.some(p => p.qty > 0) && (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-sm font-medium mb-2">Select Date</h3>
-                  <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
+                    return (
+                      <div
+                        key={time.datetime}
                         className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !selectedDate && "text-muted-foreground"
+                          "p-3 border rounded-md space-y-2",
+                          time.conflict && "opacity-60 bg-muted",
+                          selectedTime && "bg-accent/5 border-primary"
                         )}
                       >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? dayjs(selectedDate).format('MMM D, YYYY') : "Select date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={(date) => {
-                          setSelectedDate(date);
-                          setCalendarOpen(false); // Auto-close on selection
-                        }}
-                        disabled={(date) => {
-                          // Disable dates that don't have classes
-                          const dateStr = dayjs(date).format('YYYY-MM-DD');
-                          return !availableDates.includes(dateStr);
-                        }}
-                        initialFocus
-                        fromDate={new Date()}
-                        toDate={(() => {
-                          const date = new Date();
-                          date.setMonth(date.getMonth() + 6);
-                          return date;
-                        })()}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* Show times for selected date */}
-                {selectedDate && timesForSelectedDate.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">
-                      Available Times for {dayjs(selectedDate).format('dddd, MMMM D')}
-                    </h3>
-                    <ScrollArea className="h-[200px] border rounded-md p-3">
-                      <div className="space-y-2">
-                        {timesForSelectedDate.map((time) => (
-                          <div
-                            key={time.datetime}
-                            className={cn(
-                              "flex items-center space-x-3 p-2 hover:bg-muted rounded-md",
-                              time.conflict && "opacity-60"
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{time.time}</span>
+                            {time.label && (
+                              <Badge variant="secondary" className="text-xs">{time.label}</Badge>
                             )}
-                          >
-                            <Checkbox
-                              id={time.datetime}
-                              checked={selectedTimes.some(t => t.datetime === time.datetime)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedTimes([...selectedTimes, time]);
-                                } else {
-                                  setSelectedTimes(selectedTimes.filter(t => t.datetime !== time.datetime));
-                                }
-                                setProduct(draft => {
-                                  draft.selectedTimes = checked
-                                    ? [...selectedTimes, time]
-                                    : selectedTimes.filter(t => t.datetime !== time.datetime);
-                                });
-                              }}
-                              disabled={time.available <= 0 || time.conflict}
-                            />
-                            <label
-                              htmlFor={time.datetime}
-                              className={cn(
-                                "flex-1 flex items-center justify-between cursor-pointer",
-                                time.conflict && "line-through text-muted-foreground"
-                              )}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span>{time.time}</span>
-                                {time.label && (
-                                  <Badge variant="secondary">{time.label}</Badge>
-                                )}
-                                {time.conflict && (
-                                  <Badge variant="destructive" className="text-xs">{time.conflictReason}</Badge>
-                                )}
-                              </div>
-                              <span className="text-sm text-muted-foreground">
-                                {time.conflict
-                                  ? 'Unavailable'
-                                  : time.available > 0
-                                    ? `${time.available} spots`
-                                    : 'Full'
-                                }
-                              </span>
-                            </label>
+                            {time.conflict && (
+                              <Badge variant="destructive" className="text-xs">{time.conflictReason}</Badge>
+                            )}
                           </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  </div>
-                )}
-
-                {/* Show selected times summary */}
-                {selectedTimes.length > 0 && (
-                  <div>
-                    <h3 className="text-sm font-medium mb-2">Selected Classes</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedTimes.map((time) => (
-                        <Badge 
-                          key={time.datetime} 
-                          variant="outline" 
-                          className="pr-1 flex items-center gap-1 cursor-pointer"
-                        >
-                          <span>
-                            {dayjs(time.datetime).format('MMM D, h:mm A')}
-                            {time.label && ` - ${time.label}`}
+                          <span className="text-sm text-muted-foreground">
+                            {time.conflict
+                              ? 'Unavailable'
+                              : `${time.available - totalQtyForTime}/${time.available} spots`
+                            }
                           </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-4 w-4 p-0 hover:bg-transparent"
-                            onClick={() => {
-                              const updatedTimes = selectedTimes.filter(t => t.datetime !== time.datetime);
-                              setSelectedTimes(updatedTimes);
-                              setProduct(draft => {
-                                draft.selectedTimes = updatedTimes;
-                              });
-                            }}
-                          >
-                            <X className="h-3 w-3 text-destructive" />
-                          </Button>
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+                        </div>
 
-          </div>
+                        {!time.conflict && time.available > 0 && (
+                          <div className="space-y-2 pl-2">
+                            {product.prices?.map((price, priceIdx) => {
+                              const qty = selectedTime?.quantities?.[priceIdx] || 0;
+                              const atCapacity = totalQtyForTime >= time.available;
+
+                              return (
+                                <div key={priceIdx} className="flex items-center gap-2">
+                                  <Button
+                                    size="icon"
+                                    className="cursor-pointer"
+                                    onClick={() => {
+                                      setSelectedTimes(prev => {
+                                        const existing = prev.find(t => t.datetime === time.datetime);
+                                        if (existing) {
+                                          const newQty = Math.max(0, (existing.quantities?.[priceIdx] || 0) - 1);
+                                          if (newQty === 0) {
+                                            // Remove this price from quantities
+                                            const newQuantities = { ...existing.quantities };
+                                            delete newQuantities[priceIdx];
+
+                                            // If no quantities left, remove the time entirely
+                                            if (Object.keys(newQuantities).length === 0) {
+                                              return prev.filter(t => t.datetime !== time.datetime);
+                                            }
+
+                                            return prev.map(t =>
+                                              t.datetime === time.datetime
+                                                ? { ...t, quantities: newQuantities }
+                                                : t
+                                            );
+                                          }
+                                          return prev.map(t =>
+                                            t.datetime === time.datetime
+                                              ? { ...t, quantities: { ...t.quantities, [priceIdx]: newQty } }
+                                              : t
+                                          );
+                                        }
+                                        return prev;
+                                      });
+                                    }}
+                                    disabled={qty === 0}
+                                  >
+                                    <Minus />
+                                  </Button>
+                                  <Button
+                                    size="icon"
+                                    className="cursor-pointer"
+                                    onClick={() => {
+                                      setSelectedTimes(prev => {
+                                        const existing = prev.find(t => t.datetime === time.datetime);
+                                        if (existing) {
+                                          return prev.map(t =>
+                                            t.datetime === time.datetime
+                                              ? { ...t, quantities: { ...t.quantities, [priceIdx]: (t.quantities?.[priceIdx] || 0) + 1 } }
+                                              : t
+                                          );
+                                        } else {
+                                          return [...prev, { ...time, quantities: { [priceIdx]: 1 } }];
+                                        }
+                                      });
+                                    }}
+                                    disabled={atCapacity}
+                                  >
+                                    <Plus />
+                                  </Button>
+                                  <span className="flex-1">
+                                    {price.name}
+                                    {price.minor && (
+                                      <Badge variant="secondary" className="text-xs ml-1">Minor</Badge>
+                                    )}
+                                  </span>
+                                  <span className="w-12 text-center">{qty}x</span>
+                                  <span className="w-16 text-right">${parseFloat(price.value || 0).toFixed(2)}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
+          )}
 
         </div>
 
@@ -303,27 +271,35 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
             <Button
               type="submit"
               className='cursor-pointer'
-              disabled={(() => {
-                // Check if we have selected prices and times
-                const hasSelectedPrices = product.prices?.some(p => (p.qty || 0) > 0);
-                const hasSelectedTimes = selectedTimes && selectedTimes.length > 0;
-
-                // Need both: selected prices AND selected times
-                return !hasSelectedPrices || !hasSelectedTimes;
-              })()}
+              disabled={selectedTimes.length === 0}
               onClick={async () => {
-                // Prepare product for cart
+                // Convert new data structure to cart format
+                // Calculate total quantities per price across all selected times
+                const priceQuantities = {};
+                selectedTimes.forEach(time => {
+                  if (time.quantities) {
+                    Object.entries(time.quantities).forEach(([priceIdx, qty]) => {
+                      priceQuantities[priceIdx] = (priceQuantities[priceIdx] || 0) + qty;
+                    });
+                  }
+                });
+
+                // Prepare product for cart with qty fields
                 const cartProduct = {
                   ...product,
-                  selectedTimes: selectedTimes, // Already in the correct format
-                  prices: product.prices?.filter(p => (p.qty || 0) > 0)
+                  prices: product.prices.map((price, idx) => ({
+                    ...price,
+                    qty: priceQuantities[idx] || 0
+                  })),
+                  selectedTimes: selectedTimes.map(({ datetime, time, label, available, conflict, conflictReason }) => ({
+                    datetime, time, label, available, conflict, conflictReason
+                  }))
                 };
 
                 const _product = await calcCartValueClass({product: cartProduct})
                 const _productCleaned = await cleanupProduct({product:_product})
 
                 await onAddToCart(_productCleaned)
-                // Don't call setOpen(false) here - let the parent component handle it
               }}
             >
               {isPartOfGroup ? 'Ok' : 'Add'}
@@ -333,20 +309,29 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
               <Button
                 type="submit"
                 className='cursor-pointer'
-                disabled={(() => {
-                  // Check if we have selected prices and times
-                  const hasSelectedPrices = product.prices?.some(p => (p.qty || 0) > 0);
-                  const hasSelectedTimes = selectedTimes && selectedTimes.length > 0;
-
-                  // Need both: selected prices AND selected times
-                  return !hasSelectedPrices || !hasSelectedTimes;
-                })()}
+                disabled={selectedTimes.length === 0}
                 onClick={async () => {
-                  // Prepare product for cart
+                  // Convert new data structure to cart format
+                  // Calculate total quantities per price across all selected times
+                  const priceQuantities = {};
+                  selectedTimes.forEach(time => {
+                    if (time.quantities) {
+                      Object.entries(time.quantities).forEach(([priceIdx, qty]) => {
+                        priceQuantities[priceIdx] = (priceQuantities[priceIdx] || 0) + qty;
+                      });
+                    }
+                  });
+
+                  // Prepare product for cart with qty fields
                   const cartProduct = {
                     ...product,
-                    selectedTimes: selectedTimes, // Already in the correct format
-                    prices: product.prices?.filter(p => (p.qty || 0) > 0)
+                    prices: product.prices.map((price, idx) => ({
+                      ...price,
+                      qty: priceQuantities[idx] || 0
+                    })),
+                    selectedTimes: selectedTimes.map(({ datetime, time, label, available, conflict, conflictReason }) => ({
+                      datetime, time, label, available, conflict, conflictReason
+                    }))
                   };
 
                   const _product = await calcCartValueClass({product: cartProduct})

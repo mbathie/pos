@@ -20,26 +20,33 @@ import { CustomerAvatar } from '@/components/customer-avatar';
 
 export default function Page({ schedule, setSchedule }) {
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(null); // null = show all upcoming
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const classesPerPage = 10;
 
   if (!schedule || !schedule.product) return null
 
   // Filter classes based on selected filters (for both classes and courses)
   const filteredClasses = schedule.classes?.filter(cls => {
-        // Date filter
+        // Date filter - show from selected date onwards (or all upcoming if no date selected)
         if (selectedDate) {
           const classDate = dayjs(cls.datetime).format('YYYY-MM-DD');
           const filterDate = dayjs(selectedDate).format('YYYY-MM-DD');
-          if (classDate !== filterDate) return false;
+          if (classDate < filterDate) return false;
+        } else {
+          // If no date selected, only show future classes (from today onwards)
+          const classDate = dayjs(cls.datetime).format('YYYY-MM-DD');
+          const today = dayjs().format('YYYY-MM-DD');
+          if (classDate < today) return false;
         }
 
         // Search filter (customer name, dependent name, or member ID)
         if (searchQuery) {
           const query = searchQuery.toLowerCase();
-          const hasMatchingCustomer = cls.customers?.some(cust => 
+          const hasMatchingCustomer = cls.customers?.some(cust =>
             cust.customer?.name?.toLowerCase().includes(query) ||
             cust.dependent?.name?.toLowerCase().includes(query) ||
             cust.customer?.memberId?.toString().includes(query)
@@ -49,7 +56,7 @@ export default function Page({ schedule, setSchedule }) {
 
         // Status filter
         if (statusFilter !== 'all') {
-          const hasMatchingStatus = cls.customers?.some(cust => 
+          const hasMatchingStatus = cls.customers?.some(cust =>
             cust.status === statusFilter
           );
           if (!hasMatchingStatus) return false;
@@ -58,10 +65,22 @@ export default function Page({ schedule, setSchedule }) {
         return true;
       }) || [];
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredClasses.length / classesPerPage);
+  const startIndex = (currentPage - 1) * classesPerPage;
+  const endIndex = startIndex + classesPerPage;
+  const paginatedClasses = filteredClasses.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedDate, searchQuery, statusFilter]);
+
   const clearFilters = () => {
-    setSelectedDate(null);
+    setSelectedDate(null); // Reset to show all upcoming
     setSearchQuery('');
     setStatusFilter('all');
+    setCurrentPage(1);
   };
 
   const getStatusIcon = (status) => {
@@ -72,6 +91,8 @@ export default function Page({ schedule, setSchedule }) {
         return <CheckCircle className="size-4 text-primary" />;
       case 'cancelled':
         return <XCircle className="size-4 text-destructive" />;
+      case 'pending_waiver':
+        return <Clock className="size-4 text-warning" />;
       default:
         return <Clock className="size-4 text-muted-foreground" />;
     }
@@ -178,9 +199,9 @@ export default function Page({ schedule, setSchedule }) {
         {/* Calendar Filter - for both classes and courses */}
         <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" className="w-[200px] justify-start text-left font-normal">
+            <Button variant="outline" className="w-[240px] justify-start text-left font-normal">
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {selectedDate ? dayjs(selectedDate).format("MMM D, YYYY") : "Pick a date"}
+              {selectedDate ? `From ${dayjs(selectedDate).format("MMM D, YYYY")}` : "All upcoming"}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-0" align="start">
@@ -219,13 +240,14 @@ export default function Page({ schedule, setSchedule }) {
 
         {/* Status Filter */}
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="All Status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="confirmed">Confirmed</SelectItem>
             <SelectItem value="checked in">Checked In</SelectItem>
+            <SelectItem value="pending_waiver">Pending Waiver</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
@@ -238,9 +260,16 @@ export default function Page({ schedule, setSchedule }) {
         )}
 
         {/* Results Count */}
-        <Badge variant="secondary" className="ml-auto">
-          {filteredClasses.length} class{filteredClasses.length !== 1 ? 'es' : ''}
-        </Badge>
+        <div className="ml-auto flex items-center gap-2">
+          <Badge variant="secondary">
+            {filteredClasses.length} class{filteredClasses.length !== 1 ? 'es' : ''}
+          </Badge>
+          {totalPages > 1 && (
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Classes Table */}
@@ -257,16 +286,16 @@ export default function Page({ schedule, setSchedule }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-                  {!filteredClasses || filteredClasses.length === 0 ? (
+                  {!paginatedClasses || paginatedClasses.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                          {(selectedDate || searchQuery || statusFilter !== 'all') 
-                            ? 'No classes found matching your filters' 
+                          {(selectedDate || searchQuery || statusFilter !== 'all')
+                            ? 'No classes found matching your filters'
                             : 'No classes scheduled'}
                         </TableCell>
                       </TableRow>
                     ) : (
-                      filteredClasses.map((cls, clsIdx) => {
+                      paginatedClasses.map((cls, clsIdx) => {
                         const classTime = dayjs(cls.datetime);
                         const isExpired = classTime.isBefore(dayjs());
                         const isToday = classTime.format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD');
@@ -339,7 +368,9 @@ export default function Page({ schedule, setSchedule }) {
                                 <TableCell className="w-1/6">
                                   <div className="flex items-center gap-2">
                                     {getStatusIcon(cust.status)}
-                                    <span className="capitalize">{cust.status}</span>
+                                    <span className="capitalize">
+                                      {cust.status === 'pending_waiver' ? 'Pending Waiver' : cust.status}
+                                    </span>
                                   </div>
                                 </TableCell>
                                 
@@ -363,6 +394,66 @@ export default function Page({ schedule, setSchedule }) {
                   )}
             </TableBody>
           </Table>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 p-4 border-t">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="cursor-pointer"
+              >
+                Previous
+              </Button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                  // Show first page, last page, current page, and pages around current
+                  const showPage = page === 1 ||
+                                   page === totalPages ||
+                                   Math.abs(page - currentPage) <= 1;
+
+                  // Show ellipsis
+                  const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
+                  const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2;
+
+                  if (showEllipsisBefore || showEllipsisAfter) {
+                    return (
+                      <span key={page} className="px-2 text-muted-foreground">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  if (!showPage) return null;
+
+                  return (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className="cursor-pointer min-w-[40px]"
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="cursor-pointer"
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -370,6 +461,8 @@ export default function Page({ schedule, setSchedule }) {
 }
 
 function ManageCustomer({ schedule, customer, classId, scheduleId, setSchedule }) {
+  // Disable actions for placeholder customers (pending waiver)
+  const isPlaceholder = customer.isPlaceholder === true;
 
   const handleUpdateStatus = async (newStatus) => {
     console.log('Updating status to:', newStatus);
@@ -416,16 +509,23 @@ function ManageCustomer({ schedule, customer, classId, scheduleId, setSchedule }
 
   return (
     <div className="flex gap-2">
-      <Button 
+      <Button
         variant={customer.status === "checked in" ? "default" : "secondary"}
         size="sm"
         onClick={() => handleUpdateStatus(customer.status === "checked in" ? "confirmed" : "checkin")}
+        disabled={isPlaceholder}
+        className="cursor-pointer"
       >
         <Check className='size-4' />
       </Button>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon">
+          <Button
+            variant="ghost"
+            size="icon"
+            disabled={isPlaceholder}
+            className="cursor-pointer"
+          >
             <Ellipsis className='size-4' />
           </Button>
         </DropdownMenuTrigger>

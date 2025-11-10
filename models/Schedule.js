@@ -17,9 +17,11 @@ const ScheduleSchema = new mongoose.Schema({
       available: Number,
       label: String, // For course time labels like "Morning" or "Arvo"
       customers: [{
-        customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
-        status: { type: String, enum: ['confirmed', 'cancelled', 'checked in'] },
-        transaction: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' }
+        customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },
+        status: { type: String, enum: ['confirmed', 'cancelled', 'checked in', 'pending_waiver'] },
+        transaction: { type: mongoose.Schema.Types.ObjectId, ref: 'Transaction' },
+        company: { type: mongoose.Schema.Types.ObjectId, ref: 'Company' },
+        isPlaceholder: { type: Boolean, default: false }
       }]
     }]
   }]
