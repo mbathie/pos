@@ -16,12 +16,18 @@ import { useCard } from './useCard'
 import { useCash } from "./useCash";
 import { useTerminalSimulator } from './useTerminalSimulator';
 import { Separator } from "@/components/ui/separator";
-import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail, Plus, OctagonAlert, Check, TestTube } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail, Plus, OctagonAlert, Check, TestTube, Building2, ChevronsUpDown } from "lucide-react";
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import { cn } from "@/lib/utils";
 
 import CustomerSelectionSheet from './customerSelectionSheet'
 import DiscountPinDialog from '@/components/pin-dialog-discount'
+import { AddCompanySheet } from '@/components/add-company-sheet'
 import { hasPermission } from '@/lib/permissions'
 // import { User } from "lucide-react";
 
@@ -96,6 +102,14 @@ export default function Page() {
   
   // Customer credits state
   const [customerCredits, setCustomerCredits] = useState(null)
+
+  // Company/Individual payment selection state
+  const [paymentType, setPaymentType] = useState('individual') // 'individual' or 'company'
+  const [selectedCompany, setSelectedCompany] = useState(null)
+  const [companies, setCompanies] = useState([])
+  const [companySearchOpen, setCompanySearchOpen] = useState(false)
+  const [companySearchQuery, setCompanySearchQuery] = useState('')
+  const [addCompanySheetOpen, setAddCompanySheetOpen] = useState(false)
 
   // Organization settings state
   const [orgSettings, setOrgSettings] = useState({})
@@ -205,6 +219,29 @@ export default function Page() {
     
     fetchCustomerCredits()
   }, [cart.customer?._id])
+
+  // Fetch companies when payment type is 'company'
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      if (paymentType === 'company') {
+        try {
+          const params = new URLSearchParams();
+          if (companySearchQuery) {
+            params.append('search', companySearchQuery);
+          }
+          const response = await fetch(`/api/companies?${params}`);
+          if (response.ok) {
+            const data = await response.json();
+            setCompanies(data.companies || []);
+          }
+        } catch (error) {
+          console.error('Error fetching companies:', error);
+        }
+      }
+    };
+
+    fetchCompanies();
+  }, [paymentType, companySearchQuery]);
 
   useEffect(() => {
     console.log(cart)
@@ -1439,14 +1476,128 @@ export default function Page() {
 
             <Separator orientation="vertical" className="h-[1px] bg-muted my-2" />
 
-            {(requiresCustomerAssignment || isShopOnly) && (
-              <div className="flex items-center justify-between mb-2">
-                <div></div>
+            {/* PAYMENT TYPE SELECTION - Individual or Company */}
+            {requiresCustomerAssignment && (
+              <div className="flex flex-col gap-4 mb-4">
+                <div className="flex items-center gap-4">
+                  <Label className="text-sm font-medium">Payment Type</Label>
+                  <RadioGroup
+                    value={paymentType}
+                    onValueChange={(value) => {
+                      setPaymentType(value);
+                      if (value === 'individual') {
+                        setSelectedCompany(null);
+                      }
+                    }}
+                    className="flex gap-4"
+                    disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="individual" id="individual" />
+                      <Label htmlFor="individual" className="cursor-pointer">Individual</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="company" id="company" />
+                      <Label htmlFor="company" className="cursor-pointer">Company/Group</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+
+                {/* Company Selection Combobox */}
+                {paymentType === 'company' && (
+                  <div className="flex gap-2 items-start">
+                    <div className="flex-1">
+                      <Popover open={companySearchOpen} onOpenChange={setCompanySearchOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={companySearchOpen}
+                            className="w-full justify-between cursor-pointer"
+                            disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                          >
+                            {selectedCompany ? (
+                              <div className="flex items-center gap-2">
+                                <Building2 className="h-4 w-4" />
+                                <span>{selectedCompany.name}</span>
+                              </div>
+                            ) : (
+                              "Select company..."
+                            )}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[400px] p-0">
+                          <Command>
+                            <CommandInput
+                              placeholder="Search companies..."
+                              value={companySearchQuery}
+                              onValueChange={setCompanySearchQuery}
+                            />
+                            <CommandList>
+                              <CommandEmpty>No company found.</CommandEmpty>
+                              <CommandGroup>
+                                {companies.map((company) => (
+                                  <CommandItem
+                                    key={company._id}
+                                    value={company.name}
+                                    onSelect={() => {
+                                      setSelectedCompany(company);
+                                      setCompanySearchOpen(false);
+                                      setCompanySearchQuery('');
+                                    }}
+                                    className="cursor-pointer"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedCompany?._id === company._id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <div className="flex flex-col">
+                                      <span>{company.name}</span>
+                                      {company.abn && (
+                                        <span className="text-xs text-muted-foreground">ABN: {company.abn}</span>
+                                      )}
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setAddCompanySheetOpen(true)}
+                      disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                      className="cursor-pointer"
+                      title="Add new company"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+
+                {/* Company Info Message */}
+                {paymentType === 'company' && selectedCompany && (
+                  <div className="flex items-start gap-2 p-3 bg-muted rounded-md text-sm">
+                    <OctagonAlert className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    <div className="flex flex-col gap-1">
+                      <div className="font-medium">Group Purchase for {selectedCompany.name}</div>
+                      <div className="text-muted-foreground text-xs">
+                        Customer assignments will be completed after payment via a shareable waiver link sent to {selectedCompany.contactEmail}.
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {/* CUSTOMER ASSIGNMENTS - Show for products requiring waiver */}
-            {requiresCustomerAssignment && (
+            {requiresCustomerAssignment && paymentType === 'individual' && (
               <div className="flex flex-col gap-2">
                 {(cart.products || []).flatMap((product, pIdx) => {
                   // Only show products that require waiver
@@ -2295,6 +2446,16 @@ export default function Page() {
         onOpenChange={setShowDiscountPinDialog}
         onSuccess={handleDiscountPinSuccess}
         permission="discount:custom"
+      />
+
+      <AddCompanySheet
+        open={addCompanySheetOpen}
+        setOpen={setAddCompanySheetOpen}
+        onCompanyAdded={(company) => {
+          setSelectedCompany(company);
+          setAddCompanySheetOpen(false);
+          setCompanies(prev => [company, ...prev]); // Add to list
+        }}
       />
 
     </div>

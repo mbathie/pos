@@ -9,6 +9,7 @@ import Group from './Group.js';
 import Accounting from './Accounting.js';
 import Product from './Product.js';
 import Customer from './Customer.js';
+import Company from './Company.js';
 import Transaction from './Transaction.js';
 import Schedule from './Schedule.js';
 import General from './General.js';
@@ -28,6 +29,7 @@ export {
   Terminal,
   Employee,
   Customer,
+  Company,
   Category,
   Folder,
   Group,
