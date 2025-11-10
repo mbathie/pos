@@ -62,12 +62,10 @@ export default function StandaloneProductSheet({
         name: '',
         desc: '',
         category: category?._id || null,
-        variations: [{ name: '', amount: '' }],
+        variations: [{ name: '', amount: '', qty: 0, par: 0 }],
         type: productType,
         publish: true,
         bump: true,
-        qty: 0,
-        par: 0,
         folder: null,
         accounting: null,
         modGroups: []
@@ -263,7 +261,7 @@ export default function StandaloneProductSheet({
   const addVariation = () => {
     setProduct(prev => ({
       ...prev,
-      variations: [...(prev.variations || []), { name: '', amount: '' }]
+      variations: [...(prev.variations || []), { name: '', amount: '', qty: 0, par: 0 }]
     }));
     setIsDirty(true);
   };
@@ -472,58 +470,28 @@ export default function StandaloneProductSheet({
               />
             </div>
 
-            <div className="flex gap-4">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-1">
-                  <Label>Qty</Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info size="15"/>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Quantity in stock of this item
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <NumberInput
-                  min={0}
-                  value={product.qty || null}
-                  onChange={(value) => updateField('qty', value || 0)}
-                  placeholder="0"
-                  className="w-24"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-1">
-                  <Label>Par</Label>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info size="15"/>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        Remaining stock level to issue a warning
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-                <NumberInput
-                  min={0}
-                  value={product.par || null}
-                  onChange={(value) => updateField('par', value || 0)}
-                  placeholder="0"
-                  className="w-24"
-                />
-              </div>
-            </div>
-
             <div className="space-y-4">
-              <Label>Variations</Label>
+              <div className="flex items-center gap-2">
+                <Label>Variations</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-4 w-4 text-muted-foreground" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Each variation has its own stock (Qty) and reorder level (Par)</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
 
               <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Label className="w-24">Name</Label>
+                  <Label className="w-24">Price ($)</Label>
+                  <Label className="w-20">Qty</Label>
+                  <Label className="w-20">Par</Label>
+                </div>
                 {product?.variations?.map((v, i) => (
                   <div key={`${product._id}-${i}`} className="flex gap-2 items-center">
                     <Input
@@ -540,6 +508,20 @@ export default function StandaloneProductSheet({
                       step={0.01}
                       className="w-24"
                       onChange={(value) => updateVariation(i, 'amount', value ? value.toString() : '')}
+                    />
+                    <NumberInput
+                      placeholder="0"
+                      value={v.qty != null ? v.qty : null}
+                      min={0}
+                      className="w-20"
+                      onChange={(value) => updateVariation(i, 'qty', value || 0)}
+                    />
+                    <NumberInput
+                      placeholder="0"
+                      value={v.par != null ? v.par : null}
+                      min={0}
+                      className="w-20"
+                      onChange={(value) => updateVariation(i, 'par', value || 0)}
                     />
                     <div className="flex gap-1">
                       <Button

@@ -1,17 +1,30 @@
 'use client'
 import Link from 'next/link';
 import { useGlobals } from '@/lib/globals'
-import { Trash2, Info } from 'lucide-react'
+import { Trash2, Info, Save, Clock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import dayjs from 'dayjs';
 import { Badge } from '@/components/ui/badge';
 import { useState } from 'react';
 import CourseScheduleDialog from '@/components/CourseScheduleDialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function Cart({ asSheet = false, onClose }) {
-  const { cart, removeFromCart, resetCart } = useGlobals()
+  const {
+    getCurrentCart,
+    carts,
+    currentCartIndex,
+    removeFromCart,
+    resetCart,
+    saveCart,
+    switchCart,
+    deleteCart
+  } = useGlobals()
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState(null)
+
+  // Get current cart
+  const cart = getCurrentCart()
 
   // Show visual indicator for stale carts
   const isStale = cart.stale
@@ -51,6 +64,18 @@ export default function Cart({ asSheet = false, onClose }) {
     }
   })
 
+  // Format cart label for dropdown
+  const formatCartLabel = (cart, index) => {
+    if (!cart.savedAt) {
+      return index === currentCartIndex ? 'Current Cart' : `Cart ${index + 1}`;
+    }
+    const date = new Date(cart.savedAt);
+    return `${dayjs(date).format('HH:mm:ss')} - ${cart.products.length} item${cart.products.length !== 1 ? 's' : ''}`;
+  };
+
+  // Check if there are any saved carts (carts with savedAt timestamp)
+  const hasSavedCarts = carts.some(c => c.savedAt);
+
   return (
     <div className="flex flex-col h-full text-sm bg-muted w-[380px] rounded-tl-lg">
       {isStale && (
@@ -58,6 +83,7 @@ export default function Cart({ asSheet = false, onClose }) {
           ✅ Transaction completed - Cart available for review
         </div>
       )}
+
       <div className="space-y-1 w-full flex-1 overflow-y-auto p-4">
         {groupedProducts.map((item, itemIdx) => {
           if (item.type === 'grouped') {
@@ -149,7 +175,7 @@ export default function Cart({ asSheet = false, onClose }) {
               </div>
               {p.item?.mods && p.item.mods.length > 0 && (
                 <div className='text-xs ml-1 text-muted-foreground'>
-                  {p.item.mods.map(mod => mod.name).join(', ')}
+                  {p.item.mods.map(mod => mod.qty > 1 ? `${mod.name} x${mod.qty}` : mod.name).join(', ')}
                 </div>
               )}
             </div>
@@ -348,10 +374,11 @@ export default function Cart({ asSheet = false, onClose }) {
         </div>
 
         <div className='flex flex-col gap-2 mt-2'>
+          {/* Payment Button */}
           <Link href="/shop/payment" passHref>
             <Button
               type="submit"
-              className="w-full"
+              className="w-full cursor-pointer"
               disabled={!cart.products.length || isStale}
               onClick={() => {
                 if (asSheet && onClose) onClose()
@@ -361,9 +388,56 @@ export default function Cart({ asSheet = false, onClose }) {
             </Button>
           </Link>
 
+          {/* Cart Selector and Save Cart Button on same row */}
+          <div className="flex gap-2">
+            {/* Cart Selector Dropdown - show if there are multiple carts */}
+            {carts.length > 1 && (
+              <div className="flex items-center gap-1 flex-1 min-w-0">
+                <Select value={String(currentCartIndex)} onValueChange={(value) => switchCart(parseInt(value))}>
+                  <SelectTrigger className="h-10 text-xs flex-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {carts.map((c, idx) => (
+                      <SelectItem key={idx} value={String(idx)}>
+                        {formatCartLabel(c, idx)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {hasSavedCarts && currentCartIndex !== 0 && cart.savedAt && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-10 w-10 cursor-pointer flex-shrink-0"
+                    onClick={() => deleteCart(currentCartIndex)}
+                    title="Delete this saved cart"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Save Cart Button - only show if cart has items and isn't already saved */}
+            {cart.products.length > 0 && !cart.savedAt && !isStale && (
+              <Button
+                type="button"
+                className={`cursor-pointer ${carts.length > 1 ? 'flex-1' : 'w-full'}`}
+                onClick={() => {
+                  saveCart();
+                }}
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Save Cart
+              </Button>
+            )}
+          </div>
+
+          {/* Clear Cart Button */}
           <Button
             type="submit"
-            className="w-full"
+            className="w-full cursor-pointer"
             variant="destructive"
             disabled={!cart.products.length}
             onClick={() => {

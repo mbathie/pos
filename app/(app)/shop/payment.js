@@ -31,7 +31,8 @@ const emailSchema = z.string().email('Please enter a valid email address');
 const keypad = ['1','2','3','4','5','6','7','8','9','.','0','AC'];
 
 export default function Page() {
-  const { cart, resetCart, markCartAsStale, setCart, employee, setEmployee, location, appliedAdjustments, setAppliedAdjustments, clearAppliedAdjustments } = useGlobals();
+  const { getCurrentCart, resetCart, markCartAsStale, setCart, employee, setEmployee, location, appliedAdjustments, setAppliedAdjustments, clearAppliedAdjustments } = useGlobals();
+  const cart = getCurrentCart();
   const [mounted, setMounted] = useState(false);
   const [cashInput, setCashInput] = useState('0');
   const [tab, setTab] = useState('card');

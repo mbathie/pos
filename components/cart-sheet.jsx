@@ -5,15 +5,26 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ShoppingCart } from "lucide-react"
 import { useGlobals } from '@/lib/globals'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Cart from '@/components/cart'
 
 export function CartSheet() {
-  const { cart } = useGlobals()
+  const { getCurrentCart, carts } = useGlobals()
   const [open, setOpen] = useState(false)
-  
-  // Don't show cart icon if empty or stale
-  if (!cart?.products?.length || cart?.stale) return null
+  const [mounted, setMounted] = useState(false)
+
+  const cart = getCurrentCart()
+
+  // Prevent hydration mismatch by waiting for client mount
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  if (!mounted) return null
+
+  // Show cart icon if current cart has items OR if there are saved carts
+  // Don't show if cart is stale
+  if (cart?.stale || (!cart?.products?.length && carts.length <= 1)) return null
 
   const itemCount = cart.products.reduce((sum, p) => {
     if (p.type === 'shop') return sum + (p.qty || 1)

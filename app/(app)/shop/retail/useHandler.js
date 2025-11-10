@@ -65,12 +65,12 @@ export function useHandler() {
       });
     }
 
-    // Sum selected modifiers from modGroupsData
+    // Sum modifiers from modGroupsData (multiply price by qty)
     if (product?.modGroupsData) {
       product.modGroupsData.forEach(group => {
         group.mods?.forEach(mod => {
-          if (mod.selected) {
-            total += parseFloat(mod.price) || 0;
+          if ((mod.qty || 0) > 0) {
+            total += (parseFloat(mod.price) || 0) * (mod.qty || 0);
           }
         });
       });

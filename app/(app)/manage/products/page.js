@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, X, ChevronsUpDown, Edit, Warehouse, Image, Tag } from 'lucide-react';
+import { Search, X, ChevronsUpDown, Edit, Tag } from 'lucide-react';
 import colors from '@/lib/tailwind-colors';
 import AccountingSelect from '@/app/(app)/products/shopold/accounting-select';
 
@@ -31,16 +31,7 @@ export default function ManageProductsPage() {
   });
   const [editForm, setEditForm] = useState({
     name: '',
-    qty: '',
-    par: '',
     accounting: null,
-  });
-  const [receiveDialog, setReceiveDialog] = useState({
-    open: false,
-    product: null,
-  });
-  const [receiveForm, setReceiveForm] = useState({
-    quantity: '',
   });
 
   useEffect(() => {
@@ -154,8 +145,6 @@ export default function ManageProductsPage() {
   const openEditDialog = (product) => {
     setEditForm({
       name: product.name || '',
-      qty: product.qty || '',
-      par: product.par || '',
       accounting: product.accounting || null,
     });
     setEditDialog({
@@ -171,8 +160,6 @@ export default function ManageProductsPage() {
     });
     setEditForm({
       name: '',
-      qty: '',
-      par: '',
       accounting: null,
     });
   };
@@ -184,22 +171,20 @@ export default function ManageProductsPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          product: { 
+        body: JSON.stringify({
+          product: {
             name: editForm.name,
-            qty: parseInt(editForm.qty) || 0,
-            par: parseInt(editForm.par) || 0,
             accounting: editForm.accounting?._id || editForm.accounting,
-          } 
+          }
         }),
       });
 
       if (res.ok) {
         const { product: updatedProduct } = await res.json();
         // Update the local state with the fully populated product data
-        setAllProducts(prev => 
-          prev.map(product => 
-            product._id === editDialog.product._id 
+        setAllProducts(prev =>
+          prev.map(product =>
+            product._id === editDialog.product._id
               ? { ...product, ...updatedProduct }
               : product
           )
@@ -211,69 +196,6 @@ export default function ManageProductsPage() {
       }
     } catch (error) {
       console.error('Error updating product:', error);
-    }
-  };
-
-  const openReceiveDialog = (product) => {
-    setReceiveForm({
-      quantity: '',
-    });
-    setReceiveDialog({
-      open: true,
-      product: product,
-    });
-  };
-
-  const closeReceiveDialog = () => {
-    setReceiveDialog({
-      open: false,
-      product: null,
-    });
-    setReceiveForm({
-      quantity: '',
-    });
-  };
-
-  const saveReceiveChanges = async () => {
-    try {
-      const quantityToAdd = parseInt(receiveForm.quantity) || 0;
-      if (quantityToAdd <= 0) {
-        alert('Please enter a valid quantity greater than 0');
-        return;
-      }
-
-      const currentQty = receiveDialog.product.qty || 0;
-      const newQty = currentQty + quantityToAdd;
-
-      const res = await fetch(`/api/products/${receiveDialog.product._id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          product: { 
-            qty: newQty,
-          } 
-        }),
-      });
-
-      if (res.ok) {
-        const { product: updatedProduct } = await res.json();
-        // Update the local state with the new quantity
-        setAllProducts(prev => 
-          prev.map(product => 
-            product._id === receiveDialog.product._id 
-              ? { ...product, qty: newQty }
-              : product
-          )
-        );
-        closeReceiveDialog();
-        console.log('Stock received successfully');
-      } else {
-        console.error('Failed to receive stock');
-      }
-    } catch (error) {
-      console.error('Error receiving stock:', error);
     }
   };
 
@@ -322,14 +244,6 @@ export default function ManageProductsPage() {
         case 'publish':
           aValue = a.publish !== false ? 1 : 0;
           bValue = b.publish !== false ? 1 : 0;
-          break;
-        case 'qty':
-          aValue = a.qty || 0;
-          bValue = b.qty || 0;
-          break;
-        case 'par':
-          aValue = a.par || 0;
-          bValue = b.par || 0;
           break;
         default:
           return 0;
@@ -444,30 +358,12 @@ export default function ManageProductsPage() {
                       <ChevronsUpDown className="ml-2 h-4 w-4" />
                     </div>
                   </th>
-                  <th 
+                  <th
                     className="h-12 px-4 text-left align-middle text-muted-foreground cursor-pointer hover:bg-muted w-1/6"
                     onClick={() => handleSort('folder')}
                   >
                     <div className="flex items-center">
                       Folder
-                      <ChevronsUpDown className="ml-2 h-4 w-4" />
-                    </div>
-                  </th>
-                  <th 
-                    className="h-12 px-4 text-center align-middle text-muted-foreground cursor-pointer hover:bg-muted w-16"
-                    onClick={() => handleSort('qty')}
-                  >
-                    <div className="flex items-center justify-center">
-                      Qty
-                      <ChevronsUpDown className="ml-2 h-4 w-4" />
-                    </div>
-                  </th>
-                  <th 
-                    className="h-12 px-4 text-center align-middle text-muted-foreground cursor-pointer hover:bg-muted w-16"
-                    onClick={() => handleSort('par')}
-                  >
-                    <div className="flex items-center justify-center">
-                      Par
                       <ChevronsUpDown className="ml-2 h-4 w-4" />
                     </div>
                   </th>
@@ -497,8 +393,8 @@ export default function ManageProductsPage() {
                 <tbody>
                   {filteredProducts.length === 0 ? (
                     <tr>
-                        <td colSpan={9} className="text-center py-8 text-muted-foreground">
-                          {hasActiveFilters ? 'No products match your filters.' : 
+                        <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                          {hasActiveFilters ? 'No products match your filters.' :
                            allProducts.length === 0 ? 'No products found.' : 'No products match your filters.'}
                         </td>
                       </tr>
@@ -550,7 +446,7 @@ export default function ManageProductsPage() {
                           <td className="px-4 py-3 align-middle w-1/6">
                             {product.folder ? (
                               <div className="flex items-center gap-2">
-                                <div 
+                                <div
                                   className="size-4 rounded-sm border flex-shrink-0"
                                   style={{ backgroundColor: product.folder.color ? colors?.[product.folder.color.split('-')[0]]?.[product.folder.color.split('-')[1]] : '#e5e7eb' }}
                                 />
@@ -561,23 +457,6 @@ export default function ManageProductsPage() {
                             ) : (
                               <span></span>
                             )}
-                          </td>
-                          <td className="px-4 py-3 align-middle text-center w-16">
-                            <span className={
-                              product.qty !== null && 
-                              product.qty !== undefined && 
-                              product.par !== null && 
-                              product.par !== undefined && 
-                              product.qty <= product.par && 
-                              product.qty > 0
-                                ? 'text-destructive' 
-                                : ''
-                            }>
-                              {product.qty || 0}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3 align-middle text-center w-16">
-                            {product.par || 0}
                           </td>
                           <td className="px-4 py-3 align-middle text-center w-16">
                             <Checkbox
@@ -597,15 +476,6 @@ export default function ManageProductsPage() {
                           </td>
                           <td className="px-4 py-3 align-middle text-right w-24">
                             <div className="flex gap-2 justify-end pr-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openReceiveDialog(product)}
-                                className="cursor-pointer size-4 p-0"
-                                title="Receive Stock"
-                              >
-                                <Warehouse className="size-4" />
-                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -660,31 +530,6 @@ export default function ManageProductsPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="qty">Quantity</Label>
-                <Input
-                  id="qty"
-                  type="number"
-                  min="0"
-                  value={editForm.qty}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, qty: e.target.value }))}
-                  className="text-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="par">Par Level</Label>
-                <Input
-                  id="par"
-                  type="number"
-                  min="0"
-                  value={editForm.par}
-                  onChange={(e) => setEditForm(prev => ({ ...prev, par: e.target.value }))}
-                  className="text-sm"
-                />
-              </div>
-            </div>
-
             <div className="space-y-2">
               <Label>Accounting Code</Label>
               <AccountingSelect
@@ -700,46 +545,6 @@ export default function ManageProductsPage() {
               </Button>
               <Button onClick={saveEditChanges}>
                 Save Changes
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Receive Stock Dialog */}
-      <Dialog open={receiveDialog.open} onOpenChange={(open) => {
-        if (!open) closeReceiveDialog();
-      }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Receive Stock - {receiveDialog.product?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Current Stock: {receiveDialog.product?.qty || 0}</Label>
-              <Label htmlFor="receive-quantity">Quantity to Receive</Label>
-              <Input
-                id="receive-quantity"
-                type="number"
-                min="1"
-                value={receiveForm.quantity}
-                onChange={(e) => setReceiveForm(prev => ({ ...prev, quantity: e.target.value }))}
-                placeholder="Enter quantity to add"
-                className="text-sm"
-              />
-              {receiveForm.quantity && (
-                <p className="text-sm text-muted-foreground">
-                  New total: {(receiveDialog.product?.qty || 0) + (parseInt(receiveForm.quantity) || 0)}
-                </p>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4">
-              <Button variant="outline" onClick={closeReceiveDialog}>
-                Cancel
-              </Button>
-              <Button onClick={saveReceiveChanges}>
-                Receive Stock
               </Button>
             </div>
           </div>

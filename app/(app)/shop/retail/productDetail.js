@@ -59,7 +59,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                 price: mod.price || 0,
                 isDefault: mod.isDefault || false,
                 order: mod.order || 0,
-                selected: false
+                qty: 0
               }))
               .sort((a, b) => a.order - b.order) // Sort mods by order
           }))
@@ -142,44 +142,80 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                     </div>
                     <div className='flex flex-wrap gap-2'>
                       {group.mods.map((mod, modIdx) => (
-                        <div 
-                          key={mod._id} 
-                          className='gap-2 flex items-center flex-row cursor-pointer hover:bg-muted/50 p-2 pl-0 rounded-md'
-                          onClick={() => {
-                            setModGroups(prev => {
-                              // Deep clone to avoid mutation issues
-                              const updated = prev.map((group, gIdx) => {
-                                if (gIdx !== groupIdx) return group
-                                
-                                return {
-                                  ...group,
-                                  mods: group.mods.map((m, mIdx) => {
-                                    if (!group.allowMultiple) {
-                                      // Single selection - only the clicked mod can be selected
-                                      return {
-                                        ...m,
-                                        selected: mIdx === modIdx ? !m.selected : false
-                                      }
-                                    } else {
-                                      // Multiple selection - toggle only the clicked mod
-                                      return mIdx === modIdx 
-                                        ? { ...m, selected: !m.selected }
-                                        : m
-                                    }
-                                  })
-                                }
-                              })
-                              
-                              // Update product with the new selection
-                              setProduct(draft => {
-                                draft.modGroupsData = updated
-                              })
-                              
-                              return updated
-                            })
-                          }}
+                        <div
+                          key={mod._id}
+                          className='gap-2 flex items-center flex-row p-2 pl-0 rounded-md'
                         >
-                          <Checkbox checked={mod.selected} className='size-9' />
+                          <Button
+                            size="icon"
+                            onClick={() => {
+                              setModGroups(prev => {
+                                const updated = prev.map((group, gIdx) => {
+                                  if (gIdx !== groupIdx) return group
+
+                                  return {
+                                    ...group,
+                                    mods: group.mods.map((m, mIdx) => {
+                                      if (mIdx === modIdx) {
+                                        return { ...m, qty: Math.max(0, m.qty - 1) }
+                                      }
+                                      return m
+                                    })
+                                  }
+                                })
+
+                                setProduct(draft => {
+                                  draft.modGroupsData = updated
+                                })
+
+                                return updated
+                              })
+                            }}
+                            disabled={mod.qty === 0}
+                          >
+                            <Minus className='h-4 w-4' />
+                          </Button>
+
+                          <div className="w-8 text-center font-semibold">{mod.qty}</div>
+
+                          <Button
+                            size="icon"
+                            onClick={() => {
+                              setModGroups(prev => {
+                                const updated = prev.map((group, gIdx) => {
+                                  if (gIdx !== groupIdx) return group
+
+                                  return {
+                                    ...group,
+                                    mods: group.mods.map((m, mIdx) => {
+                                      if (!group.allowMultiple) {
+                                        // Single selection - reset other mods to 0
+                                        if (mIdx === modIdx) {
+                                          return { ...m, qty: Math.min(99, m.qty + 1) }
+                                        } else {
+                                          return { ...m, qty: 0 }
+                                        }
+                                      } else {
+                                        // Multiple selection - just increment
+                                        return mIdx === modIdx
+                                          ? { ...m, qty: Math.min(99, m.qty + 1) }
+                                          : m
+                                      }
+                                    })
+                                  }
+                                })
+
+                                setProduct(draft => {
+                                  draft.modGroupsData = updated
+                                })
+
+                                return updated
+                              })
+                            }}
+                          >
+                            <Plus className='h-4 w-4' />
+                          </Button>
+
                           <div>{mod.name}</div>
                           {mod.price > 0 && <div className='ml-1'>${parseFloat(mod.price).toFixed(2)}</div>}
                         </div>

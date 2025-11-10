@@ -242,10 +242,10 @@ export default function Page({ params }) {
                           <TableCell colSpan={2}>
                             <div className="flex flex-wrap gap-1">
                               {p.item?.modGroups?.length > 0 ? (
-                                p.item.modGroups.map((group) => 
-                                  group.mods.filter(mod => mod.selected).map((mod, modIndex) => (
+                                p.item.modGroups.map((group) =>
+                                  group.mods.filter(mod => (mod.qty || 0) > 0).map((mod, modIndex) => (
                                     <Badge key={`${group._id}-${modIndex}`} variant="secondary" className="text-xs">
-                                      {mod.name}
+                                      {mod.qty > 1 && `${mod.qty}x `}{mod.name}
                                     </Badge>
                                   ))
                                 )
