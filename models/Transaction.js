@@ -44,6 +44,22 @@ const TransactionSchema = new mongoose.Schema({
   cash: mongoose.Schema.Types.Mixed,
   paymentMethod: String,
   status: String, // 'completed', 'refunded', 'partially_refunded'
+  // Invoice tracking for company purchases
+  stripeInvoiceId: String,
+  invoiceStatus: {
+    type: String,
+    enum: ['draft', 'open', 'paid', 'void', 'uncollectible', 'partially_paid'],
+    required: false
+  },
+  invoiceAmountPaid: {
+    type: Number,
+    default: 0
+  },
+  invoiceAmountDue: {
+    type: Number,
+    required: false
+  },
+  invoiceUrl: String, // Hosted invoice URL from Stripe
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org' },
   location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },

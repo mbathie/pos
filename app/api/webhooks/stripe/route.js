@@ -5,6 +5,7 @@ import { connectDB } from '@/lib/mongoose';
 import { Transaction, Membership, Customer, Org, Product } from '@/models';
 import { sendTransactionReceipt } from '@/lib/email/receipt';
 import { prepareCartForTransaction } from '@/lib/payments/success';
+import { handleInvoicePayment, handleInvoiceUpdate } from '@/lib/stripe/invoice';
 import { Types } from 'mongoose';
 import fs from 'fs/promises';
 import path from 'path';
@@ -747,14 +748,48 @@ export async function POST(req) {
       case 'invoice.paid':
       case 'invoice.payment_succeeded':
       case 'invoice_payment.paid': // Non-standard event name sometimes sent by Stripe
-        const result = await handleInvoicePaid(event.data.object, stripeAccount);
-        console.log(`✅ ${event.type} processed:`, result);
+        const invoice = event.data.object;
+
+        // Check if this is a company invoice (has transactionId in metadata)
+        if (invoice.metadata?.transactionId && !invoice.subscription) {
+          // Company invoice payment
+          await handleInvoicePayment({ invoice, stripeAccountId: stripeAccount });
+          console.log(`✅ Company invoice paid: ${invoice.id}`);
+        } else {
+          // Subscription invoice payment (existing logic)
+          const result = await handleInvoicePaid(invoice, stripeAccount);
+          console.log(`✅ ${event.type} processed:`, result);
+        }
+        break;
+
+      case 'invoice.updated':
+        const updatedInvoice = event.data.object;
+
+        // Check if this is a company invoice
+        if (updatedInvoice.metadata?.transactionId && !updatedInvoice.subscription) {
+          // Company invoice update (partial payment tracking)
+          await handleInvoiceUpdate({ invoice: updatedInvoice, stripeAccountId: stripeAccount });
+          console.log(`✅ Company invoice updated: ${updatedInvoice.id}`);
+        }
         break;
 
       case 'invoice.payment_failed':
         console.log('❌ Invoice payment failed:', event.data.object.id);
-        const failedResult = await handleInvoicePaymentFailed(event.data.object, stripeAccount);
-        console.log(`❌ invoice.payment_failed processed:`, failedResult);
+        const failedInvoice = event.data.object;
+
+        // Check if this is a company invoice
+        if (failedInvoice.metadata?.transactionId && !failedInvoice.subscription) {
+          // Company invoice payment failed
+          await Transaction.findByIdAndUpdate(failedInvoice.metadata.transactionId, {
+            invoiceStatus: 'open', // Keep open for retry
+            paymentFailedAt: new Date()
+          });
+          console.log(`❌ Company invoice payment failed: ${failedInvoice.id}`);
+        } else {
+          // Subscription invoice payment failed (existing logic)
+          const failedResult = await handleInvoicePaymentFailed(failedInvoice, stripeAccount);
+          console.log(`❌ invoice.payment_failed processed:`, failedResult);
+        }
         break;
 
       case 'customer.subscription.deleted':

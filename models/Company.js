@@ -38,7 +38,17 @@ const CompanySchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  notes: String
+  notes: String,
+  // Stripe integration
+  stripeCustomerId: {
+    type: String,
+    required: false
+  },
+  paymentTerms: {
+    type: String,
+    enum: ['due_on_receipt', 'net_7', 'net_15', 'net_30', 'net_60'],
+    default: 'due_on_receipt'
+  }
 }, { timestamps: true });
 
 // Indexes
