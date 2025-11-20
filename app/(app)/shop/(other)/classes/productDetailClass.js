@@ -3,7 +3,7 @@
 import { Sheet, SheetContent, SheetFooter, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import React from 'react'
-import { Minus, Plus, CalendarIcon } from "lucide-react"
+import { Minus, Plus, CalendarIcon, Clock } from "lucide-react"
 import { useGlobals } from '@/lib/globals'
 import { useState, useEffect } from 'react'
 import { calcCartValueClass, cleanupProduct } from '@/lib/product'
@@ -11,6 +11,10 @@ import { Calendar } from '@/components/ui/calendar'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { NumberInput } from '@/components/ui/number-input'
+import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
+import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { useClass } from './useClass'
 import dayjs from 'dayjs'
@@ -19,7 +23,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
 
   if (!product) return null;
 
-  const { addToCart } = useGlobals()
+  const { addToCart, location } = useGlobals()
   const { getAvailableDates, getTimesForDate } = useClass({ product, setProduct })
   const [total, setTotal] = useState(0)
   const [selectedDate, setSelectedDate] = useState(null)
@@ -28,21 +32,69 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
   const [timesForSelectedDate, setTimesForSelectedDate] = useState([])
   const [calendarOpen, setCalendarOpen] = useState(false)
 
-  // Calculate total based on selected times and their quantities
+  // Open schedule state
+  const [customTime, setCustomTime] = useState('')
+  const [customDuration, setCustomDuration] = useState(product?.duration?.minute || null)
+  const [priceQuantities, setPriceQuantities] = useState({})
+
+  // Alert dialog state
+  const [showOverlapAlert, setShowOverlapAlert] = useState(false)
+
+  // Helper function to check if a day is closed at the location
+  const isDayClosed = (date) => {
+    if (!location?.storeHours) return false;
+
+    const dayOfWeek = date.getDay();
+    const storeHour = location.storeHours.find(h => h.d === dayOfWeek);
+
+    // Day is closed if there are no store hours or both open and close are empty
+    if (!storeHour || (!storeHour.open && !storeHour.close)) {
+      return true;
+    }
+
+    return false;
+  }
+
+  // Helper function to check if a specific date is in closedDays
+  const isSpecificDateClosed = (date) => {
+    if (!location?.closedDays || location.closedDays.length === 0) return false;
+
+    const dateStr = dayjs(date).format('YYYY-MM-DD');
+
+    return location.closedDays.some(closedDay => {
+      const startDate = dayjs(closedDay.startDate).format('YYYY-MM-DD');
+      const endDate = dayjs(closedDay.endDate).format('YYYY-MM-DD');
+
+      return dateStr >= startDate && dateStr <= endDate;
+    });
+  }
+
+  // Calculate total based on selected times and their quantities OR open schedule quantities
   useEffect(() => {
     let subtotal = 0;
-    selectedTimes.forEach(time => {
-      if (time.quantities) {
-        Object.entries(time.quantities).forEach(([priceIdx, qty]) => {
-          const price = product.prices[parseInt(priceIdx)];
-          if (price && qty > 0) {
-            subtotal += price.value * qty;
-          }
-        });
-      }
-    });
+    if (product.openSchedule) {
+      // Calculate from priceQuantities for open schedule
+      Object.entries(priceQuantities).forEach(([priceIdx, qty]) => {
+        const price = product.prices[parseInt(priceIdx)];
+        if (price && qty > 0) {
+          subtotal += price.value * qty;
+        }
+      });
+    } else {
+      // Calculate from selectedTimes for regular schedule
+      selectedTimes.forEach(time => {
+        if (time.quantities) {
+          Object.entries(time.quantities).forEach(([priceIdx, qty]) => {
+            const price = product.prices[parseInt(priceIdx)];
+            if (price && qty > 0) {
+              subtotal += price.value * qty;
+            }
+          });
+        }
+      });
+    }
     setTotal(subtotal);
-  }, [selectedTimes, product.prices])
+  }, [selectedTimes, priceQuantities, product.prices, product.openSchedule])
   
   // Get available dates when product changes
   useEffect(() => {
@@ -66,7 +118,14 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
   }, [selectedDate, product?.schedule])
   
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <>
+    <Sheet open={open} onOpenChange={(newOpen) => {
+      // Don't allow closing the sheet if alert is showing
+      if (!newOpen && showOverlapAlert) {
+        return;
+      }
+      setOpen(newOpen);
+    }} modal={false}>
       <SheetContent className="sm:max-w-[700px] flex flex-col h-full">
 
         <SheetHeader className=''>
@@ -114,6 +173,23 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                     setCalendarOpen(false);
                   }}
                   disabled={(date) => {
+                    // For openSchedule products, disable based on location hours and closed days
+                    if (product.openSchedule) {
+                      // Disable past dates
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      if (date < today) return true;
+
+                      // Disable if the day is closed at the location
+                      if (isDayClosed(date)) return true;
+
+                      // Disable if the date is in closedDays
+                      if (isSpecificDateClosed(date)) return true;
+
+                      return false;
+                    }
+
+                    // For regular scheduled products, use availableDates
                     const dateStr = dayjs(date).format('YYYY-MM-DD');
                     return !availableDates.includes(dateStr);
                   }}
@@ -129,8 +205,99 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
             </Popover>
           </div>
 
+          {/* Open Schedule: Custom Time and Duration Inputs */}
+          {product.openSchedule && selectedDate && (
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">
+                Custom Time for {dayjs(selectedDate).format('dddd, MMMM D')}
+              </h3>
+              <div className="border rounded-md space-y-3 p-3">
+                {/* Time and Duration Row */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Start Time</Label>
+                      <div className="relative">
+                        <Clock className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+                        <Input
+                          type="time"
+                          value={customTime}
+                          onChange={(e) => setCustomTime(e.target.value)}
+                          className="pl-7 h-8 w-32"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Duration (min)</Label>
+                      <NumberInput
+                        value={customDuration}
+                        onChange={setCustomDuration}
+                        min={1}
+                        placeholder="60"
+                        className="h-8 w-24"
+                      />
+                    </div>
+                  </div>
+                  {product.capacity && (
+                    <span className="text-sm text-muted-foreground">
+                      {Object.values(priceQuantities).reduce((sum, q) => sum + q, 0)}/{product.capacity} spots
+                    </span>
+                  )}
+                </div>
+
+                {/* Participants Selection */}
+                <div className="space-y-2 pl-2">
+                  {product.prices?.map((price, priceIdx) => {
+                    const qty = priceQuantities[priceIdx] || 0;
+                    const totalQty = Object.values(priceQuantities).reduce((sum, q) => sum + q, 0);
+                    const atCapacity = product.capacity && totalQty >= product.capacity;
+
+                    return (
+                      <div key={priceIdx} className="flex items-center gap-2">
+                        <Button
+                          size="icon"
+                          className="cursor-pointer"
+                          onClick={() => {
+                            setPriceQuantities(prev => ({
+                              ...prev,
+                              [priceIdx]: Math.max(0, (prev[priceIdx] || 0) - 1)
+                            }));
+                          }}
+                          disabled={qty === 0}
+                        >
+                          <Minus />
+                        </Button>
+                        <Button
+                          size="icon"
+                          className="cursor-pointer"
+                          onClick={() => {
+                            setPriceQuantities(prev => ({
+                              ...prev,
+                              [priceIdx]: (prev[priceIdx] || 0) + 1
+                            }));
+                          }}
+                          disabled={atCapacity}
+                        >
+                          <Plus />
+                        </Button>
+                        <span className="flex-1">
+                          {price.name}
+                          {price.minor && (
+                            <Badge variant="secondary" className="text-xs ml-1">Minor</Badge>
+                          )}
+                        </span>
+                        <span className="w-12 text-center">{qty}x</span>
+                        <span className="w-16 text-right">${parseFloat(price.value || 0).toFixed(2)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Time Slots with +/- buttons per price */}
-          {selectedDate && timesForSelectedDate.length > 0 && (
+          {!product.openSchedule && selectedDate && timesForSelectedDate.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-sm font-medium">
                 Available Times for {dayjs(selectedDate).format('dddd, MMMM D')}
@@ -271,82 +438,178 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
             <Button
               type="submit"
               className='cursor-pointer'
-              disabled={selectedTimes.length === 0}
+              disabled={
+                product.openSchedule
+                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0)
+                  : selectedTimes.length === 0
+              }
               onClick={async () => {
-                // Convert new data structure to cart format
-                // Calculate total quantities per price across all selected times
-                const priceQuantities = {};
-                selectedTimes.forEach(time => {
-                  if (time.quantities) {
-                    Object.entries(time.quantities).forEach(([priceIdx, qty]) => {
-                      priceQuantities[priceIdx] = (priceQuantities[priceIdx] || 0) + qty;
-                    });
-                  }
-                });
-
-                // Prepare product for cart with qty fields
-                const cartProduct = {
-                  ...product,
-                  prices: product.prices.map((price, idx) => ({
-                    ...price,
-                    qty: priceQuantities[idx] || 0
-                  })),
-                  selectedTimes: selectedTimes.map(({ datetime, time, label, available, conflict, conflictReason }) => ({
-                    datetime, time, label, available, conflict, conflictReason
-                  }))
-                };
-
-                const _product = await calcCartValueClass({product: cartProduct})
-                const _productCleaned = await cleanupProduct({product:_product})
-
-                await onAddToCart(_productCleaned)
-              }}
-            >
-              {isPartOfGroup ? 'Ok' : 'Add'}
-            </Button>
-          ) : (
-            <SheetClose asChild>
-              <Button
-                type="submit"
-                className='cursor-pointer'
-                disabled={selectedTimes.length === 0}
-                onClick={async () => {
-                  // Convert new data structure to cart format
-                  // Calculate total quantities per price across all selected times
-                  const priceQuantities = {};
-                  selectedTimes.forEach(time => {
-                    if (time.quantities) {
-                      Object.entries(time.quantities).forEach(([priceIdx, qty]) => {
-                        priceQuantities[priceIdx] = (priceQuantities[priceIdx] || 0) + qty;
-                      });
-                    }
+                if (product.openSchedule) {
+                  // Check for overlaps
+                  const datetime = dayjs(selectedDate).format('YYYY-MM-DD') + 'T' + customTime;
+                  const overlapCheck = await fetch('/api/schedules/check-overlap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      productId: product._id,
+                      datetime,
+                      duration: customDuration
+                    })
                   });
 
-                  // Prepare product for cart with qty fields
+                  const { hasOverlap } = await overlapCheck.json();
+                  if (hasOverlap) {
+                    setShowOverlapAlert(true);
+                    return;
+                  }
+
+                  // Prepare cart product for open schedule
                   const cartProduct = {
                     ...product,
                     prices: product.prices.map((price, idx) => ({
                       ...price,
                       qty: priceQuantities[idx] || 0
                     })),
+                    selectedTimes: [{
+                      datetime,
+                      time: customTime,
+                      label: '',
+                      duration: customDuration
+                    }]
+                  };
+
+                  const _product = await calcCartValueClass({product: cartProduct});
+                  const _productCleaned = await cleanupProduct({product:_product});
+                  await onAddToCart(_productCleaned);
+                } else {
+                  // Regular schedule logic
+                  const quantities = {};
+                  selectedTimes.forEach(time => {
+                    if (time.quantities) {
+                      Object.entries(time.quantities).forEach(([priceIdx, qty]) => {
+                        quantities[priceIdx] = (quantities[priceIdx] || 0) + qty;
+                      });
+                    }
+                  });
+
+                  const cartProduct = {
+                    ...product,
+                    prices: product.prices.map((price, idx) => ({
+                      ...price,
+                      qty: quantities[idx] || 0
+                    })),
                     selectedTimes: selectedTimes.map(({ datetime, time, label, available, conflict, conflictReason }) => ({
                       datetime, time, label, available, conflict, conflictReason
                     }))
                   };
 
-                  const _product = await calcCartValueClass({product: cartProduct})
-                  const _productCleaned = await cleanupProduct({product:_product})
+                  const _product = await calcCartValueClass({product: cartProduct});
+                  const _productCleaned = await cleanupProduct({product:_product});
+                  await onAddToCart(_productCleaned);
+                }
+              }}
+            >
+              {isPartOfGroup ? 'Ok' : 'Add'}
+            </Button>
+          ) : (
+            <Button
+              type="submit"
+              className='cursor-pointer'
+              disabled={
+                product.openSchedule
+                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0)
+                  : selectedTimes.length === 0
+              }
+              onClick={async () => {
+                if (product.openSchedule) {
+                  // Check for overlaps
+                  const datetime = dayjs(selectedDate).format('YYYY-MM-DD') + 'T' + customTime;
+                  const overlapCheck = await fetch('/api/schedules/check-overlap', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      productId: product._id,
+                      datetime,
+                      duration: customDuration
+                    })
+                  });
 
-                  await addToCart(_productCleaned)
-                }}
-              >
-                Add
-              </Button>
-            </SheetClose>
+                  const { hasOverlap } = await overlapCheck.json();
+                  if (hasOverlap) {
+                    setShowOverlapAlert(true);
+                    return;
+                  }
+
+                  // Prepare cart product for open schedule
+                  const cartProduct = {
+                    ...product,
+                    prices: product.prices.map((price, idx) => ({
+                      ...price,
+                      qty: priceQuantities[idx] || 0
+                    })),
+                    selectedTimes: [{
+                      datetime,
+                      time: customTime,
+                      label: '',
+                      duration: customDuration
+                    }]
+                  };
+
+                  const _product = await calcCartValueClass({product: cartProduct});
+                  const _productCleaned = await cleanupProduct({product:_product});
+                  await addToCart(_productCleaned);
+                  setOpen(false); // Close sheet after successful add
+                } else {
+                  // Regular schedule logic
+                  const quantities = {};
+                  selectedTimes.forEach(time => {
+                    if (time.quantities) {
+                      Object.entries(time.quantities).forEach(([priceIdx, qty]) => {
+                        quantities[priceIdx] = (quantities[priceIdx] || 0) + qty;
+                      });
+                    }
+                  });
+
+                  const cartProduct = {
+                    ...product,
+                    prices: product.prices.map((price, idx) => ({
+                      ...price,
+                      qty: quantities[idx] || 0
+                    })),
+                    selectedTimes: selectedTimes.map(({ datetime, time, label, available, conflict, conflictReason }) => ({
+                      datetime, time, label, available, conflict, conflictReason
+                    }))
+                  };
+
+                  const _product = await calcCartValueClass({product: cartProduct});
+                  const _productCleaned = await cleanupProduct({product:_product});
+                  await addToCart(_productCleaned);
+                  setOpen(false); // Close sheet after successful add
+                }
+              }}
+            >
+              Add
+            </Button>
           )}
         </SheetFooter>
 
       </SheetContent>
     </Sheet>
+
+    {/* Overlap Alert Dialog - Outside Sheet but prevents Sheet from closing */}
+    <AlertDialog open={showOverlapAlert} onOpenChange={setShowOverlapAlert}>
+      <AlertDialogContent onEscapeKeyDown={(e) => e.preventDefault()} onPointerDownOutside={(e) => e.preventDefault()}>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Schedule Conflict</AlertDialogTitle>
+          <AlertDialogDescription>
+            This class time overlaps with an existing scheduled class for this product.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogAction>OK</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
   );
 }

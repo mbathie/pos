@@ -427,9 +427,30 @@ export default function ClassesProductSheet({
           {/* Schedule Section */}
           <div className='space-y-6'>
             <Label>Schedule</Label>
-            
+
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id={`openSchedule-${pIdx}`}
+                checked={product.openSchedule || false}
+                onCheckedChange={(checked) => updateProduct({ openSchedule: checked })}
+              />
+              <Label htmlFor={`openSchedule-${pIdx}`} className="cursor-pointer">
+                Open Schedule
+              </Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>When enabled, staff can enter custom date/time/duration during checkout instead of selecting from pre-defined time slots. Typically used for large school groups or corporates.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
             {/* Start and End Dates */}
-            <div className='space-y-2'>
+            <div className={product.openSchedule ? 'hidden' : 'space-y-2'}>
               <div className='flex items-center gap-8'>
                 <Label className="w-[215px]">Start Date</Label>
                 <div className='flex items-center gap-2'>
@@ -515,7 +536,7 @@ export default function ClassesProductSheet({
             </div>
 
             {/* Schedule Configuration with Tabs */}
-            <div className='space-y-2'>
+            <div className={product.openSchedule ? 'hidden' : 'space-y-2'}>
               <Label>Schedule Configuration</Label>
               <div className="w-full space-y-4">
                 {/* Tab List */}
