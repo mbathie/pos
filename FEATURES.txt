@@ -1,3 +1,24 @@
+21.11.2025
+
+DONE - Stripe invoice system for group/company bookings (21.11.2025)
+  - Automatic Stripe customer creation for companies
+  - Invoice generation with detailed line items (products, discounts, surcharges, tax)
+  - Auto-send invoices to company contact email
+  - Hosted invoice page for easy payment
+  - Webhook integration for real-time payment tracking
+  - Partial payment support and tracking
+  - Payment status updates (open, partially_paid, paid, void, uncollectible)
+  - Configurable payment terms per company (due_on_receipt, net_7, net_15, net_30, net_60)
+  - Immediate customer assignment (waivers before payment)
+  - Invoice link included in waiver email
+  - Comprehensive payment failure handling
+  - Frontend: Company payment flow in /app/(app)/shop/payment.js
+  - Backend: /app/api/payments/company/route.js (invoice creation)
+  - Backend: /app/api/webhooks/stripe/route.js (payment tracking)
+  - Utilities: /lib/stripe/company-customer.js, /lib/stripe/invoice.js
+  - Email: /lib/email/company-waiver.js (updated with invoice link)
+  - Models: Company (stripeCustomerId, paymentTerms), Transaction (invoice fields)
+
 27.10.2025
 
 DONE - membership card management (27.10.2025)
