@@ -89,13 +89,13 @@ export default function DiscountsSheet({
       <SheetContent className="w-[75vw] sm:max-w-[75vw] overflow-y-auto">
 
       {/* <SheetContent side="right" className="w-[600px] sm:max-w-[600px] flex flex-col p-0"> */}
-        <SheetHeader className="px-6 -py-4 border-b">
+        <SheetHeader className="px-6 -py-4">
           <SheetTitle>{title}</SheetTitle>
           <SheetDescription>{subtitle}</SheetDescription>
         </SheetHeader>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="flex-1 overflow-y-auto px-6 pt-2 pb-4">
           <Discounts
             key={refreshTrigger}
             isPanel={true}

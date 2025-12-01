@@ -6,6 +6,7 @@ import { sendCompanyWaiverEmail } from '@/lib/email/company-waiver';
 import { getOrCreateCompanyStripeCustomer } from '@/lib/stripe/company-customer';
 import { createCompanyInvoice } from '@/lib/stripe/invoice';
 import { Org } from '@/models';
+import { SignJWT } from 'jose';
 
 export async function POST(req, { params }) {
   console.log('\n╔════════════════════════════════════════════════════════════╗');
@@ -105,6 +106,33 @@ export async function POST(req, { params }) {
     // Staff can manually create invoice later
   }
 
+  // Generate payment link for invoice
+  let paymentLink = null;
+  if (invoice) {
+    try {
+      console.log('\n🔗 Generating payment link...');
+      const JWT_SECRET = new TextEncoder().encode(
+        process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET
+      );
+
+      const token = await new SignJWT({
+        transactionId: transaction._id.toString(),
+        orgId: employee.org._id.toString(),
+        type: 'payment_link'
+      })
+        .setProtectedHeader({ alg: 'HS256' })
+        .setExpirationTime('90d')
+        .sign(JWT_SECRET);
+
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
+      paymentLink = `${baseUrl}/pay/${transaction._id}?token=${token}`;
+
+      console.log('✅ Payment link generated:', paymentLink);
+    } catch (error) {
+      console.error('❌ Failed to generate payment link:', error);
+    }
+  }
+
   // Generate waiver link and send email to company contact
   console.log('\n📧 Sending waiver email...');
   try {
@@ -112,6 +140,7 @@ export async function POST(req, { params }) {
     const waiverLink = `${baseUrl}/schedule/${transaction._id}/waiver`;
 
     console.log('   Waiver Link:', waiverLink);
+    console.log('   Payment Link:', paymentLink || 'No payment link');
     console.log('   Invoice URL:', invoice?.hosted_invoice_url || 'No invoice');
     console.log('   Recipient:', company.contactEmail);
 
@@ -120,7 +149,8 @@ export async function POST(req, { params }) {
       org,
       waiverLink,
       transaction,
-      invoiceUrl: invoice?.hosted_invoice_url
+      invoiceUrl: invoice?.hosted_invoice_url,
+      paymentLink
     });
 
     console.log('✅ Waiver link email sent successfully!');

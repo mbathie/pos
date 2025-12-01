@@ -61,6 +61,7 @@ export async function GET(request) {
       .populate('adjustments.surcharges.items.id', 'name value type mode')
       .populate('employee', 'name')
       .populate('customer', 'name email phone')
+      .populate('company', 'name')
       .populate('location', 'name')
       .sort({ createdAt: -1 })
       .lean();

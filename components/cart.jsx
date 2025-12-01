@@ -1,15 +1,17 @@
 'use client'
 import Link from 'next/link';
 import { useGlobals } from '@/lib/globals'
-import { Trash2, Info, Save, Clock } from 'lucide-react'
+import { Trash2, Info, Save, Clock, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import dayjs from 'dayjs';
 import { Badge } from '@/components/ui/badge';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import CourseScheduleDialog from '@/components/CourseScheduleDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ActionButton } from '@/components/ui/action-button';
+import { toast } from 'sonner';
 
-export default function Cart({ asSheet = false, onClose }) {
+export default function Cart({ asSheet = false, onClose, onEditGroup }) {
   const {
     getCurrentCart,
     carts,
@@ -22,12 +24,55 @@ export default function Cart({ asSheet = false, onClose }) {
   } = useGlobals()
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState(null)
+  const [originalTransaction, setOriginalTransaction] = useState(null)
+  const [mounted, setMounted] = useState(false)
+
+  // Wait for client-side mount to avoid hydration mismatch
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Get current cart
   const cart = getCurrentCart()
 
   // Show visual indicator for stale carts
   const isStale = cart.stale
+
+  // Check if we're editing a transaction
+  const isEditingTransaction = !!cart.editingTransactionId
+
+  // Fetch original transaction when editing
+  useEffect(() => {
+    if (cart.editingTransactionId) {
+      fetchOriginalTransaction(cart.editingTransactionId)
+    } else {
+      setOriginalTransaction(null)
+    }
+  }, [cart.editingTransactionId])
+
+  const fetchOriginalTransaction = async (transactionId) => {
+    try {
+      const response = await fetch(`/api/transactions/${transactionId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setOriginalTransaction(data)
+      }
+    } catch (error) {
+      console.error('Error fetching transaction:', error)
+    }
+  }
+
+  // Calculate differential amounts when editing
+  const originalTotal = originalTransaction?.total || 0
+  const originalSubtotal = originalTransaction?.subtotal || 0
+  const originalTax = originalTransaction?.tax || 0
+
+  const differentialSubtotal = cart.subtotal - originalSubtotal
+  const differentialTax = cart.tax - originalTax
+  const differentialTotal = cart.total - originalTotal
+
+  // Don't render until mounted to avoid hydration mismatch
+  if (!mounted) return null
 
   // Don't show cart if empty or if it's stale (unless it's being used as a sheet)
   if ((cart.products.length < 1 || isStale) && !asSheet)
@@ -52,6 +97,7 @@ export default function Cart({ asSheet = false, onClose }) {
         groupName: p.groupName,
         groupAmount: p.groupAmount, // in dollars
         groupThumbnail: p.groupThumbnail,
+        selectedVariationName: p.selectedVariationName, // variation name for display
         products: groupProducts
       })
     } else if (!p.gId) {
@@ -77,7 +123,7 @@ export default function Cart({ asSheet = false, onClose }) {
   const hasSavedCarts = carts.some(c => c.savedAt);
 
   return (
-    <div className="flex flex-col h-full text-sm bg-muted w-[380px] rounded-tl-lg">
+    <div className="flex flex-col h-full text-sm bg-muted w-[380px] rounded-tl-lg" suppressHydrationWarning>
       {isStale && (
         <div className="bg-green-100 text-green-800 text-xs px-4 py-2 border-b border-green-200">
           ✅ Transaction completed - Cart available for review
@@ -89,13 +135,29 @@ export default function Cart({ asSheet = false, onClose }) {
           if (item.type === 'grouped') {
             // Render group
             const groupTotal = (item.groupAmount || 0) // Group amount is already in dollars
+            const groupQty = item.products[0]?.groupQty || 1 // Get qty from first product
             return (
               <div key={`group-${item.gId}`} className="flex flex-col border-l-2 border-primary pl-2 space-y-1">
-                {/* Group header with name, total price, and delete */}
-                <div className="flex">
+                {/* Group header with name, total price, edit, and delete */}
+                <div className="flex" suppressHydrationWarning>
                   <div className='flex'>
+                    {groupQty > 1 && <span>{groupQty}x&nbsp;</span>}
                     {item.groupName}
+                    {item.selectedVariationName && (
+                      <span className="text-muted-foreground"> - {item.selectedVariationName}</span>
+                    )}
                   </div>
+                  {onEditGroup ? (
+                    <div
+                      className='ml-2 cursor-pointer mt-0.5'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditGroup(item);
+                      }}
+                    >
+                      <Pencil className='size-4'/>
+                    </div>
+                  ) : null}
                   <div
                     className='ml-2 cursor-pointer mt-0.5'
                     onClick={(e) => {
@@ -108,7 +170,7 @@ export default function Cart({ asSheet = false, onClose }) {
                     <Trash2 className='size-4'/>
                   </div>
                   <div className='flex-1' />
-                  <div>${groupTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div>${(groupTotal * groupQty).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
 
                 {/* Display individual products within the group */}
@@ -133,7 +195,7 @@ export default function Cart({ asSheet = false, onClose }) {
 
                     {/* Show selected times for classes if applicable */}
                     {product.selectedTimes?.map((time, timeIdx) => (
-                      <div key={timeIdx} className="text-xs text-muted-foreground ml-2">
+                      <div key={timeIdx} className="text-xs text-muted-foreground ml-2" suppressHydrationWarning>
                         {new Date(time.datetime).toLocaleString('en-US', {
                           month: 'short',
                           day: 'numeric',
@@ -203,8 +265,8 @@ export default function Cart({ asSheet = false, onClose }) {
               {p.schedule && (
                 <div className='text-xs text-muted-foreground flex items-center'>
                   <div className='flex items-center gap-2'>
-                    <span>
-                      {p.schedule.startDate && dayjs(p.schedule.startDate).format('DD/MM/YY')} - 
+                    <span suppressHydrationWarning>
+                      {p.schedule.startDate && dayjs(p.schedule.startDate).format('DD/MM/YY')} -
                       {p.schedule.endDate && dayjs(p.schedule.endDate).format(' DD/MM/YY')}
                     </span>
                     {p.selectedTimeSlot && (
@@ -275,7 +337,7 @@ export default function Cart({ asSheet = false, onClose }) {
                 return (
                   <div key={tIdx} className='flex items-center'>
                     <div className="mr-auto flex items-center gap-2 text-xs text-muted-foreground">
-                      <span>{dayjs(datetime).format('ddd DD/MM/YY HH:mm A')}</span>
+                      <span suppressHydrationWarning>{dayjs(datetime).format('ddd DD/MM/YY HH:mm A')}</span>
                       {label && (
                         <Badge variant="secondary" className="text-xs">
                           {label}
@@ -356,43 +418,104 @@ export default function Cart({ asSheet = false, onClose }) {
           <div className='flex'>
             <div className=''>Subtotal</div>
             <div className='ml-auto'>
-              ${cart.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {isEditingTransaction ? (
+                differentialSubtotal.toLocaleString('en-US', { style: 'currency', currency: 'USD', signDisplay: 'always' })
+              ) : (
+                `$${cart.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              )}
             </div>
           </div>
           <div className='flex'>
             <div className=''>Tax</div>
             <div className='ml-auto'>
-              ${cart.tax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {isEditingTransaction ? (
+                differentialTax.toLocaleString('en-US', { style: 'currency', currency: 'USD', signDisplay: 'always' })
+              ) : (
+                `$${cart.tax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              )}
             </div>
           </div>
           <div className='flex font-semibold'>
             <div className='uppercase'>Total</div>
             <div className='ml-auto'>
-              ${cart.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {isEditingTransaction ? (
+                differentialTotal.toLocaleString('en-US', { style: 'currency', currency: 'USD', signDisplay: 'always' })
+              ) : (
+                `$${cart.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+              )}
             </div>
           </div>
         </div>
 
         <div className='flex flex-col gap-2 mt-2'>
-          {/* Payment Button */}
-          <Link href="/shop/payment" passHref>
-            <Button
-              type="submit"
-              className="w-full cursor-pointer"
-              disabled={!cart.products.length || isStale}
-              onClick={() => {
-                if (asSheet && onClose) onClose()
+          {/* Payment Button or Update Invoice Button */}
+          {isEditingTransaction ? (
+            <ActionButton
+              action={async () => {
+                try {
+                  const response = await fetch(`/api/transactions/${cart.editingTransactionId}/update-invoice`, {
+                    method: 'PATCH',
+                    headers: {
+                      'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                      differentialAmount: differentialTotal
+                    })
+                  });
+
+                  const data = await response.json();
+
+                  if (!response.ok) {
+                    return {
+                      error: true,
+                      message: data.error || 'Failed to update invoice'
+                    };
+                  }
+
+                  toast.success('Invoice updated successfully');
+
+                  // Clear the cart and reset editing state
+                  resetCart();
+
+                  // Redirect to the transaction page
+                  window.location.href = `/manage/transactions/${cart.editingTransactionId}`;
+
+                  return { error: false };
+                } catch (error) {
+                  console.error('Error updating invoice:', error);
+                  return {
+                    error: true,
+                    message: 'Failed to update invoice'
+                  };
+                }
               }}
+              requireAreYouSure
+              areYouSureDescription={`This will ${differentialTotal >= 0 ? 'add' : 'subtract'} ${Math.abs(differentialTotal).toLocaleString('en-US', { style: 'currency', currency: 'USD' })} ${differentialTotal >= 0 ? 'to' : 'from'} the existing invoice. This action cannot be undone.`}
+              className="w-full cursor-pointer"
+              disabled={!cart.products.length || isStale || differentialTotal === 0}
             >
-              {isStale ? 'Transaction Completed' : 'Payment'}
-            </Button>
-          </Link>
+              Update Invoice
+            </ActionButton>
+          ) : (
+            <Link href="/shop/payment" passHref>
+              <Button
+                type="submit"
+                className="w-full cursor-pointer"
+                disabled={!cart.products.length || isStale}
+                onClick={() => {
+                  if (asSheet && onClose) onClose()
+                }}
+              >
+                {isStale ? 'Transaction Completed' : 'Payment'}
+              </Button>
+            </Link>
+          )}
 
           {/* Cart Selector and Save Cart Button on same row */}
           <div className="flex gap-2">
             {/* Cart Selector Dropdown - show if there are multiple carts */}
             {carts.length > 1 && (
-              <div className="flex items-center gap-1 flex-1 min-w-0">
+              <div className="flex items-center gap-1 flex-1 min-w-0" suppressHydrationWarning>
                 <Select value={String(currentCartIndex)} onValueChange={(value) => switchCart(parseInt(value))}>
                   <SelectTrigger className="h-10 text-xs flex-1">
                     <SelectValue />

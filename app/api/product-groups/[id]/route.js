@@ -8,7 +8,9 @@ export async function GET(req, { params }) {
   const result = await getEmployee();
   if (result.error) return NextResponse.json({ error: result.error }, { status: result.status });
   const { id } = await params;
-  const group = await ProductGroup.findById(id).populate('products', 'name thumbnail');
+  const group = await ProductGroup.findById(id)
+    .populate('products', 'name thumbnail')
+    .populate('variations.products', 'name thumbnail');
   if (!group) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json({ group }, { status: 200 });
 }
@@ -24,10 +26,13 @@ export async function PUT(req, { params }) {
   if (body.description !== undefined) update.description = body.description;
   if (body.thumbnail !== undefined) update.thumbnail = body.thumbnail;
   if (Array.isArray(body.products)) update.products = body.products;
+  if (Array.isArray(body.variations)) update.variations = body.variations;
   if (body.amount !== undefined) update.amount = body.amount;
   if (body.active !== undefined) update.active = body.active;
 
-  const group = await ProductGroup.findByIdAndUpdate(id, update, { new: true });
+  const group = await ProductGroup.findByIdAndUpdate(id, update, { new: true })
+    .populate('products', 'name thumbnail')
+    .populate('variations.products', 'name thumbnail');
   if (!group) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json({ group }, { status: 200 });
 }

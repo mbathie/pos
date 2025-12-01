@@ -32,21 +32,25 @@ export async function GET(req) {
   if (includeProducts === 'true') {
     const categoriesWithProducts = await Promise.all(
       categories.map(async (category) => {
-        const products = await Product.find({ 
-          category: category._id,
+        // Query for both ObjectId and string category formats
+        const products = await Product.find({
+          $or: [
+            { category: category._id },
+            { category: category._id.toString() }
+          ],
           deleted: { $ne: true }
         })
           .populate('folder')
           .populate('accounting')
           .lean();
-        
+
         return {
           ...category.toObject(),
           products
         };
       })
     );
-    
+
     return NextResponse.json({ categories: categoriesWithProducts }, { status: 200 });
   }
 

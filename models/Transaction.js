@@ -60,6 +60,16 @@ const TransactionSchema = new mongoose.Schema({
     required: false
   },
   invoiceUrl: String, // Hosted invoice URL from Stripe
+  // Track voided invoices when creating replacement invoices
+  voidedInvoiceId: String,
+  // Payment history for invoices
+  invoicePayments: [{
+    amount: Number,
+    date: Date,
+    stripePaymentIntentId: String,
+    stripeChargeId: String,
+    method: String // 'card', 'bank_transfer', etc.
+  }],
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org' },
   location: { type: mongoose.Schema.Types.ObjectId, ref: 'Location' },
   customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer' },

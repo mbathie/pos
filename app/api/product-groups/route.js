@@ -9,7 +9,10 @@ export async function GET() {
   if (result.error) return NextResponse.json({ error: result.error }, { status: result.status });
   const { employee } = result;
 
-  const groups = await ProductGroup.find({ org: employee.org._id }).populate('products', 'name thumbnail').sort({ createdAt: -1 });
+  const groups = await ProductGroup.find({ org: employee.org._id })
+    .populate('products', 'name thumbnail')
+    .populate('variations.products', 'name thumbnail')
+    .sort({ createdAt: -1 });
   return NextResponse.json({ groups }, { status: 200 });
 }
 
@@ -20,9 +23,14 @@ export async function POST(req) {
   const { employee } = result;
 
   const body = await req.json();
-  const { name, description, thumbnail, products = [], amount, active = true } = body || {};
-  if (!name || typeof amount !== 'number') {
-    return NextResponse.json({ error: 'Name and amount are required' }, { status: 400 });
+  const { name, description, thumbnail, products = [], variations = [], amount, active = true } = body || {};
+
+  // Validate: must have name and either variations or amount (for backward compatibility)
+  if (!name) {
+    return NextResponse.json({ error: 'Name is required' }, { status: 400 });
+  }
+  if (variations.length === 0 && typeof amount !== 'number') {
+    return NextResponse.json({ error: 'At least one variation with a price is required' }, { status: 400 });
   }
 
   const group = await ProductGroup.create({
@@ -30,7 +38,8 @@ export async function POST(req) {
     description,
     thumbnail,
     products,
-    amount,
+    variations,
+    amount, // kept for backward compatibility
     active,
     org: employee.org._id,
   });

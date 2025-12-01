@@ -55,7 +55,10 @@ export async function GET(request, { params }) {
                     }
                   } else if (containedItem.itemType === 'group') {
                     const { ProductGroup } = await import('@/models');
-                    const group = await ProductGroup.findById(containedItem.itemId).populate('products').lean();
+                    const group = await ProductGroup.findById(containedItem.itemId)
+                      .populate('products')
+                      .populate('variations.products')
+                      .lean();
                     if (group) {
                       populatedItems.push({
                         itemType: 'group',

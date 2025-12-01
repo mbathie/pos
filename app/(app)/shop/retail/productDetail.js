@@ -235,22 +235,24 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
             <div className='flex flex-col gap-2'>
               <div className='text-sm font-medium'>Qty</div>
               <div className='flex gap-2 items-center'>
-                {!isPartOfGroup && (
-                  <Button size="icon" onClick={() => setQty({ setProduct, type: 'decrement' })} disabled={product?.qty <= 1}>
-                    <Minus className='h-4 w-4' />
-                  </Button>
+                {!isPartOfGroup ? (
+                  <>
+                    <Button size="icon" className="cursor-pointer" onClick={() => setQty({ setProduct, type: 'decrement' })} disabled={product?.qty <= 1}>
+                      <Minus className='h-4 w-4' />
+                    </Button>
+                    <Button size="icon" className="cursor-pointer" onClick={() => setQty({ setProduct, type: 'increment' })}>
+                      <Plus className='h-4 w-4' />
+                    </Button>
+                    <div className='flex-1' />
+                    <div className='font-semibold'>{product?.qty || 1}</div>
+                  </>
+                ) : (
+                  <>
+                    <div className='text-muted-foreground text-sm'>Set by group</div>
+                    <div className='flex-1' />
+                    <div className='font-semibold'>{product?.groupQty || product?.qty || 1}</div>
+                  </>
                 )}
-                <Button size="icon" onClick={() => {
-                  if (isPartOfGroup && product?.qty >= 1) {
-                    // For group products, limit to 1
-                    return;
-                  }
-                  setQty({ setProduct, type: 'increment' });
-                }}>
-                  <Plus className='h-4 w-4' />
-                </Button>
-                <div className='flex-1' />
-                <div className='font-semibold'>{product?.qty || (isPartOfGroup ? 0 : 1)}</div>
               </div>
             </div>
 

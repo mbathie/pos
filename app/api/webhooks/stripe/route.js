@@ -711,6 +711,151 @@ ${organization?.name || 'The Team'}
 }
 
 /**
+ * Handle checkout.session.completed for partial invoice payments
+ */
+async function handleCheckoutCompleted(session, stripeAccount) {
+  console.log('💳 Processing checkout.session.completed:', session.id);
+
+  // Check if this is a partial invoice payment
+  if (session.metadata?.paymentType !== 'partial_invoice_payment') {
+    console.log('⏭️ Skipping - not a partial invoice payment');
+    return { skipped: true, reason: 'not_partial_invoice_payment' };
+  }
+
+  const transactionId = session.metadata?.transactionId;
+  const invoiceId = session.metadata?.invoiceId;
+
+  if (!transactionId || !invoiceId) {
+    console.error('❌ Missing transaction or invoice ID in metadata');
+    return { skipped: true, reason: 'missing_metadata' };
+  }
+
+  await connectDB();
+
+  console.log('💰 Applying payment to invoice:', invoiceId);
+
+  try {
+    // Get the payment intent to get the amount
+    const paymentIntent = await stripe.paymentIntents.retrieve(
+      session.payment_intent,
+      { stripeAccount }
+    );
+
+    const paymentAmount = paymentIntent.amount / 100; // Convert from cents
+
+    console.log('💵 Payment amount:', paymentAmount);
+
+    // Get current transaction to calculate totals
+    const transaction = await Transaction.findById(transactionId);
+    if (!transaction) {
+      throw new Error('Transaction not found');
+    }
+
+    // Calculate new payment totals
+    const currentAmountPaid = transaction.invoiceAmountPaid || 0;
+    const newAmountPaid = currentAmountPaid + paymentAmount;
+    const newAmountDue = transaction.total - newAmountPaid;
+    const isFullyPaid = newAmountDue <= 0;
+
+    console.log('💰 Current paid:', currentAmountPaid);
+    console.log('💰 New total paid:', newAmountPaid);
+    console.log('💰 Remaining due:', newAmountDue);
+    console.log('💰 Fully paid?', isFullyPaid);
+
+    // Only mark invoice as paid in Stripe if fully paid
+    if (isFullyPaid) {
+      console.log('✅ Invoice fully paid - marking in Stripe as paid out of band');
+      await stripe.invoices.pay(
+        invoiceId,
+        {
+          paid_out_of_band: true,
+          // This tells Stripe that the full payment was made outside the normal flow
+        },
+        { stripeAccount }
+      );
+    }
+
+    // Get updated invoice to get final status
+    const invoice = await stripe.invoices.retrieve(
+      invoiceId,
+      { stripeAccount }
+    );
+
+    // Update transaction with new payment status
+    const updateData = {
+      invoiceStatus: isFullyPaid ? 'paid' : 'partially_paid',
+      invoiceAmountPaid: newAmountPaid,
+      invoiceAmountDue: Math.max(0, newAmountDue),
+      $push: {
+        invoicePayments: {
+          amount: paymentAmount,
+          date: new Date(),
+          stripePaymentIntentId: paymentIntent.id,
+          stripeChargeId: paymentIntent.latest_charge,
+          method: paymentIntent.payment_method_types?.[0] || 'card'
+        }
+      }
+    };
+
+    // If fully paid, mark transaction as completed
+    if (isFullyPaid) {
+      updateData.status = 'completed';
+      console.log('✅ Invoice fully paid - marking transaction as completed');
+    }
+
+    await Transaction.findByIdAndUpdate(transactionId, updateData);
+
+    console.log('✅ Successfully applied payment to invoice');
+    console.log('   Amount paid:', paymentAmount);
+    console.log('   Total paid:', newAmountPaid);
+    console.log('   Amount due:', Math.max(0, newAmountDue));
+
+    // Send receipt for the payment
+    try {
+      console.log('📧 Sending payment receipt...');
+
+      // Fetch full transaction with populated fields for receipt
+      const fullTransaction = await Transaction.findById(transactionId)
+        .populate('customer', 'name email phone memberId')
+        .populate('employee', 'name')
+        .populate('org', 'name email phone addressLine suburb state postcode logo')
+        .populate('location', 'name')
+        .populate('company', 'name contactEmail contactName')
+        .lean();
+
+      if (fullTransaction?.company?.contactEmail) {
+        await sendTransactionReceipt({
+          transaction: fullTransaction,
+          recipientEmail: fullTransaction.company.contactEmail,
+          org: fullTransaction.org,
+          paymentAmount: paymentAmount // Include partial payment amount in receipt
+        });
+        console.log('✅ Receipt sent to:', fullTransaction.company.contactEmail);
+      } else {
+        console.log('⚠️ No company email found - skipping receipt');
+      }
+    } catch (error) {
+      console.error('❌ Error sending receipt:', error);
+      // Don't fail the payment if receipt sending fails
+    }
+
+    return {
+      success: true,
+      transactionId,
+      invoiceId,
+      paymentAmount,
+      totalPaid: newAmountPaid,
+      amountDue: Math.max(0, newAmountDue),
+      invoiceStatus: isFullyPaid ? 'paid' : 'partially_paid'
+    };
+
+  } catch (error) {
+    console.error('❌ Error applying payment to invoice:', error);
+    throw error;
+  }
+}
+
+/**
  * Main webhook handler
  */
 export async function POST(req) {
@@ -790,6 +935,12 @@ export async function POST(req) {
           const failedResult = await handleInvoicePaymentFailed(failedInvoice, stripeAccount);
           console.log(`❌ invoice.payment_failed processed:`, failedResult);
         }
+        break;
+
+      case 'checkout.session.completed':
+        const session = event.data.object;
+        const checkoutResult = await handleCheckoutCompleted(session, stripeAccount);
+        console.log(`✅ checkout.session.completed processed:`, checkoutResult);
         break;
 
       case 'customer.subscription.deleted':

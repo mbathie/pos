@@ -67,7 +67,7 @@ export default function Page() {
     selectVariation,
     selectMod, getProductTotal, setQty } = useHandler()
 
-  const { addToCart } = useGlobals()
+  const { addToCart, removeFromCart, getCurrentCart, location } = useGlobals()
 
   const [posInterface, setPosInterface] = useState(null)
   const [category, setCategory] = useState(undefined)
@@ -192,10 +192,22 @@ export default function Page() {
         onOpenChange={setGroupSheetOpen}
         group={selectedGroup}
         onAddToCart={addToCart}
+        onRemoveGroup={(group) => {
+          // Remove all products with this gId from cart
+          const cart = getCurrentCart();
+          const indicesToRemove = cart.products
+            .map((p, idx) => ({ p, idx }))
+            .filter(({ p }) => p.gId === group.gId)
+            .map(({ idx }) => idx)
+            .sort((a, b) => b - a); // Remove from end to beginning to maintain indices
+
+          indicesToRemove.forEach(idx => removeFromCart(idx));
+        }}
         useClass={{ setTimesClass, setTimesCourse }}
         useMembership={{}}
         getProductTotal={getProductTotal}
         migrateScheduleFormat={migrateScheduleFormat}
+        location={location}
       />
 
       <div className="flex space-x-4 h-full">
@@ -383,7 +395,12 @@ export default function Page() {
         </div>
 
         {/* cart */}
-        <Cart />
+        <Cart
+          onEditGroup={(group) => {
+            setSelectedGroup(group);
+            setGroupSheetOpen(true);
+          }}
+        />
 
       </div>
     </>

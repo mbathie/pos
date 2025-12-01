@@ -314,6 +314,21 @@ export default function Discounts({
         </div>
       )}
 
+      {/* Panel mode search */}
+      {isPanel && (
+        <div className="mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search adjustments..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </div>
+      )}
+
       {/* Table Container - Scrollable */}
       <div className="flex-1 flex flex-col min-h-0 relative">
         <div className="rounded-md border flex-1 overflow-auto">

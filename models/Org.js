@@ -7,6 +7,13 @@ const OrgSchema = new mongoose.Schema({
     type: Number,
     default: 30
   },
+  // Minimum payment percentage for company/group booking invoices (0-100)
+  minInvoicePaymentPercent: {
+    type: Number,
+    default: 50,
+    min: 0,
+    max: 100
+  },
 }, {
   timestamps: true,
   strict: false

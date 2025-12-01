@@ -39,11 +39,12 @@ export function AppSidebar(props) {
     { title: "Check In", url: "/checkin", icon: ScanLine },
     { title: "Bump", url: "/manage/orders", icon: ChefHat },
     { title: "Memberships", url: "/manage/memberships", icon: CreditCard },
-    { 
+    {
       title: "Schedules", icon: Calendar,
       items: [
+        { title: "Calendar", url: "/manage/calendar" },
+        { title: "Classes & Courses", url: "/manage/classes" },
         { title: "General Entry", url: "/manage/general" },
-        { title: "Class & Courses", url: "/manage/classes" },
       ]
     },
     { title: "Check-ins", url: "/manage/checkins", icon: CheckCircle },

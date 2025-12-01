@@ -1,11 +1,59 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
+import { NumberInput } from '@/components/ui/number-input'
+import { Label } from '@/components/ui/label'
+import { toast } from 'sonner'
+import { Loader2 } from 'lucide-react'
 
 export default function FinancialSettingsPage() {
+  const [minPaymentPercent, setMinPaymentPercent] = useState(50)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/org/settings')
+        if (res.ok) {
+          const data = await res.json()
+          setMinPaymentPercent(data.minInvoicePaymentPercent ?? 50)
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchSettings()
+  }, [])
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/org/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minInvoicePaymentPercent: minPaymentPercent })
+      })
+
+      if (res.ok) {
+        toast.success('Settings saved')
+      } else {
+        const error = await res.json()
+        toast.error(error.message || 'Failed to save settings')
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error)
+      toast.error('Failed to save settings')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -16,6 +64,49 @@ export default function FinancialSettingsPage() {
       </div>
 
       <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Invoice Payment Settings</CardTitle>
+            <CardDescription>
+              Configure payment requirements for company and group booking invoices.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="minPayment">Minimum Invoice Payment (%)</Label>
+              <div className="flex items-center gap-2">
+                <NumberInput
+                  id="minPayment"
+                  min={0}
+                  max={100}
+                  value={minPaymentPercent}
+                  onChange={setMinPaymentPercent}
+                  className="w-24"
+                  disabled={loading}
+                />
+                <span className="text-sm text-muted-foreground">%</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Customers must pay at least this percentage of the invoice total as an initial deposit. Set to 0 to allow any amount, or 100 to require full payment.
+              </p>
+            </div>
+            <Button
+              onClick={handleSave}
+              disabled={saving || loading}
+              className="cursor-pointer"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Accounting Codes</CardTitle>

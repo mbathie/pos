@@ -20,14 +20,20 @@ export default function ProductGroupsPage() {
 
   async function fetchAll() {
     try {
-      const [catRes, groupsRes] = await Promise.all([
-        // Load all categories with their products across menus
-        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories?includeProducts=true`),
+      const [productsRes, groupsRes] = await Promise.all([
+        // Load all products directly (categories are obsolete)
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products`),
         fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/product-groups`)
       ])
-      const catData = await catRes.json()
+      const productsData = await productsRes.json()
       const groupsData = await groupsRes.json()
-      setCategoriesWithProducts(catData.categories || [])
+
+      // Group products into a single category for the selector
+      setCategoriesWithProducts([{
+        _id: 'all',
+        name: 'All Products',
+        products: productsData.products || []
+      }])
       setGroups(groupsData.groups || [])
     } catch (e) {
       console.error(e)

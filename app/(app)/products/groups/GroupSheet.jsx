@@ -3,17 +3,26 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Input } from '@/components/ui/input'
 import { NumberInput } from '@/components/ui/number-input'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
 import ProductCategorySelector from '@/components/discounts/product-category-selector'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { Loader2, Save, CheckCircle, Trash2 } from 'lucide-react'
+import { Loader2, Save, CheckCircle, Trash2, Plus, ChevronUp, ChevronDown, Info } from 'lucide-react'
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { ProductThumbnail } from '@/components/product-thumbnail'
 
 export default function GroupSheet({ open, onOpenChange, group, categoriesWithProducts, onSaved, onDeleted, setIconDialogOpen, setIconDialogQuery }) {
   const [name, setName] = useState(group?.name || '')
-  const [amount, setAmount] = useState(group?.amount != null ? String(group.amount) : '')
   const [selected, setSelected] = useState(new Set(group?.products?.map(p => p._id || p) || []))
+  const [variations, setVariations] = useState(
+    group?.variations?.length > 0
+      ? group.variations.map(v => ({
+          name: v.name || '',
+          amount: v.amount != null ? String(v.amount) : '',
+          products: new Set(v.products?.map(p => p._id || p) || [])
+        }))
+      : [{ name: '', amount: group?.amount != null ? String(group.amount) : '', products: new Set() }]
+  )
   const [saving, setSaving] = useState(false)
   const [autoSaving, setAutoSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
@@ -23,10 +32,25 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
   // Update local state if different group opened
   React.useEffect(() => {
     setName(group?.name || '')
-    setAmount(group?.amount != null ? String(group.amount) : '')
     setSelected(new Set(group?.products?.map(p => p._id || p) || []))
+    setVariations(
+      group?.variations?.length > 0
+        ? group.variations.map(v => ({
+            name: v.name || '',
+            amount: v.amount != null ? String(v.amount) : '',
+            products: new Set(v.products?.map(p => p._id || p) || [])
+          }))
+        : [{ name: '', amount: group?.amount != null ? String(group.amount) : '', products: new Set() }]
+    )
     setDirty(false)
   }, [group?._id])
+
+  // Helper to serialize variations for comparison and API
+  const serializeVariations = (vars) => vars.map(v => ({
+    name: v.name.trim(),
+    amount: parseFloat(v.amount),
+    products: Array.from(v.products)
+  }))
 
   // Auto-save when editing existing group
   useEffect(() => {
@@ -34,20 +58,37 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
 
     const nextPayload = {
       name: name.trim(),
-      amount: parseFloat(amount),
-      products: Array.from(selected)
+      products: Array.from(selected),
+      variations: serializeVariations(variations)
     }
+
+    const originalVariations = (group?.variations || []).map(v => ({
+      name: v.name || '',
+      amount: v.amount ?? NaN,
+      products: (v.products || []).map(p => p._id || p)
+    }))
     const original = {
       name: group?.name || '',
-      amount: group?.amount ?? NaN,
-      products: (group?.products || []).map(p => p._id || p)
+      products: (group?.products || []).map(p => p._id || p),
+      variations: originalVariations
     }
+
+    // Check if variations changed
+    const variationsChanged = nextPayload.variations.length !== original.variations.length ||
+      nextPayload.variations.some((v, i) => {
+        const ov = original.variations[i]
+        if (!ov) return true
+        return v.name !== ov.name ||
+          (!Number.isNaN(v.amount) && v.amount !== ov.amount) ||
+          v.products.length !== ov.products.length ||
+          v.products.some((id, j) => id !== ov.products[j])
+      })
 
     const changed = (
       nextPayload.name !== original.name ||
-      (!Number.isNaN(nextPayload.amount) && nextPayload.amount !== original.amount) ||
       nextPayload.products.length !== original.products.length ||
-      nextPayload.products.some((id, i) => id !== original.products[i])
+      nextPayload.products.some((id, i) => id !== original.products[i]) ||
+      variationsChanged
     )
 
     setDirty(changed)
@@ -84,13 +125,19 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [name, amount, selected, group?._id])
+  }, [name, selected, variations, group?._id])
 
   async function handleSave() {
     if (!name.trim()) return toast.error('Enter a group name')
-    const value = parseFloat(amount)
-    if (Number.isNaN(value)) return toast.error('Enter a valid amount')
-    if (selected.size === 0) return toast.error('Select at least one product')
+    if (variations.length === 0) return toast.error('Add at least one variation')
+
+    // Validate all variations have name and amount
+    for (let i = 0; i < variations.length; i++) {
+      const v = variations[i]
+      if (!v.name.trim()) return toast.error(`Enter a name for variation ${i + 1}`)
+      const amount = parseFloat(v.amount)
+      if (Number.isNaN(amount)) return toast.error(`Enter a valid price for variation "${v.name || i + 1}"`)
+    }
 
     setSaving(true)
     try {
@@ -99,7 +146,11 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}${url}`, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim(), amount: value, products: Array.from(selected) })
+        body: JSON.stringify({
+          name: name.trim(),
+          products: Array.from(selected),
+          variations: serializeVariations(variations)
+        })
       })
       if (!res.ok) {
         const e = await res.json().catch(() => ({}))
@@ -115,6 +166,42 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
     } finally {
       setSaving(false)
     }
+  }
+
+  // Variation management functions
+  const updateVariation = (index, field, value) => {
+    setVariations(prev => {
+      const newVariations = [...prev]
+      newVariations[index] = { ...newVariations[index], [field]: value }
+      return newVariations
+    })
+  }
+
+  const addVariation = () => {
+    setVariations(prev => [...prev, { name: '', amount: '', products: new Set() }])
+  }
+
+  const deleteVariation = (index) => {
+    if (variations.length <= 1) return toast.error('At least one variation is required')
+    setVariations(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const moveVariationUp = (index) => {
+    if (index === 0) return
+    setVariations(prev => {
+      const newVariations = [...prev];
+      [newVariations[index - 1], newVariations[index]] = [newVariations[index], newVariations[index - 1]]
+      return newVariations
+    })
+  }
+
+  const moveVariationDown = (index) => {
+    if (index === variations.length - 1) return
+    setVariations(prev => {
+      const newVariations = [...prev];
+      [newVariations[index], newVariations[index + 1]] = [newVariations[index + 1], newVariations[index]]
+      return newVariations
+    })
   }
 
   async function handleDelete() {
@@ -150,7 +237,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
               <ProductThumbnail
                 src={group?.thumbnail}
                 alt={name || 'Group'}
-                size="lg"
+                size="xl"
               />
             </div>
             <div className="flex-1">
@@ -182,27 +269,132 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
             )}
           </SheetTitle>
         </SheetHeader>
-        <div className='space-y-4 mt-4'>
-          <div>
-            <label className='text-sm font-medium'>Group Name</label>
-            <Input value={name} onChange={e => setName(e.target.value)} placeholder='e.g., Morning Coffee Combo' />
+        <div className='space-y-6 mt-4'>
+          <div className="flex flex-col gap-2">
+            <Label>Group Name</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder='e.g., Kids Party' />
           </div>
-          <div>
-            <label className='text-sm font-medium'>Group Amount ($)</label>
-            <NumberInput value={amount} onChange={setAmount} prefix='$' placeholder='e.g., 10.00' />
-          </div>
-          <div>
-            <label className='text-sm font-medium'>Products</label>
+
+          <div className="flex flex-col gap-2">
+            <div className='flex items-center gap-2'>
+              <Label>Base Products</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Products included in all variations</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <ProductCategorySelector
               categoriesWithProducts={categoriesWithProducts}
               selectedProducts={selected}
               selectedCategories={new Set()}
               onSelectionChange={({ products }) => setSelected(products)}
-              placeholder='Select products for this group'
-              excludeTypes={['divider']}
+              placeholder='Select base products for this group'
+              showCategories={false}
+              excludeTypes={['divider', 'category', 'membership']}
             />
           </div>
-          <div className='flex justify-between'>
+
+          <div className='flex flex-col gap-2'>
+            <div className='flex items-center gap-2'>
+              <Label>Variations</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Each variation has its own price and can include additional products</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+
+            <div className='space-y-4'>
+            {variations.map((variation, index) => (
+              <div key={index} className='border rounded-lg p-4 space-y-3'>
+                <div className='flex items-center gap-2'>
+                  <div className='flex-1 flex gap-2'>
+                    <div className='flex-1 flex flex-col gap-2'>
+                      <Label>Variation Name</Label>
+                      <Input
+                        value={variation.name}
+                        onChange={e => updateVariation(index, 'name', e.target.value)}
+                        placeholder='e.g., with Pizza'
+                      />
+                    </div>
+                    <div className='w-32 flex flex-col gap-2'>
+                      <Label>Price ($)</Label>
+                      <NumberInput
+                        value={variation.amount}
+                        onChange={val => updateVariation(index, 'amount', val)}
+                        placeholder='25.00'
+                      />
+                    </div>
+                  </div>
+                  <div className='flex gap-1 pt-7'>
+                    <Button
+                      className="cursor-pointer"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => moveVariationUp(index)}
+                      disabled={index === 0}
+                    >
+                      <ChevronUp className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      className="cursor-pointer"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => moveVariationDown(index)}
+                      disabled={index === variations.length - 1}
+                    >
+                      <ChevronDown className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      className="cursor-pointer"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => deleteVariation(index)}
+                      disabled={variations.length <= 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className='flex flex-col gap-2'>
+                  <Label>Additional Products (optional)</Label>
+                  <ProductCategorySelector
+                    categoriesWithProducts={categoriesWithProducts}
+                    selectedProducts={variation.products}
+                    selectedCategories={new Set()}
+                    onSelectionChange={({ products }) => updateVariation(index, 'products', products)}
+                    placeholder='Select additional products for this variation'
+                    showCategories={false}
+                    excludeTypes={['divider', 'category', 'membership']}
+                  />
+                </div>
+              </div>
+            ))}
+
+            <Button
+              size="sm"
+              variant="outline"
+              className="cursor-pointer"
+              onClick={addVariation}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Variation
+            </Button>
+            </div>
+          </div>
+
+          <div className='flex justify-between pt-4'>
             {group?._id ? (
               <Button variant='destructive' className='cursor-pointer' onClick={() => setDeleteDialogOpen(true)} disabled={saving || autoSaving}>
                 <Trash2 className='h-4 w-4 mr-1' />

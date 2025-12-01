@@ -39,7 +39,9 @@ export async function GET(req, { params }) {
             });
           }
         } else if (item.itemType === 'group') {
-          const group = await ProductGroup.findById(item.itemId).populate('products');
+          const group = await ProductGroup.findById(item.itemId)
+            .populate('products')
+            .populate('variations.products');
           if (group) {
             populatedItems.push({
               itemType: 'group',

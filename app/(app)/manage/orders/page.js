@@ -14,6 +14,7 @@ dayjs.extend(relativeTime);
 
 export default function Page({ params }) {
   const { id } = useParams();
+  const router = useRouter();
   const [orders, setOrders] = useState([]);
   const [now, setNow] = useState(dayjs());
   const [filters, setFilters] = useState({
@@ -56,7 +57,11 @@ export default function Page({ params }) {
   async function getOrders() {
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/orders?hours=${filters.dateRange}`);
+      const isUpcoming = filters.dateRange === 'upcoming';
+      const url = isUpcoming
+        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/orders?upcoming=true`
+        : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/orders?hours=${filters.dateRange}`;
+      const res = await fetch(url);
       const data = await res.json();
       setOrders(data);
     } catch (error) {
@@ -69,6 +74,14 @@ export default function Page({ params }) {
   useEffect(() => {
     getOrders();
   }, [filters.dateRange]); // Only re-fetch when date range changes
+
+  // Poll for new orders every 60 seconds
+  useEffect(() => {
+    const pollInterval = setInterval(() => {
+      getOrders();
+    }, 60000); // 1 minute
+    return () => clearInterval(pollInterval);
+  }, [filters.dateRange]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -131,6 +144,7 @@ export default function Page({ params }) {
               <SelectItem value="24">Last 24 hours</SelectItem>
               <SelectItem value="48">Last 48 hours</SelectItem>
               <SelectItem value="168">Last 7 days</SelectItem>
+              <SelectItem value="upcoming">Upcoming</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -190,14 +204,39 @@ export default function Page({ params }) {
                         <div>Order #</div>
                         <div>{o.orderNumber || 0}</div>
                       </div>
-                      <div className="flex flex-col ´text-muted-foreground text-sm">
-                        {!o?.customer?.name ? (
-                          <div>Guest</div>
+                      <div className="flex flex-col text-muted-foreground text-sm">
+                        {/* Company name and contact from transaction */}
+                        {o.transaction?.company?.name ? (
+                          <>
+                            <div className="font-medium text-foreground">{o.transaction.company.name}</div>
+                            <div>{o.transaction.company.contactName}{o.transaction.company.contactPhone && `, ${o.transaction.company.contactPhone}`}</div>
+                          </>
                         ) : (
                           <>
-                            <div>{o?.customer?.name}, {o?.customer?.phone}</div>
-                            <div className="text-xs text-muted-foreground">{o.customer?.memberId}</div>
+                            {/* Group name from cart products */}
+                            {o.transaction?.cart?.products?.find(p => p.groupName)?.groupName && (
+                              <div className="font-medium text-foreground">
+                                {o.transaction.cart.products.find(p => p.groupName).groupName}
+                              </div>
+                            )}
+                            {/* Customer or Guest */}
+                            {!o?.customer?.name ? (
+                              <div>Guest</div>
+                            ) : (
+                              <>
+                                <div>{o?.customer?.name}{o?.customer?.phone && `, ${o.customer.phone}`}</div>
+                                <div className="text-xs text-muted-foreground">{o.customer?.memberId}</div>
+                              </>
+                            )}
                           </>
+                        )}
+                        {o.transaction?._id && (
+                          <button
+                            onClick={() => router.push(`/manage/transactions/${o.transaction._id}`)}
+                            className="text-xs text-primary hover:underline cursor-pointer text-left mt-1"
+                          >
+                            View transaction
+                          </button>
                         )}
                       </div>
                     </div>
@@ -218,8 +257,17 @@ export default function Page({ params }) {
 
                     <div className="flex flex-row text-right">
                       <div className="flex flex-col">
-                        <div className="text-lg- font-bold">{dayjs(o.createdAt).format('h:mm A')}</div>
-                        <div className="text-xs text-muted-foreground">{dayjs(o.createdAt).from(now)}</div>
+                        {filters.dateRange === 'upcoming' && o.notBefore ? (
+                          <>
+                            <div className="text-lg- font-bold">{dayjs(o.notBefore).format('DD/MM h:mm A')}</div>
+                            <div className="text-xs text-muted-foreground">{dayjs(o.notBefore).from(now)}</div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="text-lg- font-bold">{dayjs(o.createdAt).format('h:mm A')}</div>
+                            <div className="text-xs text-muted-foreground">{dayjs(o.createdAt).from(now)}</div>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

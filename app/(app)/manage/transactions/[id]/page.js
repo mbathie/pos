@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, CreditCard, Banknote, CheckCircle, XCircle, Clock, Undo2, Mail, MoreHorizontal } from 'lucide-react';
+import { ArrowLeft, CreditCard, Banknote, CheckCircle, XCircle, Clock, Undo2, Mail, MoreHorizontal, FileText, ExternalLink, Pencil } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ResendReceiptDialog } from '@/components/resend-receipt-dialog';
 import { RefundDialog } from '@/components/refund-dialog';
@@ -19,7 +19,7 @@ dayjs.extend(relativeTime);
 export default function TransactionDetailsPage() {
   const params = useParams();
   const router = useRouter();
-  const { employee } = useGlobals();
+  const { employee, loadGroupForEditing } = useGlobals();
   const [transaction, setTransaction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [resendReceiptDialog, setResendReceiptDialog] = useState(false);
@@ -51,6 +51,25 @@ export default function TransactionDetailsPage() {
     return `$${parseFloat(amount || 0).toFixed(2)}`;
   };
 
+  const openPaymentPage = async () => {
+    try {
+      const response = await fetch(`/api/transactions/${params.id}/payment-link`, {
+        method: 'POST'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        window.open(data.paymentUrl, '_blank');
+      } else {
+        const error = await response.json();
+        toast.error(error.error || 'Failed to open payment page');
+      }
+    } catch (error) {
+      console.error('Error opening payment page:', error);
+      toast.error('Failed to open payment page');
+    }
+  };
+
   const getStatusIcon = (status) => {
     switch (status) {
       case 'succeeded':
@@ -70,6 +89,9 @@ export default function TransactionDetailsPage() {
         return <CreditCard className="size-4" />;
       case 'cash':
         return <Banknote className="size-4" />;
+      case 'company':
+      case 'invoice':
+        return <FileText className="size-4" />;
       default:
         return <CreditCard className="size-4" />;
     }
@@ -122,12 +144,13 @@ export default function TransactionDetailsPage() {
           // Collect all products with the same gId
           const groupProducts = products.filter(p => p.gId === product.gId);
 
-          // Add a group wrapper
+          // Add a group wrapper - read groupQty from the product
           grouped[type].push({
             isGroup: true,
             gId: product.gId,
             groupName: product.groupName,
             groupAmount: product.groupAmount,
+            groupQty: product.groupQty || 1,
             products: groupProducts,
             adjustments: product.adjustments
           });
@@ -686,6 +709,36 @@ export default function TransactionDetailsPage() {
                 {getPaymentMethodIcon(transaction.paymentMethod)}
                 <span className="capitalize">{transaction.paymentMethod}</span>
               </div>
+              {transaction.paymentMethod === 'company' && transaction.invoiceUrl && (
+                <div className="flex flex-col gap-2 mt-2">
+                  <a
+                    href={transaction.invoiceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer"
+                  >
+                    View Invoice
+                    <ExternalLink className="size-3" />
+                  </a>
+
+                  {/* Payment Page Link */}
+                  {transaction.invoiceStatus !== 'paid' && (
+                    <button
+                      onClick={openPaymentPage}
+                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline cursor-pointer"
+                    >
+                      <ExternalLink className="size-3" />
+                      Payment Page
+                    </button>
+                  )}
+
+                  {transaction.voidedInvoiceId && (
+                    <p className="text-xs text-muted-foreground">
+                      This invoice replaces a voided invoice
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
@@ -736,10 +789,42 @@ export default function TransactionDetailsPage() {
                 <span>Tax (GST)</span>
                 <span>{formatCurrency(transaction.tax)}</span>
               </div>
-              <div className="flex justify-between border-t pt-2">
+              <div className="flex justify-between">
                 <span className="font-medium">Total</span>
                 <span className="font-medium">{formatCurrency(transaction.total)}</span>
               </div>
+
+              {/* Invoice Payment Tracking */}
+              {transaction.stripeInvoiceId && (
+                <>
+                  <div className="flex justify-between pt-2 border-t">
+                    <span>Amount Paid</span>
+                    <span>{formatCurrency(transaction.invoiceAmountPaid || 0)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Remaining Balance</span>
+                    <span>{formatCurrency(transaction.total - (transaction.invoiceAmountPaid || 0))}</span>
+                  </div>
+
+                  {/* Payment History */}
+                  {transaction.invoicePayments && transaction.invoicePayments.length > 0 && (
+                    <div className="pt-2 border-t">
+                      <p className="mb-2">Payment History</p>
+                      <div className="space-y-1">
+                        {transaction.invoicePayments.map((payment, index) => (
+                          <div key={index} className="flex justify-between">
+                            <span>
+                              {dayjs(payment.date).format('DD/MM/YY h:mm A')}
+                            </span>
+                            <span>{formatCurrency(payment.amount)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+
               {transaction.refunds && transaction.refunds.length > 0 && (
                 <>
                   {transaction.refunds.map((refund, index) => (
@@ -776,9 +861,10 @@ export default function TransactionDetailsPage() {
         <>
           {productGroups.shop.map((item, index) => {
             if (item.isGroup) {
-              const groupSubtotal = item.groupAmount || 0;
-              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
-              const groupDiscounts = item.adjustments?.discounts?.total || 0;
+              const groupQty = item.groupQty || 1;
+              const groupSubtotal = (item.groupAmount || 0) * groupQty;
+              const groupSurcharges = (item.adjustments?.surcharges?.total || 0) * groupQty;
+              const groupDiscounts = (item.adjustments?.discounts?.total || 0) * groupQty;
               const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
 
               // Separate products by type within the group
@@ -792,7 +878,28 @@ export default function TransactionDetailsPage() {
                 <div key={`shop-group-${item.gId}`} className="space-y-2">
                   <Card className="bg-muted/30">
                     <CardHeader>
-                      <CardTitle>{item.groupName}</CardTitle>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>{item.groupName}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-normal text-muted-foreground">
+                            Qty: {item.groupQty || 1}
+                          </span>
+                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                // Load group products into cart and navigate to shop
+                                loadGroupForEditing(item.products, transaction._id);
+                                router.push('/shop');
+                              }}
+                              className="cursor-pointer h-8 w-8 p-0"
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2 text-sm">
@@ -836,9 +943,10 @@ export default function TransactionDetailsPage() {
         <>
           {productGroups.class.map((item, index) => {
             if (item.isGroup) {
-              const groupSubtotal = item.groupAmount || 0;
-              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
-              const groupDiscounts = item.adjustments?.discounts?.total || 0;
+              const groupQty = item.groupQty || 1;
+              const groupSubtotal = (item.groupAmount || 0) * groupQty;
+              const groupSurcharges = (item.adjustments?.surcharges?.total || 0) * groupQty;
+              const groupDiscounts = (item.adjustments?.discounts?.total || 0) * groupQty;
               const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
 
               // Separate products by type within the group
@@ -852,7 +960,28 @@ export default function TransactionDetailsPage() {
                 <div key={`class-group-${item.gId}`} className="space-y-2">
                   <Card className="bg-muted/30">
                     <CardHeader>
-                      <CardTitle>{item.groupName}</CardTitle>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>{item.groupName}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-normal text-muted-foreground">
+                            Qty: {item.groupQty || 1}
+                          </span>
+                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                // Load group products into cart and navigate to shop
+                                loadGroupForEditing(item.products, transaction._id);
+                                router.push('/shop');
+                              }}
+                              className="cursor-pointer h-8 w-8 p-0"
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2 text-sm">
@@ -896,9 +1025,10 @@ export default function TransactionDetailsPage() {
         <>
           {productGroups.course.map((item, index) => {
             if (item.isGroup) {
-              const groupSubtotal = item.groupAmount || 0;
-              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
-              const groupDiscounts = item.adjustments?.discounts?.total || 0;
+              const groupQty = item.groupQty || 1;
+              const groupSubtotal = (item.groupAmount || 0) * groupQty;
+              const groupSurcharges = (item.adjustments?.surcharges?.total || 0) * groupQty;
+              const groupDiscounts = (item.adjustments?.discounts?.total || 0) * groupQty;
               const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
 
               // Separate products by type within the group
@@ -912,7 +1042,28 @@ export default function TransactionDetailsPage() {
                 <div key={`course-group-${item.gId}`} className="space-y-2">
                   <Card className="bg-muted/30">
                     <CardHeader>
-                      <CardTitle>{item.groupName}</CardTitle>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>{item.groupName}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-normal text-muted-foreground">
+                            Qty: {item.groupQty || 1}
+                          </span>
+                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                // Load group products into cart and navigate to shop
+                                loadGroupForEditing(item.products, transaction._id);
+                                router.push('/shop');
+                              }}
+                              className="cursor-pointer h-8 w-8 p-0"
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2 text-sm">
@@ -956,9 +1107,10 @@ export default function TransactionDetailsPage() {
         <>
           {productGroups.general.map((item, index) => {
             if (item.isGroup) {
-              const groupSubtotal = item.groupAmount || 0;
-              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
-              const groupDiscounts = item.adjustments?.discounts?.total || 0;
+              const groupQty = item.groupQty || 1;
+              const groupSubtotal = (item.groupAmount || 0) * groupQty;
+              const groupSurcharges = (item.adjustments?.surcharges?.total || 0) * groupQty;
+              const groupDiscounts = (item.adjustments?.discounts?.total || 0) * groupQty;
               const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
 
               // Separate products by type within the group
@@ -972,7 +1124,28 @@ export default function TransactionDetailsPage() {
                 <div key={`general-group-${item.gId}`} className="space-y-2">
                   <Card className="bg-muted/30">
                     <CardHeader>
-                      <CardTitle>{item.groupName}</CardTitle>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>{item.groupName}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-normal text-muted-foreground">
+                            Qty: {item.groupQty || 1}
+                          </span>
+                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                // Load group products into cart and navigate to shop
+                                loadGroupForEditing(item.products, transaction._id);
+                                router.push('/shop');
+                              }}
+                              className="cursor-pointer h-8 w-8 p-0"
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2 text-sm">
@@ -1016,9 +1189,10 @@ export default function TransactionDetailsPage() {
         <>
           {productGroups.membership.map((item, index) => {
             if (item.isGroup) {
-              const groupSubtotal = item.groupAmount || 0;
-              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
-              const groupDiscounts = item.adjustments?.discounts?.total || 0;
+              const groupQty = item.groupQty || 1;
+              const groupSubtotal = (item.groupAmount || 0) * groupQty;
+              const groupSurcharges = (item.adjustments?.surcharges?.total || 0) * groupQty;
+              const groupDiscounts = (item.adjustments?.discounts?.total || 0) * groupQty;
               const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
 
               // Separate products by type within the group
@@ -1032,7 +1206,28 @@ export default function TransactionDetailsPage() {
                 <div key={`membership-group-${item.gId}`} className="space-y-2">
                   <Card className="bg-muted/30">
                     <CardHeader>
-                      <CardTitle>{item.groupName}</CardTitle>
+                      <CardTitle className="flex items-center justify-between">
+                        <span>{item.groupName}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-normal text-muted-foreground">
+                            Qty: {item.groupQty || 1}
+                          </span>
+                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                // Load group products into cart and navigate to shop
+                                loadGroupForEditing(item.products, transaction._id);
+                                router.push('/shop');
+                              }}
+                              className="cursor-pointer h-8 w-8 p-0"
+                            >
+                              <Pencil className="size-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-2 text-sm">
@@ -1078,6 +1273,7 @@ export default function TransactionDetailsPage() {
         onOpenChange={setResendReceiptDialog}
         transaction={transaction}
       />
+
     </div>
   );
 } 

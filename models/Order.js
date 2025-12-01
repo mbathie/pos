@@ -13,6 +13,8 @@ const OrderSchema = new mongoose.Schema({
     item: mongoose.Schema.Types.Mixed,
   }],
   orderNumber: Number,
+  // For group bookings: order won't appear on bump screen until this date/time
+  notBefore: { type: Date, default: null },
 }, { timestamps: true, strict: false });
 
 // Indexes for transaction, location, customer, status
@@ -21,6 +23,7 @@ OrderSchema.index({ location: 1 });
 OrderSchema.index({ customer: 1 });
 OrderSchema.index({ status: 1 });
 OrderSchema.index({ orderNumber: 1 });
+OrderSchema.index({ notBefore: 1 });
 
 OrderSchema.pre('save', async function (next) {
   if (this.orderNumber) return next();

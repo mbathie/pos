@@ -10,8 +10,8 @@ export default function GroupsTable({ groups = [], onRowClick }) {
         <TableHeader>
           <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
             <TableHead className="text-foreground">Name</TableHead>
-            <TableHead className="w-40 text-foreground">Amount</TableHead>
-            <TableHead className="w-32 text-foreground">Products</TableHead>
+            <TableHead className="w-40 text-foreground">Variations</TableHead>
+            <TableHead className="w-40 text-foreground">Base Products</TableHead>
             <TableHead className="w-12"></TableHead>
           </TableRow>
         </TableHeader>
@@ -23,23 +23,39 @@ export default function GroupsTable({ groups = [], onRowClick }) {
               </TableCell>
             </TableRow>
           ) : (
-            groups.map((g) => (
-              <TableRow key={g._id} className="cursor-pointer hover:bg-muted/30" onClick={() => onRowClick?.(g)}>
-                <TableCell className="font-medium">
-                  <div className="flex items-center gap-2">
-                    <ProductThumbnail
-                      src={g.thumbnail}
-                      alt={g.name}
-                      size="sm"
-                    />
-                    {g.name}
-                  </div>
-                </TableCell>
-                <TableCell>${(g.amount || 0).toFixed(2)}</TableCell>
-                <TableCell>{g.products?.length || 0}</TableCell>
-                <TableCell><ChevronRight className="h-4 w-4 text-muted-foreground" /></TableCell>
-              </TableRow>
-            ))
+            groups.map((g) => {
+              const variationCount = g.variations?.length || 0
+              const productCount = g.products?.length || 0
+              return (
+                <TableRow key={g._id} className="cursor-pointer hover:bg-muted/30" onClick={() => onRowClick?.(g)}>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <ProductThumbnail
+                        src={g.thumbnail}
+                        alt={g.name}
+                        size="sm"
+                      />
+                      {g.name}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {variationCount > 0 ? (
+                      `${variationCount} ${variationCount === 1 ? 'variation' : 'variations'}`
+                    ) : (
+                      <span className="text-muted-foreground">No variations</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    {productCount > 0 ? (
+                      `${productCount} ${productCount === 1 ? 'product' : 'products'}`
+                    ) : (
+                      <span className="text-muted-foreground">None</span>
+                    )}
+                  </TableCell>
+                  <TableCell><ChevronRight className="h-4 w-4 text-muted-foreground" /></TableCell>
+                </TableRow>
+              )
+            })
           )}
         </TableBody>
       </Table>

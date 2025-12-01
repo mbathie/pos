@@ -16,21 +16,22 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { 
-  Search, 
-  Filter, 
-  Download, 
-  MoreHorizontal, 
-  CreditCard, 
-  Banknote, 
-  CheckCircle, 
-  XCircle, 
+import {
+  Search,
+  Filter,
+  Download,
+  MoreHorizontal,
+  CreditCard,
+  Banknote,
+  CheckCircle,
+  XCircle,
   Clock,
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
   User,
-  Mail
+  Mail,
+  FileText
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ResendReceiptDialog } from "@/components/resend-receipt-dialog";
@@ -142,6 +143,7 @@ export default function TransactionsPage() {
         item._id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.customer?.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.company?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.employee?.name?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
@@ -157,12 +159,16 @@ export default function TransactionsPage() {
             bValue = new Date(b.createdAt);
             break;
           case 'customer':
-            aValue = a.customer?.name || 'Walk-in';
-            bValue = b.customer?.name || 'Walk-in';
+            aValue = a.company?.name || a.customer?.name || 'Walk-in';
+            bValue = b.company?.name || b.customer?.name || 'Walk-in';
             break;
           case 'total':
             aValue = a.total;
             bValue = b.total;
+            break;
+          case 'balance':
+            aValue = a.invoiceAmountDue || 0;
+            bValue = b.invoiceAmountDue || 0;
             break;
           case 'paymentMethod':
             aValue = a.paymentMethod;
@@ -252,8 +258,25 @@ export default function TransactionsPage() {
         return <CreditCard className="h-4 w-4" />;
       case 'cash':
         return <Banknote className="h-4 w-4" />;
+      case 'invoice':
+      case 'company':
+        return <FileText className="h-4 w-4" />;
       default:
         return <CreditCard className="h-4 w-4" />;
+    }
+  };
+
+  const getPaymentMethodLabel = (method) => {
+    switch (method) {
+      case 'card':
+        return 'Card';
+      case 'cash':
+        return 'Cash';
+      case 'invoice':
+      case 'company':
+        return 'Invoice';
+      default:
+        return method;
     }
   };
 
@@ -380,7 +403,7 @@ export default function TransactionsPage() {
                     {getSortIcon('customer')}
                   </div>
                 </th>
-                <th 
+                <th
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
                   onClick={() => handleSort('total')}
                 >
@@ -389,7 +412,16 @@ export default function TransactionsPage() {
                     {getSortIcon('total')}
                   </div>
                 </th>
-                <th 
+                <th
+                  className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
+                  onClick={() => handleSort('balance')}
+                >
+                  <div className="flex items-center">
+                    Balance
+                    {getSortIcon('balance')}
+                  </div>
+                </th>
+                <th
                   className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:bg-muted"
                   onClick={() => handleSort('paymentMethod')}
                 >
@@ -422,13 +454,13 @@ export default function TransactionsPage() {
             <tbody className="[&_tr:last-child]:border-0">
               {loading && transactions.length === 0 ? (
                 <tr className="border-b">
-                  <td colSpan={9} className="p-4 text-center py-8">
+                  <td colSpan={10} className="p-4 text-center py-8">
                     <p className="text-muted-foreground">Loading transactions...</p>
                   </td>
                 </tr>
               ) : currentData.length === 0 ? (
                 <tr className="border-b">
-                  <td colSpan={9} className="p-4 text-center py-8">
+                  <td colSpan={10} className="p-4 text-center py-8">
                     <p className="text-muted-foreground">No transactions found matching your criteria</p>
                   </td>
                 </tr>
@@ -455,15 +487,22 @@ export default function TransactionsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 align-middle">
-                      {transaction.customer ? transaction.customer.name : 'Walk-in'}
+                      {transaction.company ? transaction.company.name : (transaction.customer ? transaction.customer.name : 'Walk-in')}
                     </td>
                     <td className="px-4 py-3 align-middle font-medium">
                       {formatCurrency(transaction.total)}
                     </td>
+                    <td className="px-4 py-3 align-middle font-medium">
+                      {(transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'company') ? (
+                        formatCurrency(transaction.invoiceAmountDue || 0)
+                      ) : (
+                        '-'
+                      )}
+                    </td>
                     <td className="px-4 py-3 align-middle">
                       <div className="flex items-center gap-2">
                         {getPaymentMethodIcon(transaction.paymentMethod)}
-                        <span className="capitalize">{transaction.paymentMethod}</span>
+                        <span>{getPaymentMethodLabel(transaction.paymentMethod)}</span>
                       </div>
                     </td>
                     <td className="px-4 py-3 align-middle">
