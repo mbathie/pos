@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getEmployee } from '@/lib/auth';
 import { connectDB } from '@/lib/mongoose';
-import { POSInterface } from '@/models';
+import { POSInterface, Location } from '@/models';
+import { getOrCreateBrowserId } from '@/lib/cookies';
 
 // GET /api/posinterfaces - List all POS interfaces for the org
 export async function GET(request) {
@@ -84,12 +85,36 @@ export async function POST(request) {
       );
     }
 
+    // Check if this is the first POS interface for this org
+    const existingCount = await POSInterface.countDocuments({ org: employee.org._id });
+    let devices = [];
+
+    // If it's the first interface, auto-assign the current device
+    if (existingCount === 0) {
+      const browserId = await getOrCreateBrowserId();
+      if (browserId) {
+        // Find which location has this device
+        const locationWithDevice = await Location.findOne({
+          org: employee.org._id,
+          'devices.browserId': browserId
+        });
+
+        if (locationWithDevice) {
+          devices = [{
+            locationId: locationWithDevice._id,
+            browserId
+          }];
+        }
+      }
+    }
+
     const posInterface = await POSInterface.create({
       name,
       org: employee.org._id,
       locations,
       categories: [],
-      isDefault
+      isDefault,
+      devices
     });
 
     return NextResponse.json({ interface: posInterface }, { status: 201 });

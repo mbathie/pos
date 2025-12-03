@@ -9,7 +9,9 @@ import GroupSheet from './GroupSheet'
 import Categories from './retail/cats'
 import Product from './product'
 import colors from '@/lib/tailwind-colors';
-import { Plus, Minus } from 'lucide-react'
+import { Plus, Minus, ShoppingBag, Settings } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import Link from 'next/link'
 import Cart from '@/components/cart'
 import { useHandler } from './retail/useHandler'
 import { useClass } from './(other)/classes/useClass'
@@ -70,6 +72,7 @@ export default function Page() {
   const { addToCart, removeFromCart, getCurrentCart, location } = useGlobals()
 
   const [posInterface, setPosInterface] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [category, setCategory] = useState(undefined)
   const [items, setItems] = useState([])
   const [product, setProduct] = useImmer(null)
@@ -123,6 +126,8 @@ export default function Page() {
       }
     } catch (error) {
       console.error('Error loading POS interface:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -168,6 +173,39 @@ export default function Page() {
     }
 
     setItems(allItems);
+  }
+
+  // Empty state when no POS interface is configured
+  if (!loading && !posInterface) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center max-w-md">
+          <div className="flex justify-center mb-6">
+            <div className="p-4 bg-muted rounded-full">
+              <ShoppingBag className="h-12 w-12 text-muted-foreground" />
+            </div>
+          </div>
+          <h2 className="text-xl font-semibold mb-2">No POS Interface Configured</h2>
+          <p className="text-muted-foreground mb-6">
+            To start selling, you need to create products and configure a POS interface for this device.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button asChild className="cursor-pointer">
+              <Link href="/products/shop">
+                <ShoppingBag className="h-4 w-4 mr-2" />
+                Create Products
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="cursor-pointer">
+              <Link href="/products/pos">
+                <Settings className="h-4 w-4 mr-2" />
+                Configure POS Interfaces
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

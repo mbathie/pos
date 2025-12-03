@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Package, Dumbbell, Users, ShoppingBag, Pizza, Percent, Grid3x3, Layers } from 'lucide-react'
+import { Package, Dumbbell, Users, ShoppingBag, Pizza, Percent, Grid3x3, Layers, LayoutGrid } from 'lucide-react'
 
 export default function ProductsSettingsPage() {
   return (
@@ -126,6 +126,25 @@ export default function ProductsSettingsPage() {
             <Link href="/products/groups">
               <Button className="cursor-pointer">
                 Manage Groups
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <LayoutGrid className="h-5 w-5" />
+              POS Interfaces
+            </CardTitle>
+            <CardDescription>
+              Configure product layouts for each POS device.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Link href="/products/pos">
+              <Button className="cursor-pointer">
+                Manage POS Interfaces
               </Button>
             </Link>
           </CardContent>

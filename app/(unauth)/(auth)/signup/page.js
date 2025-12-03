@@ -15,7 +15,7 @@ export default function SignUpPage() {
   const [ name, setName ] = useState("")
   const [ nameEmployee, setNameEmployee ] = useState("")
 
-  const { setEmployee, setLocation, setLocations } = useGlobals()
+  const { setEmployee, setLocation, setLocations, setDevice } = useGlobals()
 
   const handleForm = async (e) => {
     e.preventDefault();
@@ -62,6 +62,26 @@ export default function SignUpPage() {
       } else if (_l.length > 0) {
         // Fallback to first location
         setLocation(_l[0]);
+      }
+
+      // Find and set the current device
+      try {
+        const browserRes = await fetch('/api/auth/browser-id')
+        if (browserRes.ok) {
+          const { browserId } = await browserRes.json()
+          if (browserId) {
+            // Search for device with matching browserId across all locations
+            for (const loc of _l) {
+              const device = loc.devices?.find(d => d.browserId === browserId)
+              if (device) {
+                setDevice(device)
+                break
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error setting device:', err)
       }
 
       window.location.href = "/shop"

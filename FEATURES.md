@@ -3,7 +3,237 @@
 This document provides comprehensive documentation for all major features implemented in the POS system.
 
 ## Table of Contents
+- [Schedule Calendar View](#schedule-calendar-view)
+- [Public Payment Link for Invoices](#public-payment-link-for-invoices)
+- [Minimum Invoice Payment Settings](#minimum-invoice-payment-settings)
+- [Orders Bump Screen Enhancements](#orders-bump-screen-enhancements)
 - [Stripe Invoice System for Group/Company Bookings](#stripe-invoice-system-for-groupcompany-bookings)
+
+---
+
+## Schedule Calendar View
+
+**Date Implemented:** 01.12.2025
+**Status:** ✅ Complete
+
+### Overview
+A full-page calendar view showing all scheduled classes, courses, and group bookings. Provides an at-a-glance view of the schedule with the ability to navigate between months and years.
+
+### Key Functionality
+
+#### 1. **Month/Year Navigation**
+- Dropdown selects for month (January-December) and year (±5 years)
+- "Today" button to jump back to current date
+- Arrow buttons for quick prev/next month navigation
+
+#### 2. **Calendar Grid**
+- Full-height responsive calendar that fills available viewport
+- 6-row grid showing all days of the month plus overflow
+- Today's date highlighted with primary color
+- Event count badge on days with scheduled items
+
+#### 3. **Event Display**
+- Color-coded events by type:
+  - **Blue** - Classes
+  - **Purple** - Courses
+  - **Green** - Group bookings
+- Shows time and name (or company name for group bookings)
+- "+N more" indicator when day has many events
+
+#### 4. **Day Detail Sheet**
+- Click any day to open detail panel
+- Shows all events for that day with:
+  - Product thumbnail
+  - Product name (or company name for group bookings)
+  - Time and duration
+  - Booking count vs capacity
+- Click event to navigate to schedule management
+
+#### 5. **Group Booking Display**
+- Automatically shows company name instead of product name for group bookings
+- Product name shown as secondary info in detail sheet
+- Helps identify which company has booked each slot
+
+### Relevant Files
+
+- `/app/(app)/manage/calendar/page.js` - Calendar page
+- `/components/schedule-calendar.jsx` - Reusable calendar component
+- `/app/api/calendar/route.js` - API endpoint for fetching events
+- `/components/app-sidebar.jsx` - Sidebar menu with Calendar link
+
+### Configuration
+
+No configuration required. Calendar is accessible from the sidebar menu under **Schedules > Calendar**.
+
+---
+
+## Public Payment Link for Invoices
+
+**Date Implemented:** 01.12.2025
+**Status:** ✅ Complete
+
+### Overview
+A public-facing payment page that allows companies to pay invoices without logging in. Supports partial payments with configurable minimum payment requirements.
+
+### Key Functionality
+
+#### 1. **Secure Access**
+- Token-based authentication (no login required)
+- Payment link generated with secure token
+- Token validated on each request
+
+#### 2. **Invoice Summary**
+- Shows organization logo and name
+- Displays total amount, amount paid, and remaining balance
+- Invoice status indicator
+
+#### 3. **Flexible Payment Options**
+- Pay any amount between minimum and full balance
+- "Pay Minimum" and "Pay Full Amount" quick buttons
+- Real-time validation of payment amount
+
+#### 4. **Minimum Payment Enforcement**
+- Configurable minimum payment percentage per organization
+- First payment must meet minimum (e.g., 50% deposit)
+- Subsequent payments can be any amount
+- Clear messaging about minimum requirements
+
+#### 5. **Stripe Checkout Integration**
+- Redirects to Stripe hosted checkout
+- Handles successful payment callback
+- Updates invoice status automatically via webhooks
+
+### Relevant Files
+
+- `/app/(unauth)/pay/[id]/page.js` - Public payment page
+- `/app/(unauth)/pay/[id]/success/page.js` - Payment success page
+- `/app/api/unauth/payment/[id]/route.js` - Get invoice info
+- `/app/api/unauth/payment/[id]/checkout/route.js` - Create checkout session
+- `/app/api/transactions/[id]/payment-link/route.js` - Generate payment link
+
+### URL Format
+```
+/pay/{transactionId}?token={secureToken}
+```
+
+---
+
+## Minimum Invoice Payment Settings
+
+**Date Implemented:** 01.12.2025
+**Status:** ✅ Complete
+
+### Overview
+Organization-level setting to require a minimum percentage payment on invoices. Useful for requiring deposits on group/company bookings.
+
+### Key Functionality
+
+#### 1. **Configurable Percentage**
+- Set minimum payment as percentage of invoice total (0-100%)
+- Default: 50%
+- Applies to first payment only
+
+#### 2. **Smart Enforcement**
+- If customer has already paid the minimum, subsequent payments can be any amount
+- Prevents overpayment (max is remaining balance)
+- Clear UI messaging about requirements
+
+#### 3. **Settings UI**
+- Located in Settings > Financial
+- Number input with percentage suffix
+- Save confirmation toast
+
+### Database Schema
+
+**Org Model** (`models/Org.js`)
+```javascript
+{
+  minInvoicePaymentPercent: {
+    type: Number,
+    default: 50,
+    min: 0,
+    max: 100
+  }
+}
+```
+
+### Relevant Files
+
+- `/models/Org.js` - Organization model with setting
+- `/app/api/org/settings/route.js` - GET/PUT org settings
+- `/app/(app)/settings/financial/page.js` - Settings UI
+- `/app/api/unauth/payment/[id]/route.js` - Calculates minimum for payment page
+
+### Example Calculation
+
+**Scenario:** $1,000 invoice, 50% minimum payment setting
+
+| Payment # | Amount Paid | Min Required | Remaining |
+|-----------|-------------|--------------|-----------|
+| 1st | $500 | $500 (50%) | $500 |
+| 2nd | $200 | $0.01 | $300 |
+| 3rd | $300 | $0.01 | $0 |
+
+---
+
+## Orders Bump Screen Enhancements
+
+**Date Implemented:** 01.12.2025
+**Status:** ✅ Complete
+
+### Overview
+Improvements to the kitchen/orders bump screen for better handling of group bookings and future-dated orders.
+
+### Key Functionality
+
+#### 1. **Automatic Polling**
+- Refreshes order list every 60 seconds
+- No manual refresh needed
+- Maintains current filter settings
+
+#### 2. **Future-Dated Orders**
+- New "Upcoming" filter option for orders with future `notBefore` date
+- Shows scheduled date/time instead of created date
+- Time displayed as "in X days/hours" relative format
+
+#### 3. **Company/Contact Display**
+- Shows company name and contact for group bookings
+- Falls back to customer name for individual orders
+- "Guest" only shown when no customer info available
+
+#### 4. **Transaction Links**
+- Each order card has "View transaction" link
+- Quick access to full transaction details
+
+### Database Schema
+
+**Order Model** (`models/Order.js`)
+```javascript
+{
+  notBefore: {
+    type: Date,
+    default: null
+  }
+}
+```
+
+### Relevant Files
+
+- `/app/(app)/manage/orders/page.js` - Orders bump screen
+- `/app/api/orders/route.js` - Orders API with filtering
+- `/models/Order.js` - Order model with notBefore field
+- `/lib/order/index.js` - Sets notBefore from group booking schedule
+
+### Filter Options
+
+| Filter | Description |
+|--------|-------------|
+| Last hour | Orders created in past 1 hour |
+| Last 2 hours | Orders created in past 2 hours |
+| Last 24 hours | Orders created in past 24 hours |
+| Last 48 hours | Orders created in past 48 hours |
+| Last 7 days | Orders created in past 7 days |
+| **Upcoming** | Orders with future notBefore date |
 
 ---
 

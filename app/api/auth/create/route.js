@@ -34,13 +34,21 @@ export async function POST(req) {
 
     const org = await Org.create({ name, phone, deleted: false })
     
-    // Create the Main HQ location with browser ID already set
-    const location = await Location.create({ 
-      name: "Main HQ", 
-      org, 
-      deleted: false, 
+    // Create the Main HQ location with the device registered
+    const location = await Location.create({
+      name: "Main HQ",
+      org,
+      deleted: false,
       phone,
-      browser: browserId // Set browser ID for the default location
+      browser: browserId, // Legacy field for backwards compatibility
+      devices: [{
+        browserId,
+        name: 'Device 1',
+        lastSeen: new Date(),
+        metadata: {
+          userAgent: req.headers.get('user-agent')
+        }
+      }]
     })
     
     console.log('🖥️ New org signup: Main HQ tied to browser:', {
