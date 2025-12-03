@@ -14,6 +14,11 @@ const OrgSchema = new mongoose.Schema({
     min: 0,
     max: 100
   },
+  // Flag to skip first-time POS setup checks once all steps have passed
+  posSetupComplete: {
+    type: Boolean,
+    default: false
+  },
 }, {
   timestamps: true,
   strict: false

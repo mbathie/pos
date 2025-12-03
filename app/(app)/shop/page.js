@@ -10,6 +10,7 @@ import Categories from './retail/cats'
 import Product from './product'
 import colors from '@/lib/tailwind-colors';
 import { Plus, Minus, ShoppingBag, CreditCard, LayoutGrid, Check, Circle } from 'lucide-react'
+import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import Cart from '@/components/cart'
@@ -69,7 +70,7 @@ export default function Page() {
     selectVariation,
     selectMod, getProductTotal, setQty } = useHandler()
 
-  const { addToCart, removeFromCart, getCurrentCart, location, device } = useGlobals()
+  const { addToCart, removeFromCart, getCurrentCart, location, device, posSetupComplete, setPosSetupComplete } = useGlobals()
 
   const [posInterface, setPosInterface] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -88,8 +89,7 @@ export default function Page() {
   const { } = useMembership({ product, setProduct })
 
   useEffect(() => {
-    loadPOSInterface()
-    checkSetupStatus()
+    initializeShop()
   }, [])
 
   // Check if device has terminal when device changes
@@ -100,20 +100,79 @@ export default function Page() {
     }))
   }, [device])
 
-  const checkSetupStatus = async () => {
-    try {
-      const res = await fetch('/api/payments')
-      if (res.ok) {
-        const data = await res.json()
-        setSetupStatus(prev => ({
-          ...prev,
-          stripeConnected: data.charges_enabled === true
-        }))
-      } else {
-        setSetupStatus(prev => ({ ...prev, stripeConnected: false }))
+  const initializeShop = async () => {
+    // If setup is already complete (cached in globals), just load POS interface
+    if (posSetupComplete) {
+      const posData = await loadPOSInterface()
+      setSetupStatus({
+        stripeConnected: true,
+        hasTerminal: true
+      })
+      setPosInterface(posData)
+
+      if (posData?.categories?.length > 0) {
+        handleSetCatFromPOS(posData.categories[0])
       }
+
+      setLoading(false)
+      return
+    }
+
+    // Otherwise fetch setup status and POS interface in parallel
+    const [setupData, posData] = await Promise.all([
+      fetchSetupStatus(),
+      loadPOSInterface()
+    ])
+
+    // If setup was already marked complete in DB, update globals and skip checks
+    if (setupData.setupComplete) {
+      setPosSetupComplete(true)
+      setSetupStatus({
+        stripeConnected: true,
+        hasTerminal: true
+      })
+      setPosInterface(posData)
+
+      if (posData?.categories?.length > 0) {
+        handleSetCatFromPOS(posData.categories[0])
+      }
+
+      setLoading(false)
+      return
+    }
+
+    // Check terminal from device state
+    const hasTerminal = device?.terminal ? true : false
+
+    setSetupStatus({
+      stripeConnected: setupData.stripeConnected,
+      hasTerminal
+    })
+    setPosInterface(posData)
+
+    // Auto-select first category if POS interface loaded
+    if (posData?.categories?.length > 0) {
+      handleSetCatFromPOS(posData.categories[0])
+    }
+
+    // If all setup steps pass, mark setup as complete in DB and globals
+    if (setupData.stripeConnected && hasTerminal && posData) {
+      setPosSetupComplete(true)
+      fetch('/api/org/setup-complete', { method: 'POST' }).catch(() => {})
+    }
+
+    setLoading(false)
+  }
+
+  const fetchSetupStatus = async () => {
+    try {
+      const res = await fetch('/api/shop/setup-status')
+      if (res.ok) {
+        return await res.json()
+      }
+      return { setupComplete: false, stripeConnected: false }
     } catch (error) {
-      setSetupStatus(prev => ({ ...prev, stripeConnected: false }))
+      return { setupComplete: false, stripeConnected: false }
     }
   }
 
@@ -141,20 +200,14 @@ export default function Page() {
           const interfaceRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/posinterfaces/${data.posInterface._id}`)
           if (interfaceRes.ok) {
             const interfaceData = await interfaceRes.json()
-            setPosInterface(interfaceData.interface)
-
-            // Auto-select first category
-            if (interfaceData.interface.categories && interfaceData.interface.categories.length > 0) {
-              const firstCategory = interfaceData.interface.categories[0]
-              handleSetCatFromPOS(firstCategory)
-            }
+            return interfaceData.interface
           }
         }
       }
+      return null
     } catch (error) {
       console.error('Error loading POS interface:', error)
-    } finally {
-      setLoading(false)
+      return null
     }
   }
 
@@ -202,8 +255,17 @@ export default function Page() {
     setItems(allItems);
   }
 
+  // Show loading spinner while checking setup status
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Spinner className="size-8" />
+      </div>
+    );
+  }
+
   // Check if setup is incomplete
-  const needsSetup = !loading && (
+  const needsSetup = (
     !setupStatus.stripeConnected ||
     !setupStatus.hasTerminal ||
     !posInterface

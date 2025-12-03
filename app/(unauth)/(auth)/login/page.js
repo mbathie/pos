@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [ email, setEmail ] = useState("")
   const [ password, setPassword ] = useState("")
 
-  const { setEmployee, setLocation, setLocations, setDevice } = useGlobals()
+  const { setEmployee, setLocation, setLocations, setDevice, setPosSetupComplete } = useGlobals()
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -54,6 +54,9 @@ export default function LoginPage() {
       // }
 
       setEmployee(employeeData)
+
+      // Cache POS setup complete flag from org
+      setPosSetupComplete(data.employee.org?.posSetupComplete || false)
 
       // Fetch all locations
       const locationsRes = await fetch(`/api/locations`, { method: "GET" });

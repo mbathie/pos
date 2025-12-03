@@ -4,6 +4,27 @@ import { useGlobals } from '@/lib/globals'
 import { Trash2, Info, Save, Clock, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import updateLocale from 'dayjs/plugin/updateLocale';
+dayjs.extend(relativeTime);
+dayjs.extend(updateLocale);
+dayjs.updateLocale('en', {
+  relativeTime: {
+    future: 'in %s',
+    past: '%s ago',
+    s: 'a few sec',
+    m: '1 min',
+    mm: '%d min',
+    h: '1 hr',
+    hh: '%d hrs',
+    d: '1 day',
+    dd: '%d days',
+    M: '1 month',
+    MM: '%d months',
+    y: '1 year',
+    yy: '%d years'
+  }
+});
 import { Badge } from '@/components/ui/badge';
 import { useState, useEffect } from 'react';
 import CourseScheduleDialog from '@/components/CourseScheduleDialog';
@@ -74,8 +95,11 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
   // Don't render until mounted to avoid hydration mismatch
   if (!mounted) return null
 
-  // Don't show cart if empty or if it's stale (unless it's being used as a sheet)
-  if ((cart.products.length < 1 || isStale) && !asSheet)
+  // Don't show cart if empty and no saved carts (unless it's being used as a sheet)
+  // Show cart if there are saved carts even when current cart is empty (to allow switching)
+  if ((cart.products.length < 1 && carts.length <= 1) && !asSheet)
+    return null
+  if (isStale && !asSheet)
     return null
 
   // Group products by gId (for grouped products)
@@ -115,8 +139,8 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
     if (!cart.savedAt) {
       return index === currentCartIndex ? 'Current Cart' : `Cart ${index + 1}`;
     }
-    const date = new Date(cart.savedAt);
-    return `${dayjs(date).format('HH:mm:ss')} - ${cart.products.length} item${cart.products.length !== 1 ? 's' : ''}`;
+    const date = dayjs(cart.savedAt);
+    return `${date.format('h:mm A')} (${date.fromNow()}) - ${cart.products.length} item${cart.products.length !== 1 ? 's' : ''}`;
   };
 
   // Check if there are any saved carts (carts with savedAt timestamp)
@@ -414,163 +438,164 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
 
 
       <div className='border-t p-4 flex flex-col flex-shrink-0 text-sm'>
-        <div className='flex flex-col text-sm'>
-          <div className='flex'>
-            <div className=''>Subtotal</div>
-            <div className='ml-auto'>
-              {isEditingTransaction ? (
-                differentialSubtotal.toLocaleString('en-US', { style: 'currency', currency: 'USD', signDisplay: 'always' })
-              ) : (
-                `$${cart.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-              )}
+        {/* Only show totals and payment when cart has products */}
+        {cart.products.length > 0 && (
+          <>
+            <div className='flex flex-col text-sm'>
+              <div className='flex'>
+                <div className=''>Subtotal</div>
+                <div className='ml-auto'>
+                  {isEditingTransaction ? (
+                    differentialSubtotal.toLocaleString('en-US', { style: 'currency', currency: 'USD', signDisplay: 'always' })
+                  ) : (
+                    `$${cart.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  )}
+                </div>
+              </div>
+              <div className='flex'>
+                <div className=''>Tax</div>
+                <div className='ml-auto'>
+                  {isEditingTransaction ? (
+                    differentialTax.toLocaleString('en-US', { style: 'currency', currency: 'USD', signDisplay: 'always' })
+                  ) : (
+                    `$${cart.tax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  )}
+                </div>
+              </div>
+              <div className='flex font-semibold'>
+                <div className='uppercase'>Total</div>
+                <div className='ml-auto'>
+                  {isEditingTransaction ? (
+                    differentialTotal.toLocaleString('en-US', { style: 'currency', currency: 'USD', signDisplay: 'always' })
+                  ) : (
+                    `$${cart.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-          <div className='flex'>
-            <div className=''>Tax</div>
-            <div className='ml-auto'>
+
+            <div className='flex flex-col gap-2 mt-2'>
+              {/* Payment Button or Update Invoice Button */}
               {isEditingTransaction ? (
-                differentialTax.toLocaleString('en-US', { style: 'currency', currency: 'USD', signDisplay: 'always' })
+                <ActionButton
+                  action={async () => {
+                    try {
+                      const response = await fetch(`/api/transactions/${cart.editingTransactionId}/update-invoice`, {
+                        method: 'PATCH',
+                        headers: {
+                          'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                          differentialAmount: differentialTotal
+                        })
+                      });
+
+                      const data = await response.json();
+
+                      if (!response.ok) {
+                        return {
+                          error: true,
+                          message: data.error || 'Failed to update invoice'
+                        };
+                      }
+
+                      toast.success('Invoice updated successfully');
+
+                      // Clear the cart and reset editing state
+                      resetCart();
+
+                      // Redirect to the transaction page
+                      window.location.href = `/manage/transactions/${cart.editingTransactionId}`;
+
+                      return { error: false };
+                    } catch (error) {
+                      console.error('Error updating invoice:', error);
+                      return {
+                        error: true,
+                        message: 'Failed to update invoice'
+                      };
+                    }
+                  }}
+                  requireAreYouSure
+                  areYouSureDescription={`This will ${differentialTotal >= 0 ? 'add' : 'subtract'} ${Math.abs(differentialTotal).toLocaleString('en-US', { style: 'currency', currency: 'USD' })} ${differentialTotal >= 0 ? 'to' : 'from'} the existing invoice. This action cannot be undone.`}
+                  className="w-full cursor-pointer"
+                  disabled={!cart.products.length || isStale || differentialTotal === 0}
+                >
+                  Update Invoice
+                </ActionButton>
               ) : (
-                `$${cart.tax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                <Link href="/shop/payment" passHref>
+                  <Button
+                    type="submit"
+                    className="w-full cursor-pointer"
+                    disabled={!cart.products.length || isStale}
+                    onClick={() => {
+                      if (asSheet && onClose) onClose()
+                    }}
+                  >
+                    {isStale ? 'Transaction Completed' : 'Payment'}
+                  </Button>
+                </Link>
               )}
-            </div>
-          </div>
-          <div className='flex font-semibold'>
-            <div className='uppercase'>Total</div>
-            <div className='ml-auto'>
-              {isEditingTransaction ? (
-                differentialTotal.toLocaleString('en-US', { style: 'currency', currency: 'USD', signDisplay: 'always' })
-              ) : (
-                `$${cart.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+              {/* Save Cart Button - only show if cart has items and isn't already saved */}
+              {!cart.savedAt && !isStale && (
+                <Button
+                  type="button"
+                  className="w-full cursor-pointer"
+                  onClick={() => {
+                    saveCart();
+                  }}
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Cart
+                </Button>
               )}
-            </div>
-          </div>
-        </div>
 
-        <div className='flex flex-col gap-2 mt-2'>
-          {/* Payment Button or Update Invoice Button */}
-          {isEditingTransaction ? (
-            <ActionButton
-              action={async () => {
-                try {
-                  const response = await fetch(`/api/transactions/${cart.editingTransactionId}/update-invoice`, {
-                    method: 'PATCH',
-                    headers: {
-                      'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                      differentialAmount: differentialTotal
-                    })
-                  });
-
-                  const data = await response.json();
-
-                  if (!response.ok) {
-                    return {
-                      error: true,
-                      message: data.error || 'Failed to update invoice'
-                    };
-                  }
-
-                  toast.success('Invoice updated successfully');
-
-                  // Clear the cart and reset editing state
-                  resetCart();
-
-                  // Redirect to the transaction page
-                  window.location.href = `/manage/transactions/${cart.editingTransactionId}`;
-
-                  return { error: false };
-                } catch (error) {
-                  console.error('Error updating invoice:', error);
-                  return {
-                    error: true,
-                    message: 'Failed to update invoice'
-                  };
-                }
-              }}
-              requireAreYouSure
-              areYouSureDescription={`This will ${differentialTotal >= 0 ? 'add' : 'subtract'} ${Math.abs(differentialTotal).toLocaleString('en-US', { style: 'currency', currency: 'USD' })} ${differentialTotal >= 0 ? 'to' : 'from'} the existing invoice. This action cannot be undone.`}
-              className="w-full cursor-pointer"
-              disabled={!cart.products.length || isStale || differentialTotal === 0}
-            >
-              Update Invoice
-            </ActionButton>
-          ) : (
-            <Link href="/shop/payment" passHref>
+              {/* Clear Cart Button */}
               <Button
                 type="submit"
                 className="w-full cursor-pointer"
-                disabled={!cart.products.length || isStale}
+                variant="destructive"
                 onClick={() => {
+                  resetCart()
                   if (asSheet && onClose) onClose()
                 }}
               >
-                {isStale ? 'Transaction Completed' : 'Payment'}
+                {isStale ? 'Clear Transaction' : 'Clear Cart'}
               </Button>
-            </Link>
-          )}
+            </div>
+          </>
+        )}
 
-          {/* Cart Selector and Save Cart Button on same row */}
-          <div className="flex gap-2">
-            {/* Cart Selector Dropdown - show if there are multiple carts */}
-            {carts.length > 1 && (
-              <div className="flex items-center gap-1 flex-1 min-w-0" suppressHydrationWarning>
-                <Select value={String(currentCartIndex)} onValueChange={(value) => switchCart(parseInt(value))}>
-                  <SelectTrigger className="h-10 text-xs flex-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {carts.map((c, idx) => (
-                      <SelectItem key={idx} value={String(idx)}>
-                        {formatCartLabel(c, idx)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {hasSavedCarts && currentCartIndex !== 0 && cart.savedAt && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-10 w-10 cursor-pointer flex-shrink-0"
-                    onClick={() => deleteCart(currentCartIndex)}
-                    title="Delete this saved cart"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            )}
-
-            {/* Save Cart Button - only show if cart has items and isn't already saved */}
-            {cart.products.length > 0 && !cart.savedAt && !isStale && (
+        {/* Cart Selector Dropdown - always show if there are multiple carts */}
+        {carts.length > 1 && (
+          <div className={`flex items-center gap-1 ${cart.products.length > 0 ? 'mt-2' : ''}`} suppressHydrationWarning>
+            <Select value={String(currentCartIndex)} onValueChange={(value) => switchCart(parseInt(value))}>
+              <SelectTrigger className="h-10 text-xs flex-1 bg-primary text-primary-foreground border-primary">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {carts.map((c, idx) => (
+                  <SelectItem key={idx} value={String(idx)}>
+                    {formatCartLabel(c, idx)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {hasSavedCarts && currentCartIndex !== 0 && cart.savedAt && (
               <Button
-                type="button"
-                className={`cursor-pointer ${carts.length > 1 ? 'flex-1' : 'w-full'}`}
-                onClick={() => {
-                  saveCart();
-                }}
+                size="icon"
+                variant="ghost"
+                className="h-10 w-10 cursor-pointer flex-shrink-0"
+                onClick={() => deleteCart(currentCartIndex)}
+                title="Delete this saved cart"
               >
-                <Save className="h-4 w-4 mr-2" />
-                Save Cart
+                <Trash2 className="h-4 w-4" />
               </Button>
             )}
           </div>
-
-          {/* Clear Cart Button */}
-          <Button
-            type="submit"
-            className="w-full cursor-pointer"
-            variant="destructive"
-            disabled={!cart.products.length}
-            onClick={() => {
-              resetCart()
-              if (asSheet && onClose) onClose()
-            }}
-          >
-            {isStale ? 'Clear Transaction' : 'Clear Cart'}
-          </Button>
-        </div>
+        )}
       </div>
 
       {/* Course Schedule Dialog */}
