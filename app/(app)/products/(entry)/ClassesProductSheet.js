@@ -137,7 +137,7 @@ export default function ClassesProductSheet({
               <ProductThumbnail
                 src={product.thumbnail}
                 alt={product.name}
-                size="lg"
+                size="xl"
               />
             </div>
             <div className="flex-1">

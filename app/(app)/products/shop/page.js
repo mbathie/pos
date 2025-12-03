@@ -14,6 +14,8 @@ export default function Page() {
   const [selectedProductId, setSelectedProductId] = useState(null);
   const [productIconDialogOpen, setProductIconDialogOpen] = useState(false);
   const [productIconQuery, setProductIconQuery] = useState('');
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [thumbnailUpdateCallback, setThumbnailUpdateCallback] = useState(null);
 
   // Fetch all shop products on mount
   useEffect(() => {
@@ -79,7 +81,11 @@ export default function Page() {
         productId={selectedProductId}
         category={null}
         onProductSaved={handleProductSaved}
-        onIconClick={() => setProductIconDialogOpen(true)}
+        onIconClick={(updateCallback) => {
+          setThumbnailUpdateCallback(() => updateCallback);
+          setProductIconDialogOpen(true);
+        }}
+        refreshTrigger={refreshTrigger}
       />
 
       {/* Product Icon Select Dialog */}
@@ -97,6 +103,12 @@ export default function Page() {
 
               if (res.ok) {
                 await fetchProducts();
+                // Update the sheet's internal state immediately
+                if (thumbnailUpdateCallback) {
+                  thumbnailUpdateCallback(icon);
+                }
+                // Trigger refresh to re-fetch product in sheet
+                setRefreshTrigger(prev => prev + 1);
               }
             } catch (error) {
               console.error('Error updating product icon:', error);

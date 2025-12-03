@@ -1948,8 +1948,8 @@ export default function Page() {
               <div className="mt-4 space-y-2">
                 <Separator orientation="vertical" className="h-[1px] bg-muted" />
                 <div className="flex items-center gap-2">
+                  <span>Email Receipt</span>
                   <Mail className="size-4 text-muted-foreground" />
-                  <span className="text-sm">Email Receipt</span>
                 </div>
                 <div className="flex gap-2">
                   <Input
@@ -2202,7 +2202,7 @@ export default function Page() {
 
                 {/* Return to Shop Button - only enabled after successful payment */}
                 <Button
-                  variant="outline"
+                  className="cursor-pointer"
                   onClick={() => {
                     router.push('/shop')
                   }}
@@ -2333,8 +2333,7 @@ export default function Page() {
                     )}
                   </Button>
                    <Button
-                     variant="outline"
-                     className="w-full h-12"
+                     className="w-full h-12 cursor-pointer"
                      onClick={() => {
                        router.push('/shop')
                      }}
