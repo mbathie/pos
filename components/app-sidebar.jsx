@@ -56,12 +56,12 @@ export function AppSidebar(props) {
     {
       title: "Products", icon: Tag,
       items: [
-        { title: "General Entry", url: "/products/general" },
-        { title: "Classes", url: "/products/classes" },
-        { title: "Membership", url: "/products/memberships" },
         { title: "Shop", url: "/products/shop" },
-        { title: "Shop Mods", url: "/products/mods" },
+        { title: "Classes", url: "/products/classes" },
+        { title: "Memberships", url: "/products/memberships" },
+        { title: "General Entry", url: "/products/general" },
         { title: "Groups", url: "/products/groups" },
+        { title: "Shop Mods", url: "/products/mods" },
         { title: "POS Interfaces", url: "/products/pos" },
         { title: "Adjustments", url: "/manage/adjustments" },
         { title: "All Products", url: "/manage/products" },

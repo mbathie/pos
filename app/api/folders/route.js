@@ -8,13 +8,14 @@ export async function POST(req, { params }) {
 
   const { employee } = await getEmployee();
 
-  const { name, color, category, groups } = await req.json();
+  const { name, color, category, groups, contains } = await req.json();
 
   const folder = await Folder.create({
     name,
     color,
     category,
     groups: groups || [],
+    contains: contains || [],
     org: employee.org._id,
   });
 
