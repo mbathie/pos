@@ -9,7 +9,7 @@ import GroupSheet from './GroupSheet'
 import Categories from './retail/cats'
 import Product from './product'
 import colors from '@/lib/tailwind-colors';
-import { Plus, Minus, ShoppingBag, Settings } from 'lucide-react'
+import { Plus, Minus, ShoppingBag, CreditCard, LayoutGrid, Check, Circle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import Cart from '@/components/cart'
@@ -69,10 +69,11 @@ export default function Page() {
     selectVariation,
     selectMod, getProductTotal, setQty } = useHandler()
 
-  const { addToCart, removeFromCart, getCurrentCart, location } = useGlobals()
+  const { addToCart, removeFromCart, getCurrentCart, location, device } = useGlobals()
 
   const [posInterface, setPosInterface] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [setupStatus, setSetupStatus] = useState({ stripeConnected: null, hasTerminal: null })
   const [category, setCategory] = useState(undefined)
   const [items, setItems] = useState([])
   const [product, setProduct] = useImmer(null)
@@ -88,7 +89,33 @@ export default function Page() {
 
   useEffect(() => {
     loadPOSInterface()
+    checkSetupStatus()
   }, [])
+
+  // Check if device has terminal when device changes
+  useEffect(() => {
+    setSetupStatus(prev => ({
+      ...prev,
+      hasTerminal: device?.terminal ? true : false
+    }))
+  }, [device])
+
+  const checkSetupStatus = async () => {
+    try {
+      const res = await fetch('/api/payments')
+      if (res.ok) {
+        const data = await res.json()
+        setSetupStatus(prev => ({
+          ...prev,
+          stripeConnected: data.charges_enabled === true
+        }))
+      } else {
+        setSetupStatus(prev => ({ ...prev, stripeConnected: false }))
+      }
+    } catch (error) {
+      setSetupStatus(prev => ({ ...prev, stripeConnected: false }))
+    }
+  }
 
   useEffect(() => {
     if (product) {
@@ -175,33 +202,74 @@ export default function Page() {
     setItems(allItems);
   }
 
-  // Empty state when no POS interface is configured
-  if (!loading && !posInterface) {
+  // Check if setup is incomplete
+  const needsSetup = !loading && (
+    !setupStatus.stripeConnected ||
+    !setupStatus.hasTerminal ||
+    !posInterface
+  )
+
+  // Setup checklist UI
+  if (needsSetup) {
+    const steps = [
+      {
+        label: 'Connect Stripe Account',
+        done: setupStatus.stripeConnected === true,
+        href: '/settings/payments',
+        icon: CreditCard
+      },
+      {
+        label: 'Link Card Terminal',
+        done: setupStatus.hasTerminal === true,
+        href: '/settings/payments',
+        icon: CreditCard
+      },
+      {
+        label: 'Configure POS Interface',
+        done: !!posInterface,
+        href: '/products/pos',
+        icon: LayoutGrid
+      }
+    ]
+
     return (
       <div className="flex items-center justify-center h-full">
-        <div className="text-center max-w-md">
+        <div className="text-center max-w-lg">
           <div className="flex justify-center mb-6">
             <div className="p-4 bg-muted rounded-full">
               <ShoppingBag className="h-12 w-12 text-muted-foreground" />
             </div>
           </div>
-          <h2 className="text-xl font-semibold mb-2">No POS Interface Configured</h2>
+          <h2 className="text-xl font-semibold mb-2">Get Started</h2>
           <p className="text-muted-foreground mb-6">
-            To start selling, you need to create products and configure a POS interface for this device.
+            Complete the following steps to start selling.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button asChild className="cursor-pointer">
-              <Link href="/products/shop">
-                <ShoppingBag className="h-4 w-4 mr-2" />
-                Create Products
+          <div className="flex flex-col gap-2 max-w-sm mx-auto">
+            {steps.map((step, idx) => (
+              <Link
+                key={idx}
+                href={step.href}
+                className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${
+                  step.done
+                    ? 'bg-muted/50 border-muted'
+                    : 'bg-primary text-primary-foreground border-primary hover:bg-primary/90'
+                }`}
+              >
+                <div className={`flex items-center justify-center w-6 h-6 rounded-full ${
+                  step.done ? 'bg-primary text-primary-foreground' : 'bg-primary-foreground/20'
+                }`}>
+                  {step.done ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <span className="text-sm font-medium">{idx + 1}</span>
+                  )}
+                </div>
+                <span className={`flex-1 text-left font-medium ${step.done ? 'text-muted-foreground line-through' : ''}`}>
+                  {step.label}
+                </span>
+                <step.icon className={`h-4 w-4 ${step.done ? 'text-muted-foreground' : ''}`} />
               </Link>
-            </Button>
-            <Button asChild variant="outline" className="cursor-pointer">
-              <Link href="/products/pos">
-                <Settings className="h-4 w-4 mr-2" />
-                Configure POS Interfaces
-              </Link>
-            </Button>
+            ))}
           </div>
         </div>
       </div>

@@ -28,10 +28,12 @@ export async function GET(req, { params }) {
     stripeAccountId: account.id
   });
 
+  const baseUrl = process.env.STRIPE_HOST || process.env.HOST || process.env.NEXT_PUBLIC_API_BASE_URL;
+
   const accountLink = await stripe.accountLinks.create({
     account: account.id,
-    refresh_url: `${process.env.STRIPE_HOST}/settings`,
-    return_url: `${process.env.STRIPE_HOST}/settings?stripeReturn=1`,
+    refresh_url: `${baseUrl}/settings/payments`,
+    return_url: `${baseUrl}/settings/payments?stripeReturn=1`,
     type: 'account_onboarding',
   });
 

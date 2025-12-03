@@ -14,13 +14,12 @@ import { useGlobals } from "@/lib/globals"
 import { calcCartTotals } from '@/lib/cart'
 import { useCard } from './useCard'
 import { useCash } from "./useCash";
-import { useTerminalSimulator } from './useTerminalSimulator';
 import { Separator } from "@/components/ui/separator";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail, Plus, OctagonAlert, Check, TestTube, Building2, ChevronsUpDown } from "lucide-react";
+import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail, Plus, OctagonAlert, Check, Building2, ChevronsUpDown } from "lucide-react";
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from "@/lib/utils";
@@ -55,20 +54,12 @@ export default function Page() {
     connectReader,
     disconnectReader,
     collectPayment,
-    capturePayment,
     cancelPayment,
     terminalStatus,
     paymentStatus: cardPaymentStatus,
     transactionId: cardTransactionId
   } = useCard({cart, employee, location})
   const { calcChange, receiveCash } = useCash({cart})
-  const {
-    simulatorStatus,
-    simulatedTransactionId,
-    simulatePayment,
-    cancelSimulation,
-    resetSimulator
-  } = useTerminalSimulator({cart, employee, location})
 
   const [changeInfo, setChangeInfo] = useState({ received: "0.00", change: "0.00" });
 
@@ -2209,18 +2200,14 @@ export default function Page() {
                   </Button>
                 )}
 
-                {/* Return to Shop Button - disabled during transactions */}
+                {/* Return to Shop Button - only enabled after successful payment */}
                 <Button
                   variant="outline"
                   onClick={() => {
                     router.push('/shop')
                   }}
                   disabled={
-                    isCollectingPayment ||
-                    cardPaymentStatus === 'collecting' ||
-                    cardPaymentStatus === 'processing' ||
-                    cardPaymentStatus === 'creating' ||
-                    paymentStatus === 'processing' ||
+                    !(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') ||
                     (cardPaymentStatus === 'succeeded' && !transactionId) // Still finalizing
                   }
                 >
@@ -2229,107 +2216,6 @@ export default function Page() {
               </div>
               )}
 
-              {/* Capture Payment button - only show in dev mode, if Stripe is enabled, and terminal is connected */}
-              {process.env.NEXT_PUBLIC_IS_DEV === 'true' && stripeEnabled && terminalStatus === 'connected' && (
-                <Button
-                  disabled={!paymentIntentId || paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
-                  onClick={async () => {
-                    try {
-                    const intent = await capturePayment();
-                    console.log(intent.status)
-                    setPaymentStatus(intent.status)
-
-                    // Mark that we have a successful payment (PIN will be removed on navigation)
-                    if (intent.status === 'succeeded') {
-                      hasSuccessfulPayment.current = true
-                      // Mark cart as stale after successful manual capture
-                      if (cart.products.length > 0) {
-                        console.log('✅ Manual capture succeeded, marking cart as stale')
-                        markCartAsStale()
-                      }
-                    }
-                    } catch (error) {
-                      console.error('Payment capture failed:', error)
-                      toast.error(`Payment capture failed: ${error.message}`)
-                    }
-                  }}
-                >
-                  Capture Payment
-                </Button>
-              )}
-
-              {/* Terminal Simulator button - only show in dev mode */}
-              {process.env.NEXT_PUBLIC_IS_DEV === 'true' && stripeEnabled && (
-                <div className="flex flex-col gap-2 mt-4">
-                  {/* <Separator className="my-2" /> */}
-                  <div className="text-xs text-muted-foreground text-center">Terminal Simulator (Dev Only)</div>
-                  <Button
-                    variant={simulatorStatus === 'succeeded' ? 'secondary' : 'outline'}
-                    disabled={
-                      cart.products.length === 0 ||
-                      cart.total === 0 ||
-                      needsCustomerAssignment ||
-                      paymentStatus === 'succeeded' ||
-                      cardPaymentStatus === 'succeeded' ||
-                      simulatorStatus === 'creating' ||
-                      simulatorStatus === 'reading' ||
-                      simulatorStatus === 'processing'
-                    }
-                    onClick={async () => {
-                      if (simulatorStatus === 'succeeded') {
-                        // Reset for another simulation
-                        resetSimulator();
-                        return;
-                      }
-
-                      const result = await simulatePayment();
-                      if (result.success) {
-                        // Handle successful simulated payment
-                        setTransactionId(result.transactionId);
-                        hasSuccessfulPayment.current = true;
-                        if (cart.products.length > 0) {
-                          console.log('✅ Simulated payment succeeded, marking cart as stale');
-                          markCartAsStale();
-                        }
-                      }
-                    }}
-                    className="cursor-pointer"
-                  >
-                    <TestTube className="size-4 mr-2" />
-                    {simulatorStatus === 'ready' ? 'Simulate Terminal Payment' :
-                     simulatorStatus === 'creating' ? 'Creating Payment...' :
-                     simulatorStatus === 'reading' ? 'Reading Card...' :
-                     simulatorStatus === 'processing' ? 'Processing...' :
-                     simulatorStatus === 'succeeded' ? 'Payment Successful ✓' :
-                     simulatorStatus === 'failed' ? 'Simulation Failed' :
-                     'Simulate Terminal Payment'}
-                  </Button>
-
-                  {/* Cancel simulation button */}
-                  {(simulatorStatus === 'creating' || simulatorStatus === 'reading' || simulatorStatus === 'processing') && (
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => {
-                        cancelSimulation();
-                        toast.info('Simulation cancelled');
-                      }}
-                    >
-                      Cancel Simulation
-                    </Button>
-                  )}
-
-                  {/* Simulation status indicator */}
-                  {simulatorStatus !== 'ready' && simulatorStatus !== 'succeeded' && (
-                    <div className="text-xs text-center">
-                      {simulatorStatus === 'creating' && <span className="text-chart-4">Initializing terminal simulation...</span>}
-                      {simulatorStatus === 'reading' && <span className="text-chart-3">Simulating card read...</span>}
-                      {simulatorStatus === 'processing' && <span className="text-primary">Processing payment...</span>}
-                      {simulatorStatus === 'failed' && <span className="text-destructive">Simulation failed</span>}
-                    </div>
-                  )}
-                </div>
-              )}
 
             </CardContent>
           </Card>  

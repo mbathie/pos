@@ -38,8 +38,9 @@ export async function GET(req, { params }) {
 export async function PUT(req, { params }) {
   await connectDB()
 
+  const { id } = await params
   const updates = await req.json()
-  const updated = await Location.findByIdAndUpdate(params.id, updates, { new: true }).lean()
+  const updated = await Location.findByIdAndUpdate(id, updates, { new: true }).lean()
 
   if (!updated) {
     return NextResponse.json({ error: 'Location not found' }, { status: 404 })

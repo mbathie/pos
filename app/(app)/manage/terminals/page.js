@@ -18,9 +18,10 @@ import { useGlobals } from '@/lib/globals'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { AddLocationSheet } from '@/components/AddLocationSheet'
+import LocationForm from '@/app/(app)/manage/locations/location'
 
 export default function TerminalsPage() {
-  const { locations: globalLocations, setLocations, location: currentLocation } = useGlobals()
+  const { locations: globalLocations, setLocations, location: currentLocation, device: globalDevice, setDevice } = useGlobals()
   const router = useRouter()
   const [locations, setLocalLocations] = useState([])
   const [terminals, setTerminals] = useState([])
@@ -59,6 +60,10 @@ export default function TerminalsPage() {
 
   // Add location
   const [addLocationSheetOpen, setAddLocationSheetOpen] = useState(false)
+
+  // Edit location address
+  const [editLocationSheetOpen, setEditLocationSheetOpen] = useState(false)
+  const [locationToEdit, setLocationToEdit] = useState(null)
 
   // Terminal linking
   const [linkTerminalDialogOpen, setLinkTerminalDialogOpen] = useState(false)
@@ -179,7 +184,7 @@ export default function TerminalsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...newTerminal,
-          location: selectedLocation._id
+          locationId: selectedLocation._id
         })
       })
 
@@ -199,7 +204,13 @@ export default function TerminalsPage() {
           )
 
           if (linkRes.ok) {
+            const linkData = await linkRes.json()
             toast.success('Terminal added and linked successfully')
+
+            // Update global device if this is the current device
+            if (deviceToLink.browserId === currentBrowserId && linkData.device) {
+              setDevice(linkData.device)
+            }
           } else {
             toast.success('Terminal added (linking failed)')
           }
@@ -262,7 +273,14 @@ export default function TerminalsPage() {
       )
 
       if (res.ok) {
+        const data = await res.json()
         toast.success(selectedTerminalId ? 'Terminal linked successfully' : 'Terminal unlinked successfully')
+
+        // Update global device if this is the current device
+        if (deviceToLink.browserId === currentBrowserId && data.device) {
+          setDevice(data.device)
+        }
+
         await loadDevices(selectedLocation._id)
         setLinkTerminalDialogOpen(false)
         setDeviceToLink(null)
@@ -420,8 +438,39 @@ export default function TerminalsPage() {
     }
   }
 
+  const handleUpdateLocationAddress = async (updatedLocation) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/locations/${updatedLocation._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedLocation)
+      })
+
+      if (res.ok) {
+        toast.success('Location address updated')
+        setEditLocationSheetOpen(false)
+        setLocationToEdit(null)
+        await loadData()
+        // Also update selectedLocation if it's the same location
+        if (selectedLocation?._id === updatedLocation._id) {
+          setSelectedLocation(updatedLocation)
+        }
+      } else {
+        throw new Error('Failed to update location')
+      }
+    } catch (error) {
+      console.error('Error updating location:', error)
+      toast.error('Failed to update location')
+    }
+  }
+
   const getTerminalsForLocation = (locationId) => {
     return terminals.filter(t => t.location === locationId || t.location?._id === locationId)
+  }
+
+  // Check if location has valid address for Stripe Terminal
+  const hasValidAddress = (location) => {
+    return !!(location?.address1 && location?.city && location?.state && location?.postcode)
   }
 
   const getAvailableTerminalsForDevice = (locationId, currentDeviceId) => {
@@ -593,7 +642,41 @@ export default function TerminalsPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 align-middle">
-                    <Badge variant="outline">{locationTerminals.length} {locationTerminals.length === 1 ? 'terminal' : 'terminals'}</Badge>
+                    {locationTerminals.length === 0 ? (
+                      hasValidAddress(location) ? (
+                        <Badge
+                          className="cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setSelectedLocation(location)
+                            // Auto-link to first device if there's only one
+                            const locationDevices = location.devices || []
+                            if (locationDevices.length === 1) {
+                              setDeviceToLink(locationDevices[0])
+                            }
+                            setAddTerminalDialogOpen(true)
+                          }}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add Terminal
+                        </Badge>
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="cursor-pointer h-7"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setLocationToEdit(location)
+                            setEditLocationSheetOpen(true)
+                          }}
+                        >
+                          <Edit2 className="h-3 w-3 mr-1" />
+                          Set Address
+                        </Button>
+                      )
+                    ) : (
+                      <Badge variant="outline">{locationTerminals.length} {locationTerminals.length === 1 ? 'terminal' : 'terminals'}</Badge>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right align-middle">
                     <ChevronRight className="h-5 w-5 text-muted-foreground inline-block" />
@@ -683,6 +766,29 @@ export default function TerminalsPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
+                              {hasValidAddress(selectedLocation) ? (
+                                <DropdownMenuItem
+                                  className="cursor-pointer"
+                                  onClick={() => {
+                                    setDeviceToLink(device)
+                                    setAddTerminalDialogOpen(true)
+                                  }}
+                                >
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  Add New Terminal
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  className="cursor-pointer"
+                                  onClick={() => {
+                                    setLocationToEdit(selectedLocation)
+                                    setEditLocationSheetOpen(true)
+                                  }}
+                                >
+                                  <Edit2 className="mr-2 h-4 w-4" />
+                                  Set Address First
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem
                                 className="cursor-pointer"
                                 onClick={() => {
@@ -693,16 +799,6 @@ export default function TerminalsPage() {
                               >
                                 <LinkIcon className="mr-2 h-4 w-4" />
                                 {device.terminal ? 'Change Terminal' : 'Link Terminal'}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="cursor-pointer"
-                                onClick={() => {
-                                  setDeviceToLink(device)
-                                  setAddTerminalDialogOpen(true)
-                                }}
-                              >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Add Terminal
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="cursor-pointer"
@@ -772,9 +868,36 @@ export default function TerminalsPage() {
                           <div className="flex items-center gap-2">
                             <Terminal className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm text-muted-foreground">Stripe Terminal</span>
-                            <span className="font-medium text-sm">
-                              {device.terminal ? device.terminal.label : 'No terminal linked'}
-                            </span>
+                            {device.terminal ? (
+                              <span className="font-medium text-sm">
+                                {device.terminal.label}
+                                {device.terminal.type === 'simulated' && ' (simulated)'}
+                              </span>
+                            ) : hasValidAddress(selectedLocation) ? (
+                              <Button
+                                size="sm"
+                                className="h-7 cursor-pointer"
+                                onClick={() => {
+                                  setDeviceToLink(device)
+                                  setAddTerminalDialogOpen(true)
+                                }}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add Terminal
+                              </Button>
+                            ) : (
+                              <Button
+                                size="sm"
+                                className="h-7 cursor-pointer"
+                                onClick={() => {
+                                  setLocationToEdit(selectedLocation)
+                                  setEditLocationSheetOpen(true)
+                                }}
+                              >
+                                <Edit2 className="h-3 w-3 mr-1" />
+                                Set Address First
+                              </Button>
+                            )}
                           </div>
 
                           {/* POS Interface */}
@@ -1053,6 +1176,48 @@ export default function TerminalsPage() {
         onOpenChange={setAddLocationSheetOpen}
         onLocationAdded={loadData}
       />
+
+      {/* Edit Location Address Sheet */}
+      <Sheet open={editLocationSheetOpen} onOpenChange={(open) => {
+        setEditLocationSheetOpen(open)
+        if (!open) setLocationToEdit(null)
+      }}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Edit Location Address</SheetTitle>
+            <SheetDescription>
+              A valid address is required to create Stripe terminals
+            </SheetDescription>
+          </SheetHeader>
+          {locationToEdit && (
+            <LocationForm
+              initialData={{
+                ...locationToEdit,
+                name: locationToEdit.name || '',
+                phone: locationToEdit.phone || '',
+                address1: locationToEdit.address1 || '',
+                city: locationToEdit.city || '',
+                state: locationToEdit.state || '',
+                postcode: locationToEdit.postcode || '',
+                storeHours: locationToEdit.storeHours?.length === 7
+                  ? locationToEdit.storeHours
+                  : [
+                    { d: 0, open: '', close: '' },
+                    { d: 1, open: '', close: '' },
+                    { d: 2, open: '', close: '' },
+                    { d: 3, open: '', close: '' },
+                    { d: 4, open: '', close: '' },
+                    { d: 5, open: '', close: '' },
+                    { d: 6, open: '', close: '' }
+                  ],
+                closedDays: locationToEdit.closedDays || []
+              }}
+              onSubmit={handleUpdateLocationAddress}
+              submitLabel="Update Location"
+            />
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   )
 }

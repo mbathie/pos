@@ -12,7 +12,7 @@ export async function GET() {
 
   const locations = await Location.find(
     { org: employee.org._id },
-  ).lean()
+  ).populate('devices.terminal').lean()
 
   return NextResponse.json(locations, { status: 200 })
 }
