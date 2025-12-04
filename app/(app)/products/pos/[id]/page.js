@@ -22,6 +22,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import POSFolderSheet from './POSFolderSheet';
 import POSProductSheet from './POSProductSheet';
+import POSGroupSheet from './POSGroupSheet';
 import POSInterfaceSettingsSheet from './POSInterfaceSettingsSheet';
 import StandaloneProductSheet from '../../StandaloneProductSheet';
 import MembershipsProductSheet from '../../(entry)/MembershipsProductSheet';
@@ -412,6 +413,7 @@ export default function POSInterfaceDetailPage({ params }) {
   const [folderSheetOpen, setFolderSheetOpen] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState(null);
   const [productSheetOpen, setProductSheetOpen] = useState(false);
+  const [groupSheetOpen, setGroupSheetOpen] = useState(false);
   const [settingsSheetOpen, setSettingsSheetOpen] = useState(false);
   const [dividerDialogOpen, setDividerDialogOpen] = useState(false);
   const [dividerName, setDividerName] = useState('');
@@ -1464,6 +1466,9 @@ export default function POSInterfaceDetailPage({ params }) {
                       <DropdownMenuItem onClick={() => setProductSheetOpen(true)} className="cursor-pointer">
                         Add Existing Products
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setGroupSheetOpen(true)} className="cursor-pointer">
+                        Add Existing Group
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => handleCreateNewProduct('shop')} className="cursor-pointer">
                         Create New Shop Item
@@ -1731,6 +1736,15 @@ export default function POSInterfaceDetailPage({ params }) {
       <POSProductSheet
         open={productSheetOpen}
         onOpenChange={setProductSheetOpen}
+        posInterfaceId={id}
+        categoryId={selectedCategory?._id}
+        onSuccess={fetchPOSInterface}
+      />
+
+      {/* Group Sheet */}
+      <POSGroupSheet
+        open={groupSheetOpen}
+        onOpenChange={setGroupSheetOpen}
         posInterfaceId={id}
         categoryId={selectedCategory?._id}
         onSuccess={fetchPOSInterface}

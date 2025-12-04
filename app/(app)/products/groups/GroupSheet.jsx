@@ -1,9 +1,10 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Input } from '@/components/ui/input'
 import { NumberInput } from '@/components/ui/number-input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Checkbox } from '@/components/ui/checkbox'
 import ProductCategorySelector from '@/components/discounts/product-category-selector'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -13,15 +14,17 @@ import { ProductThumbnail } from '@/components/product-thumbnail'
 
 export default function GroupSheet({ open, onOpenChange, group, categoriesWithProducts, onSaved, onDeleted, setIconDialogOpen, setIconDialogQuery }) {
   const [name, setName] = useState(group?.name || '')
+  const [minQty, setMinQty] = useState(group?.minQty ?? null)
   const [selected, setSelected] = useState(new Set(group?.products?.map(p => p._id || p) || []))
   const [variations, setVariations] = useState(
     group?.variations?.length > 0
       ? group.variations.map(v => ({
           name: v.name || '',
           amount: v.amount != null ? String(v.amount) : '',
+          useOverridePrice: v.useOverridePrice !== false, // default true for backwards compatibility
           products: new Set(v.products?.map(p => p._id || p) || [])
         }))
-      : [{ name: '', amount: group?.amount != null ? String(group.amount) : '', products: new Set() }]
+      : [{ name: '', amount: '', useOverridePrice: false, products: new Set() }]
   )
   const [saving, setSaving] = useState(false)
   const [autoSaving, setAutoSaving] = useState(false)
@@ -32,15 +35,17 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
   // Update local state if different group opened
   React.useEffect(() => {
     setName(group?.name || '')
+    setMinQty(group?.minQty ?? null)
     setSelected(new Set(group?.products?.map(p => p._id || p) || []))
     setVariations(
       group?.variations?.length > 0
         ? group.variations.map(v => ({
             name: v.name || '',
             amount: v.amount != null ? String(v.amount) : '',
+            useOverridePrice: v.useOverridePrice !== false,
             products: new Set(v.products?.map(p => p._id || p) || [])
           }))
-        : [{ name: '', amount: group?.amount != null ? String(group.amount) : '', products: new Set() }]
+        : [{ name: '', amount: '', useOverridePrice: false, products: new Set() }]
     )
     setDirty(false)
   }, [group?._id])
@@ -48,7 +53,8 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
   // Helper to serialize variations for comparison and API
   const serializeVariations = (vars) => vars.map(v => ({
     name: v.name.trim(),
-    amount: parseFloat(v.amount),
+    amount: v.useOverridePrice ? parseFloat(v.amount) : null,
+    useOverridePrice: v.useOverridePrice,
     products: Array.from(v.products)
   }))
 
@@ -58,6 +64,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
 
     const nextPayload = {
       name: name.trim(),
+      minQty: minQty,
       products: Array.from(selected),
       variations: serializeVariations(variations)
     }
@@ -65,10 +72,12 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
     const originalVariations = (group?.variations || []).map(v => ({
       name: v.name || '',
       amount: v.amount ?? NaN,
+      useOverridePrice: v.useOverridePrice !== false,
       products: (v.products || []).map(p => p._id || p)
     }))
     const original = {
       name: group?.name || '',
+      minQty: group?.minQty ?? null,
       products: (group?.products || []).map(p => p._id || p),
       variations: originalVariations
     }
@@ -79,13 +88,15 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
         const ov = original.variations[i]
         if (!ov) return true
         return v.name !== ov.name ||
-          (!Number.isNaN(v.amount) && v.amount !== ov.amount) ||
+          v.useOverridePrice !== ov.useOverridePrice ||
+          (v.useOverridePrice && !Number.isNaN(v.amount) && v.amount !== ov.amount) ||
           v.products.length !== ov.products.length ||
           v.products.some((id, j) => id !== ov.products[j])
       })
 
     const changed = (
       nextPayload.name !== original.name ||
+      nextPayload.minQty !== original.minQty ||
       nextPayload.products.length !== original.products.length ||
       nextPayload.products.some((id, i) => id !== original.products[i]) ||
       variationsChanged
@@ -125,18 +136,21 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [name, selected, variations, group?._id])
+  }, [name, minQty, selected, variations, group?._id])
 
   async function handleSave() {
     if (!name.trim()) return toast.error('Enter a group name')
     if (variations.length === 0) return toast.error('Add at least one variation')
 
-    // Validate all variations have name and amount
+    // Validate all variations have name, products, and amount (if override)
     for (let i = 0; i < variations.length; i++) {
       const v = variations[i]
       if (!v.name.trim()) return toast.error(`Enter a name for variation ${i + 1}`)
-      const amount = parseFloat(v.amount)
-      if (Number.isNaN(amount)) return toast.error(`Enter a valid price for variation "${v.name || i + 1}"`)
+      if (v.products.size === 0) return toast.error(`Select at least one product for variation "${v.name || i + 1}"`)
+      if (v.useOverridePrice) {
+        const amount = parseFloat(v.amount)
+        if (Number.isNaN(amount)) return toast.error(`Enter a valid price for variation "${v.name || i + 1}"`)
+      }
     }
 
     setSaving(true)
@@ -148,6 +162,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: name.trim(),
+          minQty: minQty,
           products: Array.from(selected),
           variations: serializeVariations(variations)
         })
@@ -178,7 +193,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
   }
 
   const addVariation = () => {
-    setVariations(prev => [...prev, { name: '', amount: '', products: new Set() }])
+    setVariations(prev => [...prev, { name: '', amount: '', useOverridePrice: false, products: new Set() }])
   }
 
   const deleteVariation = (index) => {
@@ -277,6 +292,28 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
 
           <div className="flex flex-col gap-2">
             <div className='flex items-center gap-2'>
+              <Label>Minimum Quantity</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Minimum quantity required to add to cart. Leave blank for no minimum.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <NumberInput
+              value={minQty}
+              onChange={setMinQty}
+              placeholder='No minimum'
+              className='w-32'
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div className='flex items-center gap-2'>
               <Label>Base Products</Label>
               <TooltipProvider>
                 <Tooltip>
@@ -309,7 +346,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
                     <Info className="h-4 w-4 text-muted-foreground" />
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Each variation has its own price and can include additional products</p>
+                    <p>Each variation includes additional products. Price can be an override or derived from products.</p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -319,23 +356,13 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
             {variations.map((variation, index) => (
               <div key={index} className='border rounded-lg p-4 space-y-3'>
                 <div className='flex items-center gap-2'>
-                  <div className='flex-1 flex gap-2'>
-                    <div className='flex-1 flex flex-col gap-2'>
-                      <Label>Variation Name</Label>
-                      <Input
-                        value={variation.name}
-                        onChange={e => updateVariation(index, 'name', e.target.value)}
-                        placeholder='e.g., with Pizza'
-                      />
-                    </div>
-                    <div className='w-32 flex flex-col gap-2'>
-                      <Label>Price ($)</Label>
-                      <NumberInput
-                        value={variation.amount}
-                        onChange={val => updateVariation(index, 'amount', val)}
-                        placeholder='25.00'
-                      />
-                    </div>
+                  <div className='flex-1 flex flex-col gap-2'>
+                    <Label>Variation Name</Label>
+                    <Input
+                      value={variation.name}
+                      onChange={e => updateVariation(index, 'name', e.target.value)}
+                      placeholder='e.g., with Pizza'
+                    />
                   </div>
                   <div className='flex gap-1 pt-7'>
                     <Button
@@ -368,16 +395,43 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
                   </div>
                 </div>
                 <div className='flex flex-col gap-2'>
-                  <Label>Additional Products (optional)</Label>
+                  <Label>Additional Products</Label>
                   <ProductCategorySelector
                     categoriesWithProducts={categoriesWithProducts}
                     selectedProducts={variation.products}
                     selectedCategories={new Set()}
                     onSelectionChange={({ products }) => updateVariation(index, 'products', products)}
-                    placeholder='Select additional products for this variation'
+                    placeholder='Select products for this variation'
                     showCategories={false}
                     excludeTypes={['divider', 'category', 'membership']}
                   />
+                </div>
+                <div className='flex items-center gap-4 pt-2'>
+                  <div className='flex items-center gap-2'>
+                    <Checkbox
+                      id={`override-${index}`}
+                      checked={variation.useOverridePrice}
+                      onCheckedChange={(checked) => updateVariation(index, 'useOverridePrice', checked)}
+                    />
+                    <Label htmlFor={`override-${index}`} className='cursor-pointer text-sm font-normal'>
+                      Override Price
+                    </Label>
+                  </div>
+                  {variation.useOverridePrice ? (
+                    <div className='flex items-center gap-2'>
+                      <Label className='text-sm'>$</Label>
+                      <NumberInput
+                        value={variation.amount}
+                        onChange={val => updateVariation(index, 'amount', val)}
+                        placeholder='25.00'
+                        className='w-24'
+                      />
+                    </div>
+                  ) : (
+                    <div className='text-sm text-muted-foreground'>
+                      Price derived from products at checkout
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

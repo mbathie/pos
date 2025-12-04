@@ -209,10 +209,10 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
                           </span>
                         )}
                       </div>
-                      {/* Show individual price crossed out if it exists */}
-                      {product.amount?.total != null && (
-                        <div className='line-through text-xs'>
-                          ${(product.amount.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      {/* Show individual price - crossed out only if group has override price */}
+                      {product.amount?.subtotal != null && (
+                        <div className={`text-xs ${product.groupHasPriceOverride !== false ? 'line-through' : ''}`}>
+                          ${(product.amount.subtotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </div>
                       )}
                     </div>
@@ -257,7 +257,7 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
                   <Trash2 className='size-4'/>
                 </div>
                 <div className='flex-1' />
-                {p.amount?.total != null && <div>${p.amount.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>}
+                {p.amount?.subtotal != null && <div>${p.amount.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>}
               </div>
               {p.item?.mods && p.item.mods.length > 0 && (
                 <div className='text-xs ml-1 text-muted-foreground'>

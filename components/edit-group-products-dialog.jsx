@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { Button } from '@/components/ui/button';
 import { ActionButton } from '@/components/ui/action-button';
 import { Label } from '@/components/ui/label';
-import { Plus, Minus } from 'lucide-react';
+import { IconButton } from '@/components/control-button';
 import { toast } from 'sonner';
 import {
   MultiSelect,
@@ -135,28 +135,18 @@ export function EditGroupProductsDialog({
             <div className="flex items-center justify-between py-2-">
               <span className="text-sm font-medium">Group Quantity</span>
               <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="default"
-                  size="icon"
+                <IconButton
+                  icon="minus"
                   onClick={() => setGroupQty(Math.max(1, groupQty - 1))}
                   disabled={groupQty <= 1}
-                  className="cursor-pointer size-8"
-                >
-                  <Minus className="size-4" />
-                </Button>
-                <div className="w-12 text-center ont-medium">
+                />
+                <div className="w-12 text-center font-medium">
                   {groupQty}
                 </div>
-                <Button
-                  type="button"
-                  variant="default"
-                  size="icon"
+                <IconButton
+                  icon="plus"
                   onClick={() => setGroupQty(groupQty + 1)}
-                  className="cursor-pointer size-8"
-                >
-                  <Plus className="size-4" />
-                </Button>
+                />
               </div>
             </div>
 

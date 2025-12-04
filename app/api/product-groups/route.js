@@ -23,7 +23,7 @@ export async function POST(req) {
   const { employee } = result;
 
   const body = await req.json();
-  const { name, description, thumbnail, products = [], variations = [], amount, active = true } = body || {};
+  const { name, description, thumbnail, products = [], variations = [], amount, minQty, active = true } = body || {};
 
   // Validate: must have name and either variations or amount (for backward compatibility)
   if (!name) {
@@ -40,6 +40,7 @@ export async function POST(req) {
     products,
     variations,
     amount, // kept for backward compatibility
+    minQty: minQty || null, // minimum quantity required to add to cart
     active,
     org: employee.org._id,
   });

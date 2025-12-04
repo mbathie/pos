@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Tag, Plus, Info, Loader2, Trash2, CheckCircle, Save, ChevronUp, ChevronDown } from 'lucide-react';
+import { Tag, Plus, Info, Loader2, Trash2, CheckCircle, Save, ChevronUp, ChevronDown, AlertCircle } from 'lucide-react';
 import { toast } from "sonner";
 import { FolderSelect } from './shopold/FolderSelect';
 import { FolderManagementSheet } from './shopold/FolderManagementSheet';
@@ -117,6 +117,22 @@ export default function StandaloneProductSheet({
     }
   }, [product]);
 
+  // Validation helper - check if product has required fields
+  const getValidationErrors = () => {
+    const errors = [];
+    if (!product?.name?.trim()) {
+      errors.push('Product name is required');
+    }
+    const hasValidVariation = product?.variations?.some(v => v.amount && parseFloat(v.amount) > 0);
+    if (!hasValidVariation) {
+      errors.push('At least one variation with a price is required');
+    }
+    return errors;
+  };
+
+  const validationErrors = product ? getValidationErrors() : [];
+  const isValid = validationErrors.length === 0;
+
   // Auto-save effect - trigger save 3 seconds after changes
   useEffect(() => {
     if (isDirty && product && product._id) {
@@ -125,9 +141,8 @@ export default function StandaloneProductSheet({
         clearTimeout(saveTimeoutRef.current);
       }
 
-      // For new products, only auto-save if name is filled
-      const isNew = product._id.startsWith('new-');
-      if (isNew && !product.name) {
+      // Don't auto-save if validation fails
+      if (!isValid) {
         return;
       }
 
@@ -143,7 +158,7 @@ export default function StandaloneProductSheet({
         clearTimeout(saveTimeoutRef.current);
       }
     };
-  }, [isDirty, product]);
+  }, [isDirty, product, isValid]);
 
   // Clean up timeout when sheet closes
   useEffect(() => {
@@ -172,9 +187,10 @@ export default function StandaloneProductSheet({
   };
 
   const handleSave = async (showToast = false) => {
-    if (!product.name) {
+    const errors = getValidationErrors();
+    if (errors.length > 0) {
       if (showToast) {
-        toast.error('Product name is required');
+        toast.error(errors[0]);
       }
       return null;
     }
@@ -365,6 +381,8 @@ export default function StandaloneProductSheet({
                       <div className="flex items-center">
                         {saving ? (
                           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        ) : !isValid ? (
+                          <AlertCircle className="h-5 w-5 text-destructive" />
                         ) : isDirty ? (
                           <Save className="h-5 w-5 text-orange-500 animate-pulse" />
                         ) : (
@@ -373,11 +391,19 @@ export default function StandaloneProductSheet({
                       </div>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>
-                        {saving ? 'Saving...' :
-                         isDirty ? 'Unsaved changes (auto-saves in 2s)' :
-                         'All changes saved'}
-                      </p>
+                      {!isValid ? (
+                        <div className="space-y-1">
+                          {validationErrors.map((error, i) => (
+                            <p key={i}>{error}</p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p>
+                          {saving ? 'Saving...' :
+                           isDirty ? 'Unsaved changes (auto-saves in 2s)' :
+                           'All changes saved'}
+                        </p>
+                      )}
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -388,7 +414,7 @@ export default function StandaloneProductSheet({
           <div className="flex flex-col space-y-6 mt-4">
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <Label>Product Name</Label>
+                <Label>Product Name<span className="text-destructive ml-1">*</span></Label>
                 <div className="flex items-center gap-2">
                   <TooltipProvider>
                     <Tooltip>
@@ -472,13 +498,14 @@ export default function StandaloneProductSheet({
 
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Label>Variations</Label>
+                <Label>Variations<span className="text-destructive ml-1">*</span></Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <Info className="h-4 w-4 text-muted-foreground" />
                     </TooltipTrigger>
                     <TooltipContent>
+                      <p>At least one variation with a price is required.</p>
                       <p>Each variation has its own stock (Qty) and reorder level (Par)</p>
                     </TooltipContent>
                   </Tooltip>
@@ -488,9 +515,33 @@ export default function StandaloneProductSheet({
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <Label className="w-24">Name</Label>
-                  <Label className="w-24">Price ($)</Label>
-                  <Label className="w-20">Qty</Label>
-                  <Label className="w-20">Par</Label>
+                  <Label className="w-24">Price ($)<span className="text-destructive ml-1">*</span></Label>
+                  <Label className="w-20 flex items-center gap-1">
+                    Qty
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3 w-3 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Optional. Current stock quantity on hand.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </Label>
+                  <Label className="w-20 flex items-center gap-1">
+                    Par
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3 w-3 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Optional. Reorder level - alerts when stock falls below this.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </Label>
                 </div>
                 {product?.variations?.map((v, i) => (
                   <div key={`${product._id}-${i}`} className="flex gap-2 items-center">

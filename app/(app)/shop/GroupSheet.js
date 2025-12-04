@@ -4,8 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Button } from '@/components/ui/button';
 import { ProductThumbnail } from '@/components/product-thumbnail';
-import { ChevronRight, Check, Plus, Minus, Calendar as CalendarIcon } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
+import { ChevronRight, Check, Calendar as CalendarIcon } from 'lucide-react';
+import { IconButton, SelectionCheck } from '@/components/control-button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -24,6 +24,7 @@ import ProductDetailCourse from './(other)/classes/ProductDetailCourse';
 import ProductDetailMembership from './(other)/memberships/productDetailMembership';
 import { useImmer } from 'use-immer';
 import { cn } from '@/lib/utils';
+import { calculateDerivedPrice } from '@/lib/product';
 
 export default function GroupSheet({
   open,
@@ -44,7 +45,7 @@ export default function GroupSheet({
   const [groupQty, setGroupQty] = useState(1); // Group-level quantity
   const [availableProducts, setAvailableProducts] = useState([]); // All shop products
   const [selectedProductIds, setSelectedProductIds] = useState([]); // IDs of products to include in group
-  const [selectedVariationIndex, setSelectedVariationIndex] = useState(0); // Index of selected variation
+  const [selectedVariationIndex, setSelectedVariationIndex] = useState(null); // Index of selected variation (null = none selected)
   const [scheduledDate, setScheduledDate] = useState(null); // Date for the group booking
   const [scheduledTime, setScheduledTime] = useState(''); // Time for the group booking
   const [datePickerOpen, setDatePickerOpen] = useState(false);
@@ -53,6 +54,9 @@ export default function GroupSheet({
   // Check if this group has variations
   const hasVariations = group?.variations?.length > 0;
   const selectedVariation = hasVariations ? group.variations[selectedVariationIndex] : null;
+
+  // Get minimum quantity requirement (null/0 = no minimum)
+  const minQty = group?.minQty || 0;
 
   // Check if date/time is selected - required before configuring products
   const isDateTimeSelected = scheduledDate && scheduledTime;
@@ -115,7 +119,7 @@ export default function GroupSheet({
       setConfiguredProducts({});
       setGroupQty(1); // Reset quantity
       setSelectedProductIds([]);
-      setSelectedVariationIndex(0); // Reset variation selection
+      setSelectedVariationIndex(null); // Reset variation selection
       setScheduledDate(null); // Reset date
       setScheduledTime(''); // Reset time
       setDatePickerOpen(false);
@@ -155,10 +159,13 @@ export default function GroupSheet({
         const variationProductIds = hasVariations && group.variations[0]?.products
           ? group.variations[0].products.map(p => (p._id || p).toString())
           : [];
-        const allIds = [...new Set([...baseProductIds, ...variationProductIds])];
+        const allIds = [...new Set([...baseProductIds])]; // Start with just base products
         setSelectedProductIds(allIds);
-        setSelectedVariationIndex(0);
-        initialGroupQtyRef.current = 1; // Reset ref for new group
+        setSelectedVariationIndex(null); // No variation selected by default
+        // Set initial quantity to minQty if set, otherwise 1
+        const initialQty = group.minQty || 1;
+        setGroupQty(initialQty);
+        initialGroupQtyRef.current = initialQty;
       }
     }
   }, [open]);
@@ -173,7 +180,26 @@ export default function GroupSheet({
       : [];
     const allIds = [...new Set([...baseProductIds, ...variationProductIds])];
     setSelectedProductIds(allIds);
-    setConfiguredProducts({}); // Reset configured products when variation changes
+
+    // Only clear variation products from configured, keep base products
+    if (selectedVariationIndex !== null) {
+      setConfiguredProducts(draft => {
+        // Get all variation product IDs from all variations (not just selected)
+        const allVariationProductIds = new Set();
+        (group.variations || []).forEach(v => {
+          (v.products || []).forEach(p => {
+            allVariationProductIds.add((p._id || p).toString());
+          });
+        });
+
+        // Remove only variation products, keep base products
+        Object.keys(draft).forEach(productId => {
+          if (allVariationProductIds.has(productId)) {
+            delete draft[productId];
+          }
+        });
+      });
+    }
   }, [selectedVariationIndex, open]);
 
   // Clear selectedTimes for class/course products when quantity changes during edit
@@ -197,47 +223,74 @@ export default function GroupSheet({
     }
   }, [groupQty, group?.gId, open]);
 
-  // Calculate group total: start with variation price or template price, adjust for product changes
-  useEffect(() => {
-    if (!group) return;
+  // Calculate the max capacity from class/course base products
+  const getMaxCapacity = () => {
+    if (!group?.products || !availableProducts.length) return null;
 
-    // Start with the variation price if available, otherwise use the original group template price
-    let total = selectedVariation?.amount ?? group.amount ?? group.groupAmount ?? 0;
+    let minCapacity = null;
 
-    // If we're editing an existing cart group, check if products have changed
-    const originalProducts = group.products || [];
-    const originalProductIds = originalProducts.map(p => p._id.toString());
-
-    // Find added products (in selectedProductIds but not in original)
-    const addedProductIds = selectedProductIds.filter(id => !originalProductIds.includes(id));
-
-    // Find removed products (in original but not in selectedProductIds)
-    const removedProductIds = originalProductIds.filter(id => !selectedProductIds.includes(id));
-
-    // Add prices for newly added products
-    addedProductIds.forEach(productId => {
-      const product = availableProducts.find(p => p._id === productId);
-      if (product) {
-        const configured = configuredProducts[productId];
-        if (configured && getProductTotal) {
-          total += getProductTotal({ product: configured });
-        } else {
-          total += product.value || product.price || 0;
+    group.products.forEach(product => {
+      const productData = availableProducts.find(p => p._id === (product._id || product).toString()) || product;
+      if ((productData.type === 'class' || productData.type === 'course') && productData.capacity) {
+        if (minCapacity === null || productData.capacity < minCapacity) {
+          minCapacity = productData.capacity;
         }
       }
     });
 
-    // Subtract prices for removed products
-    removedProductIds.forEach(productId => {
-      const product = originalProducts.find(p => p._id.toString() === productId);
-      if (product) {
-        const price = product.amount?.subtotal || product.value || product.price || 0;
-        total -= price;
-      }
-    });
+    return minCapacity;
+  };
+
+  const maxCapacity = getMaxCapacity();
+
+  // Get the display price for a variation (override or derived)
+  const getVariationDisplayPrice = (variation) => {
+    if (variation?.useOverridePrice !== false && variation?.amount != null) {
+      return Number(variation.amount) || 0;
+    }
+    // Calculate derived price using shared function
+    const derived = calculateDerivedPrice(group?.products, variation?.products, availableProducts);
+    return Number(derived) || 0;
+  };
+
+  // Calculate group total based on variation selection and configured products
+  useEffect(() => {
+    if (!group) return;
+
+    let total = 0;
+
+    // Check if we should use override price or derive from products
+    const useOverridePrice = selectedVariation?.useOverridePrice !== false;
+
+    if (hasVariations && selectedVariation && useOverridePrice) {
+      // Use the variation's override price
+      total = Number(selectedVariation.amount) || 0;
+
+      // Add prices for extra products (not in base or variation)
+      const baseProductIds = (group.products || []).map(p => (p._id || p).toString());
+      const variationProductIds = (selectedVariation.products || []).map(p => (p._id || p).toString());
+      const groupProductIds = new Set([...baseProductIds, ...variationProductIds]);
+
+      selectedProductIds.forEach(productId => {
+        if (!groupProductIds.has(productId)) {
+          const configured = configuredProducts[productId];
+          if (configured) {
+            total += configured.amount?.subtotal ?? configured.amount?.total ?? 0;
+          }
+        }
+      });
+    } else {
+      // Derive total from configured products (no override price OR no variation selected)
+      selectedProductIds.forEach(productId => {
+        const configured = configuredProducts[productId];
+        if (configured) {
+          total += configured.amount?.subtotal ?? configured.amount?.total ?? 0;
+        }
+      });
+    }
 
     setGroupTotal(total);
-  }, [configuredProducts, selectedProductIds, group, getProductTotal, availableProducts]);
+  }, [configuredProducts, selectedProductIds, group, hasVariations, selectedVariation]);
 
   const handleProductClick = (product) => {
     // Require date/time before configuring products
@@ -274,6 +327,7 @@ export default function GroupSheet({
       variations: existingConfig?.variations || variations,
       groupQty: groupQty, // Pass group quantity to product
       isPartOfGroup: true, // Mark as part of group
+      groupHasPriceOverride: selectedVariation?.useOverridePrice !== false, // Whether group variation overrides price
       groupScheduledDate: scheduledDate, // Pass group's scheduled date for pre-selection
       groupScheduledTime: scheduledTime // Pass group's scheduled time
     };
@@ -339,6 +393,7 @@ export default function GroupSheet({
         groupAmount: groupTotal,     // Use calculated group total (dynamically calculated based on products)
         groupThumbnail: group.thumbnail || group.groupThumbnail,
         groupQty: groupQty,  // Store the group quantity on each product
+        groupHasPriceOverride: selectedVariation?.useOverridePrice !== false, // Whether group uses override price
         selectedVariationIndex: hasVariations ? selectedVariationIndex : undefined, // Store selected variation
         selectedVariationName: selectedVariation?.name, // Store variation name for display
         scheduledDateTime // Store scheduled date/time for the group
@@ -405,8 +460,8 @@ export default function GroupSheet({
     return availableProducts.find(p => p._id === id);
   }).filter(Boolean); // Remove any null/undefined
 
-  // Check if all selected products are configured
-  const allProductsConfigured = selectedProductIds.every(id => isProductConfigured(id));
+  // Check if all selected products are configured (variations are optional)
+  const allProductsConfigured = selectedProductIds.length > 0 && selectedProductIds.every(id => isProductConfigured(id));
 
   return (
     <>
@@ -419,6 +474,7 @@ export default function GroupSheet({
           setOpen={setProductSheetOpen}
           onAddToCart={handleProductConfigured}
           isPartOfGroup={true}
+          groupHasPriceOverride={currentProduct?.groupHasPriceOverride}
         />
       )}
       {currentProduct?.type === 'course' && (
@@ -429,6 +485,7 @@ export default function GroupSheet({
           setOpen={setProductSheetOpen}
           onAddToCart={handleProductConfigured}
           isPartOfGroup={true}
+          groupHasPriceOverride={currentProduct?.groupHasPriceOverride}
         />
       )}
       {currentProduct?.type === 'membership' && (
@@ -439,6 +496,7 @@ export default function GroupSheet({
           setOpen={setProductSheetOpen}
           onAddToCart={handleProductConfigured}
           isPartOfGroup={true}
+          groupHasPriceOverride={currentProduct?.groupHasPriceOverride}
         />
       )}
       {(!currentProduct?.type || (currentProduct?.type !== 'class' && currentProduct?.type !== 'course' && currentProduct?.type !== 'membership')) && (
@@ -449,6 +507,7 @@ export default function GroupSheet({
           setOpen={setProductSheetOpen}
           onAddToCart={handleProductConfigured}
           isPartOfGroup={true}
+          groupHasPriceOverride={currentProduct?.groupHasPriceOverride}
         />
       )}
 
@@ -481,7 +540,11 @@ export default function GroupSheet({
                   )}
                 </div>
                 <div className="text-sm text-muted-foreground font-normal">
-                  ${groupTotal.toFixed(2)}
+                  {selectedVariation?.useOverridePrice !== false ? (
+                    `$${Number(selectedVariation?.amount ?? group.amount ?? 0).toFixed(2)}`
+                  ) : (
+                    `$${(Number(calculateDerivedPrice(group?.products, selectedVariation?.products, availableProducts)) || 0).toFixed(2)} (base price)`
+                  )}
                 </div>
               </div>
             </SheetTitle>
@@ -547,53 +610,172 @@ export default function GroupSheet({
 
               {/* Group Quantity Selector */}
               <div className={cn("flex flex-col gap-2", !isDateTimeSelected && "opacity-50")}>
-                <div className="text-sm font-medium">Qty</div>
+                <div className="text-sm font-medium">
+                  Qty
+                  {minQty > 0 && (
+                    <span className="text-xs text-muted-foreground font-normal ml-2">(min {minQty})</span>
+                  )}
+                  {maxCapacity && (
+                    <span className="text-xs text-muted-foreground font-normal ml-2">(max {maxCapacity})</span>
+                  )}
+                </div>
                 <div className="flex gap-2 items-center">
-                  <Button
-                    size="icon"
-                    className="cursor-pointer"
-                    onClick={() => setGroupQty(Math.max(1, groupQty - 1))}
-                    disabled={groupQty <= 1 || !isDateTimeSelected}
-                  >
-                    <Minus className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    className="cursor-pointer"
+                  <IconButton
+                    icon="minus"
+                    onClick={() => setGroupQty(Math.max(minQty || 1, groupQty - 1))}
+                    disabled={groupQty <= (minQty || 1) || !isDateTimeSelected}
+                  />
+                  <IconButton
+                    icon="plus"
                     onClick={() => setGroupQty(groupQty + 1)}
-                    disabled={!isDateTimeSelected}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
+                    disabled={!isDateTimeSelected || (maxCapacity && groupQty >= maxCapacity)}
+                  />
                   <div className="flex-1" />
                   <div className="font-semibold">{groupQty}</div>
                 </div>
               </div>
 
-              {/* Variations - displayed like shop product variations */}
-              {hasVariations && (
-                <div className={cn("flex flex-col gap-2", !isDateTimeSelected && "opacity-50 pointer-events-none")}>
-                  <div className="text-sm font-medium">Variations</div>
-                  {group.variations.map((variation, index) => (
-                    <div
-                      key={index}
-                      className={cn(
-                        "text-sm flex space-x-2 items-center w-full py-1 rounded-md",
-                        isDateTimeSelected ? "cursor-pointer hover:bg-muted/50" : "cursor-not-allowed"
-                      )}
-                      onClick={() => isDateTimeSelected && setSelectedVariationIndex(index)}
-                    >
-                      <Checkbox checked={selectedVariationIndex === index} className="size-9" disabled={!isDateTimeSelected} />
-                      <div>{variation.name}</div>
-                      <div className="ml-auto">${variation.amount?.toFixed(2)}</div>
-                    </div>
-                  ))}
+              {/* Base Products */}
+              {group.products && group.products.length > 0 && (
+                <div className={cn("flex flex-col gap-2", !isDateTimeSelected && "opacity-50")}>
+                  <div className="text-sm font-medium">Base Products</div>
+                  {group.products.map((product, index) => {
+                    const productData = availableProducts.find(p => p._id === (product._id || product).toString()) || product;
+                    const configured = isProductConfigured(productData._id);
+                    const configuredProduct = configuredProducts[productData._id];
+                    const productPrice = configuredProduct?.amount?.subtotal ?? configuredProduct?.amount?.total ?? 0;
+                    const summary = getProductSummary(productData);
+                    const canClick = isDateTimeSelected && groupQty >= 1;
+
+                    return (
+                      <div key={productData._id || `base-${index}`} className="flex items-center gap-3">
+                        <div
+                          onClick={() => canClick && handleProductClick(productData)}
+                          className={cn(
+                            "flex items-center gap-3 p-3 border rounded-lg transition-colors",
+                            configured ? "flex-1" : "w-full",
+                            canClick ? "cursor-pointer hover:bg-muted/50" : "opacity-50 cursor-not-allowed"
+                          )}
+                        >
+                          <ProductThumbnail
+                            src={productData.thumbnail || productData.image}
+                            alt={productData.name}
+                            size="sm"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium">
+                              {productData.name}
+                              {(productData.type === 'class' || productData.type === 'course') && productData.capacity && (
+                                <span className="text-xs text-muted-foreground font-normal ml-2">
+                                  (max {productData.capacity})
+                                </span>
+                              )}
+                            </div>
+                            {summary && (
+                              <div className="text-xs text-muted-foreground truncate">{summary}</div>
+                            )}
+                            {!configured && (
+                              <div className="text-xs text-muted-foreground">
+                                {isDateTimeSelected ? 'Tap to configure' : 'Select date & time first'}
+                              </div>
+                            )}
+                          </div>
+                          {configured ? (
+                            <Check className="size-5 text-primary flex-shrink-0" />
+                          ) : (
+                            <ChevronRight className="size-5 text-muted-foreground flex-shrink-0" />
+                          )}
+                        </div>
+                        {configured && <div className="w-20 text-right">${productPrice.toFixed(2)}</div>}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
-              {/* Product Multi-Select */}
+              {/* Variations with nested products */}
+              {hasVariations && (
+                <div className={cn("flex flex-col gap-3", !isDateTimeSelected && "opacity-50 pointer-events-none")}>
+                  <div className="text-sm font-medium">Variations</div>
+                  {group.variations.map((variation, index) => {
+                    const isSelected = selectedVariationIndex === index;
+                    const variationProducts = variation.products || [];
+
+                    return (
+                      <div key={index} className="flex flex-col gap-2">
+                        {/* Variation header */}
+                        <div
+                          className={cn(
+                            "text-sm flex space-x-2 items-center w-full py-1 rounded-md",
+                            isDateTimeSelected ? "cursor-pointer hover:bg-muted/50" : "cursor-not-allowed"
+                          )}
+                          onClick={() => isDateTimeSelected && setSelectedVariationIndex(prev => prev === index ? null : index)}
+                        >
+                          <SelectionCheck checked={isSelected} disabled={!isDateTimeSelected} />
+                          <div>{variation.name}</div>
+                          {variation.useOverridePrice !== false && (
+                            <div className="ml-auto">${Number(variation.amount || 0).toFixed(2)}</div>
+                          )}
+                        </div>
+
+                        {/* Variation products (shown when selected) */}
+                        {isSelected && variationProducts.length > 0 && (
+                          <div className="flex flex-col gap-2">
+                            {variationProducts.map((product, pIndex) => {
+                              const productData = availableProducts.find(p => p._id === (product._id || product).toString()) || product;
+                              const configured = isProductConfigured(productData._id);
+                              const configuredProduct = configuredProducts[productData._id];
+                              const productPrice = configuredProduct?.amount?.subtotal ?? configuredProduct?.amount?.total ?? 0;
+                              const summary = getProductSummary(productData);
+                              const canClick = isDateTimeSelected && groupQty >= 1;
+
+                              return (
+                                <div key={productData._id || `var-${index}-prod-${pIndex}`} className="flex items-center gap-3">
+                                  <div
+                                    onClick={() => canClick && handleProductClick(productData)}
+                                    className={cn(
+                                      "flex items-center gap-3 p-3 border rounded-lg transition-colors",
+                                      configured ? "flex-1" : "w-full",
+                                      canClick ? "cursor-pointer hover:bg-muted/50" : "opacity-50 cursor-not-allowed"
+                                    )}
+                                  >
+                                    <ProductThumbnail
+                                      src={productData.thumbnail || productData.image}
+                                      alt={productData.name}
+                                      size="sm"
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-medium">{productData.name}</div>
+                                      {summary && (
+                                        <div className="text-xs text-muted-foreground truncate">{summary}</div>
+                                      )}
+                                      {!configured && (
+                                        <div className="text-xs text-muted-foreground">
+                                          {isDateTimeSelected ? 'Tap to configure' : 'Select date & time first'}
+                                        </div>
+                                      )}
+                                    </div>
+                                    {configured ? (
+                                      <Check className="size-5 text-primary flex-shrink-0" />
+                                    ) : (
+                                      <ChevronRight className="size-5 text-muted-foreground flex-shrink-0" />
+                                    )}
+                                  </div>
+                                  {configured && <div className="w-20 text-right">${productPrice.toFixed(2)}</div>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Product Multi-Select (for adding extra products) */}
               <div className={cn("space-y-2 pt-2", !isDateTimeSelected && "opacity-50")}>
-                <Label className="text-sm font-medium">Add/Remove Products</Label>
+                <Label className="text-sm font-medium">Add Extra Products</Label>
                 <MultiSelect
                   values={selectedProductIds}
                   onValuesChange={setSelectedProductIds}
@@ -618,55 +800,6 @@ export default function GroupSheet({
                   </MultiSelectContent>
                 </MultiSelect>
               </div>
-
-              {groupProducts.length > 0 ? (
-                groupProducts.map((product, index) => {
-                  const configured = isProductConfigured(product._id);
-                  const summary = getProductSummary(product);
-                  const canClick = isDateTimeSelected && groupQty >= 1;
-
-                  return (
-                    <div
-                      key={product._id || `product-${index}`}
-                      onClick={() => canClick && handleProductClick(product)}
-                      className={cn(
-                        "flex items-center gap-3 p-3 border rounded-lg transition-colors",
-                        canClick ? "cursor-pointer hover:bg-muted/50" : "opacity-50 cursor-not-allowed"
-                      )}
-                    >
-                      <ProductThumbnail
-                        src={product.thumbnail || product.image}
-                        alt={product.name}
-                        size="sm"
-                      />
-
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium">{product.name}</div>
-                        {summary && (
-                          <div className="text-xs text-muted-foreground truncate">
-                            {summary}
-                          </div>
-                        )}
-                        {!configured && (
-                          <div className="text-xs text-muted-foreground">
-                            {isDateTimeSelected ? 'Tap to configure' : 'Select date & time first'}
-                          </div>
-                        )}
-                      </div>
-
-                      {configured ? (
-                        <Check className="size-5 text-primary flex-shrink-0" />
-                      ) : (
-                        <ChevronRight className="size-5 text-muted-foreground flex-shrink-0" />
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-sm text-muted-foreground text-center py-8">
-                  No products in this group
-                </div>
-              )}
             </div>
           </div>
 
@@ -680,7 +813,7 @@ export default function GroupSheet({
                 onClick={handleAddGroupToCart}
                 className="w-full cursor-pointer"
                 size="lg"
-                disabled={!allProductsConfigured}
+                disabled={!allProductsConfigured || (minQty > 0 && groupQty < minQty)}
               >
                 {group.gId ? 'Update' : 'Add to Cart'}
               </Button>

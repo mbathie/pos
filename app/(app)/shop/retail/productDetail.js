@@ -4,13 +4,13 @@ import { useEffect, useState } from 'react'
 import { Sheet, SheetContent, SheetFooter, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import React from 'react'
-import { Minus, Plus, Loader2 } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { useHandler } from './useHandler'
 import { useGlobals } from '@/lib/globals'
-import { Checkbox } from '@/components/ui/checkbox'
+import { IconButton, SelectionCheck } from '@/components/control-button'
 import { calcCartValueShop } from '@/lib/product'
 
-export default function ProductDetail({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false }) {
+export default function ProductDetail({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false, groupHasPriceOverride = true }) {
   const [total, setTotal] = useState(0)
   const [modGroups, setModGroups] = useState([])
   const [loadingMods, setLoadingMods] = useState(false)
@@ -113,11 +113,11 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                 <div className='text-sm font-medium'>Variations</div>
                 {product?.variations?.map((v, vIdx) => {
                   return (
-                    <div 
+                    <div
                       key={vIdx} className='text-sm flex space-x-2 items-center w-full cursor-pointer hover:bg-muted/50 py-1 rounded-md'
                       onClick={() => selectVariation({setProduct, vIdx})}
                     >
-                      <Checkbox checked={v.selected} className='size-9' />
+                      <SelectionCheck checked={v.selected} />
                       <div>{v.name}</div>
                       <div className='ml-auto'>${parseFloat(v.amount).toFixed(2)}</div>
                     </div>
@@ -138,16 +138,16 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                   <div key={group._id} className='flex flex-col gap-2'>
                     <div className='text-sm font-medium'>
                       {group.name}
-                      {group.required && <span className='text-muted-foreground ml-2'>(Required)</span>}
+                      {group.required && <span className='text-destructive ml-1'>*</span>}
                     </div>
-                    <div className='flex flex-wrap gap-2'>
+                    <div className='flex flex-wrap gap-3'>
                       {group.mods.map((mod, modIdx) => (
                         <div
                           key={mod._id}
-                          className='gap-2 flex items-center flex-row p-2 pl-0 rounded-md'
+                          className='gap-1 flex items-center flex-row rounded-md'
                         >
-                          <Button
-                            size="icon"
+                          <IconButton
+                            icon="minus"
                             onClick={() => {
                               setModGroups(prev => {
                                 const updated = prev.map((group, gIdx) => {
@@ -172,14 +172,18 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                               })
                             }}
                             disabled={mod.qty === 0}
-                          >
-                            <Minus className='h-4 w-4' />
-                          </Button>
+                          />
 
-                          <div className="w-8 text-center font-semibold">{mod.qty}</div>
+                          <div className="min-w-16 text-center px-2">
+                            <div className="font-semibold">{mod.qty}</div>
+                            <div className="text-xs truncate">
+                              {mod.name}
+                              {mod.price > 0 && ` $${parseFloat(mod.price).toFixed(2)}`}
+                            </div>
+                          </div>
 
-                          <Button
-                            size="icon"
+                          <IconButton
+                            icon="plus"
                             onClick={() => {
                               setModGroups(prev => {
                                 const updated = prev.map((group, gIdx) => {
@@ -212,12 +216,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                                 return updated
                               })
                             }}
-                          >
-                            <Plus className='h-4 w-4' />
-                          </Button>
-
-                          <div>{mod.name}</div>
-                          {mod.price > 0 && <div className='ml-1'>${parseFloat(mod.price).toFixed(2)}</div>}
+                          />
                         </div>
                       ))}
                     </div>
@@ -237,12 +236,8 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
               <div className='flex gap-2 items-center'>
                 {!isPartOfGroup ? (
                   <>
-                    <Button size="icon" className="cursor-pointer" onClick={() => setQty({ setProduct, type: 'decrement' })} disabled={product?.qty <= 1}>
-                      <Minus className='h-4 w-4' />
-                    </Button>
-                    <Button size="icon" className="cursor-pointer" onClick={() => setQty({ setProduct, type: 'increment' })}>
-                      <Plus className='h-4 w-4' />
-                    </Button>
+                    <IconButton icon="minus" onClick={() => setQty({ setProduct, type: 'decrement' })} disabled={product?.qty <= 1} />
+                    <IconButton icon="plus" onClick={() => setQty({ setProduct, type: 'increment' })} />
                     <div className='flex-1' />
                     <div className='font-semibold'>{product?.qty || 1}</div>
                   </>
@@ -259,46 +254,57 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
             <div className='flex items-center'>
               <div className='uppercase'>total</div>
               <div className='ml-auto'>
-                <span className={isPartOfGroup ? 'line-through text-muted-foreground' : ''}>
+                <span className={isPartOfGroup && groupHasPriceOverride ? 'line-through text-muted-foreground' : ''}>
                   ${total.toFixed(2)}
                 </span>
               </div>
             </div>
 
-            {onAddToCart ? (
-              <Button
-                type="submit"
-                className='w-full cursor-pointer'
-                size='lg'
-                disabled={!product?.variations?.some(v => v.selected) || !(product?.qty >= 1)}
-                onClick={async () => {
-                  const _product = await calcCartValueShop({product})
-                  const productWithType = {..._product, type: "shop"}
+            {(() => {
+              // Check if all required mod groups have at least one selection
+              const requiredModsSelected = modGroups
+                .filter(g => g.required)
+                .every(g => g.mods.some(m => m.qty > 0));
 
-                  await onAddToCart(productWithType)
-                  setOpen(false)
-                }}
-              >
-                {isPartOfGroup ? 'Ok' : 'Add to Cart'}
-              </Button>
-            ) : (
-              <SheetClose asChild>
+              const isDisabled = !product?.variations?.some(v => v.selected) ||
+                !(product?.qty >= 1) ||
+                !requiredModsSelected;
+
+              return onAddToCart ? (
                 <Button
                   type="submit"
                   className='w-full cursor-pointer'
                   size='lg'
-                  disabled={!product?.variations?.some(v => v.selected) || !(product?.qty >= 1)}
+                  disabled={isDisabled}
                   onClick={async () => {
                     const _product = await calcCartValueShop({product})
                     const productWithType = {..._product, type: "shop"}
 
-                    await addToCart(productWithType)
+                    await onAddToCart(productWithType)
+                    setOpen(false)
                   }}
                 >
-                  Add to Cart
+                  {isPartOfGroup ? 'Ok' : 'Add to Cart'}
                 </Button>
-              </SheetClose>
-            )}
+              ) : (
+                <SheetClose asChild>
+                  <Button
+                    type="submit"
+                    className='w-full cursor-pointer'
+                    size='lg'
+                    disabled={isDisabled}
+                    onClick={async () => {
+                      const _product = await calcCartValueShop({product})
+                      const productWithType = {..._product, type: "shop"}
+
+                      await addToCart(productWithType)
+                    }}
+                  >
+                    Add to Cart
+                  </Button>
+                </SheetClose>
+              );
+            })()}
           </div>
         </div>
       </SheetContent>

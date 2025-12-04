@@ -1,38 +1,61 @@
 import { NextResponse } from "next/server";
 import { getEmployee } from "@/lib/auth";
 import { connectDB } from "@/lib/mongoose";
-import { createCompanyTransaction, handleTransactionSuccess, addPlaceholdersToSchedule } from '@/lib/payments/success'
+import { createCompanyTransaction, createCustomerInvoiceTransaction, handleTransactionSuccess, addPlaceholdersToSchedule } from '@/lib/payments/success'
 import { sendCompanyWaiverEmail } from '@/lib/email/company-waiver';
-import { getOrCreateCompanyStripeCustomer } from '@/lib/stripe/company-customer';
+import { getOrCreateCompanyStripeCustomer, getOrCreateCustomerStripeCustomer } from '@/lib/stripe/company-customer';
 import { createCompanyInvoice } from '@/lib/stripe/invoice';
 import { Org } from '@/models';
 import { SignJWT } from 'jose';
 
 export async function POST(req, { params }) {
   console.log('\n╔════════════════════════════════════════════════════════════╗');
-  console.log('║         COMPANY PAYMENT & INVOICE CREATION STARTED          ║');
+  console.log('║         GROUP INVOICE PAYMENT CREATION STARTED              ║');
   console.log('╚════════════════════════════════════════════════════════════╝\n');
 
   await connectDB();
 
   const { employee } = await getEmployee();
-  const { cart, company, paymentType } = await req.json();
+  const { cart, company, customer, paymentType } = await req.json();
+
+  // Determine if this is a company or customer invoice
+  const isCustomerInvoice = paymentType === 'customer-invoice';
+  const payer = isCustomerInvoice ? customer : company;
+  const payerEmail = isCustomerInvoice ? customer?.email : company?.contactEmail;
+  const payerName = isCustomerInvoice ? customer?.name : company?.name;
 
   console.log('📋 Request Details:');
   console.log('   Employee:', employee.email);
   console.log('   Organization ID:', employee.org._id);
   console.log('   Payment Type:', paymentType);
-  console.log('   Company ID:', company?._id);
-  console.log('   Company Name:', company?.name);
-  console.log('   Company Email:', company?.contactEmail);
+  console.log('   Is Customer Invoice:', isCustomerInvoice);
+  if (isCustomerInvoice) {
+    console.log('   Customer ID:', customer?._id);
+    console.log('   Customer Name:', customer?.name);
+    console.log('   Customer Email:', customer?.email);
+  } else {
+    console.log('   Company ID:', company?._id);
+    console.log('   Company Name:', company?.name);
+    console.log('   Company Email:', company?.contactEmail);
+  }
   console.log('   Cart Total:', cart?.total);
   console.log('   Cart Products:', cart?.products?.length);
 
-  if (!company || !company._id) {
-    console.error('❌ Company information missing!');
-    return NextResponse.json({
-      error: 'Company information is required for company payments'
-    }, { status: 400 });
+  // Validate that we have either a company or customer
+  if (isCustomerInvoice) {
+    if (!customer || !customer._id) {
+      console.error('❌ Customer information missing!');
+      return NextResponse.json({
+        error: 'Customer information is required for customer invoice payments'
+      }, { status: 400 });
+    }
+  } else {
+    if (!company || !company._id) {
+      console.error('❌ Company information missing!');
+      return NextResponse.json({
+        error: 'Company information is required for company payments'
+      }, { status: 400 });
+    }
   }
 
   console.log('\n🔍 Fetching organization details...');
@@ -40,9 +63,14 @@ export async function POST(req, { params }) {
   console.log('✅ Organization found:', org.name);
   console.log('   Stripe Account ID:', org.stripeAccountId || '⚠️ MISSING');
 
-  // Create the company transaction (zero payment upfront)
-  console.log('\n💾 Creating company transaction...');
-  const transaction = await createCompanyTransaction({ cart, employee, company });
+  // Create the transaction (zero payment upfront)
+  console.log('\n💾 Creating transaction...');
+  let transaction;
+  if (isCustomerInvoice) {
+    transaction = await createCustomerInvoiceTransaction({ cart, employee, customer });
+  } else {
+    transaction = await createCompanyTransaction({ cart, employee, company });
+  }
   console.log('✅ Transaction created:', transaction._id);
   console.log('   Total:', transaction.total);
   console.log('   Subtotal:', transaction.subtotal);
@@ -59,24 +87,32 @@ export async function POST(req, { params }) {
   await addPlaceholdersToSchedule({ transaction });
   console.log('✅ Placeholder customers added');
 
-  // Create Stripe invoice for company payment
+  // Create Stripe invoice for payment
   console.log('\n╔════════════════════════════════════════════════════════════╗');
   console.log('║              STRIPE INVOICE CREATION STARTING               ║');
   console.log('╚════════════════════════════════════════════════════════════╝\n');
 
   let invoice = null;
   try {
-    // Get or create Stripe customer for the company
-    console.log('🔍 Getting or creating Stripe customer for company...');
-    console.log('   Company ID:', company._id);
-    console.log('   Company Name:', company.name);
-    console.log('   Company Email:', company.contactEmail);
+    // Get or create Stripe customer for the payer
+    console.log('🔍 Getting or creating Stripe customer...');
+    console.log('   Payer ID:', payer._id);
+    console.log('   Payer Name:', payerName);
+    console.log('   Payer Email:', payerEmail);
     console.log('   Org Stripe Account:', org.stripeAccountId);
 
-    const stripeCustomerId = await getOrCreateCompanyStripeCustomer({
-      company,
-      org
-    });
+    let stripeCustomerId;
+    if (isCustomerInvoice) {
+      stripeCustomerId = await getOrCreateCustomerStripeCustomer({
+        customer,
+        org
+      });
+    } else {
+      stripeCustomerId = await getOrCreateCompanyStripeCustomer({
+        company,
+        org
+      });
+    }
 
     console.log('✅ Stripe customer ready:', stripeCustomerId);
 
@@ -84,7 +120,8 @@ export async function POST(req, { params }) {
     console.log('\n📄 Creating Stripe invoice...');
     invoice = await createCompanyInvoice({
       transaction,
-      company,
+      company: isCustomerInvoice ? null : company,
+      customer: isCustomerInvoice ? customer : null,
       org,
       stripeCustomerId
     });
@@ -95,7 +132,7 @@ export async function POST(req, { params }) {
     console.log('   Amount Due:', invoice.amount_due / 100);
     console.log('   Currency:', invoice.currency);
     console.log('   Hosted URL:', invoice.hosted_invoice_url);
-    console.log('   Sent to:', company.contactEmail);
+    console.log('   Sent to:', payerEmail);
   } catch (error) {
     console.error('\n❌ INVOICE CREATION FAILED!');
     console.error('   Error Type:', error.constructor.name);
@@ -133,7 +170,7 @@ export async function POST(req, { params }) {
     }
   }
 
-  // Generate waiver link and send email to company contact
+  // Generate waiver link and send email to payer
   console.log('\n📧 Sending waiver email...');
   try {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
@@ -142,10 +179,11 @@ export async function POST(req, { params }) {
     console.log('   Waiver Link:', waiverLink);
     console.log('   Payment Link:', paymentLink || 'No payment link');
     console.log('   Invoice URL:', invoice?.hosted_invoice_url || 'No invoice');
-    console.log('   Recipient:', company.contactEmail);
+    console.log('   Recipient:', payerEmail);
 
     await sendCompanyWaiverEmail({
-      company,
+      company: isCustomerInvoice ? null : company,
+      customer: isCustomerInvoice ? customer : null,
       org,
       waiverLink,
       transaction,
@@ -161,7 +199,7 @@ export async function POST(req, { params }) {
   }
 
   console.log('\n╔════════════════════════════════════════════════════════════╗');
-  console.log('║         COMPANY PAYMENT & INVOICE CREATION COMPLETE         ║');
+  console.log('║         GROUP INVOICE PAYMENT CREATION COMPLETE             ║');
   console.log('╚════════════════════════════════════════════════════════════╝\n');
 
   return NextResponse.json({

@@ -28,6 +28,7 @@ export async function PUT(req, { params }) {
   if (Array.isArray(body.products)) update.products = body.products;
   if (Array.isArray(body.variations)) update.variations = body.variations;
   if (body.amount !== undefined) update.amount = body.amount;
+  if (body.minQty !== undefined) update.minQty = body.minQty || null;
   if (body.active !== undefined) update.active = body.active;
 
   const group = await ProductGroup.findByIdAndUpdate(id, update, { new: true })

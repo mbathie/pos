@@ -151,6 +151,7 @@ export default function TransactionDetailsPage() {
             groupName: product.groupName,
             groupAmount: product.groupAmount,
             groupQty: product.groupQty || 1,
+            groupHasPriceOverride: product.groupHasPriceOverride,
             products: groupProducts,
             adjustments: product.adjustments
           });
@@ -164,410 +165,425 @@ export default function TransactionDetailsPage() {
     return grouped;
   };
 
-  const ShopProductsCard = ({ products, isGrouped }) => (
-    <Card className={isGrouped ? 'ml-4' : ''}>
-      <CardHeader>
-        <CardTitle>Shop Items</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Item</TableHead>
-              <TableHead>Variation</TableHead>
-              <TableHead>Modifiers</TableHead>
-              <TableHead>Qty</TableHead>
-              <TableHead className="text-right">Subtotal</TableHead>
-              <TableHead className="text-right">Surcharges</TableHead>
-              <TableHead className="text-right">Discounts</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product, index) => (
-              <TableRow key={index}>
-                <TableCell className="font-medium">{product.name}</TableCell>
-                <TableCell>{product.item?.variation || '-'}</TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
-                    {product.item?.modGroups?.length > 0 ? (
-                      product.item.modGroups.map((group) =>
-                        group.mods.filter(mod => (mod.qty || 0) > 0).map((mod, modIndex) => (
-                          <Badge key={`${group._id}-${modIndex}`} variant="secondary" className="text-xs">
-                            {mod.qty > 1 && `${mod.qty}x `}{mod.name}
-                            {mod.price > 0 && ` (+${formatCurrency(mod.price)})`}
-                          </Badge>
-                        ))
-                      )
-                    ) : '-'}
-                  </div>
-                </TableCell>
-                <TableCell>{product.qty}</TableCell>
-                <TableCell className="text-right">
-                  {isGrouped ? (
-                    <span className="line-through text-muted-foreground">
-                      {formatCurrency(product.amount?.subtotal)}
-                    </span>
-                  ) : (
-                    formatCurrency(product.amount?.subtotal)
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  {isGrouped ? '-' : (
-                    product.adjustments?.surcharges?.total > 0 ?
-                      `+${formatCurrency(product.adjustments.surcharges.total)}` : '-'
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  {isGrouped ? '-' : (
-                    product.adjustments?.discounts?.total > 0 ?
-                      `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
-                  )}
-                </TableCell>
-                <TableCell className="text-right font-medium">
-                  {isGrouped ? (
-                    <span className="line-through text-muted-foreground">
-                      {formatCurrency((product.amount?.subtotal || 0) + (product.adjustments?.surcharges?.total || 0) - (product.adjustments?.discounts?.total || 0))}
-                    </span>
-                  ) : (
-                    formatCurrency((product.amount?.subtotal || 0) + (product.adjustments?.surcharges?.total || 0) - (product.adjustments?.discounts?.total || 0))
-                  )}
-                </TableCell>
+  const ShopProductsCard = ({ products, isGrouped, groupHasPriceOverride }) => {
+    const showStrikethrough = isGrouped && groupHasPriceOverride !== false;
+    return (
+      <Card className={isGrouped ? 'ml-4' : ''}>
+        <CardHeader>
+          <CardTitle>Shop Items</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Item</TableHead>
+                <TableHead>Variation</TableHead>
+                <TableHead>Modifiers</TableHead>
+                <TableHead>Qty</TableHead>
+                <TableHead className="text-right">Subtotal</TableHead>
+                <TableHead className="text-right">Surcharges</TableHead>
+                <TableHead className="text-right">Discounts</TableHead>
+                <TableHead className="text-right">Total</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
+            </TableHeader>
+            <TableBody>
+              {products.map((product, index) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>{product.item?.variation || '-'}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {product.item?.modGroups?.length > 0 ? (
+                        product.item.modGroups.map((group) =>
+                          group.mods.filter(mod => (mod.qty || 0) > 0).map((mod, modIndex) => (
+                            <Badge key={`${group._id}-${modIndex}`} variant="secondary" className="text-xs">
+                              {mod.qty > 1 && `${mod.qty}x `}{mod.name}
+                              {mod.price > 0 && ` (+${formatCurrency(mod.price)})`}
+                            </Badge>
+                          ))
+                        )
+                      ) : '-'}
+                    </div>
+                  </TableCell>
+                  <TableCell>{product.qty}</TableCell>
+                  <TableCell className="text-right">
+                    {showStrikethrough ? (
+                      <span className="line-through text-muted-foreground">
+                        {formatCurrency(product.amount?.subtotal)}
+                      </span>
+                    ) : (
+                      formatCurrency(product.amount?.subtotal)
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {isGrouped ? '-' : (
+                      product.adjustments?.surcharges?.total > 0 ?
+                        `+${formatCurrency(product.adjustments.surcharges.total)}` : '-'
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {isGrouped ? '-' : (
+                      product.adjustments?.discounts?.total > 0 ?
+                        `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    {showStrikethrough ? (
+                      <span className="line-through text-muted-foreground">
+                        {formatCurrency((product.amount?.subtotal || 0) + (product.adjustments?.surcharges?.total || 0) - (product.adjustments?.discounts?.total || 0))}
+                      </span>
+                    ) : (
+                      formatCurrency((product.amount?.subtotal || 0) + (product.adjustments?.surcharges?.total || 0) - (product.adjustments?.discounts?.total || 0))
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    );
+  };
 
-  const ClassProductsCard = ({ products, isGrouped }) => (
-    <Card className={isGrouped ? 'ml-4' : ''}>
-      <CardHeader>
-        <CardTitle>Class Bookings</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Class</TableHead>
-              <TableHead>Date</TableHead>
-              <TableHead>Attendees</TableHead>
-              <TableHead className="text-right">Subtotal</TableHead>
-              <TableHead className="text-right">Discount</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product, index) => (
-              <TableRow key={index}>
-                <TableCell className="font-medium align-top">{product.name}</TableCell>
-                <TableCell className="align-top">
-                  <div className="space-y-1">
-                    {product.selectedTimes?.map((time, tIndex) => (
-                      <div key={tIndex} className="text-sm">
-                        <div>{dayjs(time.value).format('DD/MM/YYYY h:mm A')}</div>
-                        {time.label && (
-                          <div className="text-xs text-muted-foreground">{time.label}</div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="align-top">
-                  <div className="space-y-2">
-                    {product.prices?.map((price, pIndex) => (
-                      <div key={pIndex} className="border-b pb-1 last:border-0">
-                        <div className="text-sm font-medium">
-                          {price.qty}x {price.name}
+  const ClassProductsCard = ({ products, isGrouped, groupHasPriceOverride }) => {
+    const showStrikethrough = isGrouped && groupHasPriceOverride !== false;
+    return (
+      <Card className={isGrouped ? 'ml-4' : ''}>
+        <CardHeader>
+          <CardTitle>Class Bookings</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Class</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead>Attendees</TableHead>
+                <TableHead className="text-right">Subtotal</TableHead>
+                <TableHead className="text-right">Discount</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.map((product, index) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium align-top">{product.name}</TableCell>
+                  <TableCell className="align-top">
+                    <div className="space-y-1">
+                      {product.selectedTimes?.map((time, tIndex) => (
+                        <div key={tIndex} className="text-sm">
+                          <div>{dayjs(time.value).format('DD/MM/YYYY h:mm A')}</div>
+                          {time.label && (
+                            <div className="text-xs text-muted-foreground">{time.label}</div>
+                          )}
                         </div>
-                        {price.customers?.length > 0 && (
-                          <div className="ml-2 mt-1 space-y-1">
-                            {price.customers.map((customerObj, cIndex) => (
-                              <div key={cIndex} className="text-xs text-muted-foreground">
-                                • {customerObj.customer?.name || 'Guest'}
-                              </div>
-                            ))}
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <div className="space-y-2">
+                      {product.prices?.map((price, pIndex) => (
+                        <div key={pIndex} className="border-b pb-1 last:border-0">
+                          <div className="text-sm font-medium">
+                            {price.qty}x {price.name}
                           </div>
+                          {price.customers?.length > 0 && (
+                            <div className="ml-2 mt-1 space-y-1">
+                              {price.customers.map((customerObj, cIndex) => (
+                                <div key={cIndex} className="text-xs text-muted-foreground">
+                                  • {customerObj.customer?.name || 'Guest'}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right align-top">
+                    {showStrikethrough ? (
+                      <span className="line-through text-muted-foreground">
+                        {formatCurrency(product.amount?.subtotal)}
+                      </span>
+                    ) : (
+                      formatCurrency(product.amount?.subtotal)
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right align-top">
+                    {isGrouped ? '-' : (
+                      product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right align-top font-medium">
+                    {showStrikethrough ? (
+                      <span className="line-through text-muted-foreground">
+                        {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
+                      </span>
+                    ) : (
+                      formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const CourseProductsCard = ({ products, isGrouped, groupHasPriceOverride }) => {
+    const showStrikethrough = isGrouped && groupHasPriceOverride !== false;
+    return (
+      <Card className={isGrouped ? 'ml-4' : ''}>
+        <CardHeader>
+          <CardTitle>Courses</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Course</TableHead>
+                <TableHead>Start Date</TableHead>
+                <TableHead>Attendees</TableHead>
+                <TableHead className="text-right">Subtotal</TableHead>
+                <TableHead className="text-right">Discount</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.map((product, index) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium align-top">{product.name}</TableCell>
+                  <TableCell className="align-top">
+                    {product.selectedTimes?.[0] ? (
+                      <div>
+                        <div className="text-sm">
+                          {dayjs(product.selectedTimes[0].value).format('DD/MM/YYYY h:mm A')}
+                        </div>
+                        {product.selectedTimes[0].label && (
+                          <div className="text-xs text-muted-foreground">{product.selectedTimes[0].label}</div>
                         )}
                       </div>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right align-top">
-                  {isGrouped ? (
-                    <span className="line-through text-muted-foreground">
-                      {formatCurrency(product.amount?.subtotal)}
-                    </span>
-                  ) : (
-                    formatCurrency(product.amount?.subtotal)
-                  )}
-                </TableCell>
-                <TableCell className="text-right align-top">
-                  {isGrouped ? '-' : (
-                    product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
-                  )}
-                </TableCell>
-                <TableCell className="text-right align-top font-medium">
-                  {isGrouped ? (
-                    <span className="line-through text-muted-foreground">
-                      {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
-                    </span>
-                  ) : (
-                    formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
+                    ) : '-'}
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <div className="space-y-2">
+                      {product.prices?.map((price, pIndex) => (
+                        <div key={pIndex} className="border-b pb-1 last:border-0">
+                          <div className="text-sm font-medium">
+                            {price.qty}x {price.name}
+                          </div>
+                          {price.customers?.length > 0 && (
+                            <div className="ml-2 mt-1 space-y-1">
+                              {price.customers.map((customerObj, cIndex) => (
+                                <div key={cIndex} className="text-xs text-muted-foreground">
+                                  • {customerObj.customer?.name || 'Guest'}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right align-top">
+                    {showStrikethrough ? (
+                      <span className="line-through text-muted-foreground">
+                        {formatCurrency(product.amount?.subtotal)}
+                      </span>
+                    ) : (
+                      formatCurrency(product.amount?.subtotal)
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right align-top">
+                    {isGrouped ? '-' : (
+                      product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right align-top font-medium">
+                    {showStrikethrough ? (
+                      <span className="line-through text-muted-foreground">
+                        {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
+                      </span>
+                    ) : (
+                      formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    );
+  };
 
-  const CourseProductsCard = ({ products, isGrouped }) => (
-    <Card className={isGrouped ? 'ml-4' : ''}>
-      <CardHeader>
-        <CardTitle>Courses</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Course</TableHead>
-              <TableHead>Start Date</TableHead>
-              <TableHead>Attendees</TableHead>
-              <TableHead className="text-right">Subtotal</TableHead>
-              <TableHead className="text-right">Discount</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product, index) => (
-              <TableRow key={index}>
-                <TableCell className="font-medium align-top">{product.name}</TableCell>
-                <TableCell className="align-top">
-                  {product.selectedTimes?.[0] ? (
-                    <div>
-                      <div className="text-sm">
-                        {dayjs(product.selectedTimes[0].value).format('DD/MM/YYYY h:mm A')}
-                      </div>
-                      {product.selectedTimes[0].label && (
-                        <div className="text-xs text-muted-foreground">{product.selectedTimes[0].label}</div>
+  const GeneralProductsCard = ({ products, isGrouped, groupHasPriceOverride }) => {
+    const showStrikethrough = isGrouped && groupHasPriceOverride !== false;
+    return (
+      <Card className={isGrouped ? 'ml-4' : ''}>
+        <CardHeader>
+          <CardTitle>General Entries</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Entry Pass</TableHead>
+                <TableHead>Attendees</TableHead>
+                <TableHead className="text-right">Subtotal</TableHead>
+                <TableHead className="text-right">Discount</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.map((product, index) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium align-top">{product.name}</TableCell>
+                  <TableCell className="align-top">
+                    <div className="space-y-2">
+                      {product.prices?.map((price, pIndex) => (
+                        <div key={pIndex} className="border-b pb-1 last:border-0">
+                          <div className="text-sm font-medium">
+                            {price.qty}x {price.name}
+                          </div>
+                          {price.customers?.length > 0 && (
+                            <div className="ml-2 mt-1 space-y-1">
+                              {price.customers.map((customerObj, cIndex) => (
+                                <div key={cIndex} className="text-xs text-muted-foreground">
+                                  • {customerObj.customer?.name || 'Guest'}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right align-top">
+                    {showStrikethrough ? (
+                      <span className="line-through text-muted-foreground">
+                        {formatCurrency(product.amount?.subtotal)}
+                      </span>
+                    ) : (
+                      formatCurrency(product.amount?.subtotal)
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right align-top">
+                    {isGrouped ? '-' : (
+                      product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right align-top font-medium">
+                    {showStrikethrough ? (
+                      <span className="line-through text-muted-foreground">
+                        {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
+                      </span>
+                    ) : (
+                      formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const MembershipProductsCard = ({ products, isGrouped, groupHasPriceOverride }) => {
+    const showStrikethrough = isGrouped && groupHasPriceOverride !== false;
+    return (
+      <Card className={isGrouped ? 'ml-4' : ''}>
+        <CardHeader>
+          <CardTitle>Membership Subscriptions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Membership</TableHead>
+                <TableHead>Billing Period</TableHead>
+                <TableHead>Subscribers</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Subtotal</TableHead>
+                <TableHead className="text-right">Discount</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.map((product, index) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium align-top">{product.name}</TableCell>
+                  <TableCell className="align-top">
+                    <div className="space-y-1">
+                      {product.item && (
+                        <div className="text-sm">
+                          {product.item.variation === "1" && product.item.unit === "month" ? "Monthly" :
+                           product.item.variation === "1" && product.item.unit === "year" ? "Yearly" :
+                           `${product.item.variation} ${product.item.unit}${parseInt(product.item.variation) > 1 ? 's' : ''}`}
+                        </div>
                       )}
                     </div>
-                  ) : '-'}
-                </TableCell>
-                <TableCell className="align-top">
-                  <div className="space-y-2">
-                    {product.prices?.map((price, pIndex) => (
-                      <div key={pIndex} className="border-b pb-1 last:border-0">
-                        <div className="text-sm font-medium">
-                          {price.qty}x {price.name}
-                        </div>
-                        {price.customers?.length > 0 && (
-                          <div className="ml-2 mt-1 space-y-1">
-                            {price.customers.map((customerObj, cIndex) => (
-                              <div key={cIndex} className="text-xs text-muted-foreground">
-                                • {customerObj.customer?.name || 'Guest'}
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <div className="space-y-1">
+                      {product.prices?.map((price, pIndex) => (
+                        <div key={pIndex} className="text-sm">
+                          {price.customers?.map((customer, cIndex) => (
+                            customer.customer && (
+                              <div key={cIndex}>
+                                {customer.dependent ?
+                                  `${customer.dependent.name} (${price.name})` :
+                                  `${customer.customer.name} (${price.name})`
+                                }
                               </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right align-top">
-                  {isGrouped ? (
-                    <span className="line-through text-muted-foreground">
-                      {formatCurrency(product.amount?.subtotal)}
-                    </span>
-                  ) : (
-                    formatCurrency(product.amount?.subtotal)
-                  )}
-                </TableCell>
-                <TableCell className="text-right align-top">
-                  {isGrouped ? '-' : (
-                    product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
-                  )}
-                </TableCell>
-                <TableCell className="text-right align-top font-medium">
-                  {isGrouped ? (
-                    <span className="line-through text-muted-foreground">
-                      {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
-                    </span>
-                  ) : (
-                    formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-
-  const GeneralProductsCard = ({ products, isGrouped }) => (
-    <Card className={isGrouped ? 'ml-4' : ''}>
-      <CardHeader>
-        <CardTitle>General Entries</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Entry Pass</TableHead>
-              <TableHead>Attendees</TableHead>
-              <TableHead className="text-right">Subtotal</TableHead>
-              <TableHead className="text-right">Discount</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product, index) => (
-              <TableRow key={index}>
-                <TableCell className="font-medium align-top">{product.name}</TableCell>
-                <TableCell className="align-top">
-                  <div className="space-y-2">
-                    {product.prices?.map((price, pIndex) => (
-                      <div key={pIndex} className="border-b pb-1 last:border-0">
-                        <div className="text-sm font-medium">
-                          {price.qty}x {price.name}
+                            )
+                          ))}
                         </div>
-                        {price.customers?.length > 0 && (
-                          <div className="ml-2 mt-1 space-y-1">
-                            {price.customers.map((customerObj, cIndex) => (
-                              <div key={cIndex} className="text-xs text-muted-foreground">
-                                • {customerObj.customer?.name || 'Guest'}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right align-top">
-                  {isGrouped ? (
-                    <span className="line-through text-muted-foreground">
-                      {formatCurrency(product.amount?.subtotal)}
-                    </span>
-                  ) : (
-                    formatCurrency(product.amount?.subtotal)
-                  )}
-                </TableCell>
-                <TableCell className="text-right align-top">
-                  {isGrouped ? '-' : (
-                    product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
-                  )}
-                </TableCell>
-                <TableCell className="text-right align-top font-medium">
-                  {isGrouped ? (
-                    <span className="line-through text-muted-foreground">
-                      {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
-                    </span>
-                  ) : (
-                    formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-
-  const MembershipProductsCard = ({ products, isGrouped }) => (
-    <Card className={isGrouped ? 'ml-4' : ''}>
-      <CardHeader>
-        <CardTitle>Membership Subscriptions</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Membership</TableHead>
-              <TableHead>Billing Period</TableHead>
-              <TableHead>Subscribers</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Subtotal</TableHead>
-              <TableHead className="text-right">Discount</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product, index) => (
-              <TableRow key={index}>
-                <TableCell className="font-medium align-top">{product.name}</TableCell>
-                <TableCell className="align-top">
-                  <div className="space-y-1">
-                    {product.item && (
-                      <div className="text-sm">
-                        {product.item.variation === "1" && product.item.unit === "month" ? "Monthly" :
-                         product.item.variation === "1" && product.item.unit === "year" ? "Yearly" :
-                         `${product.item.variation} ${product.item.unit}${parseInt(product.item.variation) > 1 ? 's' : ''}`}
-                      </div>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="align-top">
+                    <Badge variant="outline" className="text-xs">
+                      {transaction.status === 'subscription_active' ? 'Active' :
+                       transaction.status === 'first_period_paid' ? 'Setup Complete' :
+                       'Processing'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right align-top">
+                    {showStrikethrough ? (
+                      <span className="line-through text-muted-foreground">
+                        {formatCurrency(product.amount?.subtotal)}
+                      </span>
+                    ) : (
+                      formatCurrency(product.amount?.subtotal)
                     )}
-                  </div>
-                </TableCell>
-                <TableCell className="align-top">
-                  <div className="space-y-1">
-                    {product.prices?.map((price, pIndex) => (
-                      <div key={pIndex} className="text-sm">
-                        {price.customers?.map((customer, cIndex) => (
-                          customer.customer && (
-                            <div key={cIndex}>
-                              {customer.dependent ?
-                                `${customer.dependent.name} (${price.name})` :
-                                `${customer.customer.name} (${price.name})`
-                              }
-                            </div>
-                          )
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </TableCell>
-                <TableCell className="align-top">
-                  <Badge variant="outline" className="text-xs">
-                    {transaction.status === 'subscription_active' ? 'Active' :
-                     transaction.status === 'first_period_paid' ? 'Setup Complete' :
-                     'Processing'}
-                  </Badge>
-                </TableCell>
-                <TableCell className="text-right align-top">
-                  {isGrouped ? (
-                    <span className="line-through text-muted-foreground">
-                      {formatCurrency(product.amount?.subtotal)}
-                    </span>
-                  ) : (
-                    formatCurrency(product.amount?.subtotal)
-                  )}
-                </TableCell>
-                <TableCell className="text-right align-top">
-                  {isGrouped ? '-' : (
-                    product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
-                  )}
-                </TableCell>
-                <TableCell className="text-right align-top font-medium">
-                  {isGrouped ? (
-                    <span className="line-through text-muted-foreground">
-                      {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
-                    </span>
-                  ) : (
-                    formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
+                  </TableCell>
+                  <TableCell className="text-right align-top">
+                    {isGrouped ? '-' : (
+                      product.adjustments?.discounts?.total > 0 ? `-${formatCurrency(product.adjustments.discounts.total)}` : '-'
+                    )}
+                  </TableCell>
+                  <TableCell className="text-right align-top font-medium">
+                    {showStrikethrough ? (
+                      <span className="line-through text-muted-foreground">
+                        {formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))}
+                      </span>
+                    ) : (
+                      formatCurrency((product.amount?.subtotal || 0) - (product.adjustments?.discounts?.total || 0))
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
@@ -747,8 +763,17 @@ export default function TransactionDetailsPage() {
             </div>
 
             <div>
-              <p className="text-sm text-muted-foreground">Customer</p>
-              {transaction.customer ? (
+              <p className="text-sm text-muted-foreground">
+                {transaction.paymentMethod === 'company' || transaction.company ? 'Company' : 'Customer'}
+              </p>
+              {transaction.paymentMethod === 'company' || transaction.company ? (
+                <button
+                  onClick={() => router.push(`/manage/companies/${transaction.company?._id || transaction.company}`)}
+                  className="font-medium text-primary hover:underline cursor-pointer text-left"
+                >
+                  {transaction.companyPayment?.companyName || transaction.company?.name || 'Unknown Company'}
+                </button>
+              ) : transaction.customer ? (
                 <button
                   onClick={() => router.push(`/manage/customers/${transaction.customer._id}`)}
                   className="font-medium text-primary hover:underline cursor-pointer text-left"
@@ -926,11 +951,11 @@ export default function TransactionDetailsPage() {
                       </div>
                     </CardContent>
                   </Card>
-                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} />}
-                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} />}
-                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} />}
-                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} />}
-                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} />}
+                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
                 </div>
               );
             }
@@ -1008,11 +1033,11 @@ export default function TransactionDetailsPage() {
                       </div>
                     </CardContent>
                   </Card>
-                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} />}
-                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} />}
-                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} />}
-                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} />}
-                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} />}
+                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
                 </div>
               );
             }
@@ -1090,11 +1115,11 @@ export default function TransactionDetailsPage() {
                       </div>
                     </CardContent>
                   </Card>
-                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} />}
-                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} />}
-                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} />}
-                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} />}
-                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} />}
+                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
                 </div>
               );
             }
@@ -1172,11 +1197,11 @@ export default function TransactionDetailsPage() {
                       </div>
                     </CardContent>
                   </Card>
-                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} />}
-                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} />}
-                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} />}
-                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} />}
-                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} />}
+                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
                 </div>
               );
             }
@@ -1254,11 +1279,11 @@ export default function TransactionDetailsPage() {
                       </div>
                     </CardContent>
                   </Card>
-                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} />}
-                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} />}
-                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} />}
-                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} />}
-                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} />}
+                  {shopProducts.length > 0 && <ShopProductsCard products={shopProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {classProducts.length > 0 && <ClassProductsCard products={classProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {courseProducts.length > 0 && <CourseProductsCard products={courseProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {generalProducts.length > 0 && <GeneralProductsCard products={generalProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
+                  {membershipProducts.length > 0 && <MembershipProductsCard products={membershipProducts} isGrouped={true} groupHasPriceOverride={item.groupHasPriceOverride} />}
                 </div>
               );
             }

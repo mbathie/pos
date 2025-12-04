@@ -13,7 +13,7 @@ import { calcCartValueCourse } from '@/lib/product'
 import { useClass } from './useClass'
 import dayjs from 'dayjs';
 
-export default function ProductDetail({ open, setOpen, product, setProduct, onAddToCart, isPartOfGroup = false }) {
+export default function ProductDetail({ open, setOpen, product, setProduct, onAddToCart, isPartOfGroup = false, groupHasPriceOverride = true }) {
 
   if (!product) return null;
 
@@ -95,7 +95,7 @@ export default function ProductDetail({ open, setOpen, product, setProduct, onAd
                         {price.name}
                         <div className='flex-1' />
                         {price.qty || 0}x
-                        <span className={isPartOfGroup ? 'line-through text-muted-foreground' : ''}>
+                        <span className={isPartOfGroup && groupHasPriceOverride ? 'line-through text-muted-foreground' : ''}>
                           ${parseFloat(price.value).toFixed(2)}
                         </span>
                       </div>

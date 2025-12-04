@@ -8,7 +8,7 @@ import { useGlobals } from '@/lib/globals'
 import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 
-export default function ProductDetailMembership({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false }) {
+export default function ProductDetailMembership({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false, groupHasPriceOverride = true }) {
 
   const { addToCart } = useGlobals()
   const [total, setTotal] = useState(0)
@@ -99,7 +99,7 @@ export default function ProductDetailMembership({ product, setProduct, setOpen, 
                     )}
                     <div className='flex-1' />
                     {price.qty || 0}x
-                    <span className={isPartOfGroup ? 'line-through text-muted-foreground' : ''}>
+                    <span className={isPartOfGroup && groupHasPriceOverride ? 'line-through text-muted-foreground' : ''}>
                       ${parseFloat(price.value || 0).toFixed(2)}{billingLabel}
                     </span>
                   </div>

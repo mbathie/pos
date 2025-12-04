@@ -19,7 +19,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail, Plus, OctagonAlert, Check, Building2, ChevronsUpDown } from "lucide-react";
+import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail, Plus, OctagonAlert, Check, Building2, ChevronsUpDown, User } from "lucide-react";
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from "@/lib/utils";
@@ -95,11 +95,16 @@ export default function Page() {
   const [customerCredits, setCustomerCredits] = useState(null)
 
   // Company/Individual payment selection state
-  const [paymentType, setPaymentType] = useState('individual') // 'individual' or 'company'
+  const [paymentType, setPaymentType] = useState('individual') // 'individual' or 'group'
+  const [groupPayerType, setGroupPayerType] = useState('company') // 'company' or 'customer' - who pays for group
   const [selectedCompany, setSelectedCompany] = useState(null)
+  const [selectedGroupCustomer, setSelectedGroupCustomer] = useState(null) // Customer paying for group
   const [companies, setCompanies] = useState([])
   const [companySearchOpen, setCompanySearchOpen] = useState(false)
   const [companySearchQuery, setCompanySearchQuery] = useState('')
+  const [groupCustomerSearchOpen, setGroupCustomerSearchOpen] = useState(false)
+  const [groupCustomerSearchQuery, setGroupCustomerSearchQuery] = useState('')
+  const [groupCustomers, setGroupCustomers] = useState([])
   const [addCompanySheetOpen, setAddCompanySheetOpen] = useState(false)
 
   // Organization settings state
@@ -182,7 +187,16 @@ export default function Page() {
       setTab('card')
     }
   }, [hasMembershipProducts, tab])
-  
+
+  // Auto-switch to invoice tab for group payments, back to card for individual
+  useEffect(() => {
+    if (paymentType === 'group') {
+      setTab('invoice')
+    } else if (tab === 'invoice') {
+      setTab('card')
+    }
+  }, [paymentType])
+
   // Fetch customer credits when a customer is selected
   useEffect(() => {
     const fetchCustomerCredits = async () => {
@@ -211,10 +225,10 @@ export default function Page() {
     fetchCustomerCredits()
   }, [cart.customer?._id])
 
-  // Fetch companies when payment type is 'company'
+  // Fetch companies when payment type is 'group' and groupPayerType is 'company'
   useEffect(() => {
     const fetchCompanies = async () => {
-      if (paymentType === 'company') {
+      if (paymentType === 'group' && groupPayerType === 'company') {
         try {
           const params = new URLSearchParams();
           if (companySearchQuery) {
@@ -232,7 +246,30 @@ export default function Page() {
     };
 
     fetchCompanies();
-  }, [paymentType, companySearchQuery]);
+  }, [paymentType, groupPayerType, companySearchQuery]);
+
+  // Fetch customers when payment type is 'group' and groupPayerType is 'customer'
+  useEffect(() => {
+    const fetchGroupCustomers = async () => {
+      if (paymentType === 'group' && groupPayerType === 'customer') {
+        try {
+          const params = new URLSearchParams();
+          if (groupCustomerSearchQuery) {
+            params.append('search', groupCustomerSearchQuery);
+          }
+          const response = await fetch(`/api/customers?${params}`);
+          if (response.ok) {
+            const data = await response.json();
+            setGroupCustomers(data.customers || data || []);
+          }
+        } catch (error) {
+          console.error('Error fetching customers:', error);
+        }
+      }
+    };
+
+    fetchGroupCustomers();
+  }, [paymentType, groupPayerType, groupCustomerSearchQuery]);
 
   useEffect(() => {
     console.log(cart)
@@ -1467,7 +1504,7 @@ export default function Page() {
 
             <Separator orientation="vertical" className="h-[1px] bg-muted my-2" />
 
-            {/* PAYMENT TYPE SELECTION - Individual or Company */}
+            {/* PAYMENT TYPE SELECTION - Regular or Group */}
             {requiresCustomerAssignment && (
               <div className="flex flex-col gap-4 mb-4">
                 <div className="flex items-center gap-4">
@@ -1479,6 +1516,7 @@ export default function Page() {
                       setPaymentType(value);
                       if (value === 'individual') {
                         setSelectedCompany(null);
+                        setSelectedGroupCustomer(null);
                       }
                     }}
                     className="flex gap-4"
@@ -1486,17 +1524,47 @@ export default function Page() {
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="individual" id="individual" />
-                      <Label htmlFor="individual" className="cursor-pointer">Individual</Label>
+                      <Label htmlFor="individual" className="cursor-pointer">Regular</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="company" id="company" />
-                      <Label htmlFor="company" className="cursor-pointer">Group</Label>
+                      <RadioGroupItem value="group" id="group" />
+                      <Label htmlFor="group" className="cursor-pointer">Group</Label>
                     </div>
                   </RadioGroup>
                 </div>
 
+                {/* Group Payer Type Selection - Company or Customer */}
+                {paymentType === 'group' && (
+                  <div className="flex items-center gap-4">
+                    <span>Payer</span>
+                    <div className="flex-1" />
+                    <RadioGroup
+                      value={groupPayerType}
+                      onValueChange={(value) => {
+                        setGroupPayerType(value);
+                        if (value === 'company') {
+                          setSelectedGroupCustomer(null);
+                        } else {
+                          setSelectedCompany(null);
+                        }
+                      }}
+                      className="flex gap-4"
+                      disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                    >
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="company" id="payer-company" />
+                        <Label htmlFor="payer-company" className="cursor-pointer">Company</Label>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="customer" id="payer-customer" />
+                        <Label htmlFor="payer-customer" className="cursor-pointer">Customer</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                )}
+
                 {/* Company Selection Combobox */}
-                {paymentType === 'company' && (
+                {paymentType === 'group' && groupPayerType === 'company' && (
                   <div className="flex gap-2 items-start">
                     <div className="flex-1">
                       <Popover open={companySearchOpen} onOpenChange={setCompanySearchOpen}>
@@ -1573,14 +1641,95 @@ export default function Page() {
                   </div>
                 )}
 
-                {/* Company Info Message */}
-                {paymentType === 'company' && selectedCompany && (
+                {/* Customer Selection Combobox (for group payments by customer) */}
+                {paymentType === 'group' && groupPayerType === 'customer' && (
+                  <div className="flex gap-2 items-start">
+                    <div className="flex-1">
+                      <Popover open={groupCustomerSearchOpen} onOpenChange={setGroupCustomerSearchOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={groupCustomerSearchOpen}
+                            className="w-full justify-between cursor-pointer"
+                            disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                          >
+                            {selectedGroupCustomer ? (
+                              <div className="flex items-center gap-2">
+                                <User className="h-4 w-4" />
+                                <span>{selectedGroupCustomer.name}</span>
+                              </div>
+                            ) : (
+                              "Select customer..."
+                            )}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[400px] p-0">
+                          <Command>
+                            <CommandInput
+                              placeholder="Search customers..."
+                              value={groupCustomerSearchQuery}
+                              onValueChange={setGroupCustomerSearchQuery}
+                            />
+                            <CommandList>
+                              <CommandEmpty>No customer found.</CommandEmpty>
+                              <CommandGroup>
+                                {groupCustomers.map((customer) => (
+                                  <CommandItem
+                                    key={customer._id}
+                                    value={customer.name}
+                                    onSelect={() => {
+                                      setSelectedGroupCustomer(customer);
+                                      setGroupCustomerSearchOpen(false);
+                                      setGroupCustomerSearchQuery('');
+                                    }}
+                                    className="cursor-pointer"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-4 w-4",
+                                        selectedGroupCustomer?._id === customer._id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <div className="flex flex-col">
+                                      <span>{customer.name}</span>
+                                      {customer.email && (
+                                        <span className="text-xs text-muted-foreground">{customer.email}</span>
+                                      )}
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                )}
+
+                {/* Group Info Message - Company */}
+                {paymentType === 'group' && groupPayerType === 'company' && selectedCompany && (
                   <div className="flex items-start gap-2 p-3 bg-muted rounded-md text-sm">
                     <OctagonAlert className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                     <div className="flex flex-col gap-1">
                       <div className="font-medium">Group Purchase for {selectedCompany.name}</div>
                       <div className="text-muted-foreground text-xs">
                         Customer assignments will be completed after payment via a shareable waiver link sent to {selectedCompany.contactEmail}.
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Group Info Message - Customer */}
+                {paymentType === 'group' && groupPayerType === 'customer' && selectedGroupCustomer && (
+                  <div className="flex items-start gap-2 p-3 bg-muted rounded-md text-sm">
+                    <OctagonAlert className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                    <div className="flex flex-col gap-1">
+                      <div className="font-medium">Group Purchase by {selectedGroupCustomer.name}</div>
+                      <div className="text-muted-foreground text-xs">
+                        Customer assignments will be completed after payment via a shareable waiver link sent to {selectedGroupCustomer.email}.
                       </div>
                     </div>
                   </div>
@@ -1648,16 +1797,22 @@ export default function Page() {
                                 />
                               </>
                             ) : (
-                              <span
-                                className={`text-sm ${paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' ? 'text-muted-foreground' : 'text-muted-foreground cursor-pointer hover:underline'}`}
-                                onClick={() => {
-                                  if (paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') return
-                                  setSelectedSlot({ priceId: price._id, isMinor: true, multi: true, remaining })
-                                  setShowCustomerSelection(true)
-                                }}
-                              >
-                                {remaining > 0 ? `${remaining} to assign` : 'All assigned'}
-                              </span>
+                              remaining > 0 ? (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="cursor-pointer h-7"
+                                  disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                                  onClick={() => {
+                                    setSelectedSlot({ priceId: price._id, isMinor: true, multi: true, remaining })
+                                    setShowCustomerSelection(true)
+                                  }}
+                                >
+                                  {remaining} to assign
+                                </Button>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">All assigned</span>
+                              )
                             )}
                           </div>
                         </div>
@@ -1992,14 +2147,15 @@ export default function Page() {
         setTab(newTab);
       }} className="w-3/4">
         <TabsList>
-          <TabsTrigger 
-            value="card" 
-            onClick={() => setCashInput(0.00)} 
-            disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+          <TabsTrigger
+            value="card"
+            onClick={() => setCashInput(0.00)}
+            disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' || paymentType === 'group'}
+            className={paymentType === 'group' ? 'opacity-50 cursor-not-allowed' : ''}
           >
             Card
           </TabsTrigger>
-          <div 
+          <div
             className="relative"
             onClick={() => {
               if (hasMembershipProducts && !(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded')) {
@@ -2007,10 +2163,10 @@ export default function Page() {
               }
             }}
           >
-            <TabsTrigger 
-              value="cash" 
-              disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' || hasMembershipProducts}
-              className={hasMembershipProducts ? 'opacity-50 cursor-not-allowed' : ''}
+            <TabsTrigger
+              value="cash"
+              disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' || hasMembershipProducts || paymentType === 'group'}
+              className={hasMembershipProducts || paymentType === 'group' ? 'opacity-50 cursor-not-allowed' : ''}
               onClick={() => setCashInput(0.00)}
             >
               Cash
@@ -2019,6 +2175,13 @@ export default function Page() {
               <div className="absolute inset-0 cursor-not-allowed" />
             )}
           </div>
+          <TabsTrigger
+            value="invoice"
+            disabled={paymentType !== 'group' || paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+            className={paymentType !== 'group' ? 'opacity-50 cursor-not-allowed' : ''}
+          >
+            Invoice
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="card">
@@ -2347,6 +2510,120 @@ export default function Page() {
                    </Button>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="invoice">
+          <Card>
+            <CardContent className="flex flex-col gap-2">
+              <div className="text-center py-2">
+                <div className="text-sm font-medium">Invoice</div>
+                <div className="text-xs text-muted-foreground">
+                  Invoice will be emailed to the customer for payment online.
+                </div>
+              </div>
+
+              <div className="bg-muted rounded-md p-3 text-sm">
+                <div className="flex justify-between mb-1">
+                  <span className="text-muted-foreground">Customer:</span>
+                  <span className="font-medium">
+                    {groupPayerType === 'company'
+                      ? (selectedCompany?.name || 'Not selected')
+                      : (selectedGroupCustomer?.name || 'Not selected')
+                    }
+                  </span>
+                </div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-muted-foreground">Contact:</span>
+                  <span className="font-medium">
+                    {groupPayerType === 'company'
+                      ? (selectedCompany?.contactEmail || '-')
+                      : (selectedGroupCustomer?.email || '-')
+                    }
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Amount:</span>
+                  <span className="font-medium">${cart.total?.toFixed(2) || '0.00'}</span>
+                </div>
+              </div>
+
+              <Button
+                className="w-full cursor-pointer"
+                disabled={
+                  cart.products.length === 0 ||
+                  (groupPayerType === 'company' ? !selectedCompany : !selectedGroupCustomer) ||
+                  paymentStatus === 'succeeded' ||
+                  isProcessingCash
+                }
+                onClick={async () => {
+                  setIsProcessingCash(true);
+                  try {
+                    const recipientEmail = groupPayerType === 'company'
+                      ? selectedCompany?.contactEmail
+                      : selectedGroupCustomer?.email;
+                    const recipientName = groupPayerType === 'company'
+                      ? selectedCompany?.name
+                      : selectedGroupCustomer?.name;
+
+                    const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/payments/company', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        cart,
+                        company: groupPayerType === 'company' ? selectedCompany : null,
+                        customer: groupPayerType === 'customer' ? selectedGroupCustomer : null,
+                        paymentType: groupPayerType === 'company' ? 'company' : 'customer-invoice'
+                      }),
+                    });
+
+                    if (!res.ok) {
+                      throw new Error('Failed to process invoice');
+                    }
+
+                    const tx = await res.json();
+                    setPaymentStatus(tx.transaction.status);
+
+                    if (tx.transaction && tx.transaction._id) {
+                      setTransactionId(tx.transaction._id);
+                    }
+
+                    if (tx.transaction.status === 'succeeded') {
+                      hasSuccessfulPayment.current = true;
+                      toast.success(`Invoice created! Waiver link sent to ${recipientEmail}`);
+                    }
+
+                    markCartAsStale();
+                  } catch (error) {
+                    console.error('Invoice processing failed:', error);
+                    toast.error(`Invoice failed: ${error.message}`);
+                  } finally {
+                    setIsProcessingCash(false);
+                  }
+                }}
+              >
+                {isProcessingCash ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin mr-2" />
+                    Processing...
+                  </>
+                ) : paymentStatus === 'succeeded' ? (
+                  'Invoice Created'
+                ) : (
+                  'Create Invoice'
+                )}
+              </Button>
+              <Button
+                className="cursor-pointer"
+                onClick={() => router.push('/shop')}
+                disabled={
+                  isProcessingCash ||
+                  paymentStatus === 'processing' ||
+                  (paymentStatus === 'succeeded' && !transactionId)
+                }
+              >
+                Return to Shop
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>

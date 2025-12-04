@@ -3,7 +3,7 @@
 import { Sheet, SheetContent, SheetFooter, SheetClose, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet'
 import { Button } from '@/components/ui/button'
 import React from 'react'
-import { Minus, Plus, CalendarIcon, Clock } from "lucide-react"
+import { CalendarIcon, Clock } from "lucide-react"
 import { useGlobals } from '@/lib/globals'
 import { useState, useEffect } from 'react'
 import { calcCartValueClass, cleanupProduct } from '@/lib/product'
@@ -14,13 +14,13 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { NumberInput } from '@/components/ui/number-input'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
+import { IconButton, SelectionCheck } from '@/components/control-button'
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { useClass } from './useClass'
 import dayjs from 'dayjs'
 
-export default function ProductDetail({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false }) {
+export default function ProductDetail({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false, groupHasPriceOverride = true }) {
 
   if (!product) return null;
 
@@ -37,6 +37,8 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
   const [customTime, setCustomTime] = useState('')
   const [customDuration, setCustomDuration] = useState(product?.duration?.minute || null)
   const [priceQuantities, setPriceQuantities] = useState({})
+  const [existingScheduleData, setExistingScheduleData] = useState({ classes: [] })
+  const [openScheduleAvailable, setOpenScheduleAvailable] = useState(product?.capacity || 0)
 
   // Alert dialog state
   const [showOverlapAlert, setShowOverlapAlert] = useState(false)
@@ -48,6 +50,50 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
       setPriceQuantities({ 0: product.groupQty });
     }
   }, [isPartOfGroup, product?.groupQty, product?.prices])
+
+  // Fetch existing schedule data for open schedule products
+  useEffect(() => {
+    const fetchScheduleData = async () => {
+      if (product?.openSchedule && product?._id) {
+        try {
+          const res = await fetch(`/api/products/${product._id}/schedules`);
+          if (res.ok) {
+            const data = await res.json();
+            setExistingScheduleData(data);
+          }
+        } catch (error) {
+          console.error('Error fetching schedule data:', error);
+        }
+      }
+    };
+    fetchScheduleData();
+  }, [product?._id, product?.openSchedule])
+
+  // Update available spots when date/time changes for open schedule
+  useEffect(() => {
+    if (!product?.openSchedule || !selectedDate || !customTime) {
+      setOpenScheduleAvailable(product?.capacity || 0);
+      return;
+    }
+
+    // Build the datetime string to match
+    const datetime = dayjs(selectedDate).format('YYYY-MM-DD') + 'T' + customTime;
+    const searchDatetime = new Date(datetime).toISOString();
+
+    // Find matching class in existing schedule data
+    const matchingClass = existingScheduleData.classes?.find(cls => {
+      const clsDatetime = new Date(cls.datetime).toISOString();
+      return clsDatetime === searchDatetime;
+    });
+
+    if (matchingClass) {
+      // Use the available spots from existing booking
+      setOpenScheduleAvailable(matchingClass.available ?? 0);
+    } else {
+      // No existing booking, full capacity available
+      setOpenScheduleAvailable(product?.capacity || 0);
+    }
+  }, [selectedDate, customTime, existingScheduleData, product?.openSchedule, product?.capacity])
 
   // Restore selectedDate and selectedTimes from previously configured product
   // OR pre-select date/time from group's scheduled date/time
@@ -273,8 +319,13 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                     </div>
                   </div>
                   {product.capacity && (
-                    <span className="text-sm text-muted-foreground">
-                      {Object.values(priceQuantities).reduce((sum, q) => sum + q, 0)}/{product.capacity} spots
+                    <span className={cn(
+                      "text-sm",
+                      Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable
+                        ? "text-destructive font-medium"
+                        : "text-muted-foreground"
+                    )}>
+                      {openScheduleAvailable} spot{openScheduleAvailable !== 1 ? 's' : ''} available
                     </span>
                   )}
                 </div>
@@ -284,38 +335,34 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                   {product.prices?.map((price, priceIdx) => {
                     const qty = priceQuantities[priceIdx] || 0;
                     const totalQty = Object.values(priceQuantities).reduce((sum, q) => sum + q, 0);
-                    const atCapacity = product.capacity && totalQty >= product.capacity;
+                    const atCapacity = openScheduleAvailable <= 0 || totalQty >= openScheduleAvailable;
 
                     return (
                       <div key={priceIdx} className="flex items-center gap-2">
-                        <Button
-                          size="icon"
-                          className="cursor-pointer"
-                          onClick={() => {
-                            setPriceQuantities(prev => ({
-                              ...prev,
-                              [priceIdx]: Math.max(0, (prev[priceIdx] || 0) - 1)
-                            }));
-                          }}
-                          disabled={qty === 0 || isPartOfGroup}
-                          style={{ display: isPartOfGroup ? 'none' : 'inline-flex' }}
-                        >
-                          <Minus />
-                        </Button>
-                        <Button
-                          size="icon"
-                          className="cursor-pointer"
-                          onClick={() => {
-                            setPriceQuantities(prev => ({
-                              ...prev,
-                              [priceIdx]: (prev[priceIdx] || 0) + 1
-                            }));
-                          }}
-                          disabled={atCapacity || isPartOfGroup}
-                          style={{ display: isPartOfGroup ? 'none' : 'inline-flex' }}
-                        >
-                          <Plus />
-                        </Button>
+                        {!isPartOfGroup && (
+                          <>
+                            <IconButton
+                              icon="minus"
+                              onClick={() => {
+                                setPriceQuantities(prev => ({
+                                  ...prev,
+                                  [priceIdx]: Math.max(0, (prev[priceIdx] || 0) - 1)
+                                }));
+                              }}
+                              disabled={qty === 0}
+                            />
+                            <IconButton
+                              icon="plus"
+                              onClick={() => {
+                                setPriceQuantities(prev => ({
+                                  ...prev,
+                                  [priceIdx]: (prev[priceIdx] || 0) + 1
+                                }));
+                              }}
+                              disabled={atCapacity}
+                            />
+                          </>
+                        )}
                         <span className="flex-1">
                           {price.name}
                           {price.minor && (
@@ -328,6 +375,13 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                     );
                   })}
                 </div>
+
+                {/* Warning when insufficient spots */}
+                {Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable && (
+                  <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md text-sm text-destructive">
+                    <strong>Insufficient spots available.</strong> This time slot only has {openScheduleAvailable} spot{openScheduleAvailable !== 1 ? 's' : ''} remaining, but {Object.values(priceQuantities).reduce((sum, q) => sum + q, 0)} {Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) === 1 ? 'is' : 'are'} required.
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -383,8 +437,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
 
                                 return (
                                   <div className="flex items-center gap-3 py-2">
-                                    <Checkbox
-                                      id={`time-${time.datetime}`}
+                                    <SelectionCheck
                                       checked={selectedTimes.some(t => t.datetime === time.datetime)}
                                       disabled={insufficientSpots}
                                       onCheckedChange={(checked) => {
@@ -399,10 +452,8 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                                           setSelectedTimes(prev => prev.filter(t => t.datetime !== time.datetime));
                                         }
                                       }}
-                                      className="size-9 cursor-pointer"
                                     />
-                                    <label
-                                      htmlFor={`time-${time.datetime}`}
+                                    <span
                                       className={`flex-1 text-sm ${insufficientSpots ? 'text-muted-foreground cursor-not-allowed' : 'cursor-pointer'}`}
                                     >
                                       Select this time slot ({groupQty}x {product.prices?.[0]?.name || 'Adult'})
@@ -411,7 +462,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                                           (Insufficient spots)
                                         </span>
                                       )}
-                                    </label>
+                                    </span>
                                   </div>
                                 );
                               })()
@@ -423,9 +474,8 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
 
                                 return (
                                   <div key={priceIdx} className="flex items-center gap-2">
-                                    <Button
-                                      size="icon"
-                                      className="cursor-pointer"
+                                    <IconButton
+                                      icon="minus"
                                       onClick={() => {
                                         setSelectedTimes(prev => {
                                           const existing = prev.find(t => t.datetime === time.datetime);
@@ -457,12 +507,9 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                                         });
                                       }}
                                       disabled={qty === 0}
-                                    >
-                                      <Minus />
-                                    </Button>
-                                    <Button
-                                      size="icon"
-                                      className="cursor-pointer"
+                                    />
+                                    <IconButton
+                                      icon="plus"
                                       onClick={() => {
                                         setSelectedTimes(prev => {
                                           const existing = prev.find(t => t.datetime === time.datetime);
@@ -478,9 +525,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                                         });
                                       }}
                                       disabled={atCapacity}
-                                    >
-                                      <Plus />
-                                    </Button>
+                                    />
                                     <span className="flex-1">
                                       {price.name}
                                       {price.minor && (
@@ -514,12 +559,13 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
           </div>
 
           {onAddToCart ? (
+            <>
             <Button
               type="submit"
-              className='cursor-pointer'
+              className='cursor-pointer w-full'
               disabled={
                 product.openSchedule
-                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0)
+                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0) || Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable
                   : selectedTimes.length === 0
               }
               onClick={async () => {
@@ -590,13 +636,22 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
             >
               {isPartOfGroup ? 'Ok' : 'Add'}
             </Button>
+            <Button
+              variant="outline"
+              className='cursor-pointer w-full'
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+            </>
           ) : (
+            <>
             <Button
               type="submit"
-              className='cursor-pointer'
+              className='cursor-pointer w-full'
               disabled={
                 product.openSchedule
-                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0)
+                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0) || Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable
                   : selectedTimes.length === 0
               }
               onClick={async () => {
@@ -669,6 +724,14 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
             >
               Add
             </Button>
+            <Button
+              variant="outline"
+              className='cursor-pointer w-full'
+              onClick={() => setOpen(false)}
+            >
+              Cancel
+            </Button>
+            </>
           )}
         </SheetFooter>
 
