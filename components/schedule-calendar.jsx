@@ -6,6 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  MultiSelect,
+  MultiSelectContent,
+  MultiSelectItem,
+  MultiSelectTrigger,
+  MultiSelectValue,
+} from '@/components/ui/multi-select'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import dayjs from 'dayjs'
@@ -32,6 +39,8 @@ export function ScheduleCalendar({ className, onEventClick, compact = false }) {
   const [loading, setLoading] = useState(true)
   const [selectedDay, setSelectedDay] = useState(null)
   const [daySheetOpen, setDaySheetOpen] = useState(false)
+  const [selectedProducts, setSelectedProducts] = useState([])
+  const [selectedBookings, setSelectedBookings] = useState([])
 
   // Fetch events for the current month
   useEffect(() => {
@@ -53,10 +62,65 @@ export function ScheduleCalendar({ className, onEventClick, compact = false }) {
     fetchEvents()
   }, [currentDate])
 
+  // Extract unique products (classes/courses) from events
+  const uniqueProducts = useMemo(() => {
+    const productMap = new Map()
+    for (const event of events) {
+      if (event.product?._id && event.product?.name) {
+        productMap.set(event.product._id, {
+          id: event.product._id,
+          name: event.product.name,
+          type: event.product.type
+        })
+      }
+    }
+    return Array.from(productMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [events])
+
+  // Extract unique bookings (companies/individuals) from events
+  const uniqueBookings = useMemo(() => {
+    const bookingMap = new Map()
+    for (const event of events) {
+      if (event.companyName) {
+        // Use company name as key since we may not have companyId
+        const key = event.companyId || event.companyName
+        bookingMap.set(key, {
+          id: key,
+          name: event.companyName
+        })
+      }
+    }
+    return Array.from(bookingMap.values()).sort((a, b) => a.name.localeCompare(b.name))
+  }, [events])
+
+  // Filter events based on selections
+  const filteredEvents = useMemo(() => {
+    return events.filter(event => {
+      // If no filters selected, show all
+      const hasProductFilter = selectedProducts.length > 0
+      const hasBookingFilter = selectedBookings.length > 0
+
+      if (!hasProductFilter && !hasBookingFilter) return true
+
+      // Check product filter
+      const matchesProduct = !hasProductFilter || selectedProducts.includes(event.product?._id)
+
+      // Check booking filter
+      const bookingKey = event.companyId || event.companyName
+      const matchesBooking = !hasBookingFilter || (bookingKey && selectedBookings.includes(bookingKey))
+
+      // Show event if it matches any active filter
+      if (hasProductFilter && hasBookingFilter) {
+        return matchesProduct || matchesBooking
+      }
+      return hasProductFilter ? matchesProduct : matchesBooking
+    })
+  }, [events, selectedProducts, selectedBookings])
+
   // Group events by day
   const eventsByDay = useMemo(() => {
     const grouped = {}
-    for (const event of events) {
+    for (const event of filteredEvents) {
       const day = dayjs(event.datetime).format('YYYY-MM-DD')
       if (!grouped[day]) {
         grouped[day] = []
@@ -64,7 +128,7 @@ export function ScheduleCalendar({ className, onEventClick, compact = false }) {
       grouped[day].push(event)
     }
     return grouped
-  }, [events])
+  }, [filteredEvents])
 
   // Generate calendar grid
   const calendarDays = useMemo(() => {
@@ -196,7 +260,63 @@ export function ScheduleCalendar({ className, onEventClick, compact = false }) {
           >
             Today
           </Button>
+
+          {/* Filters */}
+          {(uniqueProducts.length > 0 || uniqueBookings.length > 0) && (
+            <>
+              <div className="h-6 w-px bg-border mx-1" />
+              {uniqueProducts.length > 0 && (
+                <MultiSelect
+                  values={selectedProducts}
+                  onValuesChange={setSelectedProducts}
+                >
+                  <MultiSelectTrigger className="min-w-[160px] max-w-[250px] cursor-pointer">
+                    <MultiSelectValue placeholder="Filter by class..." />
+                  </MultiSelectTrigger>
+                  <MultiSelectContent search={{ placeholder: "Search classes...", emptyMessage: "No classes found" }}>
+                    {uniqueProducts.map((product) => (
+                      <MultiSelectItem
+                        key={product.id}
+                        value={product.id}
+                        badgeLabel={product.name}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span>{product.name}</span>
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {product.type}
+                          </Badge>
+                        </div>
+                      </MultiSelectItem>
+                    ))}
+                  </MultiSelectContent>
+                </MultiSelect>
+              )}
+
+              {uniqueBookings.length > 0 && (
+                <MultiSelect
+                  values={selectedBookings}
+                  onValuesChange={setSelectedBookings}
+                >
+                  <MultiSelectTrigger className="min-w-[160px] max-w-[250px] cursor-pointer">
+                    <MultiSelectValue placeholder="Filter by booking..." />
+                  </MultiSelectTrigger>
+                  <MultiSelectContent search={{ placeholder: "Search bookings...", emptyMessage: "No bookings found" }}>
+                    {uniqueBookings.map((booking) => (
+                      <MultiSelectItem
+                        key={booking.id}
+                        value={booking.id}
+                        badgeLabel={booking.name}
+                      >
+                        {booking.name}
+                      </MultiSelectItem>
+                    ))}
+                  </MultiSelectContent>
+                </MultiSelect>
+              )}
+            </>
+          )}
         </div>
+
         <div className="flex items-center gap-1">
           <Button
             variant="outline"

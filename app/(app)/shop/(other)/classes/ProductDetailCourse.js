@@ -25,6 +25,45 @@ export default function ProductDetail({ open, setOpen, product, setProduct, onAd
   const [total, setTotal] = useState(0)
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null)
 
+  // Auto-select price tier for group products
+  useEffect(() => {
+    if (isPartOfGroup && product?.groupQty && product?.prices?.length > 0) {
+      // Check if first price tier doesn't already have qty set
+      if (!product.prices[0]?.qty) {
+        setProduct(draft => {
+          if (draft?.prices?.[0]) {
+            draft.prices[0].qty = product.groupQty;
+          }
+        });
+      }
+    }
+  }, [isPartOfGroup, product?.groupQty, product?.prices?.length]);
+
+  // Auto-select time slot for group products based on groupScheduledTime
+  useEffect(() => {
+    if (!isPartOfGroup || !product?.groupScheduledTime || selectedTimeSlot) return;
+    if (!product?.schedule?.times?.length) return;
+
+    // Find matching time slot
+    const groupTime = product.groupScheduledTime; // "HH:mm" format
+    const matchingIndex = product.schedule.times.findIndex(time => {
+      const timeStr = typeof time === 'string' ? time : time.time;
+      // Convert times to comparable format
+      return timeStr === groupTime || timeStr.replace(':', '') === groupTime.replace(':', '');
+    });
+
+    if (matchingIndex >= 0) {
+      const timeId = `time-${matchingIndex}`;
+      const time = product.schedule.times[matchingIndex];
+      const timeStr = typeof time === 'string' ? time : time.time;
+      const label = typeof time === 'object' ? time.label : '';
+
+      setSelectedTimeSlot(timeId);
+      setProduct(draft => {
+        draft.selectedTimeSlot = { time: timeStr, label };
+      });
+    }
+  }, [isPartOfGroup, product?.groupScheduledTime, product?.schedule?.times, selectedTimeSlot]);
 
   useEffect(() => {
     async function fetch() {

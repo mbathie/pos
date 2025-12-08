@@ -102,9 +102,7 @@ export default function Page() {
   const [companies, setCompanies] = useState([])
   const [companySearchOpen, setCompanySearchOpen] = useState(false)
   const [companySearchQuery, setCompanySearchQuery] = useState('')
-  const [groupCustomerSearchOpen, setGroupCustomerSearchOpen] = useState(false)
-  const [groupCustomerSearchQuery, setGroupCustomerSearchQuery] = useState('')
-  const [groupCustomers, setGroupCustomers] = useState([])
+  const [groupCustomerSheetOpen, setGroupCustomerSheetOpen] = useState(false)
   const [addCompanySheetOpen, setAddCompanySheetOpen] = useState(false)
 
   // Organization settings state
@@ -248,28 +246,6 @@ export default function Page() {
     fetchCompanies();
   }, [paymentType, groupPayerType, companySearchQuery]);
 
-  // Fetch customers when payment type is 'group' and groupPayerType is 'customer'
-  useEffect(() => {
-    const fetchGroupCustomers = async () => {
-      if (paymentType === 'group' && groupPayerType === 'customer') {
-        try {
-          const params = new URLSearchParams();
-          if (groupCustomerSearchQuery) {
-            params.append('search', groupCustomerSearchQuery);
-          }
-          const response = await fetch(`/api/customers?${params}`);
-          if (response.ok) {
-            const data = await response.json();
-            setGroupCustomers(data.customers || data || []);
-          }
-        } catch (error) {
-          console.error('Error fetching customers:', error);
-        }
-      }
-    };
-
-    fetchGroupCustomers();
-  }, [paymentType, groupPayerType, groupCustomerSearchQuery]);
 
   useEffect(() => {
     console.log(cart)
@@ -1641,72 +1617,24 @@ export default function Page() {
                   </div>
                 )}
 
-                {/* Customer Selection Combobox (for group payments by customer) */}
+                {/* Customer Selection Button (for group payments by customer) */}
                 {paymentType === 'group' && groupPayerType === 'customer' && (
-                  <div className="flex gap-2 items-start">
-                    <div className="flex-1">
-                      <Popover open={groupCustomerSearchOpen} onOpenChange={setGroupCustomerSearchOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={groupCustomerSearchOpen}
-                            className="w-full justify-between cursor-pointer"
-                            disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
-                          >
-                            {selectedGroupCustomer ? (
-                              <div className="flex items-center gap-2">
-                                <User className="h-4 w-4" />
-                                <span>{selectedGroupCustomer.name}</span>
-                              </div>
-                            ) : (
-                              "Select customer..."
-                            )}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[400px] p-0">
-                          <Command>
-                            <CommandInput
-                              placeholder="Search customers..."
-                              value={groupCustomerSearchQuery}
-                              onValueChange={setGroupCustomerSearchQuery}
-                            />
-                            <CommandList>
-                              <CommandEmpty>No customer found.</CommandEmpty>
-                              <CommandGroup>
-                                {groupCustomers.map((customer) => (
-                                  <CommandItem
-                                    key={customer._id}
-                                    value={customer.name}
-                                    onSelect={() => {
-                                      setSelectedGroupCustomer(customer);
-                                      setGroupCustomerSearchOpen(false);
-                                      setGroupCustomerSearchQuery('');
-                                    }}
-                                    className="cursor-pointer"
-                                  >
-                                    <Check
-                                      className={cn(
-                                        "mr-2 h-4 w-4",
-                                        selectedGroupCustomer?._id === customer._id ? "opacity-100" : "opacity-0"
-                                      )}
-                                    />
-                                    <div className="flex flex-col">
-                                      <span>{customer.name}</span>
-                                      {customer.email && (
-                                        <span className="text-xs text-muted-foreground">{customer.email}</span>
-                                      )}
-                                    </div>
-                                  </CommandItem>
-                                ))}
-                              </CommandGroup>
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-                  </div>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-between cursor-pointer"
+                    disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                    onClick={() => setGroupCustomerSheetOpen(true)}
+                  >
+                    {selectedGroupCustomer ? (
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        <span>{selectedGroupCustomer.name}</span>
+                      </div>
+                    ) : (
+                      "Select customer..."
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
                 )}
 
                 {/* Group Info Message - Company */}
@@ -2177,8 +2105,7 @@ export default function Page() {
           </div>
           <TabsTrigger
             value="invoice"
-            disabled={paymentType !== 'group' || paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
-            className={paymentType !== 'group' ? 'opacity-50 cursor-not-allowed' : ''}
+            disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
           >
             Invoice
           </TabsTrigger>
@@ -2527,18 +2454,22 @@ export default function Page() {
                 <div className="flex justify-between mb-1">
                   <span className="text-muted-foreground">Customer:</span>
                   <span className="font-medium">
-                    {groupPayerType === 'company'
-                      ? (selectedCompany?.name || 'Not selected')
-                      : (selectedGroupCustomer?.name || 'Not selected')
+                    {paymentType === 'group'
+                      ? (groupPayerType === 'company'
+                          ? (selectedCompany?.name || 'Not selected')
+                          : (selectedGroupCustomer?.name || 'Not selected'))
+                      : (cart.customer?.name || 'Not selected')
                     }
                   </span>
                 </div>
                 <div className="flex justify-between mb-1">
                   <span className="text-muted-foreground">Contact:</span>
                   <span className="font-medium">
-                    {groupPayerType === 'company'
-                      ? (selectedCompany?.contactEmail || '-')
-                      : (selectedGroupCustomer?.email || '-')
+                    {paymentType === 'group'
+                      ? (groupPayerType === 'company'
+                          ? (selectedCompany?.contactEmail || '-')
+                          : (selectedGroupCustomer?.email || '-'))
+                      : (cart.customer?.email || '-')
                     }
                   </span>
                 </div>
@@ -2552,28 +2483,45 @@ export default function Page() {
                 className="w-full cursor-pointer"
                 disabled={
                   cart.products.length === 0 ||
-                  (groupPayerType === 'company' ? !selectedCompany : !selectedGroupCustomer) ||
+                  (paymentType === 'group'
+                    ? (groupPayerType === 'company' ? !selectedCompany : !selectedGroupCustomer)
+                    : !cart.customer?._id
+                  ) ||
                   paymentStatus === 'succeeded' ||
                   isProcessingCash
                 }
                 onClick={async () => {
                   setIsProcessingCash(true);
                   try {
-                    const recipientEmail = groupPayerType === 'company'
-                      ? selectedCompany?.contactEmail
-                      : selectedGroupCustomer?.email;
-                    const recipientName = groupPayerType === 'company'
-                      ? selectedCompany?.name
-                      : selectedGroupCustomer?.name;
+                    let recipientEmail, recipientName, invoiceCustomer, invoiceCompany, invoicePaymentType;
+
+                    if (paymentType === 'group') {
+                      recipientEmail = groupPayerType === 'company'
+                        ? selectedCompany?.contactEmail
+                        : selectedGroupCustomer?.email;
+                      recipientName = groupPayerType === 'company'
+                        ? selectedCompany?.name
+                        : selectedGroupCustomer?.name;
+                      invoiceCompany = groupPayerType === 'company' ? selectedCompany : null;
+                      invoiceCustomer = groupPayerType === 'customer' ? selectedGroupCustomer : null;
+                      invoicePaymentType = groupPayerType === 'company' ? 'company' : 'customer-invoice';
+                    } else {
+                      // Individual payment - use cart customer
+                      recipientEmail = cart.customer?.email;
+                      recipientName = cart.customer?.name;
+                      invoiceCompany = null;
+                      invoiceCustomer = cart.customer;
+                      invoicePaymentType = 'customer-invoice';
+                    }
 
                     const res = await fetch(process.env.NEXT_PUBLIC_API_BASE_URL + '/api/payments/company', {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({
                         cart,
-                        company: groupPayerType === 'company' ? selectedCompany : null,
-                        customer: groupPayerType === 'customer' ? selectedGroupCustomer : null,
-                        paymentType: groupPayerType === 'company' ? 'company' : 'customer-invoice'
+                        company: invoiceCompany,
+                        customer: invoiceCustomer,
+                        paymentType: invoicePaymentType
                       }),
                     });
 
@@ -2590,7 +2538,7 @@ export default function Page() {
 
                     if (tx.transaction.status === 'succeeded') {
                       hasSuccessfulPayment.current = true;
-                      toast.success(`Invoice created! Waiver link sent to ${recipientEmail}`);
+                      toast.success(`Invoice created! Invoice sent to ${recipientEmail}`);
                     }
 
                     markCartAsStale();
@@ -2636,6 +2584,19 @@ export default function Page() {
         selectedSlot={selectedSlot}
         singleSelection={true}
         waiverRequired={hasWaiverRequiredProducts}
+      />
+
+      {/* Customer Selection Sheet for Group Payments */}
+      <CustomerSelectionSheet
+        open={groupCustomerSheetOpen}
+        onOpenChange={setGroupCustomerSheetOpen}
+        onConfirm={(selection) => {
+          setSelectedGroupCustomer(selection.customer);
+          setGroupCustomerSheetOpen(false);
+        }}
+        selectedSlot={{ isMinor: false }}
+        singleSelection={true}
+        waiverRequired={false}
       />
 
       <DiscountPinDialog

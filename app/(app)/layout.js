@@ -13,7 +13,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { TooltipProvider } from "@/components/ui/tooltip"
-import { Badge } from "@/components/ui/badge"
 
 import { CartSheet } from '@/components/cart-sheet'
 
@@ -180,27 +179,24 @@ export default function Page({children}) {
       <SidebarInset>
         <header
           className="sticky top-0 z-50 bg-background pr-4 flex h-10 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12">
-          <div className="flex items-center gap-4 px-4">
+          <div className="flex items-center gap-2 px-4">
             <SidebarTrigger className="-ml-1" />
-            {!open && (
-              <div className="flex items-center gap-2 text-sidebar-primary text-sm">
-                <MapPin className="w-4 h-4" />
-                <span>{location?.name}</span>
-                {device?.name && (
-                  <>
-                    <Monitor className="w-4 h-4" />
-                    <span>{device.name}</span>
-                  </>
-                )}
-                {/* {(device?.terminal?.label || terminalConnection?.readerLabel) && (
-                  <Badge className="text-xs shrink-0">
-                    <CreditCard className="h-3 w-3 mr-1" />
-                    {device?.terminal?.label || terminalConnection?.readerLabel}
-                  </Badge>
-                )} */}
-              </div>
-            )}
-
+            <div className="flex items-center gap-2 text-sidebar-primary text-sm">
+              <MapPin className="w-4 h-4" />
+              <span>{location?.name}</span>
+              {device?.name && (
+                <>
+                  <Monitor className="w-4 h-4 ml-2" />
+                  <span>{device.name}</span>
+                </>
+              )}
+              {(device?.terminal?.label || terminalConnection?.readerLabel) && (
+                <>
+                  <CreditCard className="w-4 h-4 ml-2" />
+                  <span>{device?.terminal?.label || terminalConnection?.readerLabel}</span>
+                </>
+              )}
+            </div>
           </div>
 
           <div className='flex-1'/>

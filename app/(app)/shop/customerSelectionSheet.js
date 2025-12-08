@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from "@/components/ui/label"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { X, UserPlus } from 'lucide-react'
+import { X, UserPlus, User } from 'lucide-react'
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import dayjs from 'dayjs'
@@ -27,6 +27,7 @@ export default function CustomerSelectionSheet({
   const [selectedDependent, setSelectedDependent] = useState(null)
   const [selectedMinors, setSelectedMinors] = useState([]) // [{ customer, dependent }]
   const [showNewCustomer, setShowNewCustomer] = useState(false)
+  const [showSearch, setShowSearch] = useState(false)
   const [newCustomer, setNewCustomer] = useState({ name: '', email: '', phone: '' })
   const [creatingCustomer, setCreatingCustomer] = useState(false)
 
@@ -42,6 +43,7 @@ export default function CustomerSelectionSheet({
       setSelectedDependent(null)
       setSelectedMinors([])
       setShowNewCustomer(false)
+      setShowSearch(false)
       setNewCustomer({ name: '', email: '', phone: '' })
     }
   }, [open])
@@ -98,9 +100,9 @@ export default function CustomerSelectionSheet({
       })
       
       if (response.ok) {
-        const createdCustomer = await response.json()
-        // Select the new customer
-        handleSelectCustomer(createdCustomer)
+        const data = await response.json()
+        // Select the new customer (API returns { customer: {...} })
+        handleSelectCustomer(data.customer || data)
         // Hide the new customer form
         setShowNewCustomer(false)
         setNewCustomer({ name: '', email: '', phone: '' })
@@ -119,6 +121,7 @@ export default function CustomerSelectionSheet({
     // Clear search to hide dropdown
     setSearchQuery('')
     setCustomers([])
+    setShowSearch(false)
   }
 
   // Handle confirmation
@@ -164,40 +167,83 @@ export default function CustomerSelectionSheet({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4-">
+        <div className="flex-1 overflow-y-auto px-4 py-4">
           {/* Add Customer Section */}
           <div className="space-y-4">
-            <Label>Add Customer</Label>
-            <Command className="rounded-lg border">
-              <CommandInput 
-                placeholder="Search or select a customer..." 
-                value={searchQuery}
-                onValueChange={setSearchQuery}
-              />
-              <CommandList>
-                {loading ? (
-                  <CommandEmpty>Loading...</CommandEmpty>
-                ) : searchQuery && customers.length === 0 ? (
-                  <CommandEmpty>
-                    No customers found.
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mt-2 w-full"
-                      onClick={() => {
-                        setNewCustomer({ ...newCustomer, name: searchQuery })
-                        setShowNewCustomer(true)
-                        setSearchQuery('') // Clear search to collapse input
-                        setCustomers([]) // Clear customers list
-                      }}
-                    >
-                      <UserPlus className="mr-2 size-4" />
-                      Create "{searchQuery}"
-                    </Button>
-                  </CommandEmpty>
-                ) : customers.length > 0 ? (
-                  <CommandGroup>
-                    {customers.map((customer) => {
+            {/* Action Buttons */}
+            {!selectedCustomer && !showNewCustomer && (
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 cursor-pointer"
+                  onClick={() => setShowSearch(true)}
+                >
+                  <User className="mr-2 size-4" />
+                  Select Customer
+                </Button>
+                <Button
+                  className="cursor-pointer"
+                  onClick={() => {
+                    setShowNewCustomer(true)
+                    setShowSearch(false)
+                  }}
+                >
+                  <UserPlus className="mr-2 size-4" />
+                  New Customer
+                </Button>
+              </div>
+            )}
+
+            {/* Search Section - only show when search is active */}
+            {showSearch && !selectedCustomer && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Label>Search Customer</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="cursor-pointer h-6 px-2"
+                    onClick={() => {
+                      setShowSearch(false)
+                      setSearchQuery('')
+                      setCustomers([])
+                    }}
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+                <Command className="rounded-lg border">
+                  <CommandInput
+                    placeholder="Search by name, email, or phone..."
+                    value={searchQuery}
+                    onValueChange={setSearchQuery}
+                    autoFocus
+                  />
+                  <CommandList>
+                    {loading ? (
+                      <CommandEmpty>Loading...</CommandEmpty>
+                    ) : searchQuery && customers.length === 0 ? (
+                      <CommandEmpty>
+                        No customers found.
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="mt-2 w-full cursor-pointer"
+                          onClick={() => {
+                            setNewCustomer({ ...newCustomer, name: searchQuery })
+                            setShowNewCustomer(true)
+                            setShowSearch(false)
+                            setSearchQuery('')
+                            setCustomers([])
+                          }}
+                        >
+                          <UserPlus className="mr-2 size-4" />
+                          Create "{searchQuery}"
+                        </Button>
+                      </CommandEmpty>
+                    ) : customers.length > 0 ? (
+                      <CommandGroup>
+                        {customers.map((customer) => {
                       const age = getAge(customer.dob)
                       const hasValidDependents = customer.dependents?.some(dep => {
                         const depAge = getAge(dep.dob)
@@ -296,20 +342,7 @@ export default function CustomerSelectionSheet({
                 ) : null}
               </CommandList>
             </Command>
-            
-            {/* Explicit New Customer Button - only show for shop items or no waiver required */}
-            {!isMinorSlot && (
-              <Button
-                className="ml-auto flex cursor-pointer"
-                onClick={() => {
-                  setShowNewCustomer(true)
-                  setSearchQuery('') // Clear search to collapse input
-                  setCustomers([]) // Clear customers list
-                }}
-              >
-                <UserPlus className="size-4" />
-                New Customer
-              </Button>
+              </div>
             )}
           </div>
 
@@ -370,12 +403,10 @@ export default function CustomerSelectionSheet({
           {/* Selected Customer Display */}
           {selectedCustomer && (
             <div className="space-y-4 rounded-lg border p-4 mt-4">
-              {/* <h4 className="font-medium">Selected Customer</h4> */}
-              
               {/* Main Customer */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <Checkbox 
+                  <Checkbox
                     checked={true}
                     disabled
                   />
@@ -386,11 +417,25 @@ export default function CustomerSelectionSheet({
                     </p>
                   </div>
                 </div>
-                {selectedCustomer.waiver?.signed && (
-                  <Badge variant="outline" className="text-xs">
-                    Waiver ✓
-                  </Badge>
-                )}
+                <div className="flex items-center gap-2">
+                  {selectedCustomer.waiver?.signed && (
+                    <Badge variant="outline" className="text-xs">
+                      Waiver ✓
+                    </Badge>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="cursor-pointer"
+                    onClick={() => {
+                      setSelectedCustomer(null)
+                      setSelectedDependent(null)
+                      setSelectedMinors([])
+                    }}
+                  >
+                    Change
+                  </Button>
+                </div>
               </div>
 
               {/* Dependents */}

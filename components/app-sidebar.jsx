@@ -4,12 +4,10 @@ import { useState, useEffect } from "react";
 import { MapPin, MapPinCheckInside, Users, CircleDollarSign, Landmark, Settings, Calendar, QrCode, ChefHat, Receipt, Percent, Terminal, UserCheck, Tag, ScanLine, CreditCard, CheckCircle, Building2 } from "lucide-react";
 import { NavMenu } from "@/components/nav-menu";
 import { NavUser } from "@/components/nav-user";
-import { LocationDisplay } from "@/components/location";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
-  SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar";
 
@@ -91,10 +89,7 @@ export function AppSidebar(props) {
 
   return (
     <Sidebar collapsible="icon" {...props} >
-      <SidebarHeader>
-        <LocationDisplay />
-      </SidebarHeader>
-      <SidebarContent suppressHydrationWarning>
+      <SidebarContent suppressHydrationWarning className="pt-2">
         <NavMenu settings={settings} />
       </SidebarContent>
       <SidebarFooter suppressHydrationWarning>

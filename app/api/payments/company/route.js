@@ -3,6 +3,7 @@ import { getEmployee } from "@/lib/auth";
 import { connectDB } from "@/lib/mongoose";
 import { createCompanyTransaction, createCustomerInvoiceTransaction, handleTransactionSuccess, addPlaceholdersToSchedule } from '@/lib/payments/success'
 import { sendCompanyWaiverEmail } from '@/lib/email/company-waiver';
+import { sendInvoiceEmail } from '@/lib/email/invoice';
 import { getOrCreateCompanyStripeCustomer, getOrCreateCustomerStripeCustomer } from '@/lib/stripe/company-customer';
 import { createCompanyInvoice } from '@/lib/stripe/invoice';
 import { Org } from '@/models';
@@ -170,30 +171,56 @@ export async function POST(req, { params }) {
     }
   }
 
-  // Generate waiver link and send email to payer
-  console.log('\n📧 Sending waiver email...');
+  // Check if any products require a waiver
+  const hasWaiverRequired = cart?.products?.some(p => p.waiverRequired === true) || false;
+  console.log('\n📋 Waiver check:');
+  console.log('   Has waiver required products:', hasWaiverRequired);
+
+  // Send appropriate email based on waiver requirements
+  console.log('\n📧 Sending email...');
   try {
     const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
-    const waiverLink = `${baseUrl}/schedule/${transaction._id}/waiver`;
 
-    console.log('   Waiver Link:', waiverLink);
-    console.log('   Payment Link:', paymentLink || 'No payment link');
-    console.log('   Invoice URL:', invoice?.hosted_invoice_url || 'No invoice');
-    console.log('   Recipient:', payerEmail);
+    if (hasWaiverRequired) {
+      // Send waiver + invoice email
+      const waiverLink = `${baseUrl}/schedule/${transaction._id}/waiver`;
+      console.log('   Email type: Waiver + Invoice');
+      console.log('   Waiver Link:', waiverLink);
+      console.log('   Payment Link:', paymentLink || 'No payment link');
+      console.log('   Invoice URL:', invoice?.hosted_invoice_url || 'No invoice');
+      console.log('   Recipient:', payerEmail);
 
-    await sendCompanyWaiverEmail({
-      company: isCustomerInvoice ? null : company,
-      customer: isCustomerInvoice ? customer : null,
-      org,
-      waiverLink,
-      transaction,
-      invoiceUrl: invoice?.hosted_invoice_url,
-      paymentLink
-    });
+      await sendCompanyWaiverEmail({
+        company: isCustomerInvoice ? null : company,
+        customer: isCustomerInvoice ? customer : null,
+        org,
+        waiverLink,
+        transaction,
+        invoiceUrl: invoice?.hosted_invoice_url,
+        paymentLink
+      });
 
-    console.log('✅ Waiver link email sent successfully!');
+      console.log('✅ Waiver link email sent successfully!');
+    } else {
+      // Send invoice-only email (no waiver required)
+      console.log('   Email type: Invoice only (no waiver)');
+      console.log('   Payment Link:', paymentLink || 'No payment link');
+      console.log('   Invoice URL:', invoice?.hosted_invoice_url || 'No invoice');
+      console.log('   Recipient:', payerEmail);
+
+      await sendInvoiceEmail({
+        company: isCustomerInvoice ? null : company,
+        customer: isCustomerInvoice ? customer : null,
+        org,
+        transaction,
+        invoiceUrl: invoice?.hosted_invoice_url,
+        paymentLink
+      });
+
+      console.log('✅ Invoice email sent successfully!');
+    }
   } catch (error) {
-    console.error('❌ Failed to send waiver link email:', error);
+    console.error('❌ Failed to send email:', error);
     console.error('   Error:', error.message);
     // Don't fail the transaction if email fails
   }

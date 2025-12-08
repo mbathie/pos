@@ -118,6 +118,39 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
     }
   }, [product?._id, product?.groupScheduledDate, product?.groupScheduledTime, isPartOfGroup, product?.openSchedule])
 
+  // Auto-select time slot when times are loaded and group scheduled time matches
+  useEffect(() => {
+    if (!isPartOfGroup || !product?.groupScheduledTime || product?.openSchedule) return;
+    if (selectedTimes.length > 0) return; // Already has a selection
+    if (timesForSelectedDate.length === 0) return;
+
+    // Convert group time (HH:mm format like "11:00") to match the time format in timesForSelectedDate
+    const groupTime = product.groupScheduledTime;
+    const [hours, minutes] = groupTime.split(':').map(Number);
+    const groupDate = product.groupScheduledDate ? new Date(product.groupScheduledDate) : null;
+
+    if (!groupDate) return;
+
+    // Build expected ISO datetime for matching
+    const expectedDateTime = new Date(groupDate);
+    expectedDateTime.setHours(hours, minutes, 0, 0);
+    const expectedIso = expectedDateTime.toISOString();
+
+    // Find matching time slot
+    const matchingTime = timesForSelectedDate.find(t => t.datetime === expectedIso);
+
+    if (matchingTime && !matchingTime.conflict) {
+      const groupQty = product.groupQty || 1;
+      // Auto-select if there's enough capacity
+      if (matchingTime.available >= groupQty) {
+        setSelectedTimes([{
+          ...matchingTime,
+          quantities: { 0: groupQty }
+        }]);
+      }
+    }
+  }, [timesForSelectedDate, isPartOfGroup, product?.groupScheduledTime, product?.groupScheduledDate, product?.openSchedule, product?.groupQty])
+
   // Helper function to check if a day is closed at the location
   const isDayClosed = (date) => {
     if (!location?.storeHours) return false;
@@ -383,6 +416,18 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* No times available message */}
+          {!product.openSchedule && selectedDate && timesForSelectedDate.length === 0 && (
+            <div className="p-4 border rounded-md bg-muted/50 text-center">
+              <p className="text-sm text-muted-foreground">
+                No class times available for {dayjs(selectedDate).format('dddd, MMMM D')}.
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Please select a different date from the calendar.
+              </p>
             </div>
           )}
 

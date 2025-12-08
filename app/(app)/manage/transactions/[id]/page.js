@@ -91,9 +91,25 @@ export default function TransactionDetailsPage() {
         return <Banknote className="size-4" />;
       case 'company':
       case 'invoice':
+      case 'customer-invoice':
         return <FileText className="size-4" />;
       default:
         return <CreditCard className="size-4" />;
+    }
+  };
+
+  const getPaymentMethodLabel = (method) => {
+    switch (method) {
+      case 'card':
+        return 'Card';
+      case 'cash':
+        return 'Cash';
+      case 'company':
+      case 'invoice':
+      case 'customer-invoice':
+        return 'Invoice';
+      default:
+        return method;
     }
   };
 
@@ -723,9 +739,9 @@ export default function TransactionDetailsPage() {
               <p className="text-sm text-muted-foreground">Payment Method</p>
               <div className="flex items-center gap-2">
                 {getPaymentMethodIcon(transaction.paymentMethod)}
-                <span className="capitalize">{transaction.paymentMethod}</span>
+                <span>{getPaymentMethodLabel(transaction.paymentMethod)}</span>
               </div>
-              {transaction.paymentMethod === 'company' && transaction.invoiceUrl && (
+              {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'customer-invoice') && transaction.invoiceUrl && (
                 <div className="flex flex-col gap-2 mt-2">
                   <a
                     href={transaction.invoiceUrl}
@@ -909,7 +925,7 @@ export default function TransactionDetailsPage() {
                           <span className="text-sm font-normal text-muted-foreground">
                             Qty: {item.groupQty || 1}
                           </span>
-                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice') && (
+                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'customer-invoice') && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -991,7 +1007,7 @@ export default function TransactionDetailsPage() {
                           <span className="text-sm font-normal text-muted-foreground">
                             Qty: {item.groupQty || 1}
                           </span>
-                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice') && (
+                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'customer-invoice') && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1073,7 +1089,7 @@ export default function TransactionDetailsPage() {
                           <span className="text-sm font-normal text-muted-foreground">
                             Qty: {item.groupQty || 1}
                           </span>
-                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice') && (
+                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'customer-invoice') && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1155,7 +1171,7 @@ export default function TransactionDetailsPage() {
                           <span className="text-sm font-normal text-muted-foreground">
                             Qty: {item.groupQty || 1}
                           </span>
-                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice') && (
+                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'customer-invoice') && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1237,7 +1253,7 @@ export default function TransactionDetailsPage() {
                           <span className="text-sm font-normal text-muted-foreground">
                             Qty: {item.groupQty || 1}
                           </span>
-                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice') && (
+                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'customer-invoice') && (
                             <Button
                               variant="ghost"
                               size="sm"

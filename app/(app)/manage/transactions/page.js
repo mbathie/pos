@@ -260,6 +260,7 @@ export default function TransactionsPage() {
         return <Banknote className="h-4 w-4" />;
       case 'invoice':
       case 'company':
+      case 'customer-invoice':
         return <FileText className="h-4 w-4" />;
       default:
         return <CreditCard className="h-4 w-4" />;
@@ -274,6 +275,7 @@ export default function TransactionsPage() {
         return 'Cash';
       case 'invoice':
       case 'company':
+      case 'customer-invoice':
         return 'Invoice';
       default:
         return method;
@@ -493,7 +495,7 @@ export default function TransactionsPage() {
                       {formatCurrency(transaction.total)}
                     </td>
                     <td className="px-4 py-3 align-middle font-medium">
-                      {(transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'company') ? (
+                      {(transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'company' || transaction.paymentMethod === 'customer-invoice') ? (
                         formatCurrency(transaction.invoiceAmountDue || 0)
                       ) : (
                         '-'
