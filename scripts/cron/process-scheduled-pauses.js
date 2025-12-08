@@ -8,7 +8,7 @@
  * credit calculations that would normally happen with an immediate pause.
  *
  * Usage:
- *   node scripts/process-scheduled-pauses.js
+ *   node scripts/cron/process-scheduled-pauses.js
  *
  * Environment:
  *   Requires MONGODB_URI and STRIPE_SECRET_KEY environment variables
@@ -28,20 +28,28 @@ import dayjs from 'dayjs';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, '../.env') });
+// Load environment variables (.env.development for local, .env for production)
+import fs from 'fs';
+const envDevPath = path.join(__dirname, '../../.env.development');
+const envPath = path.join(__dirname, '../../.env');
+
+if (fs.existsSync(envDevPath)) {
+  dotenv.config({ path: envDevPath });
+} else {
+  dotenv.config({ path: envPath });
+}
 
 // Import models - we need to import the model files directly for the script
-import Customer from '../models/Customer.js';
-import Product from '../models/Product.js';
-import Location from '../models/Location.js';
-import Employee from '../models/Employee.js';
-import Membership from '../models/Membership.js';
-import Org from '../models/Org.js';
-import Transaction from '../models/Transaction.js';
+import Customer from '../../models/Customer.js';
+import Product from '../../models/Product.js';
+import Location from '../../models/Location.js';
+import Employee from '../../models/Employee.js';
+import Membership from '../../models/Membership.js';
+import Org from '../../models/Org.js';
+import Transaction from '../../models/Transaction.js';
 
 // Import email functions
-import { sendSuspensionEmail } from '../lib/email/suspension.js';
+import { sendSuspensionEmail } from '../../lib/email/suspension.js';
 
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);

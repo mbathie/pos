@@ -11,6 +11,7 @@ import { Loader2 } from 'lucide-react'
 
 export default function FinancialSettingsPage() {
   const [minPaymentPercent, setMinPaymentPercent] = useState(50)
+  const [paymentTermsDays, setPaymentTermsDays] = useState(7)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -21,6 +22,7 @@ export default function FinancialSettingsPage() {
         if (res.ok) {
           const data = await res.json()
           setMinPaymentPercent(data.minInvoicePaymentPercent ?? 50)
+          setPaymentTermsDays(data.paymentTermsDays ?? 7)
         }
       } catch (error) {
         console.error('Error fetching settings:', error)
@@ -37,7 +39,10 @@ export default function FinancialSettingsPage() {
       const res = await fetch('/api/org/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ minInvoicePaymentPercent: minPaymentPercent })
+        body: JSON.stringify({
+          minInvoicePaymentPercent: minPaymentPercent,
+          paymentTermsDays: paymentTermsDays
+        })
       })
 
       if (res.ok) {
@@ -88,6 +93,24 @@ export default function FinancialSettingsPage() {
               </div>
               <p className="text-xs text-muted-foreground">
                 Customers must pay at least this percentage of the invoice total as an initial deposit. Set to 0 to allow any amount, or 100 to require full payment.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="paymentTerms">Payment Terms (days)</Label>
+              <div className="flex items-center gap-2">
+                <NumberInput
+                  id="paymentTerms"
+                  min={1}
+                  max={90}
+                  value={paymentTermsDays}
+                  onChange={setPaymentTermsDays}
+                  className="w-24"
+                  disabled={loading}
+                />
+                <span className="text-sm text-muted-foreground">days</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Number of days customers have to pay invoices. Reminders will be sent at 5, 3, and 1 days before the due date for any outstanding balance.
               </p>
             </div>
             <Button

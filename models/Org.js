@@ -14,6 +14,13 @@ const OrgSchema = new mongoose.Schema({
     min: 0,
     max: 100
   },
+  // Payment terms in days - how long customers have to pay invoices
+  paymentTermsDays: {
+    type: Number,
+    default: 7,
+    min: 1,
+    max: 90
+  },
   // Flag to skip first-time POS setup checks once all steps have passed
   posSetupComplete: {
     type: Boolean,

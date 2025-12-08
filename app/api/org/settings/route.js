@@ -19,7 +19,8 @@ export async function GET() {
     }
 
     return NextResponse.json({
-      minInvoicePaymentPercent: org.minInvoicePaymentPercent ?? 50
+      minInvoicePaymentPercent: org.minInvoicePaymentPercent ?? 50,
+      paymentTermsDays: org.paymentTermsDays ?? 7
     });
 
   } catch (error) {
@@ -38,18 +39,30 @@ export async function PUT(request) {
     const { employee } = await getEmployee();
 
     const body = await request.json();
-    const { minInvoicePaymentPercent } = body;
+    const { minInvoicePaymentPercent, paymentTermsDays } = body;
 
-    // Validate
+    // Validate minInvoicePaymentPercent
     if (minInvoicePaymentPercent !== undefined) {
       if (typeof minInvoicePaymentPercent !== 'number' || minInvoicePaymentPercent < 0 || minInvoicePaymentPercent > 100) {
         return NextResponse.json({ message: 'minInvoicePaymentPercent must be a number between 0 and 100' }, { status: 400 });
       }
     }
 
+    // Validate paymentTermsDays
+    if (paymentTermsDays !== undefined) {
+      if (typeof paymentTermsDays !== 'number' || paymentTermsDays < 1 || paymentTermsDays > 90) {
+        return NextResponse.json({ message: 'paymentTermsDays must be a number between 1 and 90' }, { status: 400 });
+      }
+    }
+
+    // Build update object with only provided fields
+    const updateFields = {};
+    if (minInvoicePaymentPercent !== undefined) updateFields.minInvoicePaymentPercent = minInvoicePaymentPercent;
+    if (paymentTermsDays !== undefined) updateFields.paymentTermsDays = paymentTermsDays;
+
     const org = await Org.findByIdAndUpdate(
       employee.org._id,
-      { $set: { minInvoicePaymentPercent } },
+      { $set: updateFields },
       { new: true }
     ).lean();
 
@@ -58,7 +71,8 @@ export async function PUT(request) {
     }
 
     return NextResponse.json({
-      minInvoicePaymentPercent: org.minInvoicePaymentPercent ?? 50
+      minInvoicePaymentPercent: org.minInvoicePaymentPercent ?? 50,
+      paymentTermsDays: org.paymentTermsDays ?? 7
     });
 
   } catch (error) {
