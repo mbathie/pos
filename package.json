@@ -17,7 +17,8 @@
     "test:suite": "node scripts/run-tests.js",
     "seed": "node scripts/run-seed.js",
     "db:wipe": "node scripts/wipe-db.js",
-    "cron:process-pauses": "node scripts/process-scheduled-pauses.js",
+    "cron:process-pauses": "node scripts/cron/process-scheduled-pauses.js",
+    "cron:invoice-reminders": "node scripts/cron/process-invoice-reminders.js",
     "cron:test-pause": "node scripts/test-process-scheduled-pause.js",
     "test:suspension-email": "node scripts/test-suspension-email.js"
   },
@@ -78,7 +79,7 @@
     "lucide-react": "^0.484.0",
     "mongoose": "^8.14.2",
     "mongoose-delete": "^1.0.2",
-    "next": "^16.0.6",
+    "next": "^16.0.7",
     "next-themes": "^0.4.6",
     "node-fetch": "^3.3.2",
     "nodemailer": "^7.0.5",
