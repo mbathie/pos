@@ -194,7 +194,7 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
                     <Trash2 className='size-4'/>
                   </div>
                   <div className='flex-1' />
-                  <div>${(groupTotal * groupQty).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div>${groupTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
 
                 {/* Display individual products within the group */}
@@ -202,7 +202,9 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
                   <div key={productIdx} className="flex flex-col ml-2 text-sm">
                     <div className="flex items-center text-muted-foreground">
                       <div className='flex-1'>
+                        {product.qty >= 1 && <span>{product.qty}x </span>}
                         {product.name}
+                        {product.item?.variation && <span> ({product.item.variation})</span>}
                         {product.selectedTimes && product.selectedTimes.length > 0 && (
                           <span className="ml-1 text-xs">
                             ({product.selectedTimes.length} session{product.selectedTimes.length !== 1 ? 's' : ''})
@@ -216,6 +218,13 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
                         </div>
                       )}
                     </div>
+
+                    {/* Show mods for shop products in group */}
+                    {product.item?.mods && product.item.mods.length > 0 && (
+                      <div className='text-xs ml-2 text-muted-foreground'>
+                        {product.item.mods.map(mod => mod.qty > 1 ? `${mod.name} x${mod.qty}` : mod.name).join(', ')}
+                      </div>
+                    )}
 
                     {/* Show selected times for classes if applicable */}
                     {product.selectedTimes?.map((time, timeIdx) => (

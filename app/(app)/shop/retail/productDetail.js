@@ -33,17 +33,23 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
         setModGroups([])
         return
       }
-      
+
+      // If product already has modGroupsData (e.g., editing existing config), use it
+      if (product.modGroupsData && product.modGroupsData.length > 0) {
+        setModGroups(product.modGroupsData)
+        return
+      }
+
       try {
         setLoadingMods(true)
         // Fetch all modGroups with their mods
-        const modGroupPromises = product.modGroups.map(groupId => 
+        const modGroupPromises = product.modGroups.map(groupId =>
           fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/modgroups/${groupId}?includeMods=true`)
             .then(res => res.json())
         )
-        
+
         const fetchedGroups = await Promise.all(modGroupPromises)
-        
+
         // Deep clone the groups to avoid read-only issues and initialize selected: false
         const groupsWithSelection = fetchedGroups
           .map(group => ({
@@ -59,14 +65,15 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                 price: mod.price || 0,
                 isDefault: mod.isDefault || false,
                 order: mod.order || 0,
+                allowMultiple: mod.allowMultiple !== false, // Default to true if not set
                 qty: 0
               }))
               .sort((a, b) => a.order - b.order) // Sort mods by order
           }))
           .sort((a, b) => a.order - b.order) // Sort groups by order
-        
+
         setModGroups(groupsWithSelection)
-        
+
         // Update product with modGroups data
         setProduct(draft => {
           draft.modGroupsData = groupsWithSelection
@@ -77,7 +84,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
         setLoadingMods(false)
       }
     }
-    
+
     if (open && product?._id) {
       fetchProductMods()
     }
@@ -144,79 +151,127 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                       {group.mods.map((mod, modIdx) => (
                         <div
                           key={mod._id}
-                          className='gap-1 flex items-center flex-row rounded-md'
+                          className='flex items-center flex-row rounded-md'
                         >
-                          <IconButton
-                            icon="minus"
-                            onClick={() => {
-                              setModGroups(prev => {
-                                const updated = prev.map((group, gIdx) => {
-                                  if (gIdx !== groupIdx) return group
+                          {mod.allowMultiple === false ? (
+                            // Checkbox mode - can only select 0 or 1
+                            <div
+                              className="flex items-center gap-2 cursor-pointer py-1"
+                              onClick={() => {
+                                setModGroups(prev => {
+                                  const updated = prev.map((group, gIdx) => {
+                                    if (gIdx !== groupIdx) return group
 
-                                  return {
-                                    ...group,
-                                    mods: group.mods.map((m, mIdx) => {
-                                      if (mIdx === modIdx) {
-                                        return { ...m, qty: Math.max(0, m.qty - 1) }
-                                      }
-                                      return m
-                                    })
-                                  }
-                                })
-
-                                setProduct(draft => {
-                                  draft.modGroupsData = updated
-                                })
-
-                                return updated
-                              })
-                            }}
-                            disabled={mod.qty === 0}
-                          />
-
-                          <div className="min-w-16 text-center px-2">
-                            <div className="font-semibold">{mod.qty}</div>
-                            <div className="text-xs truncate">
-                              {mod.name}
-                              {mod.price > 0 && ` $${parseFloat(mod.price).toFixed(2)}`}
-                            </div>
-                          </div>
-
-                          <IconButton
-                            icon="plus"
-                            onClick={() => {
-                              setModGroups(prev => {
-                                const updated = prev.map((group, gIdx) => {
-                                  if (gIdx !== groupIdx) return group
-
-                                  return {
-                                    ...group,
-                                    mods: group.mods.map((m, mIdx) => {
-                                      if (!group.allowMultiple) {
-                                        // Single selection - reset other mods to 0
-                                        if (mIdx === modIdx) {
-                                          return { ...m, qty: Math.min(99, m.qty + 1) }
+                                    return {
+                                      ...group,
+                                      mods: group.mods.map((m, mIdx) => {
+                                        if (!group.allowMultiple) {
+                                          // Single selection group - reset other mods to 0
+                                          if (mIdx === modIdx) {
+                                            return { ...m, qty: m.qty > 0 ? 0 : 1 }
+                                          } else {
+                                            return { ...m, qty: 0 }
+                                          }
                                         } else {
-                                          return { ...m, qty: 0 }
+                                          // Multiple selection group - just toggle this one
+                                          return mIdx === modIdx
+                                            ? { ...m, qty: m.qty > 0 ? 0 : 1 }
+                                            : m
                                         }
-                                      } else {
-                                        // Multiple selection - just increment
-                                        return mIdx === modIdx
-                                          ? { ...m, qty: Math.min(99, m.qty + 1) }
-                                          : m
+                                      })
+                                    }
+                                  })
+
+                                  setProduct(draft => {
+                                    draft.modGroupsData = updated
+                                  })
+
+                                  return updated
+                                })
+                              }}
+                            >
+                              <SelectionCheck checked={mod.qty > 0} />
+                              <div className="text-sm">
+                                {mod.name}
+                                {mod.price > 0 && <span className="text-muted-foreground ml-1">${parseFloat(mod.price).toFixed(2)}</span>}
+                              </div>
+                            </div>
+                          ) : (
+                            // Counter mode - can select multiple
+                            <>
+                              <IconButton
+                                icon="minus"
+                                onClick={() => {
+                                  setModGroups(prev => {
+                                    const updated = prev.map((group, gIdx) => {
+                                      if (gIdx !== groupIdx) return group
+
+                                      return {
+                                        ...group,
+                                        mods: group.mods.map((m, mIdx) => {
+                                          if (mIdx === modIdx) {
+                                            return { ...m, qty: Math.max(0, m.qty - 1) }
+                                          }
+                                          return m
+                                        })
                                       }
                                     })
-                                  }
-                                })
 
-                                setProduct(draft => {
-                                  draft.modGroupsData = updated
-                                })
+                                    setProduct(draft => {
+                                      draft.modGroupsData = updated
+                                    })
 
-                                return updated
-                              })
-                            }}
-                          />
+                                    return updated
+                                  })
+                                }}
+                                disabled={mod.qty === 0}
+                              />
+
+                              <div className="min-w-16 text-center px-2">
+                                <div className="font-semibold">{mod.qty}</div>
+                                <div className="text-xs truncate">
+                                  {mod.name}
+                                  {mod.price > 0 && ` $${parseFloat(mod.price).toFixed(2)}`}
+                                </div>
+                              </div>
+
+                              <IconButton
+                                icon="plus"
+                                onClick={() => {
+                                  setModGroups(prev => {
+                                    const updated = prev.map((group, gIdx) => {
+                                      if (gIdx !== groupIdx) return group
+
+                                      return {
+                                        ...group,
+                                        mods: group.mods.map((m, mIdx) => {
+                                          if (!group.allowMultiple) {
+                                            // Single selection - reset other mods to 0
+                                            if (mIdx === modIdx) {
+                                              return { ...m, qty: Math.min(99, m.qty + 1) }
+                                            } else {
+                                              return { ...m, qty: 0 }
+                                            }
+                                          } else {
+                                            // Multiple selection - just increment
+                                            return mIdx === modIdx
+                                              ? { ...m, qty: Math.min(99, m.qty + 1) }
+                                              : m
+                                          }
+                                        })
+                                      }
+                                    })
+
+                                    setProduct(draft => {
+                                      draft.modGroupsData = updated
+                                    })
+
+                                    return updated
+                                  })
+                                }}
+                              />
+                            </>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -241,7 +296,16 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                     <div className='flex-1' />
                     <div className='font-semibold'>{product?.qty || 1}</div>
                   </>
+                ) : product?.instanceIndex !== undefined ? (
+                  // Per-instance variation products allow qty editing
+                  <>
+                    <IconButton icon="minus" onClick={() => setQty({ setProduct, type: 'decrement' })} disabled={product?.qty <= 1} />
+                    <IconButton icon="plus" onClick={() => setQty({ setProduct, type: 'increment' })} />
+                    <div className='flex-1' />
+                    <div className='font-semibold'>{product?.qty || 1}</div>
+                  </>
                 ) : (
+                  // Base products in group - qty controlled by group
                   <>
                     <div className='text-muted-foreground text-sm'>Set by group</div>
                     <div className='flex-1' />

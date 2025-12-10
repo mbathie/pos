@@ -45,6 +45,11 @@ const ModSchema = new mongoose.Schema({
   isDefault: {
     type: Boolean,
     default: false
+  },
+  // Whether this mod can be added more than once (default true = allow multiple qty)
+  allowMultiple: {
+    type: Boolean,
+    default: true
   }
 }, { timestamps: true });
 

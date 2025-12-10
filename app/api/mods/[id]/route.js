@@ -36,19 +36,34 @@ export async function GET(request, { params }) {
 export async function PUT(request, { params }) {
   try {
     await connectDB();
-    
+
     const { employee } = await getEmployee();
     if (!employee) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = await params;
     const data = await request.json();
-    
+
+    // If setting isDefault to true, first unset all other defaults in the same group
+    if (data.isDefault === true) {
+      const existingMod = await Mod.findOne({ _id: id, org: employee.org._id });
+      if (existingMod) {
+        await Mod.updateMany(
+          {
+            modGroup: existingMod.modGroup,
+            org: employee.org._id,
+            _id: { $ne: id }
+          },
+          { $set: { isDefault: false } }
+        );
+      }
+    }
+
     const mod = await Mod.findOneAndUpdate(
-      { 
+      {
         _id: id,
-        org: employee.org._id 
+        org: employee.org._id
       },
       { $set: data },
       { new: true }

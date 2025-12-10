@@ -903,9 +903,9 @@ export default function TransactionDetailsPage() {
           {productGroups.shop.map((item, index) => {
             if (item.isGroup) {
               const groupQty = item.groupQty || 1;
-              const groupSubtotal = (item.groupAmount || 0) * groupQty;
-              const groupSurcharges = (item.adjustments?.surcharges?.total || 0) * groupQty;
-              const groupDiscounts = (item.adjustments?.discounts?.total || 0) * groupQty;
+              const groupSubtotal = item.groupAmount || 0; // groupAmount is now the full total
+              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
+              const groupDiscounts = item.adjustments?.discounts?.total || 0;
               const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
 
               // Separate products by type within the group
@@ -985,9 +985,9 @@ export default function TransactionDetailsPage() {
           {productGroups.class.map((item, index) => {
             if (item.isGroup) {
               const groupQty = item.groupQty || 1;
-              const groupSubtotal = (item.groupAmount || 0) * groupQty;
-              const groupSurcharges = (item.adjustments?.surcharges?.total || 0) * groupQty;
-              const groupDiscounts = (item.adjustments?.discounts?.total || 0) * groupQty;
+              const groupSubtotal = item.groupAmount || 0; // groupAmount is now the full total
+              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
+              const groupDiscounts = item.adjustments?.discounts?.total || 0;
               const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
 
               // Separate products by type within the group
@@ -1067,9 +1067,9 @@ export default function TransactionDetailsPage() {
           {productGroups.course.map((item, index) => {
             if (item.isGroup) {
               const groupQty = item.groupQty || 1;
-              const groupSubtotal = (item.groupAmount || 0) * groupQty;
-              const groupSurcharges = (item.adjustments?.surcharges?.total || 0) * groupQty;
-              const groupDiscounts = (item.adjustments?.discounts?.total || 0) * groupQty;
+              const groupSubtotal = item.groupAmount || 0; // groupAmount is now the full total
+              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
+              const groupDiscounts = item.adjustments?.discounts?.total || 0;
               const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
 
               // Separate products by type within the group
@@ -1149,9 +1149,9 @@ export default function TransactionDetailsPage() {
           {productGroups.general.map((item, index) => {
             if (item.isGroup) {
               const groupQty = item.groupQty || 1;
-              const groupSubtotal = (item.groupAmount || 0) * groupQty;
-              const groupSurcharges = (item.adjustments?.surcharges?.total || 0) * groupQty;
-              const groupDiscounts = (item.adjustments?.discounts?.total || 0) * groupQty;
+              const groupSubtotal = item.groupAmount || 0; // groupAmount is now the full total
+              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
+              const groupDiscounts = item.adjustments?.discounts?.total || 0;
               const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
 
               // Separate products by type within the group
@@ -1231,9 +1231,9 @@ export default function TransactionDetailsPage() {
           {productGroups.membership.map((item, index) => {
             if (item.isGroup) {
               const groupQty = item.groupQty || 1;
-              const groupSubtotal = (item.groupAmount || 0) * groupQty;
-              const groupSurcharges = (item.adjustments?.surcharges?.total || 0) * groupQty;
-              const groupDiscounts = (item.adjustments?.discounts?.total || 0) * groupQty;
+              const groupSubtotal = item.groupAmount || 0; // groupAmount is now the full total
+              const groupSurcharges = item.adjustments?.surcharges?.total || 0;
+              const groupDiscounts = item.adjustments?.discounts?.total || 0;
               const groupTotal = groupSubtotal + groupSurcharges - groupDiscounts;
 
               // Separate products by type within the group

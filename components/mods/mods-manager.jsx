@@ -27,29 +27,45 @@ import { NumberInput } from '@/components/ui/number-input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
-import { Plus, GripVertical, Edit2, Trash2, MoreVertical, DollarSign, Loader2 } from 'lucide-react';
+import { Plus, GripVertical, Edit2, Trash2, MoreVertical, DollarSign, Loader2, Info, Check } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 
-function SortableMod({ mod, onEdit, onDelete }) {
+function SortableMod({ mod, onEdit, onDelete, onSetDefault }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: mod._id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
-    <div ref={setNodeRef} style={style} className={cn("inline-flex items-center gap-2 p-2 rounded-lg bg-background border", isDragging && "shadow-lg")}> 
+    <div ref={setNodeRef} style={style} className={cn(
+      "inline-flex items-center gap-2 p-2 rounded-lg border",
+      mod.isDefault ? "bg-primary text-primary-foreground" : "bg-background",
+      isDragging && "shadow-lg"
+    )}>
       <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing">
-        <GripVertical className="h-4 w-4 text-muted-foreground" />
+        <GripVertical className={cn("h-4 w-4", mod.isDefault ? "text-primary-foreground/70" : "text-muted-foreground")} />
       </div>
-      <Button variant="ghost" className="p-0 h-auto font-medium hover:bg-transparent" onClick={() => onEdit(mod)}>
+      <Button variant="ghost" className={cn("p-0 h-auto font-medium hover:bg-transparent", mod.isDefault && "text-primary-foreground hover:text-primary-foreground")} onClick={() => onEdit(mod)}>
         {mod.name}
-        {mod.price > 0 && (<span className="ml-2 text-muted-foreground">${mod.price.toFixed(2)}</span>)}
+        {mod.price > 0 && (<span className={cn("ml-2", mod.isDefault ? "text-primary-foreground/70" : "text-muted-foreground")}>${mod.price.toFixed(2)}</span>)}
       </Button>
+      {mod.allowMultiple === false && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant={mod.isDefault ? "secondary" : "outline"} className="text-xs px-1.5 py-0">1</Badge>
+            </TooltipTrigger>
+            <TooltipContent><p>Single quantity only</p></TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-6 w-6 p-0"><MoreVertical className="h-3 w-3" /></Button>
+          <Button variant="ghost" size="sm" className={cn("h-6 w-6 p-0", mod.isDefault && "text-primary-foreground hover:text-primary-foreground hover:bg-primary/80")}><MoreVertical className="h-3 w-3" /></Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => onEdit(mod)}><Edit2 className="h-4 w-4 mr-2" />Edit</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onSetDefault(mod)}><Check className="h-4 w-4 mr-2" />{mod.isDefault ? 'Remove default' : 'Set as default'}</DropdownMenuItem>
           <DropdownMenuItem onClick={() => onDelete(mod)}><Trash2 className="h-4 w-4 mr-2" />Delete</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -57,17 +73,17 @@ function SortableMod({ mod, onEdit, onDelete }) {
   );
 }
 
-function SortableModGroupCard({ modGroup, onModsReorder, onModEdit, onModDelete, onModAdd, onGroupEdit, onGroupDelete }) {
+function SortableModGroupCard({ modGroup, onModsReorder, onModEdit, onModDelete, onModSetDefault, onModAdd, onGroupEdit, onGroupDelete }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: modGroup._id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
   return (
     <div ref={setNodeRef} style={style}>
-      <ModGroupCard modGroup={modGroup} onModsReorder={onModsReorder} onModEdit={onModEdit} onModDelete={onModDelete} onModAdd={onModAdd} onGroupEdit={onGroupEdit} onGroupDelete={onGroupDelete} dragHandleProps={{ ...attributes, ...listeners }} isDragging={isDragging} />
+      <ModGroupCard modGroup={modGroup} onModsReorder={onModsReorder} onModEdit={onModEdit} onModDelete={onModDelete} onModSetDefault={onModSetDefault} onModAdd={onModAdd} onGroupEdit={onGroupEdit} onGroupDelete={onGroupDelete} dragHandleProps={{ ...attributes, ...listeners }} isDragging={isDragging} />
     </div>
   );
 }
 
-function ModGroupCard({ modGroup, onModsReorder, onModEdit, onModDelete, onModAdd, onGroupEdit, onGroupDelete, dragHandleProps, isDragging }) {
+function ModGroupCard({ modGroup, onModsReorder, onModEdit, onModDelete, onModSetDefault, onModAdd, onGroupEdit, onGroupDelete, dragHandleProps, isDragging }) {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -110,7 +126,7 @@ function ModGroupCard({ modGroup, onModsReorder, onModEdit, onModDelete, onModAd
           <SortableContext items={mods.map(m => m._id)} strategy={rectSortingStrategy}>
             <div className="flex flex-wrap gap-2">
               {mods.map((mod) => (
-                <SortableMod key={mod._id} mod={mod} onEdit={onModEdit} onDelete={onModDelete} />
+                <SortableMod key={mod._id} mod={mod} onEdit={onModEdit} onDelete={onModDelete} onSetDefault={onModSetDefault} />
               ))}
               <Button variant="" className="inline-flex items-center h-10" onClick={() => onModAdd(modGroup)}>
                 <Plus className="size-4" />
@@ -140,7 +156,7 @@ export default function ModsManager() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const [modForm, setModForm] = useState({ name: '', price: 0, isDefault: false });
+  const [modForm, setModForm] = useState({ name: '', price: 0, isDefault: false, allowMultiple: true });
   const [groupForm, setGroupForm] = useState({ name: '', allowMultiple: false, required: false });
 
   const fetchModGroups = async () => {
@@ -172,10 +188,11 @@ export default function ModsManager() {
     if (!over || active.id === over.id) return; const oldIndex = modGroups.findIndex(g => g._id === active.id); const newIndex = modGroups.findIndex(g => g._id === over.id); const reordered = arrayMove(modGroups, oldIndex, newIndex); setModGroups(reordered); try { await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/modgroups`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ groups: reordered.map((g, idx) => ({ _id: g._id, order: idx })) }) }); } catch (e) { console.error('Error reordering groups:', e); }
   };
 
-  const handleModEdit = (mod) => { setEditingMod(mod); setModForm({ name: mod.name, price: mod.price || 0, isDefault: !!mod.isDefault }); setModDialogOpen(true); };
-  const handleModAdd = (group) => { setEditingMod(null); setSelectedGroupForMod(group); setModForm({ name: '', price: 0, isDefault: false }); setModDialogOpen(true); };
+  const handleModEdit = (mod) => { setEditingMod(mod); setModForm({ name: mod.name, price: mod.price || 0, isDefault: !!mod.isDefault, allowMultiple: mod.allowMultiple !== false }); setModDialogOpen(true); };
+  const handleModAdd = (group) => { setEditingMod(null); setSelectedGroupForMod(group); setModForm({ name: '', price: 0, isDefault: false, allowMultiple: true }); setModDialogOpen(true); };
   const handleModSave = async () => { try { setSaving(true); if (editingMod) { const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/mods/${editingMod._id}`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(modForm) }); if (res.ok) { await fetchModGroups(); setModDialogOpen(false); } } else if (selectedGroupForMod) { const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/mods`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...modForm, modGroup: selectedGroupForMod._id }) }); if (res.ok) { await fetchModGroups(); setModDialogOpen(false); } } } catch (e) { console.error('Error saving mod:', e); } finally { setSaving(false); } };
   const handleModDelete = (mod) => { setItemToDelete({ type: 'mod', item: mod }); setDeleteDialogOpen(true); };
+  const handleModSetDefault = async (mod) => { try { const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/mods/${mod._id}`, { method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ isDefault: !mod.isDefault }) }); if (res.ok) { await fetchModGroups(); } } catch (e) { console.error('Error setting default:', e); } };
 
   const handleGroupAdd = () => { setEditingGroup(null); setGroupForm({ name: '', allowMultiple: false, required: false }); setGroupDialogOpen(true); };
   const handleGroupEdit = (group) => { setEditingGroup(group); setGroupForm({ name: group.name, allowMultiple: group.allowMultiple || false, required: group.required || false }); setGroupDialogOpen(true); };
@@ -198,7 +215,7 @@ export default function ModsManager() {
         <SortableContext items={modGroups.map(g => g._id)} strategy={rectSortingStrategy}>
           <div className="space-y-4">
             {modGroups.map((group) => (
-              <SortableModGroupCard key={group._id} modGroup={group} onModsReorder={handleModsReorder} onModEdit={handleModEdit} onModDelete={handleModDelete} onModAdd={handleModAdd} onGroupEdit={handleGroupEdit} onGroupDelete={handleGroupDelete} />
+              <SortableModGroupCard key={group._id} modGroup={group} onModsReorder={handleModsReorder} onModEdit={handleModEdit} onModDelete={handleModDelete} onModSetDefault={handleModSetDefault} onModAdd={handleModAdd} onGroupEdit={handleGroupEdit} onGroupDelete={handleGroupDelete} />
             ))}
           </div>
         </SortableContext>
@@ -218,7 +235,26 @@ export default function ModsManager() {
           <div className="space-y-4">
             <div className="space-y-2"><Label htmlFor="mod-name">Name</Label><Input id="mod-name" value={modForm.name} onChange={(e) => setModForm({ ...modForm, name: e.target.value })} placeholder="e.g., Oat Milk, Extra Shot" /></div>
             <div className="space-y-2"><Label htmlFor="mod-price">Price</Label><div className="relative"><DollarSign className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none z-10" /><NumberInput id="mod-price" value={modForm.price === 0 ? null : modForm.price} onChange={(value) => setModForm({ ...modForm, price: value ?? 0 })} className="pl-9" placeholder="0.00" min={0} step={0.01} formatOptions={{ minimumFractionDigits: 0, maximumFractionDigits: 2 }} /></div></div>
-            <div className="flex items-center space-x-2"><Switch id="mod-default" checked={modForm.isDefault} onCheckedChange={(checked) => setModForm({ ...modForm, isDefault: checked })} /><Label htmlFor="mod-default">Set as default option</Label></div>
+            <div className="flex items-center space-x-2">
+              <Switch id="mod-default" checked={modForm.isDefault} onCheckedChange={(checked) => setModForm({ ...modForm, isDefault: checked })} />
+              <Label htmlFor="mod-default">Set as default</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild><Info className="h-4 w-4 text-muted-foreground cursor-help" /></TooltipTrigger>
+                  <TooltipContent><p className="max-w-xs">This option will be pre-selected when the product is added to cart</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch id="mod-allow-multiple" checked={modForm.allowMultiple} onCheckedChange={(checked) => setModForm({ ...modForm, allowMultiple: checked })} />
+              <Label htmlFor="mod-allow-multiple">Allow multiple</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild><Info className="h-4 w-4 text-muted-foreground cursor-help" /></TooltipTrigger>
+                  <TooltipContent><p className="max-w-xs">When enabled, customers can add more than one of this option. When disabled, it shows as a simple checkbox.</p></TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setModDialogOpen(false)}>Cancel</Button><Button onClick={handleModSave} disabled={!modForm.name || saving}>{saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{editingMod ? 'Update' : 'Add'}</Button></DialogFooter>
         </DialogContent>

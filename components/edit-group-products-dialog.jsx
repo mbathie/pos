@@ -92,8 +92,8 @@ export function EditGroupProductsDialog({
   // Calculate current and new totals
   const formatCurrency = (amount) => `$${parseFloat(amount || 0).toFixed(2)}`;
 
-  // Calculate current total from original group
-  const currentSubtotal = (group?.groupAmount || 0) * (group?.groupQty || 1);
+  // Calculate current total from original group (groupAmount is now the full total)
+  const currentSubtotal = group?.groupAmount || 0;
 
   // Calculate new total based on selected products and quantity
   const newSubtotal = selectedProductIds.reduce((total, productId) => {
