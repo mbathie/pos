@@ -9,14 +9,6 @@ import { IconButton, SelectionCheck } from '@/components/control-button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import {
-  MultiSelect,
-  MultiSelectContent,
-  MultiSelectItem,
-  MultiSelectTrigger,
-  MultiSelectValue,
-} from '@/components/ui/multi-select';
-import { Label } from '@/components/ui/label';
 import dayjs from 'dayjs';
 import ProductDetail from './retail/productDetail';
 import ProductDetailClass from './(other)/classes/productDetailClass';
@@ -44,7 +36,6 @@ export default function GroupSheet({
   const [groupTotal, setGroupTotal] = useState(0);
   const [groupQty, setGroupQty] = useState(1); // Group-level quantity
   const [availableProducts, setAvailableProducts] = useState([]); // All shop products
-  const [selectedProductIds, setSelectedProductIds] = useState([]); // IDs of products to include in group
   const [selectedVariationIndex, setSelectedVariationIndex] = useState(null); // Index of selected variation (null = none selected)
   const [scheduledDate, setScheduledDate] = useState(null); // Date for the group booking
   const [scheduledTime, setScheduledTime] = useState(''); // Time for the group booking
@@ -119,7 +110,6 @@ export default function GroupSheet({
       setCurrentProduct(null);
       setConfiguredProducts({});
       setGroupQty(1); // Reset quantity
-      setSelectedProductIds([]);
       setSelectedVariationIndex(null); // Reset variation selection
       setScheduledDate(null); // Reset date
       setScheduledTime(''); // Reset time
@@ -131,15 +121,12 @@ export default function GroupSheet({
       if (group.products && group.gId) {
         // Opening with an existing cart group - pre-populate products
         const configured = {};
-        const ids = [];
         const initialGroupQty = group.products[0]?.groupQty || 1;
 
         group.products.forEach(product => {
           configured[product._id] = product;
-          ids.push(product._id.toString());
         });
         setConfiguredProducts(configured);
-        setSelectedProductIds(ids);
         setGroupQty(initialGroupQty);
         initialGroupQtyRef.current = initialGroupQty; // Store initial quantity in ref
 
@@ -155,14 +142,7 @@ export default function GroupSheet({
           setScheduledTime(dt.format('HH:mm'));
         }
       } else if (group.products) {
-        // Opening with a product group template - set initial selected IDs
-        // Combine base products with variation products if available
-        const baseProductIds = group.products.map(p => (p._id || p).toString());
-        const variationProductIds = hasVariations && group.variations[0]?.products
-          ? group.variations[0].products.map(p => (p._id || p).toString())
-          : [];
-        const allIds = [...new Set([...baseProductIds])]; // Start with just base products
-        setSelectedProductIds(allIds);
+        // Opening with a product group template
         setSelectedVariationIndex(null); // No variation selected by default
         // Set initial quantity to minQty if set, otherwise 1
         const initialQty = group.minQty || 1;
@@ -172,16 +152,9 @@ export default function GroupSheet({
     }
   }, [open]);
 
-  // Update selected products when variation changes
+  // Update variation instances when variation changes
   useEffect(() => {
     if (!open || !group || group.gId) return; // Don't auto-update when editing
-
-    const baseProductIds = (group.products || []).map(p => (p._id || p).toString());
-    const variationProductIds = selectedVariation?.products
-      ? selectedVariation.products.map(p => (p._id || p).toString())
-      : [];
-    const allIds = [...new Set([...baseProductIds, ...variationProductIds])];
-    setSelectedProductIds(allIds);
 
     // Initialize variation instances (start with 1 instance per variation product)
     if (selectedVariation?.products) {
@@ -313,20 +286,6 @@ export default function GroupSheet({
       // Use the variation's override price (this is per-unit, multiply by groupQty)
       // This REPLACES all base product and variation product prices
       total = (Number(selectedVariation.amount) || 0) * groupQty;
-
-      // Only add prices for EXTRA products (manually added, not part of base or variation)
-      const baseProductIds = (group.products || []).map(p => (p._id || p).toString());
-      const variationProductIds = (selectedVariation.products || []).map(p => (p._id || p).toString());
-      const groupProductIds = new Set([...baseProductIds, ...variationProductIds]);
-
-      selectedProductIds.forEach(productId => {
-        if (!groupProductIds.has(productId)) {
-          const configured = configuredProducts[productId];
-          if (configured) {
-            total += configured.amount?.subtotal ?? configured.amount?.total ?? 0;
-          }
-        }
-      });
     } else {
       // Derive total from configured products (no override price OR no variation selected)
       // Sum up base products
@@ -362,22 +321,10 @@ export default function GroupSheet({
           });
         });
       }
-
-      // Add extra products (not base or variation)
-      const variationProductIds = (selectedVariation?.products || []).map(p => (p._id || p).toString());
-      const groupProductIds = new Set([...baseProductIds, ...variationProductIds]);
-      selectedProductIds.forEach(productId => {
-        if (!groupProductIds.has(productId)) {
-          const configured = configuredProducts[productId];
-          if (configured) {
-            total += configured.amount?.subtotal ?? configured.amount?.total ?? 0;
-          }
-        }
-      });
     }
 
     setGroupTotal(total);
-  }, [configuredProducts, selectedProductIds, group, hasVariations, selectedVariation, groupQty, variationInstances]);
+  }, [configuredProducts, group, hasVariations, selectedVariation, groupQty, variationInstances]);
 
   const handleProductClick = (product, instanceIndex = null) => {
     // Require date/time before configuring products
@@ -558,22 +505,6 @@ export default function GroupSheet({
   };
 
   if (!group) return null;
-
-  // Build the list of products to display based on selectedProductIds
-  // Get products from both the group template and available products
-  const groupProducts = selectedProductIds.map(id => {
-    // First check if it's already configured in the cart
-    if (configuredProducts[id]) {
-      return configuredProducts[id];
-    }
-    // Then check the group template
-    const templateProduct = group.products?.find(p => p._id.toString() === id);
-    if (templateProduct) {
-      return templateProduct;
-    }
-    // Finally check available products (for newly added items)
-    return availableProducts.find(p => p._id === id);
-  }).filter(Boolean); // Remove any null/undefined
 
   // Get variation product IDs if a variation is selected
   const variationProductIds = selectedVariation?.products?.map(p => (p._id || p).toString()) || [];
@@ -943,33 +874,6 @@ export default function GroupSheet({
                 </div>
               )}
 
-              {/* Product Multi-Select (for adding extra products) */}
-              <div className={cn("space-y-2 pt-2", !isDateTimeSelected && "opacity-50")}>
-                <Label className="text-sm font-medium">Add Extra Products</Label>
-                <MultiSelect
-                  values={selectedProductIds}
-                  onValuesChange={setSelectedProductIds}
-                  disabled={!isDateTimeSelected}
-                >
-                  <MultiSelectTrigger className={cn("w-full", isDateTimeSelected ? "cursor-pointer" : "cursor-not-allowed")} disabled={!isDateTimeSelected}>
-                    <MultiSelectValue placeholder="Select products..." />
-                  </MultiSelectTrigger>
-                  <MultiSelectContent search={{ placeholder: "Search products...", emptyMessage: "No products found" }}>
-                    {availableProducts.map((product) => (
-                      <MultiSelectItem
-                        key={product._id}
-                        value={product._id}
-                        badgeLabel={product.name}
-                      >
-                        <div className="flex flex-col">
-                          <span className="font-medium">{product.name}</span>
-                          <span className="text-xs text-muted-foreground capitalize">{product.type}</span>
-                        </div>
-                      </MultiSelectItem>
-                    ))}
-                  </MultiSelectContent>
-                </MultiSelect>
-              </div>
             </div>
           </div>
 

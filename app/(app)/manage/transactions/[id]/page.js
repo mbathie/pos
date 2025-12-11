@@ -288,7 +288,7 @@ export default function TransactionDetailsPage() {
                     <div className="space-y-1">
                       {product.selectedTimes?.map((time, tIndex) => (
                         <div key={tIndex} className="text-sm">
-                          <div>{dayjs(time.value).format('DD/MM/YYYY h:mm A')}</div>
+                          <div>{dayjs(time.datetime || time.value).format('DD/MM/YYYY h:mm A')}</div>
                           {time.label && (
                             <div className="text-xs text-muted-foreground">{time.label}</div>
                           )}
@@ -375,7 +375,7 @@ export default function TransactionDetailsPage() {
                     {product.selectedTimes?.[0] ? (
                       <div>
                         <div className="text-sm">
-                          {dayjs(product.selectedTimes[0].value).format('DD/MM/YYYY h:mm A')}
+                          {dayjs(product.selectedTimes[0].datetime || product.selectedTimes[0].value).format('DD/MM/YYYY h:mm A')}
                         </div>
                         {product.selectedTimes[0].label && (
                           <div className="text-xs text-muted-foreground">{product.selectedTimes[0].label}</div>

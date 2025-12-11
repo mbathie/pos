@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { MapPin, MapPinCheckInside, Users, CircleDollarSign, Landmark, Settings, Calendar, QrCode, ChefHat, Receipt, Percent, Terminal, UserCheck, Tag, ScanLine, CreditCard, CheckCircle, Building2 } from "lucide-react";
+import { CircleDollarSign, Settings, Calendar, ChefHat, Receipt, UserCheck, Tag, ScanLine, CreditCard, CheckCircle, Building2 } from "lucide-react";
 import { NavMenu } from "@/components/nav-menu";
 import { NavUser } from "@/components/nav-user";
 import {
@@ -65,11 +65,6 @@ export function AppSidebar(props) {
         { title: "All Products", url: "/manage/products" },
       ]
     },
-    { title: "Employees", url: "/employees", icon: Users },
-    { title: "Shop Locations", url: "/manage/locations", icon: MapPin },
-    // { title: "Product Locations", url: "/products/locations", icon: MapPinCheckInside },
-    // { title: "Terminals", url: "/manage/terminals", icon: Terminal },
-    { title: "Accounting", url: "/manage/accounting", icon: Landmark },
     { title: "Settings", url: "/settings", icon: Settings },
   ];
 

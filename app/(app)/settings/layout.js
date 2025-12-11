@@ -12,7 +12,8 @@ import {
   Users,
   FileText,
   Receipt,
-  Calculator
+  Calculator,
+  Landmark
 } from 'lucide-react'
 
 const settingsSections = [
@@ -24,6 +25,8 @@ const settingsSections = [
   { id: 'receipts', label: 'Receipts', icon: Receipt, href: '/settings/receipts' },
   { id: 'financial', label: 'Financial', icon: Calculator, href: '/settings/financial' },
   { id: 'legal', label: 'Legal', icon: FileText, href: '/settings/legal' },
+  { id: 'employees', label: 'Employees', icon: Users, href: '/employees' },
+  { id: 'accounting', label: 'Accounting', icon: Landmark, href: '/manage/accounting' },
 ]
 
 export default function SettingsLayout({ children }) {
