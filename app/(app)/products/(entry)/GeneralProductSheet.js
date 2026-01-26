@@ -13,6 +13,7 @@ import { ProductThumbnail } from '@/components/product-thumbnail';
 import ProductInstructions from '@/app/(app)/products/(entry)/ProductInstructions';
 import ProductTerms from '@/app/(app)/products/(entry)/ProductTerms';
 import GeneralPricing from './GeneralPricing';
+import TagSelector from '@/components/tags/tag-selector';
 
 export default function GeneralProductSheet({ 
   open, 
@@ -197,6 +198,19 @@ export default function GeneralProductSheet({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label>Tags</Label>
+            <TagSelector
+              value={product.tags || []}
+              onChange={(tags) => {
+                setProducts(draft => {
+                  draft[pIdx].tags = tags;
+                });
+              }}
+              placeholder="Select or create tags..."
+            />
           </div>
 
           {/* Pricing Section */}

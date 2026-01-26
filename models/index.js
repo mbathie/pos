@@ -20,6 +20,7 @@ import ModGroup from './ModGroup.js';
 import Mod from './Mod.js';
 import ProductGroup from './ProductGroup.js';
 import POSInterface from './POSInterface.js';
+import Tag from './Tag.js';
 
 // Export all models
 export {
@@ -43,5 +44,6 @@ export {
   ModGroup,
   Mod,
   ProductGroup,
-  POSInterface
+  POSInterface,
+  Tag
 };

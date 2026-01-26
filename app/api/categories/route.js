@@ -37,6 +37,7 @@ export async function GET(req) {
     })
       .populate('folder')
       .populate('accounting')
+      .populate('tags')
       .sort({ name: 1 })
       .lean();
 

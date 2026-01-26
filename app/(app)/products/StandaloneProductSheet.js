@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/multi-select';
 import Link from 'next/link';
 import IconSelect from '@/components/icon-select';
+import TagSelector from '@/components/tags/tag-selector';
 
 export default function StandaloneProductSheet({
   open,
@@ -211,6 +212,8 @@ export default function StandaloneProductSheet({
         folder: product.folder?._id || product.folder || null,
         // Extract just the ID if accounting is populated
         accounting: product.accounting?._id || product.accounting || null,
+        // Extract just the IDs if tags are populated objects
+        tags: (product.tags || []).map(t => t._id || t),
       };
 
       // Remove the temporary _id for new products
@@ -493,6 +496,15 @@ export default function StandaloneProductSheet({
               <AccountingSelect
                 value={product.accounting}
                 onChange={(value) => updateField('accounting', value)}
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label>Tags</Label>
+              <TagSelector
+                value={product.tags || []}
+                onChange={(tags) => updateField('tags', tags)}
+                placeholder="Select or create tags..."
               />
             </div>
 

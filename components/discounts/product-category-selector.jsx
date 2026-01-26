@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Tag } from 'lucide-react';
 import {
   MultiSelect,
   MultiSelectTrigger,
@@ -12,38 +13,47 @@ import {
 
 export default function ProductCategorySelector({
   categoriesWithProducts = [],
+  tags = [],
   selectedProducts = new Set(),
   selectedCategories = new Set(),
+  selectedTags = new Set(),
   onSelectionChange,
-  placeholder = "Select categories and/or products",
+  placeholder = "Select categories, products, or tags",
   className = "",
   excludeTypes = [],
-  showCategories = true
+  showCategories = true,
+  showTags = true
 }) {
   const handleValuesChange = (values) => {
     const newProducts = new Set();
     const newCategories = new Set();
-    
+    const newTags = new Set();
+
     values.forEach((value) => {
       if (value.startsWith('category-')) {
         const categoryId = value.replace('category-', '');
         newCategories.add(categoryId);
+      } else if (value.startsWith('tag-')) {
+        const tagId = value.replace('tag-', '');
+        newTags.add(tagId);
       } else {
         newProducts.add(value);
       }
     });
-    
+
     if (onSelectionChange) {
       onSelectionChange({
         products: newProducts,
-        categories: newCategories
+        categories: newCategories,
+        tags: newTags
       });
     }
   };
 
   const currentValues = [
     ...Array.from(selectedProducts),
-    ...Array.from(selectedCategories).map(c => `category-${c}`)
+    ...Array.from(selectedCategories).map(c => `category-${c}`),
+    ...Array.from(selectedTags).map(t => `tag-${t}`)
   ];
 
   return (
@@ -56,21 +66,46 @@ export default function ProductCategorySelector({
         <MultiSelectValue placeholder={placeholder} />
       </MultiSelectTrigger>
       <MultiSelectContent
-        search={{ placeholder: "Search products..." }}
+        search={{ placeholder: "Search products, categories, or tags..." }}
         className="[&_[cmdk-list]]:max-h-[60vh] [&_[cmdk-list]]:overflow-y-auto [&_[cmdk-list]]:overscroll-contain"
       >
         <MultiSelectGroup>
           {(() => {
             const seen = new Set();
+            const items = [];
+
+            // Add tags first if showTags is true and there are tags
+            if (showTags && tags.length > 0) {
+              const sortedTags = [...tags].sort((a, b) =>
+                (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
+              );
+
+              for (const tag of sortedTags) {
+                items.push(
+                  <MultiSelectItem
+                    key={`tag-${tag._id}`}
+                    value={`tag-${tag._id}`}
+                    keywords={[tag.name, 'tag']}
+                    badgeLabel={tag.name}
+                  >
+                    <span className="flex items-center gap-2">
+                      <Tag className="size-3 text-muted-foreground" />
+                      {tag.name}
+                    </span>
+                  </MultiSelectItem>
+                );
+              }
+            }
+
+            // Add categories and products
             const sortedCategories = [...categoriesWithProducts].sort((a, b) =>
               (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
             );
 
-            const items = [];
             for (const category of sortedCategories) {
               const catLabel = category.name || '';
 
-              // Add category (only if showCategories is true)
+              // Add category header (only if showCategories is true)
               if (showCategories) {
                 items.push(
                   <MultiSelectItem

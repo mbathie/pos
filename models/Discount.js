@@ -14,16 +14,18 @@ const DiscountSchema = new mongoose.Schema({
   // Auto-assignment flag for cart checkout
   autoAssign: { type: Boolean, default: false },
 
-  // Must have products/categories (customer must be purchasing these)
+  // Must have products/categories/tags (customer must be purchasing these)
   musts: {
     products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
-    categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }]
+    categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
+    tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }]
   },
 
-  // Multiple adjustments with their own products/categories
+  // Multiple adjustments with their own products/categories/tags
   adjustments: [{
     products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }],
     categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
+    tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }],
     adjustment: {
       type: { type: String, enum: ['percent', 'amount'], required: true },
       value: { type: Number, required: true },

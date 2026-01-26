@@ -16,6 +16,7 @@ import ProductInstructions from '@/app/(app)/products/(entry)/ProductInstruction
 import ProductTerms from '@/app/(app)/products/(entry)/ProductTerms';
 import { NumberInput } from '@/components/ui/number-input';
 import DiscountsSheet from '@/components/discounts/discounts-sheet';
+import TagSelector from '@/components/tags/tag-selector';
 
 export default function MembershipsProductSheet({
   open,
@@ -438,7 +439,17 @@ export default function MembershipsProductSheet({
                 </Tooltip>
               </TooltipProvider>
             </div>
-            
+
+            {/* Tags */}
+            <div className="flex flex-col gap-2">
+              <Label>Tags</Label>
+              <TagSelector
+                value={product.tags || []}
+                onChange={(tags) => updateProduct({ tags })}
+                placeholder="Select or create tags..."
+              />
+            </div>
+
             {/* Delete Product Button */}
             <div className="w-54">
               <Button

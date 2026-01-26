@@ -21,10 +21,16 @@ export function useProduct(setProducts) {
   const updateProduct = async (product) => {
     console.log(product)
     try {
+      // Process tags to extract IDs if they are populated objects
+      const productData = {
+        ...product,
+        tags: (product.tags || []).map(t => t._id || t),
+      };
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${product._id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product }),
+        body: JSON.stringify({ product: productData }),
       });
 
       if (!res.ok)
@@ -74,11 +80,17 @@ export function useProduct(setProducts) {
 
   const createProduct = async (categoryName, product) => {
     try {
+      // Process tags to extract IDs if they are populated objects
+      const productData = {
+        ...product,
+        tags: (product.tags || []).map(t => t._id || t),
+      };
+
       // Create product directly without category (products are organized via POS interfaces now)
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product }),
+        body: JSON.stringify({ product: productData }),
       });
 
       if (!res.ok) {

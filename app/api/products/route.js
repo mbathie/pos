@@ -37,6 +37,7 @@ export async function GET(request) {
     const products = await Product.find(query)
       .populate('folder', 'name color')
       .populate('accounting', 'name code')
+      .populate('tags', 'name slug color')
       .sort({ order: 1, name: 1 }) // Sort by order first, then by name
       .lean();
 
@@ -110,7 +111,8 @@ export async function POST(request) {
     // Populate the product before returning
     const populatedProduct = await Product.findById(newProduct._id)
       .populate('folder')
-      .populate({ path: 'accounting', strictPopulate: false });
+      .populate({ path: 'accounting', strictPopulate: false })
+      .populate('tags');
 
     return NextResponse.json({ product: populatedProduct }, { status: 201 });
 

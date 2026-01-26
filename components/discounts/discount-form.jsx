@@ -106,16 +106,18 @@ export default function DiscountForm({
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(mode === 'edit');
   const [categoriesWithProducts, setCategoriesWithProducts] = useState([]);
+  const [tags, setTags] = useState([]);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [startCalendarOpen, setStartCalendarOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [initialDataLoaded, setInitialDataLoaded] = useState(false);
-  
+
   // Tracking adjustments
   const [adjustments, setAdjustments] = useState([{
     id: Date.now(),
     products: new Set(),
     categories: new Set(),
+    tags: new Set(),
     type: 'percent',
     value: undefined,
     maxAmount: undefined
@@ -124,6 +126,7 @@ export default function DiscountForm({
   // Must haves
   const [mustProducts, setMustProducts] = useState(new Set());
   const [mustCategories, setMustCategories] = useState(new Set());
+  const [mustTags, setMustTags] = useState(new Set());
   
   // Auto-save state
   const [isDirty, setIsDirty] = useState(false);
@@ -210,11 +213,11 @@ export default function DiscountForm({
     if (isInitialMount.current || !initialDataLoaded) {
       return;
     }
-    
+
     if (mode === 'edit') {
       setIsDirty(true);
     }
-  }, [adjustments, mustProducts, mustCategories, mode, initialDataLoaded]);
+  }, [adjustments, mustProducts, mustCategories, mustTags, mode, initialDataLoaded]);
 
   // Auto-save when dirty
   useEffect(() => {
@@ -239,11 +242,14 @@ export default function DiscountForm({
 
   const fetchDiscountAndProducts = async () => {
     try {
-      const [discountRes, categoriesRes] = await Promise.all([
+      const [discountRes, categoriesRes, tagsRes] = await Promise.all([
         fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/discounts/${discountId}`, {
           credentials: 'include'
         }),
         fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories?includeProducts=true`, {
+          credentials: 'include'
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/tags`, {
           credentials: 'include'
         })
       ]);
@@ -258,6 +264,7 @@ export default function DiscountForm({
             id: Date.now() + Math.random(),
             products: new Set(adj.products || []),
             categories: new Set(adj.categories || []),
+            tags: new Set(adj.tags || []),
             type: adj.adjustment?.type || 'percent',
             value: adj.adjustment?.value,
             maxAmount: adj.adjustment?.maxAmount
@@ -268,6 +275,7 @@ export default function DiscountForm({
             id: Date.now(),
             products: new Set(discount.products || []),
             categories: new Set(discount.categories || []),
+            tags: new Set(),
             type: discount.type,
             value: discount.value,
             maxAmount: discount.maxAmount
@@ -278,6 +286,7 @@ export default function DiscountForm({
           id: Date.now(),
           products: new Set(),
           categories: new Set(),
+          tags: new Set(),
           type: 'percent',
           value: undefined,
           maxAmount: undefined
@@ -286,6 +295,7 @@ export default function DiscountForm({
         // Set must haves
         setMustProducts(new Set(discount.musts?.products || []));
         setMustCategories(new Set(discount.musts?.categories || []));
+        setMustTags(new Set(discount.musts?.tags || []));
 
         form.reset({
           code: discount.code || '',
@@ -321,7 +331,13 @@ export default function DiscountForm({
         console.log('Categories API response:', data);
         setCategoriesWithProducts(data.categories || []);
       }
-      
+
+      if (tagsRes.ok) {
+        const data = await tagsRes.json();
+        console.log('Tags API response:', data);
+        setTags(data.tags || []);
+      }
+
       // Mark initial data as loaded after a brief delay to ensure form.reset has completed
       setTimeout(() => {
         setInitialDataLoaded(true);
@@ -336,21 +352,33 @@ export default function DiscountForm({
 
   const fetchCategoriesAndProducts = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories?includeProducts=true`, {
-        credentials: 'include'
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const [categoriesRes, tagsRes] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/categories?includeProducts=true`, {
+          credentials: 'include'
+        }),
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/tags`, {
+          credentials: 'include'
+        })
+      ]);
+
+      if (categoriesRes.ok) {
+        const data = await categoriesRes.json();
         console.log('Categories API response (create mode):', data);
         setCategoriesWithProducts(data.categories || []);
       }
-      
+
+      if (tagsRes.ok) {
+        const data = await tagsRes.json();
+        console.log('Tags API response (create mode):', data);
+        setTags(data.tags || []);
+      }
+
       // For create mode, we don't need to track initial data loaded
       if (mode === 'create') {
         isInitialMount.current = false;
       }
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.error('Error fetching categories/tags:', error);
     } finally {
       setFetching(false);
     }
@@ -361,6 +389,7 @@ export default function DiscountForm({
       id: Date.now(),
       products: new Set(),
       categories: new Set(),
+      tags: new Set(),
       type: 'percent',
       value: undefined,
       maxAmount: undefined
@@ -393,6 +422,7 @@ export default function DiscountForm({
         .map(adj => ({
           products: Array.from(adj.products),
           categories: Array.from(adj.categories),
+          tags: Array.from(adj.tags || new Set()),
           adjustment: {
             type: adj.type,
             value: adj.value,
@@ -409,7 +439,8 @@ export default function DiscountForm({
         mode: data.mode,
         musts: {
           products: Array.from(mustProducts),
-          categories: Array.from(mustCategories)
+          categories: Array.from(mustCategories),
+          tags: Array.from(mustTags)
         },
         adjustments: formattedAdjustments,
         start: data.start ? data.start.toISOString() : null,
@@ -426,8 +457,8 @@ export default function DiscountForm({
           perCustomer: data.perCustomerLimit
         },
         // Auto-enable requireCustomer if any tracking fields are set
-        requireCustomer: (data.totalUsageLimit > 0 || data.perCustomerLimit > 0 || data.totalFrequencyCount > 0) 
-          ? true 
+        requireCustomer: (data.totalUsageLimit > 0 || data.perCustomerLimit > 0 || data.totalFrequencyCount > 0)
+          ? true
           : data.requireCustomer
       };
 
@@ -470,6 +501,7 @@ export default function DiscountForm({
         .map(adj => ({
           products: Array.from(adj.products),
           categories: Array.from(adj.categories),
+          tags: Array.from(adj.tags || new Set()),
           adjustment: {
             type: adj.type,
             value: adj.value,
@@ -486,7 +518,8 @@ export default function DiscountForm({
         mode: data.mode,
         musts: {
           products: Array.from(mustProducts),
-          categories: Array.from(mustCategories)
+          categories: Array.from(mustCategories),
+          tags: Array.from(mustTags)
         },
         adjustments: formattedAdjustments,
         start: data.start ? data.start.toISOString() : null,
@@ -503,8 +536,8 @@ export default function DiscountForm({
           perCustomer: data.perCustomerLimit
         },
         // Auto-enable requireCustomer if any tracking fields are set
-        requireCustomer: (data.totalUsageLimit > 0 || data.perCustomerLimit > 0 || data.totalFrequencyCount > 0) 
-          ? true 
+        requireCustomer: (data.totalUsageLimit > 0 || data.perCustomerLimit > 0 || data.totalFrequencyCount > 0)
+          ? true
           : data.requireCustomer
       };
 
@@ -766,22 +799,25 @@ export default function DiscountForm({
             <CardHeader>
               <CardTitle>Must Haves</CardTitle>
               <p className="text-sm text-muted-foreground">
-                Customer must be purchasing these products/categories for the discount to apply.
+                Customer must be purchasing these products/categories/tags for the discount to apply.
                 Leave blank to apply to all.
               </p>
             </CardHeader>
             <CardContent>
               <ProductCategorySelector
                 categoriesWithProducts={categoriesWithProducts}
+                tags={tags}
                 selectedProducts={mustProducts}
                 selectedCategories={mustCategories}
-                onSelectionChange={({ products, categories }) => {
+                selectedTags={mustTags}
+                onSelectionChange={({ products, categories, tags: selectedTags }) => {
                   setMustProducts(products);
                   setMustCategories(categories);
+                  setMustTags(selectedTags);
                   form.setValue('mustProducts', Array.from(products));
                   form.setValue('mustCategories', Array.from(categories));
                 }}
-                placeholder="Select required products/categories"
+                placeholder="Select required products/categories/tags"
                 excludeTypes={['divider']}
               />
             </CardContent>
@@ -829,12 +865,14 @@ export default function DiscountForm({
                   
                   <ProductCategorySelector
                     categoriesWithProducts={categoriesWithProducts}
+                    tags={tags}
                     selectedProducts={adj.products}
                     selectedCategories={adj.categories}
-                    onSelectionChange={({ products, categories }) => {
-                      updateAdjustment(adj.id, { products, categories });
+                    selectedTags={adj.tags || new Set()}
+                    onSelectionChange={({ products, categories, tags: selectedTags }) => {
+                      updateAdjustment(adj.id, { products, categories, tags: selectedTags });
                     }}
-                    placeholder="Select products/categories (leave blank for all)"
+                    placeholder="Select products/categories/tags (leave blank for all)"
                     excludeTypes={['divider']}
                   />
                   

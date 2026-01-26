@@ -7,6 +7,7 @@ const ProductSchema = new mongoose.Schema({
   locations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Location' }],
   folder: { type: mongoose.Schema.Types.ObjectId, ref: 'Folder' },
   accounting: { type: mongoose.Schema.Types.ObjectId, ref: 'Accounting' },
+  tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }],
   type: { type: String, enum: ['class', 'course', 'general', 'membership', 'shop', 'divider'] },
   duration: { name: Number, unit: String },
   capacity: Number,
@@ -26,6 +27,7 @@ ProductSchema.index({ locations: 1 });
 ProductSchema.index({ type: 1 });
 ProductSchema.index({ accounting: 1 });
 ProductSchema.index({ order: 1 });
+ProductSchema.index({ tags: 1 });
 
 ProductSchema.plugin(mongooseDelete, { deletedAt: true, overrideMethods: 'all' });
 

@@ -16,6 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescript
 import { ProductThumbnail } from '@/components/product-thumbnail';
 import ProductInstructions from './ProductInstructions';
 import ProductTerms from './ProductTerms';
+import TagSelector from '@/components/tags/tag-selector';
 import dayjs from 'dayjs';
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -422,6 +423,15 @@ export default function ClassesProductSheet({
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label>Tags</Label>
+            <TagSelector
+              value={product.tags || []}
+              onChange={(tags) => updateProduct({ tags })}
+              placeholder="Select or create tags..."
+            />
           </div>
 
           {/* Schedule Section */}

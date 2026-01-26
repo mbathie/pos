@@ -212,7 +212,7 @@ export default function CustomerSelectionSheet({
                     <X className="size-4" />
                   </Button>
                 </div>
-                <Command className="rounded-lg border">
+                <Command className="rounded-lg border" shouldFilter={false}>
                   <CommandInput
                     placeholder="Search by name, email, or phone..."
                     value={searchQuery}

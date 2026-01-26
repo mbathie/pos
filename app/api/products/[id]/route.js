@@ -16,7 +16,8 @@ export async function GET(req, { params }) {
   
   const product = await Product.findById(id)
     .populate({ path: 'accounting', strictPopulate: false })
-    .populate('folder');
+    .populate('folder')
+    .populate('tags');
     
   if (!product) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
@@ -108,7 +109,8 @@ export async function PUT(req, { params }) {
     { new: true }
   )
     .populate('accounting')
-    .populate('folder');
+    .populate('folder')
+    .populate('tags');
 
   return NextResponse.json({ product: updatedProduct }, { status: 201 });
 }
