@@ -597,8 +597,8 @@ export default function DiscountForm({
         <div className="flex items-center gap-4 justify-between">
           <div className="flex items-center gap-4">
             {onCancel && (
-              <Button variant="ghost" size="sm" onClick={onCancel} className="cursor-pointer">
-                <ArrowLeft className="size-4" />
+              <Button variant="outline" size="sm" onClick={onCancel} className="cursor-pointer">
+                <ArrowLeft className="size-4 mr-2" />
                 Back to Adjustments
               </Button>
             )}
@@ -794,7 +794,7 @@ export default function DiscountForm({
                 <div>
                   <CardTitle>Adjustments</CardTitle>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Define adjustment values for specific products/categories. 
+                    Define adjustment values for specific products.
                     Leave blank to apply to all products.
                   </p>
                 </div>

@@ -28,28 +28,24 @@ export async function GET(req) {
 
   const categories = await Category.find(query).sort({ order: 1, createdAt: 1 });
 
-  // If includeProducts is requested, fetch products for each category
+  // If includeProducts is requested, fetch all products
   if (includeProducts === 'true') {
-    const categoriesWithProducts = await Promise.all(
-      categories.map(async (category) => {
-        // Query for both ObjectId and string category formats
-        const products = await Product.find({
-          $or: [
-            { category: category._id },
-            { category: category._id.toString() }
-          ],
-          deleted: { $ne: true }
-        })
-          .populate('folder')
-          .populate('accounting')
-          .lean();
+    // Fetch all products for the org
+    const allProducts = await Product.find({
+      org: employee.org._id,
+      deleted: { $ne: true }
+    })
+      .populate('folder')
+      .populate('accounting')
+      .sort({ name: 1 })
+      .lean();
 
-        return {
-          ...category.toObject(),
-          products
-        };
-      })
-    );
+    // Return all products under a single "All Products" pseudo-category
+    const categoriesWithProducts = [{
+      _id: 'all',
+      name: 'All Products',
+      products: allProducts
+    }];
 
     return NextResponse.json({ categories: categoriesWithProducts }, { status: 200 });
   }
