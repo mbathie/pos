@@ -6,7 +6,6 @@ const ProductSchema = new mongoose.Schema({
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
   locations: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Location' }],
   folder: { type: mongoose.Schema.Types.ObjectId, ref: 'Folder' },
-  group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group' },
   accounting: { type: mongoose.Schema.Types.ObjectId, ref: 'Accounting' },
   type: { type: String, enum: ['class', 'course', 'general', 'membership', 'shop', 'divider'] },
   duration: { name: Number, unit: String },
@@ -23,7 +22,6 @@ const ProductSchema = new mongoose.Schema({
 // Indexes for org, folder, group, locations, and accounting
 ProductSchema.index({ org: 1 });
 ProductSchema.index({ folder: 1 });
-ProductSchema.index({ group: 1 });
 ProductSchema.index({ locations: 1 });
 ProductSchema.index({ type: 1 });
 ProductSchema.index({ accounting: 1 });

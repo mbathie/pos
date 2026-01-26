@@ -5,7 +5,6 @@ import Terminal from './Terminal.js';
 import Employee from './Employee.js';
 import Category from './Category.js';
 import Folder from './Folder.js';
-import Group from './Group.js';
 import Accounting from './Accounting.js';
 import Product from './Product.js';
 import Customer from './Customer.js';
@@ -32,7 +31,6 @@ export {
   Company,
   Category,
   Folder,
-  Group,
   Accounting,
   Product,
   Discount,
