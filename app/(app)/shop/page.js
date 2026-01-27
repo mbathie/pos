@@ -83,6 +83,7 @@ export default function Page() {
   const [total, setTotal] = useState(0)
   const [selectedGroup, setSelectedGroup] = useState(null)
   const [groupSheetOpen, setGroupSheetOpen] = useState(false)
+  const [skipSetup, setSkipSetup] = useState(false)
 
   // Initialize class/course hooks
   const { setTimesClass, setTimesCourse } = useClass({ product, setProduct })
@@ -264,8 +265,8 @@ export default function Page() {
     );
   }
 
-  // Check if setup is incomplete
-  const needsSetup = (
+  // Check if setup is incomplete (but allow skipping)
+  const needsSetup = !skipSetup && (
     !setupStatus.stripeConnected ||
     !setupStatus.hasTerminal ||
     !posInterface
@@ -333,6 +334,13 @@ export default function Page() {
               </Link>
             ))}
           </div>
+          <Button
+            variant="ghost"
+            className="mt-4 cursor-pointer"
+            onClick={() => setSkipSetup(true)}
+          >
+            Continue anyway
+          </Button>
         </div>
       </div>
     );
