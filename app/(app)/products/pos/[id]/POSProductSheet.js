@@ -10,7 +10,9 @@ import ProductCategorySelector from '@/components/discounts/product-category-sel
 export default function POSProductSheet({ open, onOpenChange, posInterfaceId, categoryId, onSuccess }) {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [selectedCategories, setSelectedCategories] = useState(new Set());
+  const [selectedTags, setSelectedTags] = useState(new Set());
   const [categoriesWithProducts, setCategoriesWithProducts] = useState([]);
+  const [tags, setTags] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -18,23 +20,59 @@ export default function POSProductSheet({ open, onOpenChange, posInterfaceId, ca
       fetchAvailableItems();
       setSelectedProducts(new Set());
       setSelectedCategories(new Set());
+      setSelectedTags(new Set());
     }
   }, [open]);
 
   const fetchAvailableItems = async () => {
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/posinterfaces/${posInterfaceId}/available-items`
-      );
-      const data = await res.json();
-      setCategoriesWithProducts(data.categoriesWithProducts || []);
+      const [itemsRes, tagsRes] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/posinterfaces/${posInterfaceId}/available-items`),
+        fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/tags`)
+      ]);
+      const itemsData = await itemsRes.json();
+      setCategoriesWithProducts(itemsData.categoriesWithProducts || []);
+      if (tagsRes.ok) {
+        const tagsData = await tagsRes.json();
+        setTags(tagsData.tags || []);
+      }
     } catch (error) {
       console.error('Error fetching available items:', error);
     }
   };
 
+  // Collect all product IDs from direct selection, categories, and tags
+  const getResolvedProductIds = () => {
+    const allProductIds = new Set(selectedProducts);
+
+    // Add products from selected categories
+    for (const catId of selectedCategories) {
+      const category = categoriesWithProducts.find(c => c._id === catId);
+      if (category?.products) {
+        category.products.forEach(p => allProductIds.add(p._id));
+      }
+    }
+
+    // Add products from selected tags
+    if (selectedTags.size > 0) {
+      const allProducts = categoriesWithProducts.flatMap(c => c.products || []);
+      for (const tagId of selectedTags) {
+        for (const product of allProducts) {
+          const productTagIds = (product.tags || []).map(t => typeof t === 'object' ? t._id?.toString() : t?.toString());
+          if (productTagIds.includes(tagId)) {
+            allProductIds.add(product._id);
+          }
+        }
+      }
+    }
+
+    return allProductIds;
+  };
+
+  const totalSelected = getResolvedProductIds().size;
+
   const handleAdd = async () => {
-    if (selectedProducts.size === 0) {
+    if (totalSelected === 0) {
       toast.error('Please select at least one product');
       return;
     }
@@ -55,30 +93,13 @@ export default function POSProductSheet({ open, onOpenChange, posInterfaceId, ca
       const currentItems = posInterface.categories[categoryIndex].items || [];
       const nextOrder = currentItems.length;
 
-      // Add selected products
-      const productIds = Array.from(selectedProducts);
-      const newItems = productIds.map((productId, index) => ({
+      // Resolve all selections (products, categories, tags) to product IDs
+      const resolvedProductIds = Array.from(getResolvedProductIds());
+      const newItems = resolvedProductIds.map((productId, index) => ({
         itemType: 'product',
         itemId: productId,
         order: nextOrder + index
       }));
-
-      // If categories are selected, get all products from those categories
-      if (selectedCategories.size > 0) {
-        const categoryIds = Array.from(selectedCategories);
-        categoryIds.forEach(catId => {
-          const category = categoriesWithProducts.find(c => c._id === catId);
-          if (category && category.products) {
-            category.products.forEach((product, index) => {
-              newItems.push({
-                itemType: 'product',
-                itemId: product._id,
-                order: nextOrder + productIds.length + index
-              });
-            });
-          }
-        });
-      }
 
       // Update the category items
       posInterface.categories[categoryIndex].items = [...currentItems, ...newItems];
@@ -116,18 +137,21 @@ export default function POSProductSheet({ open, onOpenChange, posInterfaceId, ca
             <Label>Products</Label>
             <ProductCategorySelector
               categoriesWithProducts={categoriesWithProducts}
+              tags={tags}
               selectedProducts={selectedProducts}
               selectedCategories={selectedCategories}
-              onSelectionChange={({ products, categories }) => {
+              selectedTags={selectedTags}
+              onSelectionChange={({ products, categories, tags: newTags }) => {
                 setSelectedProducts(products);
                 setSelectedCategories(categories);
+                setSelectedTags(newTags);
               }}
               placeholder="Select products to add"
               excludeTypes={['divider']}
               showCategories={false}
             />
             <p className="text-xs text-muted-foreground">
-              {selectedProducts.size} product{selectedProducts.size !== 1 ? 's' : ''} selected
+              {totalSelected} product{totalSelected !== 1 ? 's' : ''} selected
             </p>
           </div>
         </div>
@@ -137,7 +161,7 @@ export default function POSProductSheet({ open, onOpenChange, posInterfaceId, ca
             <Button
               className="cursor-pointer"
               onClick={handleAdd}
-              disabled={loading || selectedProducts.size === 0}
+              disabled={loading || totalSelected === 0}
             >
               {loading ? 'Adding...' : 'Add'}
             </Button>
