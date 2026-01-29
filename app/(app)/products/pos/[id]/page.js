@@ -31,7 +31,7 @@ import { useProduct } from '../../(entry)/useProduct';
 import { useAutoSave } from '../../useAutoSave';
 
 // Draggable folder product component
-function DraggableFolderProduct({ product, folderId, onProductClick, borderColor, tintColor }) {
+function DraggableFolderProduct({ product, folderId, onProductClick, onRemove, borderColor, tintColor }) {
   const {
     attributes,
     listeners,
@@ -83,6 +83,17 @@ function DraggableFolderProduct({ product, folderId, onProductClick, borderColor
           <Pencil className="w-3 h-3" />
         </div>
 
+        {/* Remove icon - positioned absolutely */}
+        <div
+          className="absolute bottom-1 left-1 w-6 h-6 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-20"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove?.();
+          }}
+        >
+          <Trash2 className="w-3 h-3" />
+        </div>
+
         {/* Product thumbnail */}
         <div
           className="size-24 rounded-lg overflow-hidden relative"
@@ -111,7 +122,7 @@ function DraggableFolderProduct({ product, folderId, onProductClick, borderColor
 }
 
 // Simplified SortableItem component
-function SortableItem({ item, isExpanded, onFolderClick, onFolderEdit, onProductClick, onDividerDelete, isDraggedOver, draggedItemType, isAdjacentToDragged, activeId, overId }) {
+function SortableItem({ item, isExpanded, onFolderClick, onFolderEdit, onProductClick, onRemove, onDividerDelete, isDraggedOver, draggedItemType, isAdjacentToDragged, activeId, overId }) {
   const {
     attributes,
     listeners,
@@ -204,6 +215,16 @@ function SortableItem({ item, isExpanded, onFolderClick, onFolderEdit, onProduct
           >
             <Pencil className="w-3 h-3" />
           </div>
+
+          <div
+            className="absolute bottom-1 left-1 w-6 h-6 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-10"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove?.();
+            }}
+          >
+            <Trash2 className="w-3 h-3" />
+          </div>
         </div>
 
         <div
@@ -247,6 +268,16 @@ function SortableItem({ item, isExpanded, onFolderClick, onFolderEdit, onProduct
           }}
         >
           <Pencil className="w-3 h-3" />
+        </div>
+
+        <div
+          className="absolute bottom-1 left-1 w-6 h-6 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white rounded-full flex items-center justify-center z-10"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemove?.();
+          }}
+        >
+          <Trash2 className="w-3 h-3" />
         </div>
 
         <ProductThumbnail
@@ -743,6 +774,73 @@ export default function POSInterfaceDetailPage({ params }) {
       console.error('Error deleting divider:', error);
       toast.error('Failed to delete divider');
       // Revert on error
+      await fetchPOSInterface();
+    }
+  };
+
+  const handleRemoveFromCategory = async (itemId) => {
+    const updatedCategories = categories.map(cat => {
+      if (cat._id === selectedCategory._id) {
+        return {
+          ...cat,
+          items: (cat.items || []).filter(item => item.itemId !== itemId)
+        };
+      }
+      return cat;
+    });
+
+    // Optimistic update
+    setItems(draft => draft.filter(i => i._id !== itemId));
+    setCategories(updatedCategories);
+
+    try {
+      await savePOSInterface(updatedCategories);
+      await fetchPOSInterface();
+    } catch (error) {
+      console.error('Error removing item from category:', error);
+      toast.error('Failed to remove item');
+      await fetchPOSInterface();
+    }
+  };
+
+  const handleRemoveFromFolder = async (folderId, productId) => {
+    const folder = items.find(i => i.type === 'folder' && String(i._id) === String(folderId));
+    if (!folder) return;
+
+    const updatedContains = (folder.items || [])
+      .filter(item => String(item._id) !== String(productId))
+      .map((item, index) => ({
+        itemType: item.itemType || (item.amount ? 'group' : 'product'),
+        itemId: item._id,
+        order: index
+      }));
+
+    // Optimistic update
+    setItems(draft => {
+      const folderIndex = draft.findIndex(i => i._id === folderId);
+      if (folderIndex !== -1) {
+        draft[folderIndex].items = (draft[folderIndex].items || []).filter(
+          item => String(item._id) !== String(productId)
+        );
+        draft[folderIndex].products = (draft[folderIndex].products || []).filter(
+          p => String(p._id) !== String(productId)
+        );
+        draft[folderIndex].groups = (draft[folderIndex].groups || []).filter(
+          g => String(g._id) !== String(productId)
+        );
+      }
+    });
+
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/folders/${folderId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contains: updatedContains })
+      });
+      await fetchPOSInterface();
+    } catch (error) {
+      console.error('Error removing product from folder:', error);
+      toast.error('Failed to remove product from folder');
       await fetchPOSInterface();
     }
   };
@@ -1377,7 +1475,7 @@ export default function POSInterfaceDetailPage({ params }) {
       {/* Header */}
       <div className="pb-2 flex items-center gap-3">
         <Button
-          variant="ghost"
+          variant="outline"
           size="icon"
           onClick={() => router.back()}
           className="cursor-pointer"
@@ -1542,6 +1640,7 @@ export default function POSInterfaceDetailPage({ params }) {
                               setFolderSheetOpen(true);
                             }}
                             onProductClick={() => handleEditProduct(item)}
+                            onRemove={() => handleRemoveFromCategory(item._id)}
                             onDividerDelete={handleDividerDelete}
                             isDraggedOver={false}
                             draggedItemType={draggedItem?.type}
@@ -1560,6 +1659,7 @@ export default function POSInterfaceDetailPage({ params }) {
                                   product={folderItem}
                                   folderId={item._id}
                                   onProductClick={() => handleEditProduct(folderItem)}
+                                  onRemove={() => handleRemoveFromFolder(item._id, folderItem._id)}
                                   borderColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]}
                                   tintColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]}
                                 />
@@ -1573,6 +1673,7 @@ export default function POSInterfaceDetailPage({ params }) {
                                     product={product}
                                     folderId={item._id}
                                     onProductClick={() => handleEditProduct(product)}
+                                    onRemove={() => handleRemoveFromFolder(item._id, product._id)}
                                     borderColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]}
                                     tintColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]}
                                   />
@@ -1583,6 +1684,7 @@ export default function POSInterfaceDetailPage({ params }) {
                                     product={group}
                                     folderId={item._id}
                                     onProductClick={() => handleEditProduct(group)}
+                                    onRemove={() => handleRemoveFromFolder(item._id, group._id)}
                                     borderColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]}
                                     tintColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]] || colors.blue[500]}
                                   />
