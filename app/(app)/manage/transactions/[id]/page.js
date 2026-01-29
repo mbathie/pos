@@ -627,7 +627,7 @@ export default function TransactionDetailsPage() {
     <div className="mx-4 mt-4- space-y-4">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => router.back()} className="cursor-pointer">
+        <Button variant="outline" size="sm" onClick={() => router.back()} className="cursor-pointer">
           <ArrowLeft className="size-4 mr-2" />
           Back
         </Button>
@@ -879,6 +879,23 @@ export default function TransactionDetailsPage() {
                     <span>{formatCurrency(transaction.total - transaction.refunds.reduce((sum, r) => sum + r.amount, 0))}</span>
                   </div>
                 </>
+              )}
+              {transaction.bookingAdjustments && transaction.bookingAdjustments.length > 0 && (
+                <div className="pt-2 border-t">
+                  <p className="text-sm font-medium mb-2">Booking Adjustments</p>
+                  <div className="space-y-1">
+                    {transaction.bookingAdjustments.map((adj, index) => (
+                      <div key={index} className="flex justify-between text-sm">
+                        <span>
+                          {adj.type === 'qty_increase' ? 'Added' : 'Removed'} participant ({adj.previousQty} → {adj.newQty}) - {dayjs(adj.date).format('DD/MM/YY')}
+                        </span>
+                        <span>
+                          {adj.amount >= 0 ? '+' : ''}{formatCurrency(adj.amount)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               )}
               {transaction.paymentMethod === 'cash' && transaction.cash && (
                 <>

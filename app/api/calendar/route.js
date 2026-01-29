@@ -82,6 +82,7 @@ export async function GET(req) {
       available: cls.available,
       capacity: schedule.capacity,
       customerCount: cls.customers?.length || 0,
+      companyId: companyId || null,
       companyName: companyId ? companyMap.get(companyId) : null,
       product: {
         _id: schedule.product?._id,

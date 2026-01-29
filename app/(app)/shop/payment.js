@@ -1039,11 +1039,13 @@ export default function Page() {
     fetchDiscountsAndApplySurcharges()
   }, []) // Only run once on mount
 
-  // Check if customer assignment is required
+  // Check if customer assignment is required (waiver products, class/course, or group products)
   useEffect(() => {
-    // Check if any product requires a waiver
+    // Check if any product requires a waiver, is a class/course, or is part of a group
     const hasWaiverProduct = cart.products.some(p => p.waiverRequired === true)
-    setRequiresCustomerAssignment(hasWaiverProduct)
+    const hasClassOrCourse = cart.products.some(p => ['class', 'course'].includes(p.type))
+    const hasGroupProduct = cart.products.some(p => p.gId)
+    setRequiresCustomerAssignment(hasWaiverProduct || hasClassOrCourse || hasGroupProduct)
   }, [cart.products])
 
   // Check if all products are shop or general items (customer is optional)
@@ -2020,7 +2022,9 @@ export default function Page() {
             )}
             
             {/* Email Receipt Section - Show when payment succeeds and either no customer email OR shop-only with auto receipt disabled */}
+            {/* Hide for invoice payments since invoice is already emailed to customer */}
             {(paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') &&
+             tab !== 'invoice' &&
              (
                // Show if no customer email
                (!cart.customer?.email) ||

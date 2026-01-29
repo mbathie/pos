@@ -66,7 +66,7 @@ export default function ProductCategorySelector({
         <MultiSelectValue placeholder={placeholder} />
       </MultiSelectTrigger>
       <MultiSelectContent
-        search={{ placeholder: "Search products, categories, or tags..." }}
+        search={{ placeholder: "Search products or tags..." }}
         className="[&_[cmdk-list]]:max-h-[60vh] [&_[cmdk-list]]:overflow-y-auto [&_[cmdk-list]]:overscroll-contain"
       >
         <MultiSelectGroup>

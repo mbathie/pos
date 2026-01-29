@@ -102,7 +102,7 @@ export default function Page({ schedule, setSchedule }) {
     <div className="flex flex-col gap-4">
       {/* Header with Back Button */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => router.back()}>
+        <Button variant="outline" size="sm" onClick={() => router.back()} className="cursor-pointer">
           <ArrowLeft className="size-4 mr-2" />
           Back
         </Button>

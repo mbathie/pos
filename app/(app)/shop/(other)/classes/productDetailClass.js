@@ -11,7 +11,6 @@ import { Calendar } from '@/components/ui/calendar'
 import { Badge } from '@/components/ui/badge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { NumberInput } from '@/components/ui/number-input'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { IconButton, SelectionCheck } from '@/components/control-button'
@@ -342,13 +341,9 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                     </div>
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Duration (min)</Label>
-                      <NumberInput
-                        value={customDuration}
-                        onChange={setCustomDuration}
-                        min={1}
-                        placeholder="60"
-                        className="h-8 w-24"
-                      />
+                      <div className="h-8 flex items-center text-sm font-medium">
+                        {customDuration || '-'}
+                      </div>
                     </div>
                   </div>
                   {product.capacity && (

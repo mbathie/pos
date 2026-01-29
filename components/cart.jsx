@@ -354,7 +354,7 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
               </div>
 
               {/* Display prices */}
-              {p.prices?.map((price, i) => (
+              {p.prices?.filter(price => price.qty > 0).map((price, i) => (
                 <div key={i} className="flex">
                   <div>{price.qty}x {price.name}</div>
                   <div className="ml-auto opacity-40">${parseFloat(price.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
@@ -406,7 +406,7 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
                 </div>
               </div>
               {/* Display prices directly for general products */}
-              {p.prices?.map((price, i) => (
+              {p.prices?.filter(price => price.qty > 0).map((price, i) => (
                 <div key={i} className="flex">
                   <div>{price.qty}x {price.name || 'Standard'}</div>
                   <div className="ml-auto">${parseFloat(price.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>

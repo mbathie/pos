@@ -209,6 +209,9 @@ export function ScheduleCalendar({ className, onEventClick, compact = false }) {
   const handleEventClick = (event) => {
     if (onEventClick) {
       onEventClick(event)
+    } else if (event.companyName) {
+      // Company/group booking: navigate to booking page
+      router.push(`/manage/bookings?scheduleId=${event.scheduleId}&datetime=${encodeURIComponent(event.datetime)}`)
     } else {
       // Default: navigate to schedule page
       router.push(`/manage/schedules/${event.scheduleId}`)

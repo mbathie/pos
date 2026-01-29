@@ -339,10 +339,10 @@ export default function CustomerDetailPage({ params }) {
       {/* Header */}
       <div className="flex items-center gap-4 mb-4 flex-shrink-0">
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
           onClick={() => router.push('/manage/customers')}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 cursor-pointer"
         >
           <ArrowLeft className="size-4" />
           Back

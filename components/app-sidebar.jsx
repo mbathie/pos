@@ -41,6 +41,7 @@ export function AppSidebar(props) {
       title: "Schedules", icon: Calendar,
       items: [
         { title: "Calendar", url: "/manage/calendar" },
+        { title: "Bookings", url: "/manage/bookings" },
         { title: "Classes & Courses", url: "/manage/classes" },
         { title: "General Entry", url: "/manage/general" },
       ]

@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { PackagePlus } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { PackagePlus, Search } from 'lucide-react';
 import IconSelect from '@/components/icon-select';
 import StandaloneProductSheet from '../StandaloneProductSheet';
 import ShopTable from './ShopTable';
@@ -16,6 +17,13 @@ export default function Page() {
   const [productIconQuery, setProductIconQuery] = useState('');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [thumbnailUpdateCallback, setThumbnailUpdateCallback] = useState(null);
+  const [search, setSearch] = useState('');
+
+  const filteredProducts = useMemo(() => {
+    if (!search.trim()) return products;
+    const q = search.toLowerCase();
+    return products.filter(p => p.name?.toLowerCase().includes(q));
+  }, [products, search]);
 
   // Fetch all shop products on mount
   useEffect(() => {
@@ -72,7 +80,17 @@ export default function Page() {
         </Button>
       </div>
 
-      <ShopTable products={products} onRowClick={handleProductClick} />
+      <div className='relative mb-4'>
+        <Search className='absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground' />
+        <Input
+          placeholder='Search products...'
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className='pl-9 max-w-sm'
+        />
+      </div>
+
+      <ShopTable products={filteredProducts} onRowClick={handleProductClick} />
 
       {/* Product Sheet */}
       <StandaloneProductSheet

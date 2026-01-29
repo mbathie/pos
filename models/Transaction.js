@@ -39,6 +39,20 @@ const TransactionSchema = new mongoose.Schema({
     stripeStatus: String, // Stripe refund status
     stripeChargeId: String // Stripe charge ID
   }],
+  // Booking adjustments tracking (qty changes)
+  bookingAdjustments: [{
+    date: { type: Date, default: Date.now },
+    type: String, // 'qty_increase', 'qty_decrease', 'reschedule'
+    previousQty: Number,
+    newQty: Number,
+    amount: Number, // Differential amount (positive or negative)
+    previousTotal: Number,
+    newTotal: Number,
+    employeeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Employee' },
+    voidedInvoiceId: String,
+    newInvoiceId: String,
+    note: String
+  }],
   stripe: mongoose.Schema.Types.Mixed,
   stripePaymentIntentId: String, // Store payment intent ID for refunds
   cash: mongoose.Schema.Types.Mixed,

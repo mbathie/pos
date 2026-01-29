@@ -103,42 +103,7 @@ export function ComboboxCreate({
           />
           <CommandList>
             <CommandEmpty>
-              {!showCreateForm ? (
-                <div className="px-4 py-2 text-left">
-                  <p className="text-sm text-muted-foreground mb-2">No options found</p>
-                  <Button 
-                    size="sm" 
-                    className="w-full" 
-                    onClick={() => setShowCreateForm(true)}
-                  >
-                    <Plus className="mr-2 h-4 w-4" /> {createLabel}
-                  </Button>
-                </div>
-              ) : (
-                <div className="px-4 py-0 text-left">
-                  <p className="text-sm font-medium mb-2">{createFormLabel}</p>
-                  <div className="flex gap-2">
-                    <Input
-                      className="w-full"
-                      value={newItemName}
-                      placeholder="Enter name"
-                      onChange={(e) => setNewItemName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && validateNewOption(newItemName)) {
-                          handleCreateNew();
-                        }
-                      }}
-                    />
-                    <Button 
-                      size="sm"
-                      onClick={handleCreateNew} 
-                      disabled={!validateNewOption(newItemName)}
-                    >
-                      Create
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <p className="px-4 py-2 text-sm text-muted-foreground text-left">No options found</p>
             </CommandEmpty>
             <CommandGroup>
               {options.map((option) => (
@@ -154,6 +119,43 @@ export function ComboboxCreate({
                 </CommandItem>
               ))}
             </CommandGroup>
+            <div className="border-t p-2">
+              {!showCreateForm ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full cursor-pointer"
+                  onClick={() => setShowCreateForm(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" /> {createLabel}
+                </Button>
+              ) : (
+                <div className="px-2 py-1 text-left">
+                  <p className="text-sm font-medium mb-2">{createFormLabel}</p>
+                  <div className="flex gap-2">
+                    <Input
+                      className="w-full"
+                      value={newItemName}
+                      placeholder="Enter name"
+                      onChange={(e) => setNewItemName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && validateNewOption(newItemName)) {
+                          handleCreateNew();
+                        }
+                      }}
+                    />
+                    <Button
+                      size="sm"
+                      className="cursor-pointer"
+                      onClick={handleCreateNew}
+                      disabled={!validateNewOption(newItemName)}
+                    >
+                      Create
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </CommandList>
         </Command>
       </PopoverContent>

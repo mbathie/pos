@@ -146,7 +146,7 @@ export default function TermsAndConditionsSettingsPage() {
       {/* Navigation */}
       <div className="flex items-center justify-between">
         <Link href="/settings">
-          <Button variant="ghost" size="sm" className="cursor-pointer">
+          <Button variant="outline" size="sm" className="cursor-pointer">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
