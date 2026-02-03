@@ -31,6 +31,8 @@ import CourseScheduleDialog from '@/components/CourseScheduleDialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ActionButton } from '@/components/ui/action-button';
 import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function Cart({ asSheet = false, onClose, onEditGroup }) {
   const {
@@ -47,6 +49,8 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
   const [selectedCourse, setSelectedCourse] = useState(null)
   const [originalTransaction, setOriginalTransaction] = useState(null)
   const [mounted, setMounted] = useState(false)
+  const [saveCartDialogOpen, setSaveCartDialogOpen] = useState(false)
+  const [saveCartName, setSaveCartName] = useState('')
 
   // Wait for client-side mount to avoid hydration mismatch
   useEffect(() => {
@@ -140,17 +144,69 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
       return index === currentCartIndex ? 'Current Cart' : `Cart ${index + 1}`;
     }
     const date = dayjs(cart.savedAt);
-    return `${date.format('h:mm A')} (${date.fromNow()}) - ${cart.products.length} item${cart.products.length !== 1 ? 's' : ''}`;
+    const itemCount = `${cart.products.length} item${cart.products.length !== 1 ? 's' : ''}`;
+    if (cart.name) {
+      return `${cart.name} (${date.fromNow()}) - ${itemCount}`;
+    }
+    return `${date.format('h:mm A')} (${date.fromNow()}) - ${itemCount}`;
   };
 
   // Check if there are any saved carts (carts with savedAt timestamp)
   const hasSavedCarts = carts.some(c => c.savedAt);
+
+  // Get saved carts for display
+  const savedCarts = carts.filter(c => c.savedAt).map((c, i) => ({
+    ...c,
+    originalIndex: carts.findIndex(cart => cart === c)
+  }));
 
   return (
     <div className="flex flex-col h-full text-sm bg-muted w-[380px] rounded-tl-lg" suppressHydrationWarning>
       {isStale && (
         <div className="bg-green-100 text-green-800 text-xs px-4 py-2 border-b border-green-200">
           ✅ Transaction completed - Cart available for review
+        </div>
+      )}
+
+      {/* Show saved carts list when current cart is empty but there are saved carts */}
+      {cart.products.length === 0 && savedCarts.length > 0 && (
+        <div className="p-4 border-b">
+          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+            Saved Carts ({savedCarts.length})
+          </div>
+          <div className="space-y-2">
+            {savedCarts.map((savedCart) => {
+              const date = dayjs(savedCart.savedAt);
+              const itemCount = savedCart.products.length;
+              return (
+                <div
+                  key={savedCart.savedAt}
+                  className="flex items-center justify-between p-2 bg-background rounded-md cursor-pointer hover:bg-accent transition-colors"
+                  onClick={() => switchCart(savedCart.originalIndex)}
+                >
+                  <div className="flex flex-col">
+                    <div className="font-medium">
+                      {savedCart.name || date.format('h:mm A')}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {date.fromNow()} · {itemCount} item{itemCount !== 1 ? 's' : ''} · ${savedCart.total?.toFixed(2) || '0.00'}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteCart(savedCart.originalIndex);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -553,7 +609,8 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
                   type="button"
                   className="w-full cursor-pointer"
                   onClick={() => {
-                    saveCart();
+                    setSaveCartName('');
+                    setSaveCartDialogOpen(true);
                   }}
                 >
                   <Save className="h-4 w-4 mr-2" />
@@ -608,11 +665,47 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
       </div>
 
       {/* Course Schedule Dialog */}
-      <CourseScheduleDialog 
+      <CourseScheduleDialog
         open={scheduleDialogOpen}
         onOpenChange={setScheduleDialogOpen}
         course={selectedCourse}
       />
+
+      {/* Save Cart Name Dialog */}
+      <AlertDialog open={saveCartDialogOpen} onOpenChange={setSaveCartDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save Cart</AlertDialogTitle>
+            <AlertDialogDescription>
+              Enter a name to identify this saved cart.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            placeholder="e.g. Table 5, John's order"
+            value={saveCartName}
+            onChange={(e) => setSaveCartName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && saveCartName.trim()) {
+                saveCart(saveCartName.trim());
+                setSaveCartDialogOpen(false);
+              }
+            }}
+            autoFocus
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="cursor-pointer"
+              onClick={() => {
+                saveCart(saveCartName.trim() || null);
+                setSaveCartDialogOpen(false);
+              }}
+            >
+              Save
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
     </div>
 

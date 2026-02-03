@@ -34,6 +34,9 @@ export function CartSheet() {
     return sum + 1
   }, 0)
 
+  // Count saved carts (carts with savedAt timestamp)
+  const savedCartsCount = carts.filter(c => c.savedAt).length
+
   return (
     <>
       <div
@@ -41,14 +44,20 @@ export function CartSheet() {
         onClick={() => setOpen(true)}
       >
         <ShoppingCart className="size-5" />
-        {itemCount > 0 && (
-          <Badge 
+        {itemCount > 0 ? (
+          <Badge
             className="h-5 px-1.5 flex items-center justify-center"
             variant="default"
           >
             {itemCount}
           </Badge>
-        )}
+        ) : savedCartsCount > 0 ? (
+          <Badge
+            className="h-5 px-1.5 flex items-center justify-center bg-blue-500 hover:bg-blue-600"
+          >
+            {savedCartsCount}
+          </Badge>
+        ) : null}
       </div>
 
       <Sheet open={open} onOpenChange={setOpen}>
@@ -57,22 +66,30 @@ export function CartSheet() {
             <SheetTitle className=''></SheetTitle>
           </SheetHeader>
 
-          <div 
-            id="closecart" 
+          <div
+            id="closecart"
             className='absolute top-3.5 right-4 flex items-center gap-1 z-50 cursor-pointer'
             onClick={() => setOpen(false)}
           >
             <div><ShoppingCart className="size-5" /></div>
-            <Badge 
-              className="h-5 px-1.5 flex items-center justify-center"
-              variant="default"
-            >
-              {itemCount}
-            </Badge>
+            {itemCount > 0 ? (
+              <Badge
+                className="h-5 px-1.5 flex items-center justify-center"
+                variant="default"
+              >
+                {itemCount}
+              </Badge>
+            ) : savedCartsCount > 0 ? (
+              <Badge
+                className="h-5 px-1.5 flex items-center justify-center bg-blue-500 hover:bg-blue-600"
+              >
+                {savedCartsCount}
+              </Badge>
+            ) : null}
           </div>
 
 
-          
+
           <Cart asSheet={true} onClose={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
