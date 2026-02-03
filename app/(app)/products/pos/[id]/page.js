@@ -11,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
-import { Plus, FolderPlus, PackagePlus, Minus, Trash2, GripVertical, ArrowUp, ArrowDown, ArrowLeft, Pencil, Settings } from 'lucide-react';
+import { Plus, FolderPlus, PackagePlus, Minus, Trash2, GripVertical, ArrowUp, ArrowDown, ArrowLeft, Pencil, Settings, Monitor } from 'lucide-react';
 import { toast } from "sonner";
 import colors from '@/lib/tailwind-colors';
 import { generateObjectId } from '@/lib/utils';
@@ -367,7 +367,7 @@ function DragOverlayItem({ item }) {
 }
 
 // Non-sortable divider row
-function DividerRow({ item, onDividerDelete, onMoveUp, onMoveDown }) {
+function DividerRow({ item, onDividerDelete, onMoveUp, onMoveDown, onNewFolder, onNewDivider, onAddProducts, onAddGroup, onCreateShop, onCreateMembership, onCreateClass }) {
   if (!item) return null;
   return (
     <div className="w-full col-span-full relative h-12">
@@ -379,6 +379,45 @@ function DividerRow({ item, onDividerDelete, onMoveUp, onMoveDown }) {
         <div className="flex-1 h-px bg-border" />
       </div>
       <div className="absolute inset-y-0 right-0 flex items-center gap-1 z-10 pointer-events-auto">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 cursor-pointer"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onNewFolder} className="cursor-pointer">
+              <FolderPlus className="size-4 mr-2" />
+              New Folder
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onNewDivider} className="cursor-pointer">
+              <Minus className="size-4 mr-2" />
+              New Divider
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onAddProducts} className="cursor-pointer">
+              Add Existing Products
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onAddGroup} className="cursor-pointer">
+              Add Existing Group
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onCreateShop} className="cursor-pointer">
+              Create New Shop Item
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onCreateMembership} className="cursor-pointer">
+              Create New Membership
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onCreateClass} className="cursor-pointer">
+              Create New Class/Course
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           variant="ghost"
           size="icon"
@@ -449,6 +488,7 @@ export default function POSInterfaceDetailPage({ params }) {
   const [settingsSheetOpen, setSettingsSheetOpen] = useState(false);
   const [dividerDialogOpen, setDividerDialogOpen] = useState(false);
   const [dividerName, setDividerName] = useState('');
+  const [insertAtOrder, setInsertAtOrder] = useState(null);
 
   // New product creation states
   const [newProductSheetOpen, setNewProductSheetOpen] = useState(false);
@@ -678,14 +718,41 @@ export default function POSInterfaceDetailPage({ params }) {
     toast.success('Category deleted');
   };
 
-  const handleNewFolder = () => {
+  const handleNewFolder = (atOrder) => {
+    setInsertAtOrder(atOrder ?? null);
     setSelectedFolderId(null);
     setFolderSheetOpen(true);
   };
 
-  const handleNewDivider = () => {
+  const handleNewDivider = (atOrder) => {
+    setInsertAtOrder(atOrder ?? null);
     setDividerName('');
     setDividerDialogOpen(true);
+  };
+
+  // Build insert dropdown props for a given insertion order
+  const getInsertDropdownProps = (atOrder) => ({
+    afterOrder: atOrder,
+    onNewFolder: () => handleNewFolder(atOrder),
+    onNewDivider: () => handleNewDivider(atOrder),
+    onAddProducts: () => { setInsertAtOrder(atOrder); setProductSheetOpen(true); },
+    onAddGroup: () => { setInsertAtOrder(atOrder); setGroupSheetOpen(true); },
+    onCreateShop: () => { setInsertAtOrder(atOrder); handleCreateNewProduct('shop'); },
+    onCreateMembership: () => { setInsertAtOrder(atOrder); handleCreateNewProduct('membership'); },
+    onCreateClass: () => { setInsertAtOrder(atOrder); handleCreateNewProduct('class'); },
+  });
+
+  // Helper to insert an item at a specific position, shifting existing items
+  const insertItemInCategory = (categoryItems, newItem, atOrder) => {
+    if (atOrder == null) {
+      // Append to end
+      return [...categoryItems, { ...newItem, order: categoryItems.length }];
+    }
+    // Shift items at >= atOrder up by 1
+    const shifted = categoryItems.map(item =>
+      item.order >= atOrder ? { ...item, order: item.order + 1 } : item
+    );
+    return [...shifted, { ...newItem, order: atOrder }];
   };
 
   const handleCreateDivider = async () => {
@@ -693,6 +760,8 @@ export default function POSInterfaceDetailPage({ params }) {
       toast.error('Please enter a divider name');
       return;
     }
+
+    const targetOrder = insertAtOrder;
 
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products`, {
@@ -702,7 +771,7 @@ export default function POSInterfaceDetailPage({ params }) {
           product: {
             name: dividerName,
             type: 'divider',
-            order: items.length
+            order: targetOrder ?? items.length
           }
         })
       });
@@ -710,19 +779,17 @@ export default function POSInterfaceDetailPage({ params }) {
       if (res.ok) {
         const data = await res.json();
 
+        const newItem = {
+          itemType: 'divider',
+          itemId: data.product._id,
+        };
+
         // Update categories with the new divider
         const updatedCategories = categories.map(cat => {
           if (cat._id === selectedCategory._id) {
             return {
               ...cat,
-              items: [
-                ...(cat.items || []),
-                {
-                  itemType: 'divider',
-                  itemId: data.product._id,
-                  order: items.length
-                }
-              ]
+              items: insertItemInCategory(cat.items || [], newItem, targetOrder)
             };
           }
           return cat;
@@ -731,23 +798,12 @@ export default function POSInterfaceDetailPage({ params }) {
         // Save to database
         await savePOSInterface(updatedCategories);
 
-        // Update local state
-        setCategories(draft => {
-          const catIndex = draft.findIndex(c => c._id === selectedCategory._id);
-          if (catIndex !== -1) {
-            draft[catIndex].items.push({
-              itemType: 'divider',
-              itemId: data.product._id,
-              order: items.length
-            });
-          }
-        });
-
         // Refresh to get the updated data
         await fetchPOSInterface();
 
         setDividerDialogOpen(false);
         setDividerName('');
+        setInsertAtOrder(null);
         toast.success('Divider created');
       }
     } catch (error) {
@@ -1406,6 +1462,7 @@ export default function POSInterfaceDetailPage({ params }) {
 
       // Add to POS interface
       if (createdProduct?._id && selectedCategory?._id) {
+        const targetOrder = insertAtOrder;
         const updatedCategories = categories.map(cat => {
           if (cat._id === selectedCategory._id) {
             // Check if product already exists in this category
@@ -1413,17 +1470,14 @@ export default function POSInterfaceDetailPage({ params }) {
             if (productExists) {
               return cat; // Don't add duplicate
             }
-            
+
+            const newItem = {
+              itemType: 'product',
+              itemId: createdProduct._id,
+            };
             return {
               ...cat,
-              items: [
-                ...(cat.items || []),
-                {
-                  itemType: 'product',
-                  itemId: createdProduct._id,
-                  order: items.length
-                }
-              ]
+              items: insertItemInCategory(cat.items || [], newItem, targetOrder)
             };
           }
           return cat;
@@ -1431,6 +1485,7 @@ export default function POSInterfaceDetailPage({ params }) {
 
         await savePOSInterface(updatedCategories);
         await fetchPOSInterface();
+        setInsertAtOrder(null);
       }
     } catch (error) {
       console.error('Error creating product:', error);
@@ -1547,58 +1602,52 @@ export default function POSInterfaceDetailPage({ params }) {
             <>
               <div className="flex items-center justify-end mb-4">
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleNewFolder}
-                    className="cursor-pointer"
-                  >
-                    <FolderPlus className="size-4 mr-1" />
-                    New Folder
-                  </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
                         size="sm"
                         className="cursor-pointer"
                       >
-                        <PackagePlus className="size-4 mr-1" />
-                        Add Products
+                        <Plus className="size-4 mr-1" />
+                        Add
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setProductSheetOpen(true)} className="cursor-pointer">
+                      <DropdownMenuItem onClick={() => handleNewFolder(0)} className="cursor-pointer">
+                        <FolderPlus className="size-4 mr-2" />
+                        New Folder
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleNewDivider(0)} className="cursor-pointer">
+                        <Minus className="size-4 mr-2" />
+                        New Divider
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => { setInsertAtOrder(0); setProductSheetOpen(true); }} className="cursor-pointer">
                         Add Existing Products
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setGroupSheetOpen(true)} className="cursor-pointer">
+                      <DropdownMenuItem onClick={() => { setInsertAtOrder(0); setGroupSheetOpen(true); }} className="cursor-pointer">
                         Add Existing Group
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => handleCreateNewProduct('shop')} className="cursor-pointer">
+                      <DropdownMenuItem onClick={() => { setInsertAtOrder(0); handleCreateNewProduct('shop'); }} className="cursor-pointer">
                         Create New Shop Item
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleCreateNewProduct('membership')} className="cursor-pointer">
+                      <DropdownMenuItem onClick={() => { setInsertAtOrder(0); handleCreateNewProduct('membership'); }} className="cursor-pointer">
                         Create New Membership
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleCreateNewProduct('class')} className="cursor-pointer">
+                      <DropdownMenuItem onClick={() => { setInsertAtOrder(0); handleCreateNewProduct('class'); }} className="cursor-pointer">
                         Create New Class/Course
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                   <Button
                     size="sm"
-                    onClick={handleNewDivider}
-                    className="cursor-pointer"
-                  >
-                    <Plus className="size-4 mr-1" />
-                    New Divider
-                  </Button>
-                  <Button
-                    size="sm"
                     variant="outline"
                     onClick={() => setSettingsSheetOpen(true)}
                     className="cursor-pointer"
                   >
-                    <Settings className="size-4" />
+                    <Monitor className="size-4 mr-1" />
+                    Assign to Devices
                   </Button>
                 </div>
               </div>
@@ -1626,7 +1675,7 @@ export default function POSInterfaceDetailPage({ params }) {
                     })
                 ]} strategy={rectSortingStrategy}>
                   <div className="grid gap-4 auto-rows-min" style={{ gridTemplateColumns: 'repeat(auto-fill, 96px)' }}>
-                    {items.map((item) => (
+                    {items.map((item, index) => (
                       <React.Fragment key={item._id}>
                         {item.type === 'divider' ? (
                           <DividerRow
@@ -1634,6 +1683,7 @@ export default function POSInterfaceDetailPage({ params }) {
                             onDividerDelete={handleDividerDelete}
                             onMoveUp={(div) => moveDivider(div, -1)}
                             onMoveDown={(div) => moveDivider(div, +1)}
+                            {...getInsertDropdownProps(item.order + 1)}
                           />
                         ) : (
                           <SortableItem
@@ -1832,29 +1882,32 @@ export default function POSInterfaceDetailPage({ params }) {
       {/* Folder Sheet */}
       <POSFolderSheet
         open={folderSheetOpen}
-        onOpenChange={setFolderSheetOpen}
+        onOpenChange={(open) => { setFolderSheetOpen(open); if (!open) setInsertAtOrder(null); }}
         posInterfaceId={id}
         categoryId={selectedCategory?._id}
         folderId={selectedFolderId}
         onSuccess={fetchPOSInterface}
+        insertAtOrder={insertAtOrder}
       />
 
       {/* Product Sheet */}
       <POSProductSheet
         open={productSheetOpen}
-        onOpenChange={setProductSheetOpen}
+        onOpenChange={(open) => { setProductSheetOpen(open); if (!open) setInsertAtOrder(null); }}
         posInterfaceId={id}
         categoryId={selectedCategory?._id}
         onSuccess={fetchPOSInterface}
+        insertAtOrder={insertAtOrder}
       />
 
       {/* Group Sheet */}
       <POSGroupSheet
         open={groupSheetOpen}
-        onOpenChange={setGroupSheetOpen}
+        onOpenChange={(open) => { setGroupSheetOpen(open); if (!open) setInsertAtOrder(null); }}
         posInterfaceId={id}
         categoryId={selectedCategory?._id}
         onSuccess={fetchPOSInterface}
+        insertAtOrder={insertAtOrder}
       />
 
       {/* Settings Sheet */}

@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 import { ProductThumbnail } from '@/components/product-thumbnail';
 import { Users } from 'lucide-react';
 
-export default function POSGroupSheet({ open, onOpenChange, posInterfaceId, categoryId, onSuccess }) {
+export default function POSGroupSheet({ open, onOpenChange, posInterfaceId, categoryId, onSuccess, insertAtOrder }) {
   const [groups, setGroups] = useState([]);
   const [selectedGroups, setSelectedGroups] = useState(new Set());
   const [loading, setLoading] = useState(false);
@@ -51,18 +51,32 @@ export default function POSGroupSheet({ open, onOpenChange, posInterfaceId, cate
       }
 
       const currentItems = posInterface.categories[categoryIndex].items || [];
-      const nextOrder = currentItems.length;
-
-      // Add selected groups
       const groupIds = Array.from(selectedGroups);
-      const newItems = groupIds.map((groupId, index) => ({
-        itemType: 'group',
-        itemId: groupId,
-        order: nextOrder + index
-      }));
+      const count = groupIds.length;
+
+      let updatedItems;
+      if (insertAtOrder != null) {
+        updatedItems = currentItems.map(item =>
+          item.order >= insertAtOrder ? { ...item, order: item.order + count } : item
+        );
+        const newItems = groupIds.map((groupId, index) => ({
+          itemType: 'group',
+          itemId: groupId,
+          order: insertAtOrder + index
+        }));
+        updatedItems = [...updatedItems, ...newItems];
+      } else {
+        const nextOrder = currentItems.length;
+        const newItems = groupIds.map((groupId, index) => ({
+          itemType: 'group',
+          itemId: groupId,
+          order: nextOrder + index
+        }));
+        updatedItems = [...currentItems, ...newItems];
+      }
 
       // Update the category items
-      posInterface.categories[categoryIndex].items = [...currentItems, ...newItems];
+      posInterface.categories[categoryIndex].items = updatedItems;
 
       // Save the updated POS interface
       await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/posinterfaces/${posInterfaceId}`, {

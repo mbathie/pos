@@ -28,7 +28,7 @@ import {
   MultiSelectItem
 } from '@/components/ui/multi-select';
 
-export default function POSFolderSheet({ open, onOpenChange, posInterfaceId, categoryId, folderId, onSuccess }) {
+export default function POSFolderSheet({ open, onOpenChange, posInterfaceId, categoryId, folderId, onSuccess, insertAtOrder }) {
   const [folderName, setFolderName] = useState('');
   const [folderColor, setFolderColor] = useState('emerald-400');
   const [selectedProducts, setSelectedProducts] = useState(new Set());
@@ -230,14 +230,17 @@ export default function POSFolderSheet({ open, onOpenChange, posInterfaceId, cat
         const categoryIndex = posInterface.categories.findIndex(c => c._id === categoryId);
         if (categoryIndex !== -1) {
           const currentItems = posInterface.categories[categoryIndex].items || [];
-          posInterface.categories[categoryIndex].items = [
-            ...currentItems,
-            {
-              itemType: 'folder',
-              itemId: targetFolderId,
-              order: currentItems.length
-            }
-          ];
+          const newItem = { itemType: 'folder', itemId: targetFolderId };
+          let updatedItems;
+          if (insertAtOrder != null) {
+            updatedItems = currentItems.map(item =>
+              item.order >= insertAtOrder ? { ...item, order: item.order + 1 } : item
+            );
+            updatedItems = [...updatedItems, { ...newItem, order: insertAtOrder }];
+          } else {
+            updatedItems = [...currentItems, { ...newItem, order: currentItems.length }];
+          }
+          posInterface.categories[categoryIndex].items = updatedItems;
 
           // Save the updated POS interface
           await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/posinterfaces/${posInterfaceId}`, {

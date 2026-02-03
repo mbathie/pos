@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import ProductCategorySelector from '@/components/discounts/product-category-selector';
 
-export default function POSProductSheet({ open, onOpenChange, posInterfaceId, categoryId, onSuccess }) {
+export default function POSProductSheet({ open, onOpenChange, posInterfaceId, categoryId, onSuccess, insertAtOrder }) {
   const [selectedProducts, setSelectedProducts] = useState(new Set());
   const [selectedCategories, setSelectedCategories] = useState(new Set());
   const [selectedTags, setSelectedTags] = useState(new Set());
@@ -91,18 +91,36 @@ export default function POSProductSheet({ open, onOpenChange, posInterfaceId, ca
       }
 
       const currentItems = posInterface.categories[categoryIndex].items || [];
-      const nextOrder = currentItems.length;
 
       // Resolve all selections (products, categories, tags) to product IDs
       const resolvedProductIds = Array.from(getResolvedProductIds());
-      const newItems = resolvedProductIds.map((productId, index) => ({
-        itemType: 'product',
-        itemId: productId,
-        order: nextOrder + index
-      }));
+      const count = resolvedProductIds.length;
+
+      let updatedItems;
+      if (insertAtOrder != null) {
+        // Shift existing items at >= insertAtOrder up by count
+        updatedItems = currentItems.map(item =>
+          item.order >= insertAtOrder ? { ...item, order: item.order + count } : item
+        );
+        // Insert new items starting at insertAtOrder
+        const newItems = resolvedProductIds.map((productId, index) => ({
+          itemType: 'product',
+          itemId: productId,
+          order: insertAtOrder + index
+        }));
+        updatedItems = [...updatedItems, ...newItems];
+      } else {
+        const nextOrder = currentItems.length;
+        const newItems = resolvedProductIds.map((productId, index) => ({
+          itemType: 'product',
+          itemId: productId,
+          order: nextOrder + index
+        }));
+        updatedItems = [...currentItems, ...newItems];
+      }
 
       // Update the category items
-      posInterface.categories[categoryIndex].items = [...currentItems, ...newItems];
+      posInterface.categories[categoryIndex].items = updatedItems;
 
       // Save the updated POS interface
       await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/posinterfaces/${posInterfaceId}`, {
