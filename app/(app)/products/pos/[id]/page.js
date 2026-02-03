@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use } from 'react';
+import React, { useState, useEffect, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useImmer } from 'use-immer';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors, DragOverlay } from '@dnd-kit/core';
@@ -427,6 +427,7 @@ export default function POSInterfaceDetailPage({ params }) {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useImmer([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const selectedCategoryRef = useRef(null);
   const [items, setItems] = useImmer([]);
   const [expandedFolders, setExpandedFolders] = useState(new Set());
   const [activeId, setActiveId] = useState(null);
@@ -511,7 +512,10 @@ export default function POSInterfaceDetailPage({ params }) {
         setCategories(sortedCategories);
 
         if (sortedCategories.length > 0) {
-          handleSelectCategory(sortedCategories[0]);
+          // Preserve currently selected category if it still exists, otherwise select first
+          const currentId = selectedCategoryRef.current?._id;
+          const match = currentId && sortedCategories.find(c => c._id === currentId);
+          handleSelectCategory(match || sortedCategories[0]);
         }
       }
     } catch (error) {
@@ -524,6 +528,7 @@ export default function POSInterfaceDetailPage({ params }) {
 
   const handleSelectCategory = (category) => {
     setSelectedCategory(category);
+    selectedCategoryRef.current = category;
 
     // Process items (folders and products)
     const allItems = [];

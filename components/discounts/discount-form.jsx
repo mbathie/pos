@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { ArrowLeft, Calendar as CalendarIcon, Loader2, Info, Save, CheckCircle, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Calendar as CalendarIcon, Loader2, Info, Save, CheckCircle, CircleCheck, CircleX, Plus, Trash2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
@@ -128,6 +128,10 @@ export default function DiscountForm({
   const [mustCategories, setMustCategories] = useState(new Set());
   const [mustTags, setMustTags] = useState(new Set());
   
+  // Code uniqueness check
+  const [codeStatus, setCodeStatus] = useState(null); // null | 'checking' | 'available' | 'taken'
+  const codeCheckTimeoutRef = useRef(null);
+
   // Auto-save state
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -178,6 +182,40 @@ export default function DiscountForm({
       fetchCategoriesAndProducts();
     }
   }, [mode, discountId]);
+
+  // Watch code field for uniqueness check
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'code') {
+        const code = value.code?.trim();
+        if (codeCheckTimeoutRef.current) {
+          clearTimeout(codeCheckTimeoutRef.current);
+        }
+        if (!code) {
+          setCodeStatus(null);
+          return;
+        }
+        setCodeStatus('checking');
+        codeCheckTimeoutRef.current = setTimeout(async () => {
+          try {
+            const params = new URLSearchParams({ checkCode: code });
+            if (mode === 'edit' && discountId) {
+              params.set('excludeId', discountId);
+            }
+            const res = await fetch(`/api/discounts?${params}`);
+            const data = await res.json();
+            setCodeStatus(data.exists ? 'taken' : 'available');
+          } catch {
+            setCodeStatus(null);
+          }
+        }, 400);
+      }
+    });
+    return () => {
+      subscription.unsubscribe();
+      if (codeCheckTimeoutRef.current) clearTimeout(codeCheckTimeoutRef.current);
+    };
+  }, [form, mode, discountId]);
 
   // Watch for mode changes and update autoAssign accordingly
   useEffect(() => {
@@ -490,6 +528,10 @@ export default function DiscountForm({
   };
 
   const onSubmit = async (data) => {
+    if (codeStatus === 'taken') {
+      toast.error('The discount code is already in use');
+      return;
+    }
     console.log('Form submitted with data:', data);
     console.log('Current adjustments:', adjustments);
     setLoading(true);
@@ -736,13 +778,31 @@ export default function DiscountForm({
                       <LabelWithInfo info="Public code that customers can enter to apply this discount">
                         Code
                       </LabelWithInfo>
-                      <FormControl>
-                        <Input 
-                          placeholder="e.g. SUMMER10" 
-                          {...field} 
-                          disabled={form.watch('mode') !== 'discount'} 
-                        />
-                      </FormControl>
+                      <div className="relative">
+                        <FormControl>
+                          <Input
+                            placeholder="e.g. SUMMER10"
+                            {...field}
+                            disabled={form.watch('mode') !== 'discount'}
+                          />
+                        </FormControl>
+                        {field.value?.trim() && form.watch('mode') === 'discount' && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            {codeStatus === 'checking' && (
+                              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            )}
+                            {codeStatus === 'available' && (
+                              <CircleCheck className="h-4 w-4 text-primary" />
+                            )}
+                            {codeStatus === 'taken' && (
+                              <CircleX className="h-4 w-4 text-destructive" />
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {codeStatus === 'taken' && (
+                        <p className="text-sm text-destructive">This code is already in use</p>
+                      )}
                       <FormMessage />
                     </FormItem>
                   )}

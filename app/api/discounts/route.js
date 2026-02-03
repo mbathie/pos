@@ -14,6 +14,21 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const current = searchParams.get('current');
+    const checkCode = searchParams.get('checkCode');
+    const excludeId = searchParams.get('excludeId');
+
+    // Code uniqueness check (case-insensitive)
+    if (checkCode) {
+      const codeQuery = {
+        org: employee.org._id,
+        code: { $regex: new RegExp(`^${checkCode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') }
+      };
+      if (excludeId) {
+        codeQuery._id = { $ne: excludeId };
+      }
+      const existing = await Discount.findOne(codeQuery).lean();
+      return NextResponse.json({ exists: !!existing });
+    }
 
     let query = { org: employee.org._id };
 
