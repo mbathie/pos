@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Search, X, ChevronsUpDown, Edit, Tag } from 'lucide-react';
+import { Search, X, ChevronsUpDown, ChevronRight, Tag } from 'lucide-react';
 import colors from '@/lib/tailwind-colors';
 import AccountingSelect from '@/app/(app)/products/shopold/accounting-select';
 
@@ -190,8 +190,11 @@ export default function ManageProductsPage() {
     .filter(product => product.type !== 'divider') // Exclude dividers from product management
     .filter(product => {
       const matchesType = filters.type === 'all' || product.type === filters.type;
+      const searchLower = filters.search.toLowerCase();
       const matchesSearch = !filters.search ||
-        product.name.toLowerCase().includes(filters.search.toLowerCase());
+        product.name?.toLowerCase().includes(searchLower) ||
+        product.barcode?.toLowerCase().includes(searchLower) ||
+        product.tags?.some(tag => tag.name?.toLowerCase().includes(searchLower));
       const matchesPublish = filters.publish === 'all' ||
         (filters.publish === 'published' && product.publish !== false) ||
         (filters.publish === 'unpublished' && product.publish === false);
@@ -279,11 +282,11 @@ export default function ManageProductsPage() {
           </Select>
         </div>
 
-        <div className="w-48">
+        <div className="w-72">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground size-4" />
             <Input
-              placeholder="Product name"
+              placeholder="Name, barcode, or tag"
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
               className="pl-8 text-sm"
@@ -331,23 +334,8 @@ export default function ManageProductsPage() {
                       <ChevronsUpDown className="ml-2 h-4 w-4" />
                     </div>
                   </th>
-                  <th 
-                    className="h-12 px-4 text-left align-middle text-muted-foreground cursor-pointer hover:bg-muted w-1/6"
-                    onClick={() => handleSort('accounting')}
-                  >
-                    <div className="flex items-center">
-                      Acct. Code
-                      <ChevronsUpDown className="ml-2 h-4 w-4" />
-                    </div>
-                  </th>
-                  <th
-                    className="h-12 px-4 text-left align-middle text-muted-foreground cursor-pointer hover:bg-muted w-1/6"
-                    onClick={() => handleSort('folder')}
-                  >
-                    <div className="flex items-center">
-                      Folder
-                      <ChevronsUpDown className="ml-2 h-4 w-4" />
-                    </div>
+                  <th className="h-12 px-4 text-left align-middle text-muted-foreground">
+                    Tags
                   </th>
                   <th 
                     className="h-12 px-4 text-center align-middle text-muted-foreground cursor-pointer hover:bg-muted w-16"
@@ -375,14 +363,14 @@ export default function ManageProductsPage() {
                 <tbody>
                   {filteredProducts.length === 0 ? (
                     <tr>
-                        <td colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <td colSpan={6} className="text-center py-8 text-muted-foreground">
                           {hasActiveFilters ? 'No products match your filters.' :
                            allProducts.length === 0 ? 'No products found.' : 'No products match your filters.'}
                         </td>
                       </tr>
                     ) : (
                       filteredProducts.map((product) => (
-                        <tr key={product._id} className="hover:bg-muted/50 border-b">
+                        <tr key={product._id} className="hover:bg-muted/50 border-b cursor-pointer" onClick={() => openEditDialog(product)}>
                           <td className="px-4 py-3 align-middle w-1/4">
                             <div className="flex items-center gap-2">
                               {product.thumbnail ? (
@@ -404,32 +392,16 @@ export default function ManageProductsPage() {
                               {product.type || 'Unknown'}
                             </Badge>
                           </td>
-                          <td className="px-4 py-3 align-middle w-1/6">
-                            {product.accounting ? (
-                              <div className="flex flex-col">
-                                <span>{product.accounting.name}</span>
-                                <span className="text-xs text-muted-foreground">({product.accounting.code})</span>
-                              </div>
-                            ) : (
-                              <span></span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 align-middle w-1/6">
-                            {product.folder ? (
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className="size-4 rounded-sm border flex-shrink-0"
-                                  style={{ backgroundColor: product.folder.color ? colors?.[product.folder.color.split('-')[0]]?.[product.folder.color.split('-')[1]] : '#e5e7eb' }}
-                                />
-                                <Badge variant="outline" className="text-xs">
-                                  {product.folder.name}
+                          <td className="px-4 py-3 align-middle">
+                            <div className="flex flex-wrap gap-1">
+                              {[...new Map(product.tags?.map(t => [t._id, t]) || []).values()].map((tag) => (
+                                <Badge key={tag._id} variant="outline" className="text-xs">
+                                  {tag.name}
                                 </Badge>
-                              </div>
-                            ) : (
-                              <span></span>
-                            )}
+                              ))}
+                            </div>
                           </td>
-                          <td className="px-4 py-3 align-middle text-center w-16">
+                          <td className="px-4 py-3 align-middle text-center w-16" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={product.bump === true}
                               onCheckedChange={(checked) => {
@@ -437,7 +409,7 @@ export default function ManageProductsPage() {
                               }}
                             />
                           </td>
-                          <td className="px-4 py-3 align-middle text-center w-20">
+                          <td className="px-4 py-3 align-middle text-center w-20" onClick={(e) => e.stopPropagation()}>
                             <Checkbox
                               checked={product.publish !== false}
                               onCheckedChange={(checked) => {
@@ -445,18 +417,8 @@ export default function ManageProductsPage() {
                               }}
                             />
                           </td>
-                          <td className="px-4 py-3 align-middle text-right w-24">
-                            <div className="flex gap-2 justify-end pr-2">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openEditDialog(product)}
-                                className="cursor-pointer size-4 p-0"
-                                title="Edit Product"
-                              >
-                                <Edit className="size-4" />
-                              </Button>
-                            </div>
+                          <td className="px-4 py-3 align-middle text-right w-12">
+                            <ChevronRight className="size-4 text-muted-foreground ml-auto" />
                           </td>
                         </tr>
                       ))
