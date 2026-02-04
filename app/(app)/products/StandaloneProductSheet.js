@@ -27,6 +27,7 @@ import {
 import Link from 'next/link';
 import IconSelect from '@/components/icon-select';
 import TagSelector from '@/components/tags/tag-selector';
+import BarcodeScanner from '@/components/barcode-scanner';
 
 export default function StandaloneProductSheet({
   open,
@@ -69,7 +70,8 @@ export default function StandaloneProductSheet({
         bump: true,
         folder: null,
         accounting: null,
-        modGroups: []
+        modGroups: [],
+        barcode: ''
       });
     }
   }, [open, productId]);
@@ -505,6 +507,15 @@ export default function StandaloneProductSheet({
                 value={product.tags || []}
                 onChange={(tags) => updateField('tags', tags)}
                 placeholder="Select or create tags..."
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label>Barcode / SKU</Label>
+              <BarcodeScanner
+                value={product.barcode || ''}
+                onChange={(barcode) => updateField('barcode', barcode)}
+                placeholder="Scan or enter barcode..."
               />
             </div>
 
