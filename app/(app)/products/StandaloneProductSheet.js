@@ -214,8 +214,8 @@ export default function StandaloneProductSheet({
         folder: product.folder?._id || product.folder || null,
         // Extract just the ID if accounting is populated
         accounting: product.accounting?._id || product.accounting || null,
-        // Extract just the IDs if tags are populated objects
-        tags: (product.tags || []).map(t => t._id || t),
+        // Extract just the IDs if tags are populated objects (deduplicated)
+        tags: [...new Set((product.tags || []).map(t => String(t._id || t)))],
       };
 
       // Remove the temporary _id for new products

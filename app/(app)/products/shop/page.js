@@ -22,7 +22,11 @@ export default function Page() {
   const filteredProducts = useMemo(() => {
     if (!search.trim()) return products;
     const q = search.toLowerCase();
-    return products.filter(p => p.name?.toLowerCase().includes(q));
+    return products.filter(p =>
+      p.name?.toLowerCase().includes(q) ||
+      p.barcode?.toLowerCase().includes(q) ||
+      p.tags?.some(tag => tag.name?.toLowerCase().includes(q))
+    );
   }, [products, search]);
 
   // Fetch all shop products on mount
@@ -83,7 +87,7 @@ export default function Page() {
       <div className='relative mb-4'>
         <Search className='absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground' />
         <Input
-          placeholder='Search products...'
+          placeholder='Search by name, barcode, or tag...'
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className='pl-9 max-w-sm'

@@ -41,9 +41,11 @@ export default function TagSelector({
   const [creating, setCreating] = useState(false);
   const [searchValue, setSearchValue] = useState('');
 
-  // Normalize value to always be an array of IDs
+  // Normalize value to always be an array of string IDs (deduplicated)
   // Handles both populated objects [{_id: '123', name: 'tag'}] and string IDs ['123']
-  const normalizedValue = value.map(v => typeof v === 'object' ? v._id : v);
+  const normalizedValue = [...new Set(
+    value.map(v => typeof v === 'object' ? String(v._id) : String(v))
+  )];
 
   // Fetch available tags
   const fetchTags = useCallback(async () => {
@@ -116,14 +118,15 @@ export default function TagSelector({
 
   // Toggle tag selection
   const toggleTag = (tagId) => {
-    const newValue = normalizedValue.includes(tagId)
-      ? normalizedValue.filter(id => id !== tagId)
-      : [...normalizedValue, tagId];
+    const tagIdStr = String(tagId);
+    const newValue = normalizedValue.includes(tagIdStr)
+      ? normalizedValue.filter(id => id !== tagIdStr)
+      : [...normalizedValue, tagIdStr];
     onChange(newValue);
   };
 
   // Get selected tag objects for display
-  const selectedTags = tags.filter(tag => normalizedValue.includes(tag._id));
+  const selectedTags = tags.filter(tag => normalizedValue.includes(String(tag._id)));
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -188,7 +191,7 @@ export default function TagSelector({
                         <CheckIcon
                           className={cn(
                             "mr-2 size-4",
-                            normalizedValue.includes(tag._id) ? "opacity-100" : "opacity-0"
+                            normalizedValue.includes(String(tag._id)) ? "opacity-100" : "opacity-0"
                           )}
                         />
                         {tag.name}

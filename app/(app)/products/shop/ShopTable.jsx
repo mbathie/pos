@@ -11,6 +11,7 @@ export default function ShopTable({ products = [], onRowClick }) {
         <TableHeader>
           <TableRow className="bg-muted/50 hover:bg-muted/50 border-b">
             <TableHead className="text-foreground">Name</TableHead>
+            <TableHead className="text-foreground">Tags</TableHead>
             <TableHead className="w-40 text-foreground">Variations</TableHead>
             <TableHead className="w-32 text-foreground">Status</TableHead>
             <TableHead className="w-12"></TableHead>
@@ -19,7 +20,7 @@ export default function ShopTable({ products = [], onRowClick }) {
         <TableBody>
           {(!products || products.length === 0) ? (
             <TableRow>
-              <TableCell colSpan={4} className="text-center text-muted-foreground">
+              <TableCell colSpan={5} className="text-center text-muted-foreground">
                 No products yet. Click "New Product" to add one.
               </TableCell>
             </TableRow>
@@ -40,6 +41,16 @@ export default function ShopTable({ products = [], onRowClick }) {
                         size="sm"
                       />
                       {product.name}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {/* Deduplicate tags by _id */}
+                      {[...new Map(product.tags?.map(t => [t._id, t]) || []).values()].map((tag) => (
+                        <Badge key={tag._id} variant="outline" className="text-xs">
+                          {tag.name}
+                        </Badge>
+                      ))}
                     </div>
                   </TableCell>
                   <TableCell>
