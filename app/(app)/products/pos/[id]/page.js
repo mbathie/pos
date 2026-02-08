@@ -612,6 +612,13 @@ export default function POSInterfaceDetailPage({ params }) {
           type: 'divider',
           order: item.order
         });
+      } else if (item.itemType === 'group' && item.data) {
+        allItems.push({
+          ...item.data,
+          _id: item.itemId,
+          type: 'group',
+          order: item.order
+        });
       }
     });
 
@@ -1075,7 +1082,7 @@ export default function POSInterfaceDetailPage({ params }) {
               ...cat,
               items: [
                 ...updatedCategoryItems.map((item, idx) => ({
-                  itemType: item.type === 'folder' ? 'folder' : item.type === 'divider' ? 'divider' : 'product',
+                  itemType: item.type === 'folder' ? 'folder' : item.type === 'divider' ? 'divider' : item.type === 'group' ? 'group' : 'product',
                   itemId: item._id,
                   order: idx
                 })),
@@ -1292,7 +1299,7 @@ export default function POSInterfaceDetailPage({ params }) {
         return {
           ...cat,
           items: updatedItems.map((item, idx) => ({
-            itemType: item.type === 'folder' ? 'folder' : item.type === 'divider' ? 'divider' : 'product',
+            itemType: item.type === 'folder' ? 'folder' : item.type === 'divider' ? 'divider' : item.type === 'group' ? 'group' : 'product',
             itemId: item._id,
             order: idx
           }))
@@ -1334,7 +1341,7 @@ export default function POSInterfaceDetailPage({ params }) {
         return {
           ...cat,
           items: updatedItems.map((item, idx) => ({
-            itemType: item.type === 'folder' ? 'folder' : item.type === 'divider' ? 'divider' : 'product',
+            itemType: item.type === 'folder' ? 'folder' : item.type === 'divider' ? 'divider' : item.type === 'group' ? 'group' : 'product',
             itemId: item._id,
             order: idx
           }))

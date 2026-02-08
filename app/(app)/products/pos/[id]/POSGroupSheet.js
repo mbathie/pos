@@ -133,6 +133,7 @@ export default function POSGroupSheet({ open, onOpenChange, posInterfaceId, cate
                   >
                     <Checkbox
                       checked={selectedGroups.has(group._id)}
+                      onClick={(e) => e.stopPropagation()}
                       onCheckedChange={() => toggleGroup(group._id)}
                     />
                     <ProductThumbnail

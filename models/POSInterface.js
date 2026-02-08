@@ -3,7 +3,7 @@ import mongooseDelete from 'mongoose-delete';
 
 const POSInterfaceItemSchema = new mongoose.Schema({
   // Reference to the actual item (could be folder, product, or divider)
-  itemType: { type: String, enum: ['folder', 'product', 'divider'], required: true },
+  itemType: { type: String, enum: ['folder', 'product', 'divider', 'group'], required: true },
   itemId: { type: mongoose.Schema.Types.ObjectId, required: true },
   order: { type: Number, default: 0 }
 }, { _id: false });

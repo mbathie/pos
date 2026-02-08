@@ -84,6 +84,16 @@ export async function GET(request, { params }) {
                 ...item.toObject(),
                 data: product
               };
+            } else if (item.itemType === 'group') {
+              const { ProductGroup } = await import('@/models');
+              const group = await ProductGroup.findById(item.itemId)
+                .populate('products')
+                .populate('variations.products')
+                .lean();
+              return {
+                ...item.toObject(),
+                data: group
+              };
             }
             return item;
           })

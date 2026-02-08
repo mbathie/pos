@@ -218,12 +218,18 @@ export default function Page() {
 
     // Process items from POS interface (already populated with data)
     const allItems = [];
+    const seenIds = new Set(); // Track seen IDs to prevent duplicates
 
     if (categoryData.items && categoryData.items.length > 0) {
       // Sort by order
       const sortedItems = [...categoryData.items].sort((a, b) => (a.order || 0) - (b.order || 0));
 
       for (const item of sortedItems) {
+        // Skip duplicates
+        const itemKey = `${item.itemType}-${item.itemId}`;
+        if (seenIds.has(itemKey)) continue;
+        seenIds.add(itemKey);
+
         if (item.itemType === 'folder' && item.data) {
           // Use unified items array for proper ordering of products and groups
           allItems.push({
@@ -247,6 +253,13 @@ export default function Page() {
             ...item.data,
             _id: item.itemId,
             // Don't override the type - keep the original product type (shop, class, course, membership, etc.)
+            order: item.order
+          });
+        } else if (item.itemType === 'group' && item.data) {
+          allItems.push({
+            ...item.data,
+            _id: item.itemId,
+            type: 'group',
             order: item.order
           });
         }
@@ -410,7 +423,7 @@ export default function Page() {
             // Render dividers
             if (item.type === 'divider') {
               return (
-                <div key={item._id} className='w-full'>
+                <div key={`divider-${item._id}`} className='w-full'>
                   <div className='flex items-center gap-4 my-2'>
                     <div className='flex-1 h-px bg-border' />
                     <div className='text-sm font-medium text-muted-foreground uppercase tracking-wide'>
@@ -425,12 +438,13 @@ export default function Page() {
             // Render folders
             if (item.type === 'folder') {
               // Hide empty folders in retail view
-              if (!item.products || item.products.length === 0) {
+              const itemCount = item.items?.length || ((item.products?.length || 0) + (item.groups?.length || 0));
+              if (itemCount === 0) {
                 return null;
               }
               const isExpanded = expandedFolders.has(item._id);
               return (
-                <React.Fragment key={item._id}>
+                <React.Fragment key={`folder-${item._id}`}>
                   <div className='relative w-24 flex flex-col text-center text-xs'>
                     <div
                       onClick={() => {
@@ -543,10 +557,24 @@ export default function Page() {
               );
             }
 
+            // Render groups
+            if (item.type === 'group') {
+              return (
+                <Product
+                  key={`group-${item._id}`}
+                  product={item}
+                  onClick={() => {
+                    setSelectedGroup(item);
+                    setGroupSheetOpen(true);
+                  }}
+                />
+              );
+            }
+
             // Render products
             return (
               <Product
-                key={item._id}
+                key={`product-${item._id}`}
                 product={item}
                 onClick={() => {
                   const cartProduct = {
