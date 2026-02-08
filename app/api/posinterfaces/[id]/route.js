@@ -4,16 +4,12 @@ import { connectDB } from '@/lib/mongoose';
 import { POSInterface, Product, Folder } from '@/models';
 
 // GET /api/posinterfaces/[id] - Get a specific POS interface with populated data
+// All authenticated users can read (needed for STAFF to use the shop)
 export async function GET(request, { params }) {
   try {
     const { employee } = await getEmployee();
     if (!employee) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Only admin and manager can access POS interfaces
-    if (!['ADMIN', 'MANAGER'].includes(employee.role)) {
-      return NextResponse.json({ error: 'Forbidden - Admin or Manager access required' }, { status: 403 });
     }
 
     const { id } = await params;

@@ -19,16 +19,14 @@
         "/manage/orders",
         "/manage/casual",
         "/manage/classes",
+        "/manage/general",
         "/manage/transactions",
         "/manage/customers",
+        "/manage/companies",
         "/manage/memberships",
         "/manage/checkins",
-        "/manage/accounting",
-        "/manage/terminals",
-        "/manage/adjustments",
-        "/products/groups",
-        "/sample-table",
-        "/style-guide"
+        "/manage/calendar",
+        "/manage/bookings"
       ],
       "restricted": [
         "process_refund",

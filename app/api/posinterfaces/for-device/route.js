@@ -14,9 +14,9 @@ export async function GET(request) {
 
     await connectDB();
 
-    // Get the current browserId from the browser-id API
+    // Get the current browserId from cookies
     const cookieStore = await cookies();
-    let browserId = cookieStore.get('browserId')?.value;
+    let browserId = cookieStore.get('browser_id')?.value;
 
     if (!browserId) {
       // Try to get it from the request

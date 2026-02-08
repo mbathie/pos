@@ -9,15 +9,23 @@ import GroupSheet from './GroupSheet'
 import Categories from './retail/cats'
 import Product from './product'
 import colors from '@/lib/tailwind-colors';
-import { Plus, Minus, ShoppingBag, CreditCard, LayoutGrid, Check, Circle } from 'lucide-react'
+import { Plus, Minus, ShoppingBag, CreditCard, LayoutGrid, Check, Circle, MonitorSmartphone } from 'lucide-react'
 import { Spinner } from '@/components/ui/spinner'
 import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import Link from 'next/link'
 import Cart from '@/components/cart'
 import { useHandler } from './retail/useHandler'
 import { useClass } from './(other)/classes/useClass'
 import { useMembership } from './(other)/memberships/useMembership'
 import { useGlobals } from '@/lib/globals'
+import { toast } from 'sonner'
 
 // Helper function to migrate old schedule format to new format
 function migrateScheduleFormat(schedule) {
@@ -70,7 +78,7 @@ export default function Page() {
     selectVariation,
     selectMod, getProductTotal, setQty } = useHandler()
 
-  const { addToCart, removeFromCart, getCurrentCart, location, device, posSetupComplete, setPosSetupComplete } = useGlobals()
+  const { addToCart, removeFromCart, getCurrentCart, location, device, posSetupComplete, setPosSetupComplete, employee } = useGlobals()
 
   const [posInterface, setPosInterface] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -84,6 +92,9 @@ export default function Page() {
   const [selectedGroup, setSelectedGroup] = useState(null)
   const [groupSheetOpen, setGroupSheetOpen] = useState(false)
   const [skipSetup, setSkipSetup] = useState(false)
+  const [availableInterfaces, setAvailableInterfaces] = useState([])
+  const [showInterfaceSelector, setShowInterfaceSelector] = useState(false)
+  const [assigningInterface, setAssigningInterface] = useState(false)
 
   // Initialize class/course hooks
   const { setTimesClass, setTimesCourse } = useClass({ product, setProduct })
@@ -92,6 +103,20 @@ export default function Page() {
   useEffect(() => {
     initializeShop()
   }, [])
+
+  // For STAFF users: check for available interfaces when no posInterface is loaded
+  useEffect(() => {
+    const checkForInterfaces = async () => {
+      if (!loading && !posInterface && employee?.role === 'STAFF' && !showInterfaceSelector) {
+        const interfaces = await fetchAvailableInterfaces()
+        if (interfaces.length > 0) {
+          setAvailableInterfaces(interfaces)
+          setShowInterfaceSelector(true)
+        }
+      }
+    }
+    checkForInterfaces()
+  }, [loading, posInterface, employee?.role])
 
   // Check if device has terminal when device changes
   useEffect(() => {
@@ -162,7 +187,57 @@ export default function Page() {
       fetch('/api/org/setup-complete', { method: 'POST' }).catch(() => {})
     }
 
+    // If no POS interface and user is STAFF, fetch available interfaces for selection
+    if (!posData && employee?.role === 'STAFF') {
+      const interfaces = await fetchAvailableInterfaces()
+      if (interfaces.length > 0) {
+        setAvailableInterfaces(interfaces)
+        setShowInterfaceSelector(true)
+      }
+    }
+
     setLoading(false)
+  }
+
+  const fetchAvailableInterfaces = async () => {
+    try {
+      const res = await fetch('/api/posinterfaces/available')
+      if (res.ok) {
+        const data = await res.json()
+        return data.interfaces || []
+      }
+      return []
+    } catch (error) {
+      console.error('Error fetching available interfaces:', error)
+      return []
+    }
+  }
+
+  const handleSelectInterface = async (interfaceId) => {
+    setAssigningInterface(true)
+    try {
+      const res = await fetch('/api/posinterfaces/assign-to-browser', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ posInterfaceId: interfaceId })
+      })
+
+      if (res.ok) {
+        toast.success('POS interface configured')
+        setShowInterfaceSelector(false)
+        // Reload the page to fetch the newly assigned interface
+        window.location.reload()
+      } else {
+        const data = await res.json()
+        toast.error(data.error || 'Failed to assign interface')
+        console.error('Failed to assign interface:', data)
+      }
+    } catch (error) {
+      toast.error('Error assigning interface')
+      console.error('Error assigning interface:', error)
+    } finally {
+      setAssigningInterface(false)
+    }
   }
 
   const fetchSetupStatus = async () => {
@@ -279,13 +354,81 @@ export default function Page() {
   }
 
   // Check if setup is incomplete (but allow skipping)
-  const needsSetup = !skipSetup && (
+  // For STAFF users, don't show setup checklist - show interface selector instead
+  const isStaff = employee?.role === 'STAFF'
+  const needsSetup = !skipSetup && !isStaff && (
     !setupStatus.stripeConnected ||
     !setupStatus.hasTerminal ||
     !posInterface
   )
 
-  // Setup checklist UI
+  // Interface selector dialog for STAFF users
+  if (showInterfaceSelector && isStaff) {
+    return (
+      <AlertDialog open={true}>
+        <AlertDialogContent className="sm:max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <MonitorSmartphone className="h-5 w-5" />
+              Select POS Interface
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Choose which POS interface to use on this device.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex flex-col gap-2 mt-4">
+            {availableInterfaces.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">
+                No POS interfaces have been configured yet. Please contact your administrator.
+              </p>
+            ) : (
+              availableInterfaces.map((iface) => (
+                <Button
+                  key={iface._id}
+                  variant="outline"
+                  className="justify-start h-auto py-3 cursor-pointer"
+                  onClick={() => handleSelectInterface(iface._id)}
+                  disabled={assigningInterface}
+                >
+                  <div className="flex items-center gap-3 w-full">
+                    <LayoutGrid className="h-5 w-5 text-muted-foreground" />
+                    <div className="flex-1 text-left">
+                      <div className="font-medium">{iface.name}</div>
+                      {iface.isDefault && (
+                        <div className="text-xs text-muted-foreground">Default</div>
+                      )}
+                    </div>
+                    {assigningInterface && <Spinner className="h-4 w-4" />}
+                  </div>
+                </Button>
+              ))
+            )}
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+    )
+  }
+
+  // For STAFF users without posInterface and no available interfaces, show a message
+  if (isStaff && !posInterface && !showInterfaceSelector) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center max-w-md">
+          <div className="flex justify-center mb-6">
+            <div className="p-4 bg-muted rounded-full">
+              <LayoutGrid className="h-12 w-12 text-muted-foreground" />
+            </div>
+          </div>
+          <h2 className="text-xl font-semibold mb-2">No POS Interface Configured</h2>
+          <p className="text-muted-foreground">
+            This device hasn&apos;t been assigned to a POS interface. Please contact your administrator to set this up.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Setup checklist UI (for ADMIN/MANAGER only)
   if (needsSetup) {
     const steps = [
       {
