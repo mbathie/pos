@@ -545,8 +545,8 @@ export default function ClassesProductSheet({
               </div>
 
               {/* Repeat Frequency */}
-              <div className="flex items-center gap-4">
-                <Label className="w-[100px]">Repeats</Label>
+              <div className="space-y-2">
+                <Label>Repeats</Label>
                 <Select
                   value={product.schedule?.repeatFrequency || 'weekly'}
                   onValueChange={(value) => {
@@ -558,7 +558,7 @@ export default function ClassesProductSheet({
                     });
                   }}
                 >
-                  <SelectTrigger className="w-[200px]">
+                  <SelectTrigger className="w-[240px]">
                     <SelectValue placeholder="Select frequency" />
                   </SelectTrigger>
                   <SelectContent>
