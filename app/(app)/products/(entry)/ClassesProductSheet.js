@@ -354,8 +354,21 @@ export default function ClassesProductSheet({
               </Select>
             </div>
 
-            <div className='flex flex-col gap-2 w-32'>
-              <Label>Class Size</Label>
+            <div className='flex flex-col gap-2 w-40'>
+              <div className='flex items-center gap-2'>
+                <Label>Class Size</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info size="15"/>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Maximum number of participants</p>
+                      <p>that can attend this class.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <NumberInput
                 placeholder="max capacity"
                 min={0}
@@ -364,7 +377,7 @@ export default function ClassesProductSheet({
               />
             </div>
 
-            <div className='flex flex-col gap-2 w-32'>
+            <div className='flex flex-col gap-2 w-40'>
               <div className='flex items-center gap-2'>
                 <Label>Min Purchase</Label>
                 <TooltipProvider>
@@ -389,7 +402,7 @@ export default function ClassesProductSheet({
               />
             </div>
 
-            <div className='flex flex-col gap-2 w-48'>
+            <div className='flex flex-col gap-2 w-40'>
               <div className='flex items-center gap-2'>
                 <Label className='text-nowrap'>Duration (min)</Label>
                 <TooltipProvider>
