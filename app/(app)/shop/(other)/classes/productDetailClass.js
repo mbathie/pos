@@ -299,23 +299,23 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                     setCalendarOpen(false);
                   }}
                   disabled={(date) => {
-                    // For openSchedule products, disable based on location hours and closed days
+                    // Disable past dates
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    if (date < today) return true;
+
+                    // Disable if the day is closed at the location (store hours)
+                    if (isDayClosed(date)) return true;
+
+                    // Disable if the date is in closedDays
+                    if (isSpecificDateClosed(date)) return true;
+
+                    // For openSchedule products, allow any open day
                     if (product.openSchedule) {
-                      // Disable past dates
-                      const today = new Date();
-                      today.setHours(0, 0, 0, 0);
-                      if (date < today) return true;
-
-                      // Disable if the day is closed at the location
-                      if (isDayClosed(date)) return true;
-
-                      // Disable if the date is in closedDays
-                      if (isSpecificDateClosed(date)) return true;
-
                       return false;
                     }
 
-                    // For regular scheduled products, use availableDates
+                    // For regular scheduled products, also check availableDates
                     const dateStr = dayjs(date).format('YYYY-MM-DD');
                     return !availableDates.includes(dateStr);
                   }}
