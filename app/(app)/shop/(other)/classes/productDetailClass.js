@@ -599,6 +599,13 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                                 );
                               })
                             )}
+
+                            {/* Warning when minimum purchase not met - show inside selected time slot */}
+                            {selectedTime && minPurchase && totalQuantity > 0 && totalQuantity < minPurchase && (
+                              <div className="mt-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-md text-sm text-amber-700 dark:text-amber-400">
+                                <strong>Minimum purchase required.</strong> You must purchase at least {minPurchase} spot{minPurchase !== 1 ? 's' : ''} ({totalQuantity} selected).
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -606,13 +613,6 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                   })}
                 </div>
               </ScrollArea>
-
-              {/* Warning when minimum purchase not met */}
-              {minPurchase && totalQuantity > 0 && totalQuantity < minPurchase && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-md text-sm text-amber-700 dark:text-amber-400">
-                  <strong>Minimum purchase required.</strong> You must purchase at least {minPurchase} spot{minPurchase !== 1 ? 's' : ''} for this class ({totalQuantity} selected).
-                </div>
-              )}
             </div>
           )}
 
