@@ -120,27 +120,61 @@ export function useClass({product, setProduct}) {
     const dates = [];
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    
+
     const sixMonthsLater = new Date();
     sixMonthsLater.setMonth(sixMonthsLater.getMonth() + 6);
-    
+
     const start = new Date(schedule.startDate);
+    start.setHours(0, 0, 0, 0);
     const current = new Date(Math.max(start, now));
-    
+
+    const repeatFrequency = schedule.repeatFrequency || 'weekly';
+
+    // Calculate week number from start date for biweekly check
+    const getWeekNumber = (date) => {
+      const diffTime = date.getTime() - start.getTime();
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      return Math.floor(diffDays / 7);
+    };
+
     while (current <= sixMonthsLater) {
       const dayOfWeek = current.getDay();
       // Convert Sunday = 0 to our format where Monday = 0
       const adjustedDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-      
+
       // Check if this day has any selected times in the new structure
       const dayConfig = schedule.daysOfWeek.find(d => d.dayIndex === adjustedDayOfWeek);
+
       if (dayConfig && dayConfig.times?.some(t => t.selected)) {
-        dates.push(dayjs(current).format('YYYY-MM-DD'));
+        let shouldInclude = false;
+
+        if (repeatFrequency === 'weekly') {
+          // Include every week
+          shouldInclude = true;
+        } else if (repeatFrequency === 'biweekly') {
+          // Include every 2 weeks from start date
+          const weekNum = getWeekNumber(current);
+          shouldInclude = weekNum % 2 === 0;
+        } else if (repeatFrequency === 'monthly') {
+          // Include only dates that match the start date's day of month
+          // Or the last day of month if the start day doesn't exist in current month
+          const startDay = start.getDate();
+          const currentDay = current.getDate();
+          const lastDayOfMonth = new Date(current.getFullYear(), current.getMonth() + 1, 0).getDate();
+
+          // Check if it's the same day of month, or if start day > last day, use last day
+          shouldInclude = currentDay === startDay ||
+            (startDay > lastDayOfMonth && currentDay === lastDayOfMonth);
+        }
+
+        if (shouldInclude) {
+          dates.push(dayjs(current).format('YYYY-MM-DD'));
+        }
       }
-      
+
       current.setDate(current.getDate() + 1);
     }
-    
+
     return dates;
   };
 

@@ -543,6 +543,31 @@ export default function ClassesProductSheet({
                   </PopoverContent>
                 </Popover>
               </div>
+
+              {/* Repeat Frequency */}
+              <div className="flex items-center gap-4">
+                <Label className="w-[100px]">Repeats</Label>
+                <Select
+                  value={product.schedule?.repeatFrequency || 'weekly'}
+                  onValueChange={(value) => {
+                    updateProduct({
+                      schedule: {
+                        ...product.schedule,
+                        repeatFrequency: value
+                      }
+                    });
+                  }}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Select frequency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="weekly">Every week</SelectItem>
+                    <SelectItem value="biweekly">Every 2 weeks</SelectItem>
+                    <SelectItem value="monthly">Every month</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             {/* Schedule Configuration with Tabs */}

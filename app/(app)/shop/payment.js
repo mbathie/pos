@@ -890,15 +890,21 @@ export default function Page() {
     if (paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') {
       // Stop the collecting/loading state
       setIsCollectingPayment(false)
-      
+
       // Mark cart as stale after successful card payment (keep totals visible for POS operator)
       if ((paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded') && cart.products.length > 0) {
         console.log('✅ Card payment succeeded, marking cart as stale')
         markCartAsStale()
-        // Keep the cart data so the payment summary stays visible for double-checking
       }
+
+      // Auto-redirect to shop after a short delay
+      const timeout = setTimeout(() => {
+        toast.success('Payment completed successfully')
+        router.push('/shop')
+      }, 2000)
+      return () => clearTimeout(timeout)
     }
-  }, [paymentStatus, cardPaymentStatus, cart.products.length, markCartAsStale])
+  }, [paymentStatus, cardPaymentStatus, cart.products.length, markCartAsStale, router])
 
 
   // Clear adjustments when navigating away or when returning to shop
@@ -2401,8 +2407,6 @@ export default function Page() {
                           hasSuccessfulPayment.current = true;
                           if (paymentType === 'company') {
                             toast.success(`Company purchase recorded! Waiver link sent to ${selectedCompany.contactEmail}`);
-                          } else {
-                            toast.success('Payment processed successfully!');
                           }
                         }
 

@@ -130,16 +130,18 @@ After implementing or updating any feature, you MUST update the following docume
 - Run tests with UI: `npm run test:ui`
 - Run headed tests: `npm run test:headed`
 
-### Browser Testing with Playwright
-- When testing pages behind authentication, use the following authentication cookie:
-  ```
-  eyJhbGciOiJIUzI1NiJ9.eyJzZWxlY3RlZExvY2F0aW9uSWQiOiI2OGEyOGJjMzY4MjA0ZmEwZmJkYzRjNjYiLCJlbWFpbCI6Im1iYXRoaWVAZ21haWwuY29tIiwiZW1wbG95ZWVJZCI6IjY4OWYxM2YxY2IwNzU0MzQxZTA5M2Q5MiIsIm9yZ0lkIjoiNjg5ZjEzZjBjYjA3NTQzNDFlMDkzZDc4IiwiZXhwIjoxNzg3NzI0MDY3fQ.t5YqTRUPCg-jtJB7DbJEA4ngMFhTmsV_ZbnbgYMdsgw
-  ```
-- After making UI changes, always verify the UI/UX using Playwright MCP to ensure:
+### Browser Testing with Claude-in-Chrome Extension
+- **IMPORTANT**: Use the Claude-in-Chrome extension (mcp__claude-in-chrome__*) for browser testing instead of Playwright MCP
+- The user will already be logged in via their browser session - no need to set authentication cookies
+- After making UI changes, verify the UI/UX using the Chrome extension to ensure:
   - Visual consistency with design system
   - Proper responsive behavior
   - Interactive elements work as expected
   - No visual regressions
+- Key pages for testing:
+  - Shop: `/shop`
+  - Transactions: `/manage/transactions`
+  - Orders: `/manage/orders`
 
 ## Development
 - Start dev server: `npm run dev --turbopack`

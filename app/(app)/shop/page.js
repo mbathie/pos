@@ -78,9 +78,16 @@ export default function Page() {
     selectVariation,
     selectMod, getProductTotal, setQty } = useHandler()
 
-  const { addToCart, removeFromCart, getCurrentCart, location, device, posSetupComplete, setPosSetupComplete, employee } = useGlobals()
+  const { addToCart, removeFromCart, getCurrentCart, location, device, posSetupComplete, setPosSetupComplete, employee, setPosInterfaceName } = useGlobals()
 
-  const [posInterface, setPosInterface] = useState(null)
+  const [posInterface, setPosInterfaceLocal] = useState(null)
+
+  // Helper to update both local and global state
+  const setPosInterface = (value) => {
+    setPosInterfaceLocal(value)
+    // Update global state with just the name for header display
+    setPosInterfaceName(value?.name || null)
+  }
   const [loading, setLoading] = useState(true)
   const [setupStatus, setSetupStatus] = useState({ stripeConnected: null, hasTerminal: null })
   const [category, setCategory] = useState(undefined)
@@ -251,6 +258,13 @@ export default function Page() {
       return { setupComplete: false, stripeConnected: false }
     }
   }
+
+  // Update global POS interface name when local state changes
+  useEffect(() => {
+    if (posInterface?.name) {
+      setPosInterfaceName(posInterface.name)
+    }
+  }, [posInterface?.name, setPosInterfaceName])
 
   useEffect(() => {
     if (product) {
