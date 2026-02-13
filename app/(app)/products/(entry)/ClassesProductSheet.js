@@ -354,9 +354,9 @@ export default function ClassesProductSheet({
               </Select>
             </div>
 
-            <div className='flex flex-col gap-2 w-40'>
+            <div className='flex flex-col gap-2 w-32'>
               <div className='flex items-center gap-2'>
-                <Label>Class Size</Label>
+                <Label className='text-nowrap'>Class Size</Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -370,16 +370,16 @@ export default function ClassesProductSheet({
                 </TooltipProvider>
               </div>
               <NumberInput
-                placeholder="max capacity"
+                placeholder="max"
                 min={0}
                 value={product.capacity || null}
                 onChange={(value) => updateProduct({ capacity: value })}
               />
             </div>
 
-            <div className='flex flex-col gap-2 w-40'>
+            <div className='flex flex-col gap-2 w-36'>
               <div className='flex items-center gap-2'>
-                <Label>Min Purchase</Label>
+                <Label className='text-nowrap'>Min Purchase</Label>
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -402,7 +402,7 @@ export default function ClassesProductSheet({
               />
             </div>
 
-            <div className='flex flex-col gap-2 w-40'>
+            <div className='flex flex-col gap-2 w-36'>
               <div className='flex items-center gap-2'>
                 <Label className='text-nowrap'>Duration (min)</Label>
                 <TooltipProvider>
