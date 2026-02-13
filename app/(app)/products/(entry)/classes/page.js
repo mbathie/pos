@@ -39,7 +39,8 @@ export default function Page() {
   );
 
   const getProducts = async () => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products?type=${categoryName}`);
+    // Fetch both class and course products
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products?type=class,course`);
     if (res.ok) {
       const data = await res.json();
       setProducts(data.products);

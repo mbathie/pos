@@ -28,9 +28,13 @@ export async function GET(request) {
       query.name = { $regex: searchQuery, $options: 'i' };
     }
 
-    // Add type filter if provided
+    // Add type filter if provided (supports comma-separated values)
     if (typeFilter) {
-      query.type = typeFilter;
+      if (typeFilter.includes(',')) {
+        query.type = { $in: typeFilter.split(',') };
+      } else {
+        query.type = typeFilter;
+      }
     }
 
     // Fetch products with populated references

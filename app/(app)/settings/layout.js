@@ -13,7 +13,8 @@ import {
   FileText,
   Receipt,
   Calculator,
-  Landmark
+  Landmark,
+  Monitor
 } from 'lucide-react'
 
 const settingsSections = [
@@ -21,6 +22,7 @@ const settingsSections = [
   { id: 'payments', label: 'Payments', icon: CreditCard, href: '/settings/payments' },
   { id: 'products', label: 'Products', icon: Package, href: '/settings/products' },
   { id: 'locations', label: 'Locations', icon: MapPin, href: '/settings/locations' },
+  { id: 'devices', label: 'Devices', icon: Monitor, href: '/settings/devices' },
   { id: 'customer', label: 'Customer', icon: Users, href: '/settings/customer' },
   { id: 'receipts', label: 'Receipts', icon: Receipt, href: '/settings/receipts' },
   { id: 'financial', label: 'Financial', icon: Calculator, href: '/settings/financial' },

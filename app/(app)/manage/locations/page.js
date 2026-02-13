@@ -1,18 +1,10 @@
 'use client'
 import React, { useEffect, useState, useMemo } from 'react'
-import Link from 'next/link'
 import { MapPin, Plus, Search, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Building2, Info } from 'lucide-react'
 import { useGlobals } from '@/lib/globals'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { AddLocationSheet } from '@/components/add-location-sheet'
 import {
   Pagination,
   PaginationContent,
@@ -303,12 +295,12 @@ export default function Page() {
           </div>
 
           {/* Add Location Button */}
-          <Link href="/manage/locations/create">
+          <AddLocationSheet onSuccess={() => fetchLocations()}>
             <Button className="cursor-pointer">
               <Plus className="mr-2 h-4 w-4" />
               Add Location
             </Button>
-          </Link>
+          </AddLocationSheet>
         </div>
       </div>
 
