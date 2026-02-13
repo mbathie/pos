@@ -22,6 +22,7 @@ export default function Page({ params }) {
     dateRange: '2'
   });
   const [loading, setLoading] = useState(false);
+  const [bumpSettings, setBumpSettings] = useState({ green: 2, orange: 5, red: 10 });
 
   async function updateStatus(id, status) {
     const res = await fetch(`/api/orders/${id}/status`, {
@@ -52,6 +53,35 @@ export default function Page({ params }) {
       className: 'text-primary',
       badgeVariant: 'default'
     }
+  }
+
+  // Fetch bump screen settings
+  useEffect(() => {
+    const fetchBumpSettings = async () => {
+      try {
+        const res = await fetch('/api/org/settings');
+        if (res.ok) {
+          const data = await res.json();
+          setBumpSettings({
+            green: data.bumpScreenGreenMinutes ?? 2,
+            orange: data.bumpScreenOrangeMinutes ?? 5,
+            red: data.bumpScreenRedMinutes ?? 10
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching bump settings:', error);
+      }
+    };
+    fetchBumpSettings();
+  }, []);
+
+  function getBumpColor(order) {
+    if (order.status !== 'placed') return { card: '', badge: '' };
+    const minutesElapsed = now.diff(dayjs(order.createdAt), 'minute');
+    if (minutesElapsed >= bumpSettings.red) return { card: 'bg-red-500/10 border-red-500/20', badge: 'bg-red-500/20 border-red-500/30 text-red-200' };
+    if (minutesElapsed >= bumpSettings.orange) return { card: 'bg-yellow-500/10 border-yellow-500/20', badge: 'bg-yellow-500/20 border-yellow-500/30 text-yellow-200' };
+    if (minutesElapsed >= bumpSettings.green) return { card: 'bg-green-500/10 border-green-500/20', badge: 'bg-green-500/20 border-green-500/30 text-green-200' };
+    return { card: '', badge: '' };
   }
 
   async function getOrders() {
@@ -177,8 +207,9 @@ export default function Page({ params }) {
         {!loading && (
           <div className="flex flex-col gap-4">
         {filteredOrders?.map((o, oIdx) => {
+          const bump = getBumpColor(o);
           return (
-            <Card key={o._id}>
+            <Card key={o._id} className={bump.card}>
               <CardContent>
                 <div className="flex gap-4 flex-col">
 
@@ -192,9 +223,9 @@ export default function Page({ params }) {
                               <StatusIcon
                                 className={`size-5 stroke-2 ${className}`}
                               />
-                              <Badge 
+                              <Badge
                                 variant={badgeVariant}
-                                className="text-xs font-medium capitalize w-[90px] text-center"
+                                className={`text-xs font-medium capitalize w-[90px] text-center ${bump.badge}`}
                               >
                                 {o.status}
                               </Badge>

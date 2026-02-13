@@ -14,13 +14,15 @@ import {
   Receipt,
   Calculator,
   Landmark,
-  Monitor
+  Monitor,
+  ClipboardList
 } from 'lucide-react'
 
 const settingsSections = [
   { id: 'organization', label: 'Organization', icon: Building2, href: '/settings' },
   { id: 'payments', label: 'Payments', icon: CreditCard, href: '/settings/payments' },
   { id: 'products', label: 'Products', icon: Package, href: '/settings/products' },
+  { id: 'orders', label: 'Orders', icon: ClipboardList, href: '/settings/orders' },
   { id: 'locations', label: 'Locations', icon: MapPin, href: '/settings/locations' },
   { id: 'devices', label: 'Devices', icon: Monitor, href: '/settings/devices' },
   { id: 'customer', label: 'Customer', icon: Users, href: '/settings/customer' },

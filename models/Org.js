@@ -21,6 +21,19 @@ const OrgSchema = new mongoose.Schema({
     min: 1,
     max: 90
   },
+  // Bump screen color thresholds (in minutes)
+  bumpScreenGreenMinutes: {
+    type: Number,
+    default: 2
+  },
+  bumpScreenOrangeMinutes: {
+    type: Number,
+    default: 5
+  },
+  bumpScreenRedMinutes: {
+    type: Number,
+    default: 10
+  },
   // Flag to skip first-time POS setup checks once all steps have passed
   posSetupComplete: {
     type: Boolean,

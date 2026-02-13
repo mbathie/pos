@@ -20,7 +20,10 @@ export async function GET() {
 
     return NextResponse.json({
       minInvoicePaymentPercent: org.minInvoicePaymentPercent ?? 50,
-      paymentTermsDays: org.paymentTermsDays ?? 7
+      paymentTermsDays: org.paymentTermsDays ?? 7,
+      bumpScreenGreenMinutes: org.bumpScreenGreenMinutes ?? 2,
+      bumpScreenOrangeMinutes: org.bumpScreenOrangeMinutes ?? 5,
+      bumpScreenRedMinutes: org.bumpScreenRedMinutes ?? 10
     });
 
   } catch (error) {
@@ -39,7 +42,7 @@ export async function PUT(request) {
     const { employee } = await getEmployee();
 
     const body = await request.json();
-    const { minInvoicePaymentPercent, paymentTermsDays } = body;
+    const { minInvoicePaymentPercent, paymentTermsDays, bumpScreenGreenMinutes, bumpScreenOrangeMinutes, bumpScreenRedMinutes } = body;
 
     // Validate minInvoicePaymentPercent
     if (minInvoicePaymentPercent !== undefined) {
@@ -55,10 +58,37 @@ export async function PUT(request) {
       }
     }
 
+    // Validate bump screen fields
+    const bumpFields = { bumpScreenGreenMinutes, bumpScreenOrangeMinutes, bumpScreenRedMinutes };
+    for (const [key, val] of Object.entries(bumpFields)) {
+      if (val !== undefined) {
+        if (typeof val !== 'number' || val < 0 || val > 120) {
+          return NextResponse.json({ message: `${key} must be a number between 0 and 120` }, { status: 400 });
+        }
+      }
+    }
+
+    // Validate green < orange < red when all three are provided or partially updated
+    const green = bumpScreenGreenMinutes;
+    const orange = bumpScreenOrangeMinutes;
+    const red = bumpScreenRedMinutes;
+    if (green !== undefined && orange !== undefined && green >= orange) {
+      return NextResponse.json({ message: 'Green threshold must be less than orange threshold' }, { status: 400 });
+    }
+    if (orange !== undefined && red !== undefined && orange >= red) {
+      return NextResponse.json({ message: 'Orange threshold must be less than red threshold' }, { status: 400 });
+    }
+    if (green !== undefined && red !== undefined && green >= red) {
+      return NextResponse.json({ message: 'Green threshold must be less than red threshold' }, { status: 400 });
+    }
+
     // Build update object with only provided fields
     const updateFields = {};
     if (minInvoicePaymentPercent !== undefined) updateFields.minInvoicePaymentPercent = minInvoicePaymentPercent;
     if (paymentTermsDays !== undefined) updateFields.paymentTermsDays = paymentTermsDays;
+    if (bumpScreenGreenMinutes !== undefined) updateFields.bumpScreenGreenMinutes = bumpScreenGreenMinutes;
+    if (bumpScreenOrangeMinutes !== undefined) updateFields.bumpScreenOrangeMinutes = bumpScreenOrangeMinutes;
+    if (bumpScreenRedMinutes !== undefined) updateFields.bumpScreenRedMinutes = bumpScreenRedMinutes;
 
     const org = await Org.findByIdAndUpdate(
       employee.org._id,
@@ -72,7 +102,10 @@ export async function PUT(request) {
 
     return NextResponse.json({
       minInvoicePaymentPercent: org.minInvoicePaymentPercent ?? 50,
-      paymentTermsDays: org.paymentTermsDays ?? 7
+      paymentTermsDays: org.paymentTermsDays ?? 7,
+      bumpScreenGreenMinutes: org.bumpScreenGreenMinutes ?? 2,
+      bumpScreenOrangeMinutes: org.bumpScreenOrangeMinutes ?? 5,
+      bumpScreenRedMinutes: org.bumpScreenRedMinutes ?? 10
     });
 
   } catch (error) {
