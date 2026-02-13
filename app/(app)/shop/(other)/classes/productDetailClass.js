@@ -179,6 +179,20 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
     });
   }
 
+  // Calculate total quantity purchased
+  const totalQuantity = product.openSchedule
+    ? Object.values(priceQuantities).reduce((sum, q) => sum + q, 0)
+    : selectedTimes.reduce((sum, time) => {
+        if (time.quantities) {
+          return sum + Object.values(time.quantities).reduce((s, q) => s + q, 0);
+        }
+        return sum;
+      }, 0);
+
+  // Check if minimum purchase requirement is met
+  const minPurchase = product.minPurchase || null;
+  const meetsMinPurchase = minPurchase === null || totalQuantity >= minPurchase;
+
   // Calculate total based on selected times and their quantities OR open schedule quantities
   useEffect(() => {
     let subtotal = 0;
@@ -410,6 +424,13 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                     <strong>Insufficient spots available.</strong> This time slot only has {openScheduleAvailable} spot{openScheduleAvailable !== 1 ? 's' : ''} remaining, but {Object.values(priceQuantities).reduce((sum, q) => sum + q, 0)} {Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) === 1 ? 'is' : 'are'} required.
                   </div>
                 )}
+
+                {/* Warning when minimum purchase not met */}
+                {minPurchase && totalQuantity > 0 && totalQuantity < minPurchase && (
+                  <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-md text-sm text-amber-700 dark:text-amber-400">
+                    <strong>Minimum purchase required.</strong> You must purchase at least {minPurchase} spot{minPurchase !== 1 ? 's' : ''} for this class ({totalQuantity} selected).
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -585,6 +606,13 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                   })}
                 </div>
               </ScrollArea>
+
+              {/* Warning when minimum purchase not met */}
+              {minPurchase && totalQuantity > 0 && totalQuantity < minPurchase && (
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-md text-sm text-amber-700 dark:text-amber-400">
+                  <strong>Minimum purchase required.</strong> You must purchase at least {minPurchase} spot{minPurchase !== 1 ? 's' : ''} for this class ({totalQuantity} selected).
+                </div>
+              )}
             </div>
           )}
 
@@ -605,8 +633,8 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
               className='cursor-pointer w-full'
               disabled={
                 product.openSchedule
-                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0) || Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable
-                  : selectedTimes.length === 0
+                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0) || Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable || !meetsMinPurchase
+                  : selectedTimes.length === 0 || !meetsMinPurchase
               }
               onClick={async () => {
                 if (product.openSchedule) {
@@ -691,8 +719,8 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
               className='cursor-pointer w-full'
               disabled={
                 product.openSchedule
-                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0) || Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable
-                  : selectedTimes.length === 0
+                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0) || Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable || !meetsMinPurchase
+                  : selectedTimes.length === 0 || !meetsMinPurchase
               }
               onClick={async () => {
                 if (product.openSchedule) {

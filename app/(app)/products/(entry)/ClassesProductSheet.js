@@ -356,11 +356,36 @@ export default function ClassesProductSheet({
 
             <div className='flex flex-col gap-2 w-32'>
               <Label>Class Size</Label>
-              <NumberInput 
-                placeholder="max capacity" 
+              <NumberInput
+                placeholder="max capacity"
                 min={0}
                 value={product.capacity || null}
                 onChange={(value) => updateProduct({ capacity: value })}
+              />
+            </div>
+
+            <div className='flex flex-col gap-2 w-32'>
+              <div className='flex items-center gap-2'>
+                <Label>Min Purchase</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info size="15"/>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Minimum number of spots that</p>
+                      <p>must be purchased. Leave empty</p>
+                      <p>for no minimum requirement.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <NumberInput
+                placeholder="no min"
+                min={1}
+                max={product.capacity || 999}
+                value={product.minPurchase || null}
+                onChange={(value) => updateProduct({ minPurchase: value })}
               />
             </div>
 

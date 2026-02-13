@@ -25,6 +25,13 @@ export default function ProductDetail({ open, setOpen, product, setProduct, onAd
   const [total, setTotal] = useState(0)
   const [selectedTimeSlot, setSelectedTimeSlot] = useState(null)
 
+  // Calculate total quantity purchased
+  const totalQuantity = product.prices?.reduce((sum, p) => sum + (p.qty || 0), 0) || 0;
+
+  // Check if minimum purchase requirement is met
+  const minPurchase = product.minPurchase || null;
+  const meetsMinPurchase = minPurchase === null || totalQuantity >= minPurchase;
+
   // Auto-select price tier for group products
   useEffect(() => {
     if (isPartOfGroup && product?.groupQty && product?.prices?.length > 0) {
@@ -170,6 +177,13 @@ export default function ProductDetail({ open, setOpen, product, setProduct, onAd
               </div>
             )}
 
+            {/* Warning when minimum purchase not met */}
+            {minPurchase && totalQuantity > 0 && totalQuantity < minPurchase && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-md text-sm text-amber-700 dark:text-amber-400">
+                <strong>Minimum purchase required.</strong> You must purchase at least {minPurchase} spot{minPurchase !== 1 ? 's' : ''} for this course ({totalQuantity} selected).
+              </div>
+            )}
+
             {/* Time slot selection for courses - only show if prices have been selected */}
             {product.prices?.some(p => p.qty > 0) && product.schedule?.times && product.schedule.times.length > 0 && (
               <div>
@@ -276,7 +290,8 @@ export default function ProductDetail({ open, setOpen, product, setProduct, onAd
                 }}
                 disabled={
                   !product.prices?.some(p => p.qty > 0) ||
-                  (product.schedule?.times?.length > 1 && !selectedTimeSlot)
+                  (product.schedule?.times?.length > 1 && !selectedTimeSlot) ||
+                  !meetsMinPurchase
                 }
                 className='w-full mt-2 cursor-pointer'
               >
