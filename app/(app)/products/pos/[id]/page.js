@@ -23,6 +23,7 @@ import { CSS } from '@dnd-kit/utilities';
 import POSFolderSheet from './POSFolderSheet';
 import POSProductSheet from './POSProductSheet';
 import POSGroupSheet from './POSGroupSheet';
+import POSPrepaidSheet from './POSPrepaidSheet';
 import POSInterfaceSettingsSheet from './POSInterfaceSettingsSheet';
 import StandaloneProductSheet from '../../StandaloneProductSheet';
 import MembershipsProductSheet from '../../(entry)/MembershipsProductSheet';
@@ -367,7 +368,7 @@ function DragOverlayItem({ item }) {
 }
 
 // Non-sortable divider row
-function DividerRow({ item, onDividerDelete, onMoveUp, onMoveDown, onNewFolder, onNewDivider, onAddProducts, onAddGroup, onCreateShop, onCreateMembership, onCreateClass }) {
+function DividerRow({ item, onDividerDelete, onMoveUp, onMoveDown, onNewFolder, onNewDivider, onAddProducts, onAddGroup, onAddPrepaid, onCreateShop, onCreateMembership, onCreateClass }) {
   if (!item) return null;
   return (
     <div className="w-full col-span-full relative h-12">
@@ -405,6 +406,9 @@ function DividerRow({ item, onDividerDelete, onMoveUp, onMoveDown, onNewFolder, 
             </DropdownMenuItem>
             <DropdownMenuItem onClick={onAddGroup} className="cursor-pointer">
               Add Existing Group
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onAddPrepaid} className="cursor-pointer">
+              Add Existing Prepaid Pack
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={onCreateShop} className="cursor-pointer">
@@ -485,6 +489,7 @@ export default function POSInterfaceDetailPage({ params }) {
   const [selectedFolderId, setSelectedFolderId] = useState(null);
   const [productSheetOpen, setProductSheetOpen] = useState(false);
   const [groupSheetOpen, setGroupSheetOpen] = useState(false);
+  const [prepaidSheetOpen, setPrepaidSheetOpen] = useState(false);
   const [settingsSheetOpen, setSettingsSheetOpen] = useState(false);
   const [dividerDialogOpen, setDividerDialogOpen] = useState(false);
   const [dividerName, setDividerName] = useState('');
@@ -619,6 +624,13 @@ export default function POSInterfaceDetailPage({ params }) {
           type: 'group',
           order: item.order
         });
+      } else if (item.itemType === 'prepaid' && item.data) {
+        allItems.push({
+          ...item.data,
+          _id: item.itemId,
+          type: 'prepaid',
+          order: item.order
+        });
       }
     });
 
@@ -744,6 +756,7 @@ export default function POSInterfaceDetailPage({ params }) {
     onNewDivider: () => handleNewDivider(atOrder),
     onAddProducts: () => { setInsertAtOrder(atOrder); setProductSheetOpen(true); },
     onAddGroup: () => { setInsertAtOrder(atOrder); setGroupSheetOpen(true); },
+    onAddPrepaid: () => { setInsertAtOrder(atOrder); setPrepaidSheetOpen(true); },
     onCreateShop: () => { setInsertAtOrder(atOrder); handleCreateNewProduct('shop'); },
     onCreateMembership: () => { setInsertAtOrder(atOrder); handleCreateNewProduct('membership'); },
     onCreateClass: () => { setInsertAtOrder(atOrder); handleCreateNewProduct('class'); },
@@ -1082,7 +1095,7 @@ export default function POSInterfaceDetailPage({ params }) {
               ...cat,
               items: [
                 ...updatedCategoryItems.map((item, idx) => ({
-                  itemType: item.type === 'folder' ? 'folder' : item.type === 'divider' ? 'divider' : item.type === 'group' ? 'group' : 'product',
+                  itemType: item.type === 'folder' ? 'folder' : item.type === 'divider' ? 'divider' : item.type === 'group' ? 'group' : item.type === 'prepaid' ? 'prepaid' : 'product',
                   itemId: item._id,
                   order: idx
                 })),
@@ -1299,7 +1312,7 @@ export default function POSInterfaceDetailPage({ params }) {
         return {
           ...cat,
           items: updatedItems.map((item, idx) => ({
-            itemType: item.type === 'folder' ? 'folder' : item.type === 'divider' ? 'divider' : item.type === 'group' ? 'group' : 'product',
+            itemType: item.type === 'folder' ? 'folder' : item.type === 'divider' ? 'divider' : item.type === 'group' ? 'group' : item.type === 'prepaid' ? 'prepaid' : 'product',
             itemId: item._id,
             order: idx
           }))
@@ -1341,7 +1354,7 @@ export default function POSInterfaceDetailPage({ params }) {
         return {
           ...cat,
           items: updatedItems.map((item, idx) => ({
-            itemType: item.type === 'folder' ? 'folder' : item.type === 'divider' ? 'divider' : item.type === 'group' ? 'group' : 'product',
+            itemType: item.type === 'folder' ? 'folder' : item.type === 'divider' ? 'divider' : item.type === 'group' ? 'group' : item.type === 'prepaid' ? 'prepaid' : 'product',
             itemId: item._id,
             order: idx
           }))
@@ -1635,6 +1648,9 @@ export default function POSInterfaceDetailPage({ params }) {
                       <DropdownMenuItem onClick={() => { setInsertAtOrder(0); setGroupSheetOpen(true); }} className="cursor-pointer">
                         Add Existing Group
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setInsertAtOrder(0); setPrepaidSheetOpen(true); }} className="cursor-pointer">
+                        Add Existing Prepaid Pack
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => { setInsertAtOrder(0); handleCreateNewProduct('shop'); }} className="cursor-pointer">
                         Create New Shop Item
@@ -1911,6 +1927,16 @@ export default function POSInterfaceDetailPage({ params }) {
       <POSGroupSheet
         open={groupSheetOpen}
         onOpenChange={(open) => { setGroupSheetOpen(open); if (!open) setInsertAtOrder(null); }}
+        posInterfaceId={id}
+        categoryId={selectedCategory?._id}
+        onSuccess={fetchPOSInterface}
+        insertAtOrder={insertAtOrder}
+      />
+
+      {/* Prepaid Sheet */}
+      <POSPrepaidSheet
+        open={prepaidSheetOpen}
+        onOpenChange={(open) => { setPrepaidSheetOpen(open); if (!open) setInsertAtOrder(null); }}
         posInterfaceId={id}
         categoryId={selectedCategory?._id}
         onSuccess={fetchPOSInterface}

@@ -3,11 +3,68 @@
 This document provides comprehensive documentation for all major features implemented in the POS system.
 
 ## Table of Contents
+- [Unified Check-In Flow](#unified-check-in-flow)
 - [Schedule Calendar View](#schedule-calendar-view)
 - [Public Payment Link for Invoices](#public-payment-link-for-invoices)
 - [Minimum Invoice Payment Settings](#minimum-invoice-payment-settings)
 - [Orders Bump Screen Enhancements](#orders-bump-screen-enhancements)
 - [Stripe Invoice System for Group/Company Bookings](#stripe-invoice-system-for-groupcompany-bookings)
+
+---
+
+## Unified Check-In Flow
+
+**Date Implemented:** 16.02.2026
+**Status:** Done
+
+### Overview
+A single QR code per customer that, when scanned, shows ALL products available to that customer — classes, memberships, and prepaid passes — letting staff select what to check in or redeem in one unified dialog.
+
+### Key Functionality
+
+#### 1. **Unified Lookup**
+- Scanning a member ID QR queries classes, memberships, and prepaid passes simultaneously
+- Returns a `unified-select` response with all available items for the customer
+- Time window filtering: classes within 30 minutes before/after (or all future in test mode)
+
+#### 2. **Multi-Section Selection UI**
+- **Classes & Courses**: Checkbox list with product name and datetime, "Checked In" badge for already-checked-in classes
+- **Memberships**: Checkbox list with status badges (Active, Suspended, Expired), disabled for invalid
+- **Prepaid Passes**: Grouped by pack with remaining count, product sub-lists for selection
+
+#### 3. **Smart Pre-Selection**
+- Auto-selects when only 1 available class (not already checked in)
+- Auto-selects when only 1 active membership
+
+#### 4. **Unified Processing**
+- Single API call processes all selected items: class check-ins, membership check-ins, prepaid redemptions
+- Per-item success/error reporting in results
+- Partial success handling (some items succeed, others fail)
+
+#### 5. **PP: QR Fallback**
+- Prepaid pass QR codes (PP: prefix) still use the existing direct redemption flow
+
+### Configuration
+- Test mode: Add `?test=1` to check-in page URL to show all future classes instead of time-window filtering
+
+### Relevant Files
+| File | Purpose |
+|------|---------|
+| `/app/(app)/checkin/CheckInClient.js` | Client UI with unified selection dialog |
+| `/app/api/checkin/qr/route.js` | QR scan lookup — returns unified product list |
+| `/app/api/checkin/unified/route.js` | Processes staff's multi-item selection |
+| `/lib/checkin.js` | Shared functions: processClassCheckin(), processPrepaidRedemption() |
+| `/app/api/checkin/prepaid/redeem/route.js` | Legacy PP: prefix redemption endpoint |
+
+### Edge Cases
+| Scenario | Behavior |
+|----------|----------|
+| No products at all | Shows customer info + warning message, auto-closes in 8s |
+| Only membership | Shows membership section only, pre-selects if active |
+| Suspended membership | Shows with "Suspended" badge, checkbox disabled |
+| Only prepaid | Shows prepaid section with product sub-list |
+| Already checked-in class | Shows with "Checked In" badge, checkbox disabled and checked |
+| PP: QR scanned | Existing direct prepaid flow unchanged |
 
 ---
 

@@ -1,14 +1,11 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Button } from '@/components/ui/button';
 import { ProductThumbnail } from '@/components/product-thumbnail';
-import { ChevronRight, Check, Calendar as CalendarIcon, Plus, X } from 'lucide-react';
-import { IconButton, SelectionCheck } from '@/components/control-button';
-import { Input } from '@/components/ui/input';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ChevronRight, Check, Plus, X } from 'lucide-react';
+import { SelectionCheck } from '@/components/control-button';
 import dayjs from 'dayjs';
 import ProductDetail from './retail/productDetail';
 import ProductDetailClass from './(other)/classes/productDetailClass';
@@ -27,20 +24,14 @@ export default function GroupSheet({
   useClass,
   useMembership,
   getProductTotal,
-  migrateScheduleFormat,
-  location // Pass location for store hours
+  migrateScheduleFormat
 }) {
   const [configuredProducts, setConfiguredProducts] = useImmer({});
   const [currentProduct, setCurrentProduct] = useImmer(null);
   const [productSheetOpen, setProductSheetOpen] = useState(false);
   const [groupTotal, setGroupTotal] = useState(0);
-  const [groupQty, setGroupQty] = useState(1); // Group-level quantity
   const [availableProducts, setAvailableProducts] = useState([]); // All shop products
   const [selectedVariationIndex, setSelectedVariationIndex] = useState(null); // Index of selected variation (null = none selected)
-  const [scheduledDate, setScheduledDate] = useState(null); // Date for the group booking
-  const [scheduledTime, setScheduledTime] = useState(''); // Time for the group booking
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
-  const initialGroupQtyRef = useRef(1); // Store initial quantity when editing
   const [variationInstances, setVariationInstances] = useState({}); // Track instances per variation product: { productId: [0, 1, 2] }
 
   // Check if this group has variations
@@ -49,31 +40,6 @@ export default function GroupSheet({
 
   // Get minimum quantity requirement (null/0 = no minimum)
   const minQty = group?.minQty || 0;
-
-  // Check if date/time is selected - required before configuring products
-  const isDateTimeSelected = scheduledDate && scheduledTime;
-
-  // Helper to check if a day is closed at the location
-  const isDayClosed = (date) => {
-    if (!location?.storeHours) return false;
-    const dayOfWeek = date.getDay();
-    const storeHour = location.storeHours.find(h => h.d === dayOfWeek);
-    if (!storeHour || (!storeHour.open && !storeHour.close)) {
-      return true;
-    }
-    return false;
-  };
-
-  // Helper to check if a specific date is in closedDays
-  const isSpecificDateClosed = (date) => {
-    if (!location?.closedDays || location.closedDays.length === 0) return false;
-    const dateStr = dayjs(date).format('YYYY-MM-DD');
-    return location.closedDays.some(closedDay => {
-      const startDate = dayjs(closedDay.startDate).format('YYYY-MM-DD');
-      const endDate = dayjs(closedDay.endDate).format('YYYY-MM-DD');
-      return dateStr >= startDate && dateStr <= endDate;
-    });
-  };
 
   const { setTimesClass, setTimesCourse } = useClass || {};
 
@@ -109,45 +75,26 @@ export default function GroupSheet({
       setProductSheetOpen(false);
       setCurrentProduct(null);
       setConfiguredProducts({});
-      setGroupQty(1); // Reset quantity
       setSelectedVariationIndex(null); // Reset variation selection
-      setScheduledDate(null); // Reset date
-      setScheduledTime(''); // Reset time
-      setDatePickerOpen(false);
-      initialGroupQtyRef.current = 1; // Reset ref
       setVariationInstances({}); // Reset variation instances
     } else if (open && group) {
       // Check if we're editing an existing cart group
       if (group.products && group.gId) {
         // Opening with an existing cart group - pre-populate products
         const configured = {};
-        const initialGroupQty = group.products[0]?.groupQty || 1;
 
         group.products.forEach(product => {
           configured[product._id] = product;
         });
         setConfiguredProducts(configured);
-        setGroupQty(initialGroupQty);
-        initialGroupQtyRef.current = initialGroupQty; // Store initial quantity in ref
 
         // Restore selected variation if editing
         if (group.products[0]?.selectedVariationIndex !== undefined) {
           setSelectedVariationIndex(group.products[0].selectedVariationIndex);
         }
-
-        // Restore scheduled date/time if editing
-        if (group.products[0]?.scheduledDateTime) {
-          const dt = dayjs(group.products[0].scheduledDateTime);
-          setScheduledDate(dt.toDate());
-          setScheduledTime(dt.format('HH:mm'));
-        }
       } else if (group.products) {
         // Opening with a product group template
         setSelectedVariationIndex(null); // No variation selected by default
-        // Set initial quantity to minQty if set, otherwise 1
-        const initialQty = group.minQty || 1;
-        setGroupQty(initialQty);
-        initialGroupQtyRef.current = initialQty;
       }
     }
   }, [open]);
@@ -189,27 +136,6 @@ export default function GroupSheet({
     });
   }, [selectedVariationIndex, open]);
 
-  // Clear selectedTimes for class/course products when quantity changes during edit
-  useEffect(() => {
-    if (!group?.gId || !open) return; // Only when editing an existing cart group
-
-    // If quantity changed from the initial value stored in ref
-    if (groupQty !== initialGroupQtyRef.current) {
-      console.log(`🔄 Quantity changed from ${initialGroupQtyRef.current} to ${groupQty}, clearing class/course configurations`);
-      setConfiguredProducts(draft => {
-        Object.keys(draft).forEach(productId => {
-          const product = draft[productId];
-          // Remove class/course products from configured list entirely
-          // This forces them to be reconfigured with new time slots
-          if (product.type === 'class' || product.type === 'course') {
-            console.log(`🔄 Removing ${product.name} from configured products due to quantity change`);
-            delete draft[productId];
-          }
-        });
-      });
-    }
-  }, [groupQty, group?.gId, open]);
-
   // Helper function to add a new variation product instance
   const addVariationInstance = (productId) => {
     setVariationInstances(prev => {
@@ -242,25 +168,13 @@ export default function GroupSheet({
     });
   };
 
-  // Calculate the max capacity from class/course base products
-  const getMaxCapacity = () => {
-    if (!group?.products || !availableProducts.length) return null;
-
-    let minCapacity = null;
-
-    group.products.forEach(product => {
-      const productData = availableProducts.find(p => p._id === (product._id || product).toString()) || product;
-      if ((productData.type === 'class' || productData.type === 'course') && productData.capacity) {
-        if (minCapacity === null || productData.capacity < minCapacity) {
-          minCapacity = productData.capacity;
-        }
-      }
-    });
-
-    return minCapacity;
-  };
-
-  const maxCapacity = getMaxCapacity();
+  // Derive group quantity from configured class/course product price selections
+  const derivedGroupQty = (() => {
+    const allConfigured = Object.values(configuredProducts);
+    const classProduct = allConfigured.find(p => p.type === 'class' || p.type === 'course');
+    if (!classProduct?.prices) return 1;
+    return classProduct.prices.reduce((sum, p) => sum + (p.qty || 0), 0) || 1;
+  })();
 
   // Get the display price for a variation (override or derived)
   const getVariationDisplayPrice = (variation) => {
@@ -283,9 +197,9 @@ export default function GroupSheet({
     const useOverridePrice = hasVariations && selectedVariation && selectedVariation?.useOverridePrice !== false;
 
     if (useOverridePrice) {
-      // Use the variation's override price (this is per-unit, multiply by groupQty)
+      // Use the variation's override price (this is per-unit, multiply by derivedGroupQty)
       // This REPLACES all base product and variation product prices
-      total = (Number(selectedVariation.amount) || 0) * groupQty;
+      total = (Number(selectedVariation.amount) || 0) * derivedGroupQty;
     } else {
       // Derive total from configured products (no override price OR no variation selected)
       // Sum up base products
@@ -301,7 +215,7 @@ export default function GroupSheet({
             total += productTotal;
           } else {
             // Shop products need qty multiplier
-            total += productTotal * groupQty;
+            total += productTotal * derivedGroupQty;
           }
         }
       });
@@ -324,12 +238,9 @@ export default function GroupSheet({
     }
 
     setGroupTotal(total);
-  }, [configuredProducts, group, hasVariations, selectedVariation, groupQty, variationInstances]);
+  }, [configuredProducts, group, hasVariations, selectedVariation, derivedGroupQty, variationInstances]);
 
   const handleProductClick = (product, instanceIndex = null) => {
-    // Require date/time before configuring products
-    if (!isDateTimeSelected) return;
-
     // Check if product is already configured (use instance key if provided)
     const configKey = instanceIndex !== null ? `${product._id}_${instanceIndex}` : product._id;
     const existingConfig = configuredProducts[configKey];
@@ -360,11 +271,8 @@ export default function GroupSheet({
       qty: existingConfig?.qty || (product.type === 'class' || product.type === 'course' || product.type === 'membership' ? 0 : 1), // Each instance has qty 1
       schedule: product.type === 'course' && migrateScheduleFormat ? migrateScheduleFormat(product.schedule) : product.schedule,
       variations: existingConfig?.variations || variations,
-      groupQty: groupQty, // Pass group quantity to product
       isPartOfGroup: true, // Mark as part of group
       groupHasPriceOverride: selectedVariation?.useOverridePrice !== false, // Whether group variation overrides price
-      groupScheduledDate: scheduledDate, // Pass group's scheduled date for pre-selection
-      groupScheduledTime: scheduledTime, // Pass group's scheduled time
       instanceIndex: instanceIndex, // Track which instance this is (for variation products)
       configKey: configKey // Store the config key for saving
     };
@@ -406,12 +314,15 @@ export default function GroupSheet({
       ? group.gId
       : `${group._id || group.groupId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Combine date and time into a single ISO string if both are set
-    const scheduledDateTime = scheduledDate && scheduledTime
-      ? dayjs(scheduledDate).format('YYYY-MM-DD') + 'T' + scheduledTime
-      : scheduledDate
-        ? dayjs(scheduledDate).toISOString()
-        : undefined;
+    // Derive scheduledDateTime from the first configured class/course product's selectedTimes
+    let scheduledDateTime;
+    const allConfigured = Object.values(configuredProducts);
+    const firstScheduledProduct = allConfigured.find(
+      p => (p.type === 'class' || p.type === 'course') && p.selectedTimes?.length > 0
+    );
+    if (firstScheduledProduct?.selectedTimes?.[0]?.datetime) {
+      scheduledDateTime = firstScheduledProduct.selectedTimes[0].datetime;
+    }
 
     // Helper to add group metadata to a product
     const addGroupMetadata = (product) => ({
@@ -421,7 +332,7 @@ export default function GroupSheet({
       groupName: group.name || group.groupName,
       groupAmount: groupTotal,
       groupThumbnail: group.thumbnail || group.groupThumbnail,
-      groupQty: groupQty,
+      groupQty: derivedGroupQty,
       groupHasPriceOverride: selectedVariation?.useOverridePrice !== false,
       selectedVariationIndex: hasVariations ? selectedVariationIndex : undefined,
       selectedVariationName: selectedVariation?.name,
@@ -466,7 +377,6 @@ export default function GroupSheet({
 
     // Reset and close
     setConfiguredProducts({});
-    setGroupQty(1);
     onOpenChange(false);
   };
 
@@ -622,92 +532,9 @@ export default function GroupSheet({
 
           <div className="flex-1 overflow-y-auto">
             <div className="space-y-4 px-4">
-              {/* Date/Time Selector */}
-              <div className="flex flex-col gap-2" suppressHydrationWarning>
-                <div className="text-sm font-medium">Date & Time</div>
-                <div className="flex gap-2">
-                  <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "flex-1 justify-between font-normal cursor-pointer",
-                          !scheduledDate && "text-muted-foreground"
-                        )}
-                      >
-                        {scheduledDate ? dayjs(scheduledDate).format('DD/MM/YYYY') : "Select date"}
-                        <CalendarIcon className="h-4 w-4 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={scheduledDate}
-                        onSelect={(date) => {
-                          setScheduledDate(date);
-                          setDatePickerOpen(false);
-                        }}
-                        disabled={(date) => {
-                          // Disable past dates
-                          const today = new Date();
-                          today.setHours(0, 0, 0, 0);
-                          if (date < today) return true;
-                          // Disable if the day is closed at the location
-                          if (isDayClosed(date)) return true;
-                          // Disable if the date is in closedDays
-                          if (isSpecificDateClosed(date)) return true;
-                          return false;
-                        }}
-                        fromDate={new Date()}
-                        toDate={(() => {
-                          const d = new Date();
-                          d.setMonth(d.getMonth() + 6);
-                          return d;
-                        })()}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <Input
-                    type="time"
-                    value={scheduledTime}
-                    onChange={(e) => setScheduledTime(e.target.value)}
-                    className="w-32"
-                    suppressHydrationWarning
-                  />
-                </div>
-              </div>
-
-              {/* Group Quantity Selector */}
-              <div className={cn("flex flex-col gap-2", !isDateTimeSelected && "opacity-50")}>
-                <div className="text-sm font-medium">
-                  Qty
-                  {minQty > 0 && (
-                    <span className="text-xs text-muted-foreground font-normal ml-2">(min {minQty})</span>
-                  )}
-                  {maxCapacity && (
-                    <span className="text-xs text-muted-foreground font-normal ml-2">(max {maxCapacity})</span>
-                  )}
-                </div>
-                <div className="flex gap-2 items-center">
-                  <IconButton
-                    icon="minus"
-                    onClick={() => setGroupQty(Math.max(minQty || 1, groupQty - 1))}
-                    disabled={groupQty <= (minQty || 1) || !isDateTimeSelected}
-                  />
-                  <IconButton
-                    icon="plus"
-                    onClick={() => setGroupQty(groupQty + 1)}
-                    disabled={!isDateTimeSelected || (maxCapacity && groupQty >= maxCapacity)}
-                  />
-                  <div className="flex-1" />
-                  <div className="font-semibold">{groupQty}</div>
-                </div>
-              </div>
-
               {/* Base Products */}
               {group.products && group.products.length > 0 && (
-                <div className={cn("flex flex-col gap-2", !isDateTimeSelected && "opacity-50")}>
+                <div className="flex flex-col gap-2">
                   <div className="text-sm font-medium">Base Products</div>
                   {group.products.map((product, index) => {
                     const productData = availableProducts.find(p => p._id === (product._id || product).toString()) || product;
@@ -715,7 +542,7 @@ export default function GroupSheet({
                     const configuredProduct = configuredProducts[productData._id];
                     const productPrice = configuredProduct?.amount?.subtotal ?? configuredProduct?.amount?.total ?? 0;
                     const summary = getProductSummary(productData);
-                    const canClick = isDateTimeSelected && groupQty >= 1;
+                    const canClick = true;
 
                     return (
                       <div key={productData._id || `base-${index}`} className="flex items-center gap-2">
@@ -744,9 +571,7 @@ export default function GroupSheet({
                               <div className="text-xs text-muted-foreground truncate">{summary}</div>
                             )}
                             {!configured && (
-                              <div className="text-xs text-muted-foreground">
-                                {isDateTimeSelected ? 'Tap to configure' : 'Select date & time first'}
-                              </div>
+                              <div className="text-xs text-muted-foreground">Tap to configure</div>
                             )}
                           </div>
                           {configured ? (
@@ -764,7 +589,7 @@ export default function GroupSheet({
 
               {/* Variations with nested products */}
               {hasVariations && (
-                <div className={cn("flex flex-col gap-3", !isDateTimeSelected && "opacity-50 pointer-events-none")}>
+                <div className="flex flex-col gap-3">
                   <div className="text-sm font-medium">Variations</div>
                   {group.variations.map((variation, index) => {
                     const isSelected = selectedVariationIndex === index;
@@ -774,13 +599,10 @@ export default function GroupSheet({
                       <div key={index} className="flex flex-col gap-2">
                         {/* Variation header */}
                         <div
-                          className={cn(
-                            "text-sm flex space-x-2 items-center w-full py-1 rounded-md",
-                            isDateTimeSelected ? "cursor-pointer hover:bg-muted/50" : "cursor-not-allowed"
-                          )}
-                          onClick={() => isDateTimeSelected && setSelectedVariationIndex(prev => prev === index ? null : index)}
+                          className="text-sm flex space-x-2 items-center w-full py-1 rounded-md cursor-pointer hover:bg-muted/50"
+                          onClick={() => setSelectedVariationIndex(prev => prev === index ? null : index)}
                         >
-                          <SelectionCheck checked={isSelected} disabled={!isDateTimeSelected} />
+                          <SelectionCheck checked={isSelected} />
                           <div>{variation.name}</div>
                           {variation.useOverridePrice !== false && (
                             <div className="ml-auto">${Number(variation.amount || 0).toFixed(2)}</div>
@@ -794,7 +616,7 @@ export default function GroupSheet({
                               const productData = availableProducts.find(p => p._id === (product._id || product).toString()) || product;
                               const productId = (product._id || product).toString();
                               const instances = variationInstances[productId] || [0];
-                              const canClick = isDateTimeSelected;
+                              const canClick = true;
 
                               return (
                                 <div key={`var-${index}-prod-${pIndex}`} className="flex flex-col gap-2">
@@ -830,9 +652,7 @@ export default function GroupSheet({
                                               <div className="text-xs text-muted-foreground truncate">{summary}</div>
                                             )}
                                             {!configured && (
-                                              <div className="text-xs text-muted-foreground">
-                                                {isDateTimeSelected ? 'Tap to configure' : 'Select date & time first'}
-                                              </div>
+                                              <div className="text-xs text-muted-foreground">Tap to configure</div>
                                             )}
                                           </div>
                                           {configured ? (
@@ -887,7 +707,7 @@ export default function GroupSheet({
                 onClick={handleAddGroupToCart}
                 className="w-full cursor-pointer"
                 size="lg"
-                disabled={!allProductsConfigured || (minQty > 0 && groupQty < minQty)}
+                disabled={!allProductsConfigured || (minQty > 0 && derivedGroupQty < minQty)}
               >
                 {group.gId ? 'Update' : 'Add to Cart'}
               </Button>

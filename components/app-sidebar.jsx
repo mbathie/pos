@@ -60,6 +60,7 @@ export function AppSidebar(props) {
         { title: "Memberships", url: "/products/memberships" },
         { title: "General Entry", url: "/products/general" },
         { title: "Groups", url: "/products/groups" },
+        { title: "Prepaid Packs", url: "/products/prepaid" },
         { title: "Shop Mods", url: "/products/mods" },
         { title: "POS Interfaces", url: "/products/pos" },
         { title: "Adjustments", url: "/manage/adjustments" },

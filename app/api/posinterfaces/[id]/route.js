@@ -61,6 +61,17 @@ export async function GET(request, { params }) {
                         ...group
                       });
                     }
+                  } else if (containedItem.itemType === 'prepaid') {
+                    const { PrepaidPack } = await import('@/models');
+                    const pack = await PrepaidPack.findById(containedItem.itemId)
+                      .populate('products')
+                      .lean();
+                    if (pack) {
+                      populatedItems.push({
+                        itemType: 'prepaid',
+                        ...pack
+                      });
+                    }
                   }
                 }
               }
@@ -71,7 +82,8 @@ export async function GET(request, { params }) {
                   ...folder,
                   items: populatedItems, // Return unified array in order
                   products: populatedItems.filter(i => i.itemType === 'product'), // Legacy support
-                  groups: populatedItems.filter(i => i.itemType === 'group') // Legacy support
+                  groups: populatedItems.filter(i => i.itemType === 'group'), // Legacy support
+                  prepaids: populatedItems.filter(i => i.itemType === 'prepaid') // Legacy support
                 }
               };
             } else if (item.itemType === 'product' || item.itemType === 'divider') {
@@ -89,6 +101,15 @@ export async function GET(request, { params }) {
               return {
                 ...item.toObject(),
                 data: group
+              };
+            } else if (item.itemType === 'prepaid') {
+              const { PrepaidPack } = await import('@/models');
+              const pack = await PrepaidPack.findById(item.itemId)
+                .populate('products')
+                .lean();
+              return {
+                ...item.toObject(),
+                data: pack
               };
             }
             return item;

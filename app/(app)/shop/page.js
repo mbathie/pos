@@ -6,6 +6,7 @@ import ProductDetailClass from './(other)/classes/productDetailClass'
 import ProductDetailCourse from './(other)/classes/ProductDetailCourse'
 import ProductDetailMembership from './(other)/memberships/productDetailMembership'
 import GroupSheet from './GroupSheet'
+import PrepaidSheet from './PrepaidSheet'
 import Categories from './retail/cats'
 import Product from './product'
 import colors from '@/lib/tailwind-colors';
@@ -98,6 +99,8 @@ export default function Page() {
   const [total, setTotal] = useState(0)
   const [selectedGroup, setSelectedGroup] = useState(null)
   const [groupSheetOpen, setGroupSheetOpen] = useState(false)
+  const [selectedPrepaid, setSelectedPrepaid] = useState(null)
+  const [prepaidSheetOpen, setPrepaidSheetOpen] = useState(false)
   const [skipSetup, setSkipSetup] = useState(false)
   const [availableInterfaces, setAvailableInterfaces] = useState([])
   const [showInterfaceSelector, setShowInterfaceSelector] = useState(false)
@@ -280,6 +283,13 @@ export default function Page() {
     }
   }, [groupSheetOpen])
 
+  // Reset selectedPrepaid when prepaid sheet closes
+  useEffect(() => {
+    if (!prepaidSheetOpen) {
+      setSelectedPrepaid(null);
+    }
+  }, [prepaidSheetOpen])
+
   const loadPOSInterface = async () => {
     try {
       const response = await fetch('/api/posinterfaces/for-device')
@@ -349,6 +359,13 @@ export default function Page() {
             ...item.data,
             _id: item.itemId,
             type: 'group',
+            order: item.order
+          });
+        } else if (item.itemType === 'prepaid' && item.data) {
+          allItems.push({
+            ...item.data,
+            _id: item.itemId,
+            type: 'prepaid',
             order: item.order
           });
         }
@@ -553,10 +570,17 @@ export default function Page() {
         useMembership={{}}
         getProductTotal={getProductTotal}
         migrateScheduleFormat={migrateScheduleFormat}
-        location={location}
       />
 
-      <div className="flex space-x-4 h-full">
+      {/* Prepaid sheet for prepaid packs */}
+      <PrepaidSheet
+        open={prepaidSheetOpen}
+        onOpenChange={setPrepaidSheetOpen}
+        prepaid={selectedPrepaid}
+        onAddToCart={addToCart}
+      />
+
+      <div className="flex space-x-4 flex-1 min-h-0 overflow-hidden">
 
         {/* Left Panel */}
         <Categories
@@ -575,7 +599,7 @@ export default function Page() {
 
         {/* Right Panel */}
 
-        <div className='flex flex-1 flex-wrap gap-4 text-sm content-start'>
+        <div className='flex-1 min-w-0 overflow-y-auto flex flex-wrap gap-4 text-sm content-start'>
           {items.map((item) => {
             // Render dividers
             if (item.type === 'divider') {
@@ -641,6 +665,12 @@ export default function Page() {
                             borderColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]]}
                             tintColor={colors?.[item.color?.split('-')[0]]?.[item.color?.split('-')[1]]}
                             onClick={() => {
+                              // Handle prepaid click
+                              if (folderItem.itemType === 'prepaid' || folderItem.passes) {
+                                setSelectedPrepaid(folderItem);
+                                setPrepaidSheetOpen(true);
+                                return;
+                              }
                               // Handle group click
                               if (folderItem.amount || folderItem.itemType === 'group') {
                                 setSelectedGroup(folderItem);
@@ -723,6 +753,20 @@ export default function Page() {
                   onClick={() => {
                     setSelectedGroup(item);
                     setGroupSheetOpen(true);
+                  }}
+                />
+              );
+            }
+
+            // Render prepaid packs
+            if (item.type === 'prepaid') {
+              return (
+                <Product
+                  key={`prepaid-${item._id}`}
+                  product={item}
+                  onClick={() => {
+                    setSelectedPrepaid(item);
+                    setPrepaidSheetOpen(true);
                   }}
                 />
               );

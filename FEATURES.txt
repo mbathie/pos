@@ -1,3 +1,21 @@
+16.02.2026
+
+DONE - Unified check-in flow (16.02.2026)
+  - Single QR code per customer shows ALL products: classes, memberships, and prepaid passes
+  - Staff selects what to check in or redeem from a multi-section selection UI
+  - Pre-selects when only 1 class or 1 active membership
+  - Shows disabled checkboxes with badges for already checked-in classes, suspended/expired memberships
+  - Prepaid passes show product sub-lists with remaining count validation
+  - Unified processing endpoint handles all selections in one request
+  - Per-item success/error reporting in results
+  - PP: prefix QR code flow preserved as fallback
+  - Auto-close after submission result (5s), no auto-close for selection screen
+  - Shared library functions: processClassCheckin(), processPrepaidRedemption()
+  - Frontend: /app/(app)/checkin/CheckInClient.js
+  - Backend: /app/api/checkin/qr/route.js (unified lookup)
+  - Backend: /app/api/checkin/unified/route.js (unified processing)
+  - Library: /lib/checkin.js (shared functions)
+
 21.11.2025
 
 DONE - Stripe invoice system for group/company bookings (21.11.2025)

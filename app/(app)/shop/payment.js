@@ -126,6 +126,13 @@ export default function Page() {
       isGrouped: !!product.gId
     })
 
+    // Prepaid always requires a customer
+    if (product.type === 'prepaid') {
+      const needsCustomer = !cart.customer?._id
+      console.log('  🛒 Prepaid item needs customer:', needsCustomer)
+      return needsCustomer
+    }
+
     if (!product.waiverRequired) {
       console.log('  ✅ No waiver required, skipping')
       return false
@@ -1049,7 +1056,7 @@ export default function Page() {
   useEffect(() => {
     // Check if any product requires a waiver, is a class/course, or is part of a group
     const hasWaiverProduct = cart.products.some(p => p.waiverRequired === true)
-    const hasClassOrCourse = cart.products.some(p => ['class', 'course'].includes(p.type))
+    const hasClassOrCourse = cart.products.some(p => ['class', 'course', 'prepaid'].includes(p.type))
     const hasGroupProduct = cart.products.some(p => p.gId)
     setRequiresCustomerAssignment(hasWaiverProduct || hasClassOrCourse || hasGroupProduct)
   }, [cart.products])
@@ -1859,11 +1866,11 @@ export default function Page() {
                   return []
                 })}
 
-                {/* Show main customer if there are shop items with waiver requirement */}
-                {cart.products.some(p => p.type === 'shop' && p.waiverRequired) && (
+                {/* Show main customer if there are prepaid items or shop items with waiver requirement */}
+                {cart.products.some(p => p.type === 'prepaid' || (p.type === 'shop' && p.waiverRequired)) && (
                   <div className="flex items-center gap-2">
                     <div className="flex-1 flex items-center gap-2">
-                      <span className="text-sm font-medium">Shop Items</span>
+                      <span className="text-sm font-medium">{cart.products.some(p => p.type === 'prepaid') ? 'Prepaid Pack' : 'Shop Items'}</span>
                       <span className="text-sm text-muted-foreground">(Customer)</span>
                       <div className="flex-1 border-b border-dotted border-muted-foreground/30" />
                     </div>
@@ -1888,7 +1895,19 @@ export default function Page() {
                           />
                         </>
                       ) : (
-                        <span className="text-sm text-muted-foreground">Not assigned</span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedSlot({ isShopCustomer: true })
+                            setShowCustomerSelection(true)
+                          }}
+                          disabled={paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded'}
+                          className="cursor-pointer h-7 text-xs"
+                        >
+                          <Plus className="size-3" />
+                          Assign
+                        </Button>
                       )}
                     </div>
                   </div>

@@ -13,7 +13,7 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { IconButton, SelectionCheck } from '@/components/control-button'
+import { IconButton } from '@/components/control-button'
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { cn } from '@/lib/utils'
 import { useClass } from './useClass'
@@ -41,14 +41,6 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
 
   // Alert dialog state
   const [showOverlapAlert, setShowOverlapAlert] = useState(false)
-
-  // Initialize price quantities for group products
-  useEffect(() => {
-    if (isPartOfGroup && product?.groupQty && product?.prices?.length > 0) {
-      // Set the first price tier to the group quantity
-      setPriceQuantities({ 0: product.groupQty });
-    }
-  }, [isPartOfGroup, product?.groupQty, product?.prices])
 
   // Fetch existing schedule data for open schedule products
   useEffect(() => {
@@ -106,49 +98,8 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
         const date = new Date(product.selectedTimes[0].datetime);
         setSelectedDate(date);
       }
-    } else if (product?.groupScheduledDate && isPartOfGroup) {
-      // Pre-select the group's scheduled date for group products
-      setSelectedDate(new Date(product.groupScheduledDate));
-
-      // Pre-select the group's scheduled time for openSchedule products
-      if (product?.groupScheduledTime && product.openSchedule) {
-        setCustomTime(product.groupScheduledTime);
-      }
     }
-  }, [product?._id, product?.groupScheduledDate, product?.groupScheduledTime, isPartOfGroup, product?.openSchedule])
-
-  // Auto-select time slot when times are loaded and group scheduled time matches
-  useEffect(() => {
-    if (!isPartOfGroup || !product?.groupScheduledTime || product?.openSchedule) return;
-    if (selectedTimes.length > 0) return; // Already has a selection
-    if (timesForSelectedDate.length === 0) return;
-
-    // Convert group time (HH:mm format like "11:00") to match the time format in timesForSelectedDate
-    const groupTime = product.groupScheduledTime;
-    const [hours, minutes] = groupTime.split(':').map(Number);
-    const groupDate = product.groupScheduledDate ? new Date(product.groupScheduledDate) : null;
-
-    if (!groupDate) return;
-
-    // Build expected ISO datetime for matching
-    const expectedDateTime = new Date(groupDate);
-    expectedDateTime.setHours(hours, minutes, 0, 0);
-    const expectedIso = expectedDateTime.toISOString();
-
-    // Find matching time slot
-    const matchingTime = timesForSelectedDate.find(t => t.datetime === expectedIso);
-
-    if (matchingTime && !matchingTime.conflict) {
-      const groupQty = product.groupQty || 1;
-      // Auto-select if there's enough capacity
-      if (matchingTime.available >= groupQty) {
-        setSelectedTimes([{
-          ...matchingTime,
-          quantities: { 0: groupQty }
-        }]);
-      }
-    }
-  }, [timesForSelectedDate, isPartOfGroup, product?.groupScheduledTime, product?.groupScheduledDate, product?.openSchedule, product?.groupQty])
+  }, [product?._id])
 
   // Helper function to check if a day is closed at the location
   const isDayClosed = (date) => {
@@ -381,30 +332,26 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
 
                     return (
                       <div key={priceIdx} className="flex items-center gap-2">
-                        {!isPartOfGroup && (
-                          <>
-                            <IconButton
-                              icon="minus"
-                              onClick={() => {
-                                setPriceQuantities(prev => ({
-                                  ...prev,
-                                  [priceIdx]: Math.max(0, (prev[priceIdx] || 0) - 1)
-                                }));
-                              }}
-                              disabled={qty === 0}
-                            />
-                            <IconButton
-                              icon="plus"
-                              onClick={() => {
-                                setPriceQuantities(prev => ({
-                                  ...prev,
-                                  [priceIdx]: (prev[priceIdx] || 0) + 1
-                                }));
-                              }}
-                              disabled={atCapacity}
-                            />
-                          </>
-                        )}
+                        <IconButton
+                          icon="minus"
+                          onClick={() => {
+                            setPriceQuantities(prev => ({
+                              ...prev,
+                              [priceIdx]: Math.max(0, (prev[priceIdx] || 0) - 1)
+                            }));
+                          }}
+                          disabled={qty === 0}
+                        />
+                        <IconButton
+                          icon="plus"
+                          onClick={() => {
+                            setPriceQuantities(prev => ({
+                              ...prev,
+                              [priceIdx]: (prev[priceIdx] || 0) + 1
+                            }));
+                          }}
+                          disabled={atCapacity}
+                        />
                         <span className="flex-1">
                           {price.name}
                           {price.minor && (
@@ -490,115 +437,75 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
 
                         {!time.conflict && time.available > 0 && (
                           <div className="space-y-2 pl-2">
-                            {isPartOfGroup ? (
-                              // Checkbox for group products - select entire time slot
-                              (() => {
-                                const groupQty = product.groupQty || 1;
-                                const insufficientSpots = groupQty > time.available;
+                            {product.prices?.map((price, priceIdx) => {
+                              const qty = selectedTime?.quantities?.[priceIdx] || 0;
+                              const atCapacity = totalQtyForTime >= time.available;
 
-                                return (
-                                  <div className="flex items-center gap-3 py-2">
-                                    <SelectionCheck
-                                      checked={selectedTimes.some(t => t.datetime === time.datetime)}
-                                      disabled={insufficientSpots}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          // Select this time slot, clear any others, set first price tier to group qty
-                                          setSelectedTimes([{
-                                            ...time,
-                                            quantities: { 0: groupQty }
-                                          }]);
-                                        } else {
-                                          // Deselect this time slot
-                                          setSelectedTimes(prev => prev.filter(t => t.datetime !== time.datetime));
-                                        }
-                                      }}
-                                    />
-                                    <span
-                                      className={`flex-1 text-sm ${insufficientSpots ? 'text-muted-foreground cursor-not-allowed' : 'cursor-pointer'}`}
-                                    >
-                                      Select this time slot ({groupQty}x {product.prices?.[0]?.name || 'Adult'})
-                                      {insufficientSpots && (
-                                        <span className="text-xs text-destructive ml-2">
-                                          (Insufficient spots)
-                                        </span>
-                                      )}
-                                    </span>
-                                  </div>
-                                );
-                              })()
-                            ) : (
-                              // Regular +/- buttons for non-group products
-                              product.prices?.map((price, priceIdx) => {
-                                const qty = selectedTime?.quantities?.[priceIdx] || 0;
-                                const atCapacity = totalQtyForTime >= time.available;
+                              return (
+                                <div key={priceIdx} className="flex items-center gap-2">
+                                  <IconButton
+                                    icon="minus"
+                                    onClick={() => {
+                                      setSelectedTimes(prev => {
+                                        const existing = prev.find(t => t.datetime === time.datetime);
+                                        if (existing) {
+                                          const newQty = Math.max(0, (existing.quantities?.[priceIdx] || 0) - 1);
+                                          if (newQty === 0) {
+                                            // Remove this price from quantities
+                                            const newQuantities = { ...existing.quantities };
+                                            delete newQuantities[priceIdx];
 
-                                return (
-                                  <div key={priceIdx} className="flex items-center gap-2">
-                                    <IconButton
-                                      icon="minus"
-                                      onClick={() => {
-                                        setSelectedTimes(prev => {
-                                          const existing = prev.find(t => t.datetime === time.datetime);
-                                          if (existing) {
-                                            const newQty = Math.max(0, (existing.quantities?.[priceIdx] || 0) - 1);
-                                            if (newQty === 0) {
-                                              // Remove this price from quantities
-                                              const newQuantities = { ...existing.quantities };
-                                              delete newQuantities[priceIdx];
-
-                                              // If no quantities left, remove the time entirely
-                                              if (Object.keys(newQuantities).length === 0) {
-                                                return prev.filter(t => t.datetime !== time.datetime);
-                                              }
-
-                                              return prev.map(t =>
-                                                t.datetime === time.datetime
-                                                  ? { ...t, quantities: newQuantities }
-                                                  : t
-                                              );
+                                            // If no quantities left, remove the time entirely
+                                            if (Object.keys(newQuantities).length === 0) {
+                                              return prev.filter(t => t.datetime !== time.datetime);
                                             }
+
                                             return prev.map(t =>
                                               t.datetime === time.datetime
-                                                ? { ...t, quantities: { ...t.quantities, [priceIdx]: newQty } }
+                                                ? { ...t, quantities: newQuantities }
                                                 : t
                                             );
                                           }
-                                          return prev;
-                                        });
-                                      }}
-                                      disabled={qty === 0}
-                                    />
-                                    <IconButton
-                                      icon="plus"
-                                      onClick={() => {
-                                        setSelectedTimes(prev => {
-                                          const existing = prev.find(t => t.datetime === time.datetime);
-                                          if (existing) {
-                                            return prev.map(t =>
-                                              t.datetime === time.datetime
-                                                ? { ...t, quantities: { ...t.quantities, [priceIdx]: (t.quantities?.[priceIdx] || 0) + 1 } }
-                                                : t
-                                            );
-                                          } else {
-                                            return [...prev, { ...time, quantities: { [priceIdx]: 1 } }];
-                                          }
-                                        });
-                                      }}
-                                      disabled={atCapacity}
-                                    />
-                                    <span className="flex-1">
-                                      {price.name}
-                                      {price.minor && (
-                                        <Badge variant="secondary" className="text-xs ml-1">Minor</Badge>
-                                      )}
-                                    </span>
-                                    <span className="w-12 text-center">{qty}x</span>
-                                    <span className="w-16 text-right">${parseFloat(price.value || 0).toFixed(2)}</span>
-                                  </div>
-                                );
-                              })
-                            )}
+                                          return prev.map(t =>
+                                            t.datetime === time.datetime
+                                              ? { ...t, quantities: { ...t.quantities, [priceIdx]: newQty } }
+                                              : t
+                                          );
+                                        }
+                                        return prev;
+                                      });
+                                    }}
+                                    disabled={qty === 0}
+                                  />
+                                  <IconButton
+                                    icon="plus"
+                                    onClick={() => {
+                                      setSelectedTimes(prev => {
+                                        const existing = prev.find(t => t.datetime === time.datetime);
+                                        if (existing) {
+                                          return prev.map(t =>
+                                            t.datetime === time.datetime
+                                              ? { ...t, quantities: { ...t.quantities, [priceIdx]: (t.quantities?.[priceIdx] || 0) + 1 } }
+                                              : t
+                                          );
+                                        } else {
+                                          return [...prev, { ...time, quantities: { [priceIdx]: 1 } }];
+                                        }
+                                      });
+                                    }}
+                                    disabled={atCapacity}
+                                  />
+                                  <span className="flex-1">
+                                    {price.name}
+                                    {price.minor && (
+                                      <Badge variant="secondary" className="text-xs ml-1">Minor</Badge>
+                                    )}
+                                  </span>
+                                  <span className="w-12 text-center">{qty}x</span>
+                                  <span className="w-16 text-right">${parseFloat(price.value || 0).toFixed(2)}</span>
+                                </div>
+                              );
+                            })}
 
                             {/* Warning when minimum purchase not met - show inside selected time slot */}
                             {selectedTime && minPurchase && totalQuantity > 0 && totalQuantity < minPurchase && (

@@ -497,6 +497,30 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
             </div>
           )
 
+          else if (p.type=='prepaid') return (
+            <div key={pIdx} className="flex flex-col space-y-1">
+              <div className="flex">
+                <div>{p.name}</div>
+                <div
+                  className='ml-1 cursor-pointer mt-0.5'
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    removeFromCart(pIdx);
+                  }}
+                >
+                  <Trash2 className='size-4'/>
+                </div>
+              </div>
+              {/* Display prices */}
+              {p.prices?.filter(price => price.qty > 0).map((price, i) => (
+                <div key={i} className="flex">
+                  <div>{price.qty}x {price.name || 'Standard'}</div>
+                  <div className="ml-auto">${(price.qty * parseFloat(price.value)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                </div>
+              ))}
+            </div>
+          )
+
         })}
       </div>
       

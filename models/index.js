@@ -21,6 +21,8 @@ import Mod from './Mod.js';
 import ProductGroup from './ProductGroup.js';
 import POSInterface from './POSInterface.js';
 import Tag from './Tag.js';
+import PrepaidPack from './PrepaidPack.js';
+import PrepaidPass from './PrepaidPass.js';
 
 // Export all models
 export {
@@ -45,5 +47,7 @@ export {
   Mod,
   ProductGroup,
   POSInterface,
-  Tag
+  Tag,
+  PrepaidPack,
+  PrepaidPass
 };

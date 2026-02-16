@@ -601,6 +601,50 @@ export default function TransactionDetailsPage() {
     );
   };
 
+  const PrepaidProductsCard = ({ products }) => {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Prepaid Packs</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Pack</TableHead>
+                <TableHead>Passes</TableHead>
+                <TableHead>Redeemable Products</TableHead>
+                <TableHead className="text-right">Subtotal</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.map((product, index) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>{product.passes || '-'}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1">
+                      {product.products?.length > 0 ? (
+                        product.products.map((p, pIndex) => (
+                          <Badge key={pIndex} variant="secondary" className="text-xs">
+                            {p.name}
+                          </Badge>
+                        ))
+                      ) : '-'}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {formatCurrency(product.amount?.subtotal)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    );
+  };
+
   if (loading) {
     return (
       <div className="mx-4 mt-4">
@@ -1322,6 +1366,14 @@ export default function TransactionDetailsPage() {
             }
             return <MembershipProductsCard key={`membership-${index}`} products={[item]} isGrouped={false} />;
           })}
+        </>
+      )}
+
+      {productGroups.prepaid && (
+        <>
+          {productGroups.prepaid.map((item, index) => (
+            <PrepaidProductsCard key={`prepaid-${index}`} products={[item]} />
+          ))}
         </>
       )}
 
