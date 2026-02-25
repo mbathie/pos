@@ -57,6 +57,7 @@ export default function ProductDetail({ open, setOpen, product, setQty }) {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="cursor-pointer"
                     onClick={() => setQty({ type: '-', pIdx })}
                     disabled={!price.qty}
                   >
@@ -65,6 +66,7 @@ export default function ProductDetail({ open, setOpen, product, setQty }) {
                   <Button
                     variant="outline"
                     size="sm"
+                    className="cursor-pointer"
                     onClick={() => setQty({ type: '+', pIdx })}
                   >
                     <Plus className="h-4 w-4" />
@@ -99,8 +101,10 @@ export default function ProductDetail({ open, setOpen, product, setQty }) {
           </div>
 
           <SheetClose asChild>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
+              className="w-full cursor-pointer"
+              size="lg"
               disabled={!total}
               onClick={async () => {
                 const _product = await calcCartValueGeneral({product})
@@ -111,7 +115,7 @@ export default function ProductDetail({ open, setOpen, product, setQty }) {
                 await addToCart(_product)
               }}
             >
-              Add
+              Add to Cart
             </Button>
           </SheetClose>
         </SheetFooter>

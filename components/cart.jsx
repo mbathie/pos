@@ -465,7 +465,7 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
               {p.prices?.filter(price => price.qty > 0).map((price, i) => (
                 <div key={i} className="flex">
                   <div>{price.qty}x {price.name || 'Standard'}</div>
-                  <div className="ml-auto">${parseFloat(price.value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div className="ml-auto">${(price.qty * parseFloat(price.value)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
               ))}
             </div>

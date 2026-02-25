@@ -5,6 +5,8 @@ import ProductDetail from './retail/productDetail'
 import ProductDetailClass from './(other)/classes/productDetailClass'
 import ProductDetailCourse from './(other)/classes/ProductDetailCourse'
 import ProductDetailMembership from './(other)/memberships/productDetailMembership'
+import ProductDetailGeneral from './(other)/general/productDetail'
+import { useHandler as useHandlerGeneral } from './(other)/general/useHandler'
 import GroupSheet from './GroupSheet'
 import PrepaidSheet from './PrepaidSheet'
 import Categories from './retail/cats'
@@ -109,6 +111,7 @@ export default function Page() {
   // Initialize class/course hooks
   const { setTimesClass, setTimesCourse } = useClass({ product, setProduct })
   const { } = useMembership({ product, setProduct })
+  const { setQty: setQtyGeneral } = useHandlerGeneral({ setProduct })
 
   useEffect(() => {
     initializeShop()
@@ -545,7 +548,10 @@ export default function Page() {
       {product?.type === 'membership' && (
         <ProductDetailMembership product={product} setProduct={setProduct} open={open} setOpen={setOpen} />
       )}
-      {(!product?.type || (product?.type !== 'class' && product?.type !== 'course' && product?.type !== 'membership')) && (
+      {product?.type === 'general' && (
+        <ProductDetailGeneral product={product} setQty={setQtyGeneral} open={open} setOpen={setOpen} />
+      )}
+      {(!product?.type || !['class', 'course', 'membership', 'general'].includes(product?.type)) && (
         <ProductDetail product={product} setProduct={setProduct} open={open} setOpen={setOpen} />
       )}
 
@@ -681,10 +687,10 @@ export default function Page() {
                               const cartProduct = {
                                 ...folderItem,
                                 stockQty: folderItem.qty,
-                                qty: folderItem.type === 'class' || folderItem.type === 'course' || folderItem.type === 'membership' ? 0 : 1,
+                                qty: folderItem.type === 'class' || folderItem.type === 'course' || folderItem.type === 'membership' || folderItem.type === 'general' ? 0 : 1,
                                 schedule: folderItem.type === 'course' ? migrateScheduleFormat(folderItem.schedule) : folderItem.schedule,
-                                // Initialize prices with qty for memberships
-                                ...(folderItem.type === 'membership' && folderItem.prices && {
+                                // Initialize prices with qty for memberships and general entry
+                                ...((folderItem.type === 'membership' || folderItem.type === 'general') && folderItem.prices && {
                                   prices: folderItem.prices.map(p => ({ ...p, qty: p.qty || 0 }))
                                 })
                               };
@@ -709,10 +715,10 @@ export default function Page() {
                                 const cartProduct = {
                                   ...p,
                                   stockQty: p.qty,
-                                  qty: p.type === 'class' || p.type === 'course' || p.type === 'membership' ? 0 : 1,
+                                  qty: p.type === 'class' || p.type === 'course' || p.type === 'membership' || p.type === 'general' ? 0 : 1,
                                   schedule: p.type === 'course' ? migrateScheduleFormat(p.schedule) : p.schedule,
-                                  // Initialize prices with qty for memberships
-                                  ...(p.type === 'membership' && p.prices && {
+                                  // Initialize prices with qty for memberships and general entry
+                                  ...((p.type === 'membership' || p.type === 'general') && p.prices && {
                                     prices: p.prices.map(price => ({ ...price, qty: price.qty || 0 }))
                                   })
                                 }
@@ -781,10 +787,10 @@ export default function Page() {
                   const cartProduct = {
                     ...item,
                     stockQty: item.qty,
-                    qty: item.type === 'class' || item.type === 'course' || item.type === 'membership' ? 0 : 1,
+                    qty: item.type === 'class' || item.type === 'course' || item.type === 'membership' || item.type === 'general' ? 0 : 1,
                     schedule: item.type === 'course' ? migrateScheduleFormat(item.schedule) : item.schedule,
-                    // Initialize prices with qty for memberships
-                    ...(item.type === 'membership' && item.prices && {
+                    // Initialize prices with qty for memberships and general entry
+                    ...((item.type === 'membership' || item.type === 'general') && item.prices && {
                       prices: item.prices.map(price => ({ ...price, qty: price.qty || 0 }))
                     })
                   }
