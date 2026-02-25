@@ -12,6 +12,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Loader2, Save, CheckCircle, Trash2, Plus, Info } from 'lucide-react'
 import { AlertDialog, AlertDialogAction, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { ProductThumbnail } from '@/components/product-thumbnail'
+import ProductInstructions from '../(entry)/ProductInstructions'
+import ProductTerms from '../(entry)/ProductTerms'
 
 function initPrices(pack) {
   if (pack?.prices?.length) return pack.prices.map(p => ({ name: p.name || '', value: p.value != null ? String(p.value) : '', minor: !!p.minor }))
@@ -26,6 +28,8 @@ export default function PrepaidSheet({ open, onOpenChange, pack, categoriesWithP
   const [passes, setPasses] = useState(pack?.passes != null ? String(pack.passes) : '')
   const [prices, setPrices] = useState(() => initPrices(pack))
   const [waiverRequired, setWaiverRequired] = useState(pack?.waiverRequired || false)
+  const [instructionsContent, setInstructionsContent] = useState(pack?.instructionsContent || '')
+  const [tandcContent, setTandcContent] = useState(pack?.tandcContent || '')
   const [selected, setSelected] = useState(new Set(pack?.products?.map(p => p._id || p) || []))
   const [saving, setSaving] = useState(false)
   const [autoSaving, setAutoSaving] = useState(false)
@@ -40,6 +44,8 @@ export default function PrepaidSheet({ open, onOpenChange, pack, categoriesWithP
     setPasses(pack?.passes != null ? String(pack.passes) : '')
     setPrices(initPrices(pack))
     setWaiverRequired(pack?.waiverRequired || false)
+    setInstructionsContent(pack?.instructionsContent || '')
+    setTandcContent(pack?.tandcContent || '')
     setSelected(new Set(pack?.products?.map(p => p._id || p) || []))
     setDirty(false)
   }, [pack?._id])
@@ -55,6 +61,8 @@ export default function PrepaidSheet({ open, onOpenChange, pack, categoriesWithP
         minor: p.minor
       })),
       waiverRequired,
+      instructionsContent,
+      tandcContent,
       products: Array.from(selected),
     }
   }
@@ -74,6 +82,8 @@ export default function PrepaidSheet({ open, onOpenChange, pack, categoriesWithP
       description: pack?.description || '',
       passes: pack?.passes != null ? String(pack.passes) : '',
       waiverRequired: pack?.waiverRequired || false,
+      instructionsContent: pack?.instructionsContent || '',
+      tandcContent: pack?.tandcContent || '',
       products: (pack?.products || []).map(p => p._id || p),
     }
 
@@ -83,6 +93,8 @@ export default function PrepaidSheet({ open, onOpenChange, pack, categoriesWithP
       passes !== original.passes ||
       pricesChanged ||
       nextPayload.waiverRequired !== original.waiverRequired ||
+      nextPayload.instructionsContent !== original.instructionsContent ||
+      nextPayload.tandcContent !== original.tandcContent ||
       nextPayload.products.length !== original.products.length ||
       nextPayload.products.some((id, i) => id !== original.products[i])
     )
@@ -121,7 +133,7 @@ export default function PrepaidSheet({ open, onOpenChange, pack, categoriesWithP
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [name, description, passes, prices, waiverRequired, selected, pack?._id])
+  }, [name, description, passes, prices, waiverRequired, instructionsContent, tandcContent, selected, pack?._id])
 
   async function handleSave() {
     if (!name.trim()) return toast.error('Enter a pack name')
@@ -323,6 +335,19 @@ export default function PrepaidSheet({ open, onOpenChange, pack, categoriesWithP
               excludeTypes={['divider', 'category', 'membership']}
             />
           </div>
+
+          <ProductInstructions
+            value={instructionsContent}
+            onChange={setInstructionsContent}
+            placeholder="Enter instructions for prepaid pack holders..."
+          />
+
+          <ProductTerms
+            value={tandcContent}
+            onChange={setTandcContent}
+            placeholder="Enter terms and conditions for this prepaid pack..."
+            productId={pack?._id}
+          />
 
           <div className="flex items-center gap-2">
             <Checkbox

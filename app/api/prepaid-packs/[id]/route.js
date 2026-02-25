@@ -28,6 +28,8 @@ export async function PUT(req, { params }) {
   if (Array.isArray(body.prices)) update.prices = body.prices;
   if (body.active !== undefined) update.active = body.active;
   if (body.waiverRequired !== undefined) update.waiverRequired = body.waiverRequired;
+  if (body.instructionsContent !== undefined) update.instructionsContent = body.instructionsContent;
+  if (body.tandcContent !== undefined) update.tandcContent = body.tandcContent;
 
   const pack = await PrepaidPack.findByIdAndUpdate(id, update, { new: true })
     .populate('products', 'name thumbnail');

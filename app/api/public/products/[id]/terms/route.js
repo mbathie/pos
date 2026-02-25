@@ -1,18 +1,37 @@
 import { NextResponse } from 'next/server'
 import { connectDB } from '@/lib/mongoose'
-import { Product, Category, Org } from '@/models'
+import { Product, Category, Org, PrepaidPack } from '@/models'
 
 export async function GET(request, { params }) {
   try {
     await connectDB()
-    
+
     const { id } = await params
 
     // Find the product and populate its organization directly
-    const product = await Product.findById(id)
+    let product = await Product.findById(id)
       .select('name desc thumbnail tandcContent org')
       .populate('org', 'name logo tandcContent addressLine suburb state postcode phone email')
       .lean()
+
+    // If not found as a Product, check PrepaidPack
+    if (!product) {
+      const pack = await PrepaidPack.findById(id)
+        .select('name description thumbnail tandcContent org')
+        .populate('org', 'name logo tandcContent addressLine suburb state postcode phone email')
+        .lean()
+
+      if (pack) {
+        product = {
+          _id: pack._id,
+          name: pack.name,
+          desc: pack.description,
+          thumbnail: pack.thumbnail,
+          tandcContent: pack.tandcContent,
+          org: pack.org
+        }
+      }
+    }
 
     if (!product) {
       return NextResponse.json(

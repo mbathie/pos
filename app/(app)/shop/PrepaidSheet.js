@@ -50,6 +50,8 @@ export default function PrepaidSheet({ open, onOpenChange, prepaid, onAddToCart 
       type: 'prepaid',
       thumbnail: prepaid.thumbnail,
       waiverRequired: prepaid.waiverRequired || false,
+      instructionsContent: prepaid.instructionsContent || '',
+      tandcContent: prepaid.tandcContent || '',
       passes: packPasses,
       products: (prepaid.products || []).map(p => ({
         _id: p._id,

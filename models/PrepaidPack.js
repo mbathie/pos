@@ -13,6 +13,8 @@ const PrepaidPackSchema = new mongoose.Schema({
   }],
   passes: { type: Number },
   amount: { type: Number },
+  instructionsContent: { type: String },
+  tandcContent: { type: String },
   active: { type: Boolean, default: true },
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
 }, { timestamps: true });
