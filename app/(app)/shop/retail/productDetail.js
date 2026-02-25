@@ -66,7 +66,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                 isDefault: mod.isDefault || false,
                 order: mod.order || 0,
                 allowMultiple: mod.allowMultiple !== false, // Default to true if not set
-                qty: 0
+                qty: mod.isDefault ? 1 : 0
               }))
               .sort((a, b) => a.order - b.order) // Sort mods by order
           }))
