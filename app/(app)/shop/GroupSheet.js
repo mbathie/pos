@@ -273,6 +273,8 @@ export default function GroupSheet({
       variations: existingConfig?.variations || variations,
       isPartOfGroup: true, // Mark as part of group
       groupHasPriceOverride: selectedVariation?.useOverridePrice !== false, // Whether group variation overrides price
+      groupMinQty: minQty || 0, // Pass group's minQty to child products
+      groupMinBookingPeriod: group?.minBookingPeriod || null, // Pass min booking period to child products
       instanceIndex: instanceIndex, // Track which instance this is (for variation products)
       configKey: configKey // Store the config key for saving
     };

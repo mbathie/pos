@@ -29,6 +29,7 @@ export async function PUT(req, { params }) {
   if (Array.isArray(body.variations)) update.variations = body.variations;
   if (body.amount !== undefined) update.amount = body.amount;
   if (body.minQty !== undefined) update.minQty = body.minQty || null;
+  if (body.minBookingPeriod !== undefined) update.minBookingPeriod = body.minBookingPeriod;
   if (body.active !== undefined) update.active = body.active;
 
   const group = await ProductGroup.findByIdAndUpdate(id, update, { new: true })

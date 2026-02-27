@@ -255,6 +255,13 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                     today.setHours(0, 0, 0, 0);
                     if (date < today) return true;
 
+                    // Enforce min booking period from group
+                    if (product.groupMinBookingPeriod?.value) {
+                      const { value, unit } = product.groupMinBookingPeriod;
+                      const earliest = dayjs().add(value, unit).startOf('day');
+                      if (dayjs(date).isBefore(earliest)) return true;
+                    }
+
                     // Disable if the day is closed at the location (store hours)
                     if (isDayClosed(date)) return true;
 
@@ -280,7 +287,20 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                 />
               </PopoverContent>
             </Popover>
+            {/* Min booking period notice */}
+            {product.groupMinBookingPeriod?.value > 0 && (
+              <p className="text-xs text-muted-foreground">
+                Requires {product.groupMinBookingPeriod.value} {product.groupMinBookingPeriod.unit}{product.groupMinBookingPeriod.value !== 1 ? 's' : ''} advance booking
+              </p>
+            )}
           </div>
+
+          {/* Group minimum quantity notice */}
+          {product.groupMinQty > 0 && (
+            <div className="p-3 bg-accent/50 border rounded-md text-sm">
+              Minimum {product.groupMinQty} attendee{product.groupMinQty !== 1 ? 's' : ''} required for this group
+            </div>
+          )}
 
           {/* Open Schedule: Custom Time and Duration Inputs */}
           {product.openSchedule && selectedDate && (
@@ -540,8 +560,8 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
               className='cursor-pointer w-full'
               disabled={
                 product.openSchedule
-                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0) || Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable || !meetsMinPurchase
-                  : selectedTimes.length === 0 || !meetsMinPurchase
+                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0) || Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable || !meetsMinPurchase || (product.groupMinQty > 0 && totalQuantity < product.groupMinQty)
+                  : selectedTimes.length === 0 || !meetsMinPurchase || (product.groupMinQty > 0 && totalQuantity < product.groupMinQty)
               }
               onClick={async () => {
                 if (product.openSchedule) {
@@ -626,8 +646,8 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
               className='cursor-pointer w-full'
               disabled={
                 product.openSchedule
-                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0) || Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable || !meetsMinPurchase
-                  : selectedTimes.length === 0 || !meetsMinPurchase
+                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0) || Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable || !meetsMinPurchase || (product.groupMinQty > 0 && totalQuantity < product.groupMinQty)
+                  : selectedTimes.length === 0 || !meetsMinPurchase || (product.groupMinQty > 0 && totalQuantity < product.groupMinQty)
               }
               onClick={async () => {
                 if (product.openSchedule) {

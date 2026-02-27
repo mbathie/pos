@@ -5,6 +5,7 @@ import { NumberInput } from '@/components/ui/number-input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import ProductCategorySelector from '@/components/discounts/product-category-selector'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -15,6 +16,8 @@ import { ProductThumbnail } from '@/components/product-thumbnail'
 export default function GroupSheet({ open, onOpenChange, group, categoriesWithProducts, onSaved, onDeleted, setIconDialogOpen, setIconDialogQuery }) {
   const [name, setName] = useState(group?.name || '')
   const [minQty, setMinQty] = useState(group?.minQty ?? null)
+  const [minBookingPeriodValue, setMinBookingPeriodValue] = useState(group?.minBookingPeriod?.value ?? null)
+  const [minBookingPeriodUnit, setMinBookingPeriodUnit] = useState(group?.minBookingPeriod?.unit || 'day')
   const [selected, setSelected] = useState(new Set(group?.products?.map(p => p._id || p) || []))
   const [variations, setVariations] = useState(
     group?.variations?.length > 0
@@ -36,6 +39,8 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
   React.useEffect(() => {
     setName(group?.name || '')
     setMinQty(group?.minQty ?? null)
+    setMinBookingPeriodValue(group?.minBookingPeriod?.value ?? null)
+    setMinBookingPeriodUnit(group?.minBookingPeriod?.unit || 'day')
     setSelected(new Set(group?.products?.map(p => p._id || p) || []))
     setVariations(
       group?.variations?.length > 0
@@ -65,6 +70,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
     const nextPayload = {
       name: name.trim(),
       minQty: minQty,
+      minBookingPeriod: { value: minBookingPeriodValue, unit: minBookingPeriodUnit },
       products: Array.from(selected),
       variations: serializeVariations(variations)
     }
@@ -78,6 +84,8 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
     const original = {
       name: group?.name || '',
       minQty: group?.minQty ?? null,
+      minBookingPeriodValue: group?.minBookingPeriod?.value ?? null,
+      minBookingPeriodUnit: group?.minBookingPeriod?.unit || 'day',
       products: (group?.products || []).map(p => p._id || p),
       variations: originalVariations
     }
@@ -97,6 +105,8 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
     const changed = (
       nextPayload.name !== original.name ||
       nextPayload.minQty !== original.minQty ||
+      nextPayload.minBookingPeriod.value !== original.minBookingPeriodValue ||
+      nextPayload.minBookingPeriod.unit !== original.minBookingPeriodUnit ||
       nextPayload.products.length !== original.products.length ||
       nextPayload.products.some((id, i) => id !== original.products[i]) ||
       variationsChanged
@@ -136,7 +146,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [name, minQty, selected, variations, group?._id])
+  }, [name, minQty, minBookingPeriodValue, minBookingPeriodUnit, selected, variations, group?._id])
 
   async function handleSave() {
     if (!name.trim()) return toast.error('Enter a group name')
@@ -163,6 +173,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
         body: JSON.stringify({
           name: name.trim(),
           minQty: minQty,
+          minBookingPeriod: { value: minBookingPeriodValue, unit: minBookingPeriodUnit },
           products: Array.from(selected),
           variations: serializeVariations(variations)
         })
@@ -310,6 +321,42 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
               placeholder='No minimum'
               className='w-32'
             />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <div className='flex items-center gap-2'>
+              <Label>Minimum Booking Period</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-4 w-4 text-muted-foreground" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Minimum advance notice required. Sessions within this period cannot be booked.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className='flex items-center gap-2'>
+              <NumberInput
+                value={minBookingPeriodValue}
+                onChange={setMinBookingPeriodValue}
+                placeholder='None'
+                className='w-24'
+              />
+              {minBookingPeriodValue > 0 && (
+                <Select value={minBookingPeriodUnit} onValueChange={setMinBookingPeriodUnit}>
+                  <SelectTrigger className='w-28'>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='day'>Day</SelectItem>
+                    <SelectItem value='week'>Week</SelectItem>
+                    <SelectItem value='month'>Month</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           <div className="flex flex-col gap-2">

@@ -15,6 +15,10 @@ const ProductGroupSchema = new mongoose.Schema({
   variations: [ProductGroupVariationSchema], // variations with their own price and additional products
   amount: { type: Number }, // deprecated - use variations instead, kept for backward compatibility
   minQty: { type: Number, default: null }, // minimum quantity required to add to cart (null/0 = no minimum)
+  minBookingPeriod: {
+    value: { type: Number, default: null },
+    unit: { type: String, enum: ['day', 'week', 'month'], default: 'day' }
+  },
   active: { type: Boolean, default: true },
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
 }, { timestamps: true });
