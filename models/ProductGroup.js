@@ -19,6 +19,7 @@ const ProductGroupSchema = new mongoose.Schema({
     value: { type: Number, default: null },
     unit: { type: String, enum: ['day', 'week', 'month'], default: 'day' }
   },
+  linkQtyToVariations: { type: Boolean, default: false },
   active: { type: Boolean, default: true },
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
 }, { timestamps: true });

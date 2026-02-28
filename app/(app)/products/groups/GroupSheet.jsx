@@ -18,6 +18,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
   const [minQty, setMinQty] = useState(group?.minQty ?? null)
   const [minBookingPeriodValue, setMinBookingPeriodValue] = useState(group?.minBookingPeriod?.value ?? null)
   const [minBookingPeriodUnit, setMinBookingPeriodUnit] = useState(group?.minBookingPeriod?.unit || 'day')
+  const [linkQtyToVariations, setLinkQtyToVariations] = useState(group?.linkQtyToVariations || false)
   const [selected, setSelected] = useState(new Set(group?.products?.map(p => p._id || p) || []))
   const [variations, setVariations] = useState(
     group?.variations?.length > 0
@@ -41,6 +42,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
     setMinQty(group?.minQty ?? null)
     setMinBookingPeriodValue(group?.minBookingPeriod?.value ?? null)
     setMinBookingPeriodUnit(group?.minBookingPeriod?.unit || 'day')
+    setLinkQtyToVariations(group?.linkQtyToVariations || false)
     setSelected(new Set(group?.products?.map(p => p._id || p) || []))
     setVariations(
       group?.variations?.length > 0
@@ -71,6 +73,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
       name: name.trim(),
       minQty: minQty,
       minBookingPeriod: { value: minBookingPeriodValue, unit: minBookingPeriodUnit },
+      linkQtyToVariations,
       products: Array.from(selected),
       variations: serializeVariations(variations)
     }
@@ -86,6 +89,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
       minQty: group?.minQty ?? null,
       minBookingPeriodValue: group?.minBookingPeriod?.value ?? null,
       minBookingPeriodUnit: group?.minBookingPeriod?.unit || 'day',
+      linkQtyToVariations: group?.linkQtyToVariations || false,
       products: (group?.products || []).map(p => p._id || p),
       variations: originalVariations
     }
@@ -107,6 +111,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
       nextPayload.minQty !== original.minQty ||
       nextPayload.minBookingPeriod.value !== original.minBookingPeriodValue ||
       nextPayload.minBookingPeriod.unit !== original.minBookingPeriodUnit ||
+      nextPayload.linkQtyToVariations !== original.linkQtyToVariations ||
       nextPayload.products.length !== original.products.length ||
       nextPayload.products.some((id, i) => id !== original.products[i]) ||
       variationsChanged
@@ -146,7 +151,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [name, minQty, minBookingPeriodValue, minBookingPeriodUnit, selected, variations, group?._id])
+  }, [name, minQty, minBookingPeriodValue, minBookingPeriodUnit, linkQtyToVariations, selected, variations, group?._id])
 
   async function handleSave() {
     if (!name.trim()) return toast.error('Enter a group name')
@@ -174,6 +179,7 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
           name: name.trim(),
           minQty: minQty,
           minBookingPeriod: { value: minBookingPeriodValue, unit: minBookingPeriodUnit },
+          linkQtyToVariations,
           products: Array.from(selected),
           variations: serializeVariations(variations)
         })
@@ -357,6 +363,27 @@ export default function GroupSheet({ open, onOpenChange, group, categoriesWithPr
                 </Select>
               )}
             </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="linkQtyToVariations"
+              checked={linkQtyToVariations}
+              onCheckedChange={(checked) => setLinkQtyToVariations(checked)}
+            />
+            <Label htmlFor="linkQtyToVariations" className="cursor-pointer text-sm font-normal">
+              Link Qty to Variations
+            </Label>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>When enabled, variation product quantities will automatically match the base product quantity</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           <div className="flex flex-col gap-2">

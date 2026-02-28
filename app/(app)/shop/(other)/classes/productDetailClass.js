@@ -98,6 +98,28 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
         const date = new Date(product.selectedTimes[0].datetime);
         setSelectedDate(date);
       }
+
+      // Restore open schedule state (customTime, customDuration, priceQuantities)
+      if (product.openSchedule) {
+        if (product.selectedTimes[0]?.time) {
+          setCustomTime(product.selectedTimes[0].time);
+        }
+        if (product.selectedTimes[0]?.duration) {
+          setCustomDuration(product.selectedTimes[0].duration);
+        }
+        // Restore priceQuantities from product.prices qty values
+        if (product.prices) {
+          const quantities = {};
+          product.prices.forEach((price, idx) => {
+            if (price.qty > 0) {
+              quantities[idx] = price.qty;
+            }
+          });
+          if (Object.keys(quantities).length > 0) {
+            setPriceQuantities(quantities);
+          }
+        }
+      }
     }
   }, [product?._id])
 

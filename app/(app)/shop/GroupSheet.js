@@ -268,7 +268,7 @@ export default function GroupSheet({
       ...baseProduct,
       ...(existingConfig || {}),
       stockQty: product.qty,
-      qty: existingConfig?.qty || (product.type === 'class' || product.type === 'course' || product.type === 'membership' ? 0 : 1), // Each instance has qty 1
+      qty: existingConfig?.qty || (product.type === 'class' || product.type === 'course' || product.type === 'membership' ? 0 : (instanceIndex !== null && group?.linkQtyToVariations ? derivedGroupQty : 1)),
       schedule: product.type === 'course' && migrateScheduleFormat ? migrateScheduleFormat(product.schedule) : product.schedule,
       variations: existingConfig?.variations || variations,
       isPartOfGroup: true, // Mark as part of group
@@ -628,7 +628,7 @@ export default function GroupSheet({
                                     const configKey = `${productId}_${instanceIdx}`;
                                     const configuredProduct = configuredProducts[configKey];
                                     const productPrice = configuredProduct?.amount?.subtotal ?? configuredProduct?.amount?.total ?? 0;
-                                    const productQty = configuredProduct?.qty || 1;
+                                    const productQty = configuredProduct?.qty || (group.linkQtyToVariations ? derivedGroupQty : 1);
                                     const summary = getProductSummary(productData, instanceIdx, { includeQty: false });
                                     const canRemove = instances.length > 1;
 
