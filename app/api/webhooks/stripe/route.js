@@ -810,33 +810,37 @@ async function handleCheckoutCompleted(session, stripeAccount) {
     console.log('   Total paid:', newAmountPaid);
     console.log('   Amount due:', Math.max(0, newAmountDue));
 
-    // Send receipt for the payment
-    try {
-      console.log('📧 Sending payment receipt...');
+    // Send receipt only when invoice is fully paid
+    if (isFullyPaid) {
+      try {
+        console.log('📧 Invoice fully paid - sending receipt...');
 
-      // Fetch full transaction with populated fields for receipt
-      const fullTransaction = await Transaction.findById(transactionId)
-        .populate('customer', 'name email phone memberId')
-        .populate('employee', 'name')
-        .populate('org', 'name email phone addressLine suburb state postcode logo')
-        .populate('location', 'name')
-        .populate('company', 'name contactEmail contactName')
-        .lean();
+        // Fetch full transaction with populated fields for receipt
+        const fullTransaction = await Transaction.findById(transactionId)
+          .populate('customer', 'name email phone memberId')
+          .populate('employee', 'name')
+          .populate('org', 'name email phone addressLine suburb state postcode logo')
+          .populate('location', 'name')
+          .populate('company', 'name contactEmail contactName')
+          .lean();
 
-      if (fullTransaction?.company?.contactEmail) {
-        await sendTransactionReceipt({
-          transaction: fullTransaction,
-          recipientEmail: fullTransaction.company.contactEmail,
-          org: fullTransaction.org,
-          paymentAmount: paymentAmount // Include partial payment amount in receipt
-        });
-        console.log('✅ Receipt sent to:', fullTransaction.company.contactEmail);
-      } else {
-        console.log('⚠️ No company email found - skipping receipt');
+        const recipientEmail = fullTransaction?.company?.contactEmail || fullTransaction?.customer?.email;
+        if (recipientEmail) {
+          await sendTransactionReceipt({
+            transaction: fullTransaction,
+            recipientEmail,
+            org: fullTransaction.org
+          });
+          console.log('✅ Receipt sent to:', recipientEmail);
+        } else {
+          console.log('⚠️ No recipient email found - skipping receipt');
+        }
+      } catch (error) {
+        console.error('❌ Error sending receipt:', error);
+        // Don't fail the payment if receipt sending fails
       }
-    } catch (error) {
-      console.error('❌ Error sending receipt:', error);
-      // Don't fail the payment if receipt sending fails
+    } else {
+      console.log('ℹ️ Partial payment - receipt will be sent when invoice is fully paid');
     }
 
     return {
