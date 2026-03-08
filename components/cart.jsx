@@ -1,8 +1,10 @@
 'use client'
 import Link from 'next/link';
 import { useGlobals } from '@/lib/globals'
-import { Trash2, Info, Save, Clock, Pencil } from 'lucide-react'
+import { Trash2, Info, Save, Clock, Pencil, User, UserPlus, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import updateLocale from 'dayjs/plugin/updateLocale';
@@ -50,12 +52,84 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
   const [originalTransaction, setOriginalTransaction] = useState(null)
   const [mounted, setMounted] = useState(false)
   const [saveCartDialogOpen, setSaveCartDialogOpen] = useState(false)
-  const [saveCartName, setSaveCartName] = useState('')
+  const [saveCartSearchQuery, setSaveCartSearchQuery] = useState('')
+  const [saveCartCustomers, setSaveCartCustomers] = useState([])
+  const [saveCartLoading, setSaveCartLoading] = useState(false)
+  const [saveCartSelectedCustomer, setSaveCartSelectedCustomer] = useState(null)
+  const [saveCartShowNewForm, setSaveCartShowNewForm] = useState(false)
+  const [saveCartNewCustomer, setSaveCartNewCustomer] = useState({ name: '', email: '', phone: '' })
+  const [saveCartCreating, setSaveCartCreating] = useState(false)
 
   // Wait for client-side mount to avoid hydration mismatch
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Debounced customer search for save cart dialog
+  useEffect(() => {
+    if (!saveCartDialogOpen || !saveCartSearchQuery) {
+      setSaveCartCustomers([])
+      return
+    }
+    const timer = setTimeout(async () => {
+      setSaveCartLoading(true)
+      try {
+        const res = await fetch(`/api/customers?search=${encodeURIComponent(saveCartSearchQuery)}`)
+        if (res.ok) {
+          const data = await res.json()
+          const list = Array.isArray(data) ? data : (data.customers || data || [])
+          setSaveCartCustomers(list)
+        }
+      } catch (error) {
+        console.error('Error fetching customers:', error)
+        setSaveCartCustomers([])
+      } finally {
+        setSaveCartLoading(false)
+      }
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [saveCartDialogOpen, saveCartSearchQuery])
+
+  // Reset save cart dialog state when it closes
+  const handleSaveCartDialogChange = (open) => {
+    setSaveCartDialogOpen(open)
+    if (!open) {
+      setSaveCartSearchQuery('')
+      setSaveCartCustomers([])
+      setSaveCartSelectedCustomer(null)
+      setSaveCartShowNewForm(false)
+      setSaveCartNewCustomer({ name: '', email: '', phone: '' })
+      setSaveCartCreating(false)
+    }
+  }
+
+  // Create new customer for save cart
+  const handleSaveCartCreateCustomer = async () => {
+    if (!saveCartNewCustomer.name || !saveCartNewCustomer.email) return
+    setSaveCartCreating(true)
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(saveCartNewCustomer)
+      })
+      if (response.ok) {
+        const data = await response.json()
+        const customer = data.customer || data
+        setSaveCartSelectedCustomer(customer)
+        setSaveCartShowNewForm(false)
+        setSaveCartNewCustomer({ name: '', email: '', phone: '' })
+      } else {
+        const data = await response.json()
+        toast.error(data.error || 'Failed to create customer')
+      }
+    } catch (error) {
+      console.error('Error creating customer:', error)
+      toast.error('Failed to create customer')
+    } finally {
+      setSaveCartCreating(false)
+    }
+  }
 
   // Get current cart
   const cart = getCurrentCart()
@@ -145,8 +219,9 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
     }
     const date = dayjs(cart.savedAt);
     const itemCount = `${cart.products.length} item${cart.products.length !== 1 ? 's' : ''}`;
-    if (cart.name) {
-      return `${cart.name} (${date.fromNow()}) - ${itemCount}`;
+    const displayName = cart.customer?.name || cart.name;
+    if (displayName) {
+      return `${displayName} (${date.fromNow()}) - ${itemCount}`;
     }
     return `${date.format('h:mm A')} (${date.fromNow()}) - ${itemCount}`;
   };
@@ -188,6 +263,11 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
                     <div className="font-medium">
                       {savedCart.name || date.format('h:mm A')}
                     </div>
+                    {savedCart.customer?.email && (
+                      <div className="text-xs text-muted-foreground">
+                        {savedCart.customer.email}
+                      </div>
+                    )}
                     <div className="text-xs text-muted-foreground">
                       {date.fromNow()} · {itemCount} item{itemCount !== 1 ? 's' : ''} · ${savedCart.total?.toFixed(2) || '0.00'}
                     </div>
@@ -518,6 +598,12 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
                   <div className="ml-auto">${(price.qty * parseFloat(price.value)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>
               ))}
+              {p.validityDuration && p.validityUnit && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="size-3" />
+                  <span>Valid for {p.validityDuration} {p.validityUnit}{p.validityDuration > 1 ? 's' : ''}</span>
+                </div>
+              )}
             </div>
           )
 
@@ -632,10 +718,7 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
                 <Button
                   type="button"
                   className="w-full cursor-pointer"
-                  onClick={() => {
-                    setSaveCartName('');
-                    setSaveCartDialogOpen(true);
-                  }}
+                  onClick={() => handleSaveCartDialogChange(true)}
                 >
                   <Save className="h-4 w-4 mr-2" />
                   Save Cart
@@ -658,22 +741,26 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
           </>
         )}
 
-        {/* Cart Selector Dropdown - always show if there are multiple carts */}
-        {carts.length > 1 && (
+        {/* Cart Selector Dropdown - show current cart + saved carts only */}
+        {hasSavedCarts && (
           <div className={`flex items-center gap-1 ${cart.products.length > 0 ? 'mt-2' : ''}`} suppressHydrationWarning>
             <Select value={String(currentCartIndex)} onValueChange={(value) => switchCart(parseInt(value))}>
               <SelectTrigger className="h-10 text-xs flex-1 bg-primary text-primary-foreground border-primary">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {carts.map((c, idx) => (
-                  <SelectItem key={idx} value={String(idx)}>
-                    {formatCartLabel(c, idx)}
-                  </SelectItem>
-                ))}
+                {carts.map((c, idx) => {
+                  // Only show: current cart, or saved carts
+                  if (idx !== currentCartIndex && !c.savedAt) return null;
+                  return (
+                    <SelectItem key={idx} value={String(idx)}>
+                      {formatCartLabel(c, idx)}
+                    </SelectItem>
+                  );
+                })}
               </SelectContent>
             </Select>
-            {hasSavedCarts && currentCartIndex !== 0 && cart.savedAt && (
+            {currentCartIndex !== 0 && cart.savedAt && (
               <Button
                 size="icon"
                 variant="ghost"
@@ -695,34 +782,160 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
         course={selectedCourse}
       />
 
-      {/* Save Cart Name Dialog */}
-      <AlertDialog open={saveCartDialogOpen} onOpenChange={setSaveCartDialogOpen}>
+      {/* Save Cart Dialog - Customer Selection */}
+      <AlertDialog open={saveCartDialogOpen} onOpenChange={handleSaveCartDialogChange}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Save Cart</AlertDialogTitle>
             <AlertDialogDescription>
-              Enter a name to identify this saved cart.
+              Select an existing customer or create a new one to save this cart.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <Input
-            placeholder="e.g. Table 5, John's order"
-            value={saveCartName}
-            onChange={(e) => setSaveCartName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && saveCartName.trim()) {
-                saveCart(saveCartName.trim());
-                setSaveCartDialogOpen(false);
-              }
-            }}
-            autoFocus
-          />
+
+          {/* Customer selected - show summary */}
+          {saveCartSelectedCustomer && !saveCartShowNewForm && (
+            <div className="flex items-center justify-between p-3 border rounded-md bg-muted/50">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/10">
+                  <User className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <div className="font-medium">{saveCartSelectedCustomer.name}</div>
+                  {saveCartSelectedCustomer.email && (
+                    <div className="text-xs text-muted-foreground">{saveCartSelectedCustomer.email}</div>
+                  )}
+                  {saveCartSelectedCustomer.phone && (
+                    <div className="text-xs text-muted-foreground">{saveCartSelectedCustomer.phone}</div>
+                  )}
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer"
+                onClick={() => {
+                  setSaveCartSelectedCustomer(null)
+                  setSaveCartSearchQuery('')
+                  setSaveCartCustomers([])
+                }}
+              >
+                Change
+              </Button>
+            </div>
+          )}
+
+          {/* New customer form */}
+          {saveCartShowNewForm && !saveCartSelectedCustomer && (
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="save-cart-name">Name *</Label>
+                <Input
+                  id="save-cart-name"
+                  placeholder="Customer name"
+                  value={saveCartNewCustomer.name}
+                  onChange={(e) => setSaveCartNewCustomer(prev => ({ ...prev, name: e.target.value }))}
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="save-cart-email">Email *</Label>
+                <Input
+                  id="save-cart-email"
+                  placeholder="customer@email.com"
+                  type="email"
+                  value={saveCartNewCustomer.email}
+                  onChange={(e) => setSaveCartNewCustomer(prev => ({ ...prev, email: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="save-cart-phone">Phone</Label>
+                <Input
+                  id="save-cart-phone"
+                  placeholder="Phone number (optional)"
+                  value={saveCartNewCustomer.phone}
+                  onChange={(e) => setSaveCartNewCustomer(prev => ({ ...prev, phone: e.target.value }))}
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 cursor-pointer"
+                  onClick={() => {
+                    setSaveCartShowNewForm(false)
+                    setSaveCartNewCustomer({ name: '', email: '', phone: '' })
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1 cursor-pointer"
+                  onClick={handleSaveCartCreateCustomer}
+                  disabled={!saveCartNewCustomer.name || !saveCartNewCustomer.email || saveCartCreating}
+                >
+                  {saveCartCreating ? 'Creating...' : 'Create Customer'}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Search / select customer */}
+          {!saveCartSelectedCustomer && !saveCartShowNewForm && (
+            <Command shouldFilter={false} className="border rounded-md">
+              <CommandInput
+                placeholder="Search customers..."
+                value={saveCartSearchQuery}
+                onValueChange={setSaveCartSearchQuery}
+              />
+              <CommandList className="h-[250px]">
+                <CommandGroup>
+                  <CommandItem
+                    value="__new_customer__"
+                    onSelect={() => {
+                      setSaveCartShowNewForm(true)
+                      setSaveCartNewCustomer({ name: saveCartSearchQuery || '', email: '', phone: '' })
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    <span>New Customer{saveCartSearchQuery ? `: ${saveCartSearchQuery}` : ''}</span>
+                  </CommandItem>
+                  {saveCartCustomers.map((customer) => (
+                    <CommandItem
+                      key={customer._id}
+                      value={customer._id}
+                      onSelect={() => setSaveCartSelectedCustomer(customer)}
+                      className="cursor-pointer"
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      <div className="flex flex-col">
+                        <span>{customer.name}</span>
+                        {customer.email && (
+                          <span className="text-xs text-muted-foreground">{customer.email}</span>
+                        )}
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+                {saveCartSearchQuery && !saveCartLoading && saveCartCustomers.length === 0 && (
+                  <div className="py-6 text-center text-sm text-muted-foreground">No customers found.</div>
+                )}
+              </CommandList>
+            </Command>
+          )}
+
           <AlertDialogFooter>
             <AlertDialogCancel className="cursor-pointer">Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="cursor-pointer"
+              disabled={!saveCartSelectedCustomer}
               onClick={() => {
-                saveCart(saveCartName.trim() || null);
-                setSaveCartDialogOpen(false);
+                saveCart({
+                  _id: saveCartSelectedCustomer._id,
+                  name: saveCartSelectedCustomer.name,
+                  email: saveCartSelectedCustomer.email,
+                  phone: saveCartSelectedCustomer.phone
+                });
+                handleSaveCartDialogChange(false);
               }}
             >
               Save
