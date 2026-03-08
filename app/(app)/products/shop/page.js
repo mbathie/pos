@@ -116,24 +116,31 @@ export default function Page() {
         setOpen={setProductIconDialogOpen}
         onIconSelected={async (icon) => {
           if (selectedProductId) {
-            try {
-              const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${selectedProductId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ product: { thumbnail: icon } })
-              });
-
-              if (res.ok) {
-                await fetchProducts();
-                // Update the sheet's internal state immediately
-                if (thumbnailUpdateCallback) {
-                  thumbnailUpdateCallback(icon);
-                }
-                // Trigger refresh to re-fetch product in sheet
-                setRefreshTrigger(prev => prev + 1);
+            // For new products, just update local state — auto-save will persist it
+            if (selectedProductId.startsWith('new-')) {
+              if (thumbnailUpdateCallback) {
+                thumbnailUpdateCallback(icon);
               }
-            } catch (error) {
-              console.error('Error updating product icon:', error);
+            } else {
+              try {
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/products/${selectedProductId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ product: { thumbnail: icon } })
+                });
+
+                if (res.ok) {
+                  await fetchProducts();
+                  // Update the sheet's internal state immediately
+                  if (thumbnailUpdateCallback) {
+                    thumbnailUpdateCallback(icon);
+                  }
+                  // Trigger refresh to re-fetch product in sheet
+                  setRefreshTrigger(prev => prev + 1);
+                }
+              } catch (error) {
+                console.error('Error updating product icon:', error);
+              }
             }
           }
           setProductIconDialogOpen(false);
