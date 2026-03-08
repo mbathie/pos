@@ -22,7 +22,8 @@ export default function BarcodeScanner({
   value = '',
   onChange,
   placeholder = 'Scan or enter barcode...',
-  disabled = false
+  disabled = false,
+  className
 }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [cameraError, setCameraError] = useState(null);
@@ -215,8 +216,8 @@ export default function BarcodeScanner({
   }, [stopCamera]);
 
   return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
+    <div className={className}>
+      <div className="flex gap-1">
         <Input
           type="text"
           placeholder={placeholder}

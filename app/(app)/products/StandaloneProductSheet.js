@@ -64,14 +64,13 @@ export default function StandaloneProductSheet({
         name: '',
         desc: '',
         category: category?._id || null,
-        variations: [{ name: '', amount: '', qty: 0, par: 0 }],
+        variations: [{ name: '', amount: '', qty: 0, par: 0, barcode: '' }],
         type: productType,
         publish: true,
         bump: true,
         folder: null,
         accounting: null,
         modGroups: [],
-        barcode: ''
       });
     }
   }, [open, productId]);
@@ -282,7 +281,7 @@ export default function StandaloneProductSheet({
   const addVariation = () => {
     setProduct(prev => ({
       ...prev,
-      variations: [...(prev.variations || []), { name: '', amount: '', qty: 0, par: 0 }]
+      variations: [...(prev.variations || []), { name: '', amount: '', qty: 0, par: 0, barcode: '' }]
     }));
     setIsDirty(true);
   };
@@ -510,15 +509,6 @@ export default function StandaloneProductSheet({
               />
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label>Barcode / SKU</Label>
-              <BarcodeScanner
-                value={product.barcode || ''}
-                onChange={(barcode) => updateField('barcode', barcode)}
-                placeholder="Scan or enter barcode..."
-              />
-            </div>
-
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <Label>Variations<span className="text-destructive ml-1">*</span></Label>
@@ -565,6 +555,7 @@ export default function StandaloneProductSheet({
                       </Tooltip>
                     </TooltipProvider>
                   </Label>
+                  <Label className="w-36">Barcode</Label>
                 </div>
                 {product?.variations?.map((v, i) => (
                   <div key={`${product._id}-${i}`} className="flex gap-2 items-center">
@@ -596,6 +587,12 @@ export default function StandaloneProductSheet({
                       min={0}
                       className="w-20"
                       onChange={(value) => updateVariation(i, 'par', value || 0)}
+                    />
+                    <BarcodeScanner
+                      value={v.barcode || ''}
+                      onChange={(barcode) => updateVariation(i, 'barcode', barcode)}
+                      placeholder="Barcode..."
+                      className="w-36"
                     />
                     <div className="flex gap-1">
                       <Button

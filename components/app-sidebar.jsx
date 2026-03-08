@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CircleDollarSign, Settings, Calendar, ChefHat, Receipt, UserCheck, Tag, ScanLine, CreditCard, CheckCircle, Building2 } from "lucide-react";
+import { CircleDollarSign, Settings, Calendar, ChefHat, Receipt, UserCheck, Tag, ScanLine, CreditCard, CheckCircle, Building2, Ticket } from "lucide-react";
 import { NavMenu } from "@/components/nav-menu";
 import { NavUser } from "@/components/nav-user";
 import {
@@ -47,6 +47,7 @@ export function AppSidebar(props) {
       ]
     },
     { title: "Check-ins", url: "/manage/checkins", icon: CheckCircle },
+    { title: "Prepaid Passes", url: "/manage/passes", icon: Ticket },
     { title: "Customers", url: "/manage/customers", icon: UserCheck },
     { title: "Companies", url: "/manage/companies", icon: Building2 },
     // { title: "Waiver", url: `${process.env.NEXT_PUBLIC_DOMAIN}/org/${employee?.org?._id || 'default'}/waiver`, icon: QrCode },

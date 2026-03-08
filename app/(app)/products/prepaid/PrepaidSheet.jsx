@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { NumberInput } from '@/components/ui/number-input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import ProductCategorySelector from '@/components/discounts/product-category-selector'
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
@@ -28,6 +29,8 @@ export default function PrepaidSheet({ open, onOpenChange, pack, categoriesWithP
   const [passes, setPasses] = useState(pack?.passes != null ? String(pack.passes) : '')
   const [prices, setPrices] = useState(() => initPrices(pack))
   const [waiverRequired, setWaiverRequired] = useState(pack?.waiverRequired || false)
+  const [validityDuration, setValidityDuration] = useState(pack?.validityDuration ? String(pack.validityDuration) : '')
+  const [validityUnit, setValidityUnit] = useState(pack?.validityUnit || '')
   const [instructionsContent, setInstructionsContent] = useState(pack?.instructionsContent || '')
   const [tandcContent, setTandcContent] = useState(pack?.tandcContent || '')
   const [selected, setSelected] = useState(new Set(pack?.products?.map(p => p._id || p) || []))
@@ -44,6 +47,8 @@ export default function PrepaidSheet({ open, onOpenChange, pack, categoriesWithP
     setPasses(pack?.passes != null ? String(pack.passes) : '')
     setPrices(initPrices(pack))
     setWaiverRequired(pack?.waiverRequired || false)
+    setValidityDuration(pack?.validityDuration ? String(pack.validityDuration) : '')
+    setValidityUnit(pack?.validityUnit || '')
     setInstructionsContent(pack?.instructionsContent || '')
     setTandcContent(pack?.tandcContent || '')
     setSelected(new Set(pack?.products?.map(p => p._id || p) || []))
@@ -61,6 +66,8 @@ export default function PrepaidSheet({ open, onOpenChange, pack, categoriesWithP
         minor: p.minor
       })),
       waiverRequired,
+      validityDuration: parseInt(validityDuration, 10) || 0,
+      validityUnit: validityUnit || '',
       instructionsContent,
       tandcContent,
       products: Array.from(selected),
@@ -82,6 +89,8 @@ export default function PrepaidSheet({ open, onOpenChange, pack, categoriesWithP
       description: pack?.description || '',
       passes: pack?.passes != null ? String(pack.passes) : '',
       waiverRequired: pack?.waiverRequired || false,
+      validityDuration: pack?.validityDuration ? String(pack.validityDuration) : '',
+      validityUnit: pack?.validityUnit || '',
       instructionsContent: pack?.instructionsContent || '',
       tandcContent: pack?.tandcContent || '',
       products: (pack?.products || []).map(p => p._id || p),
@@ -93,6 +102,8 @@ export default function PrepaidSheet({ open, onOpenChange, pack, categoriesWithP
       passes !== original.passes ||
       pricesChanged ||
       nextPayload.waiverRequired !== original.waiverRequired ||
+      validityDuration !== original.validityDuration ||
+      validityUnit !== original.validityUnit ||
       nextPayload.instructionsContent !== original.instructionsContent ||
       nextPayload.tandcContent !== original.tandcContent ||
       nextPayload.products.length !== original.products.length ||
@@ -133,7 +144,7 @@ export default function PrepaidSheet({ open, onOpenChange, pack, categoriesWithP
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
     }
-  }, [name, description, passes, prices, waiverRequired, instructionsContent, tandcContent, selected, pack?._id])
+  }, [name, description, passes, prices, waiverRequired, validityDuration, validityUnit, instructionsContent, tandcContent, selected, pack?._id])
 
   async function handleSave() {
     if (!name.trim()) return toast.error('Enter a pack name')
@@ -254,6 +265,39 @@ export default function PrepaidSheet({ open, onOpenChange, pack, categoriesWithP
               className="w-32"
             />
             <p className="text-xs text-muted-foreground">Number of passes/credits included in this pack</p>
+          </div>
+
+          {/* Validity / Expiry */}
+          <div className="flex flex-col gap-2">
+            <Label>Validity Period</Label>
+            <div className="flex items-center gap-2">
+              <NumberInput
+                value={validityDuration}
+                onChange={v => setValidityDuration(v)}
+                placeholder="e.g., 1"
+                className="w-24"
+              />
+              <Select value={validityUnit} onValueChange={v => setValidityUnit(v)}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="Select..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="month">Month(s)</SelectItem>
+                  <SelectItem value="year">Year(s)</SelectItem>
+                </SelectContent>
+              </Select>
+              {(validityDuration || validityUnit) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="cursor-pointer"
+                  onClick={() => { setValidityDuration(''); setValidityUnit(''); }}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">How long the pass is valid from date of purchase. Leave empty for no expiry.</p>
           </div>
 
           {/* Prices */}

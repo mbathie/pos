@@ -41,6 +41,24 @@ export async function POST(request) {
         });
       }
 
+      // Check expiry
+      if (pass.expiresAt && new Date() > new Date(pass.expiresAt)) {
+        if (pass.status !== 'expired') {
+          pass.status = 'expired';
+          await pass.save();
+        }
+        return NextResponse.json({
+          success: false,
+          status: 'prepaid-expired',
+          message: `This prepaid pass expired on ${new Date(pass.expiresAt).toLocaleDateString()}`,
+          customer: pass.customer ? {
+            name: pass.customer.name,
+            memberId: pass.customer.memberId,
+            photo: pass.customer.photo
+          } : null
+        });
+      }
+
       return NextResponse.json({
         success: true,
         status: 'prepaid-select',
@@ -49,6 +67,7 @@ export async function POST(request) {
         remainingPasses: pass.remainingPasses,
         totalPasses: pass.totalPasses,
         passCode: passCode,
+        expiresAt: pass.expiresAt || null,
         customer: pass.customer ? {
           name: pass.customer.name,
           memberId: pass.customer.memberId,
@@ -167,14 +186,25 @@ export async function POST(request) {
       : [];
     const prepaidThumbnailMap = Object.fromEntries(prepaidProductDocs.map(p => [p._id.toString(), p.thumbnail]));
 
-    const prepaidList = prepaidPasses.map(p => ({
-      passId: p._id,
-      passCode: p.code,
-      packName: p.pack?.name || 'Prepaid Pass',
-      remainingPasses: p.remainingPasses,
-      totalPasses: p.totalPasses,
-      products: p.products.map(prod => ({ _id: prod._id, name: prod.name, thumbnail: prepaidThumbnailMap[prod._id.toString()] || null }))
-    }));
+    // Mark expired passes
+    for (const p of prepaidPasses) {
+      if (p.expiresAt && new Date() > new Date(p.expiresAt) && p.status !== 'expired') {
+        p.status = 'expired';
+        await p.save();
+      }
+    }
+
+    const prepaidList = prepaidPasses
+      .filter(p => p.status === 'active')
+      .map(p => ({
+        passId: p._id,
+        passCode: p.code,
+        packName: p.pack?.name || 'Prepaid Pass',
+        remainingPasses: p.remainingPasses,
+        totalPasses: p.totalPasses,
+        expiresAt: p.expiresAt || null,
+        products: p.products.map(prod => ({ _id: prod._id, name: prod.name, thumbnail: prepaidThumbnailMap[prod._id.toString()] || null }))
+      }));
 
     const hasAnything = classes.length > 0 || membershipList.length > 0 || prepaidList.length > 0;
 

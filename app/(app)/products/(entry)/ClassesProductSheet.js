@@ -280,6 +280,19 @@ export default function ClassesProductSheet({
                         onClick={() => {
                           setProducts((draft) => {
                             draft[pIdx].prices.splice(priceIdx, 1);
+                            // Clean up stale linkedPrices indices from all time slots
+                            const daysOfWeek = draft[pIdx].schedule?.daysOfWeek;
+                            if (daysOfWeek) {
+                              daysOfWeek.forEach(day => {
+                                day.times?.forEach(t => {
+                                  if (t.linkedPrices?.length) {
+                                    t.linkedPrices = t.linkedPrices
+                                      .filter(idx => idx !== priceIdx)
+                                      .map(idx => idx > priceIdx ? idx - 1 : idx);
+                                  }
+                                });
+                              });
+                            }
                           });
                         }}
                         className="w-8 h-8 p-0"
@@ -651,6 +664,7 @@ export default function ClassesProductSheet({
                     <div className='flex gap-2'>
                       <Label className="w-32">Class Time</Label>
                       <Label className="w-48">Class Label</Label>
+                      {product.prices?.length > 0 && <Label className="w-40">Linked Prices</Label>}
                     </div>
                     {(() => {
                       // Get or initialize the daysOfWeek structure
@@ -725,6 +739,56 @@ export default function ClassesProductSheet({
                                   }}
                                   className={cn("w-64", isLabelEmpty && "border-destructive focus-visible:ring-destructive")}
                                 />
+                                {product.prices?.length > 0 && (
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <Button variant="outline" size="sm" className="w-40 justify-start text-left font-normal cursor-pointer">
+                                        <span className="truncate">
+                                          {time.linkedPrices?.length > 0
+                                            ? time.linkedPrices.map(idx => product.prices[idx]?.name).filter(Boolean).join(', ') || 'All Prices'
+                                            : 'All Prices'}
+                                        </span>
+                                      </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-48 p-2" align="start">
+                                      <div className="space-y-1">
+                                        {product.prices.map((price, prIdx) => (
+                                          <div key={prIdx} className="flex items-center gap-2 p-1">
+                                            <Checkbox
+                                              checked={time.linkedPrices?.includes(prIdx) || false}
+                                              onCheckedChange={(checked) => {
+                                                const newDaysOfWeek = [...(product.schedule?.daysOfWeek || [])];
+                                                const allDayIdx = newDaysOfWeek.findIndex(d => d?.dayIndex === -1);
+                                                if (allDayIdx === -1) return;
+
+                                                const newTimes = [...(newDaysOfWeek[allDayIdx].times || [])];
+                                                const current = newTimes[timeIdx]?.linkedPrices || [];
+                                                newTimes[timeIdx] = {
+                                                  ...(newTimes[timeIdx] || {}),
+                                                  linkedPrices: checked
+                                                    ? [...current, prIdx]
+                                                    : current.filter(i => i !== prIdx)
+                                                };
+                                                newDaysOfWeek[allDayIdx] = {
+                                                  ...newDaysOfWeek[allDayIdx],
+                                                  times: newTimes
+                                                };
+
+                                                updateProduct({
+                                                  schedule: {
+                                                    ...product.schedule,
+                                                    daysOfWeek: newDaysOfWeek
+                                                  }
+                                                });
+                                              }}
+                                            />
+                                            <span className="text-sm">{price.name || `Price ${prIdx + 1}`}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
+                                )}
                               <Button
                                 type="button"
                                 variant="ghost"
@@ -732,7 +796,7 @@ export default function ClassesProductSheet({
                                 onClick={() => {
                                   const newDaysOfWeek = [...(product.schedule?.daysOfWeek || [])];
                                   const allDayIndex = newDaysOfWeek.findIndex(d => d?.dayIndex === -1);
-                                  
+
                                   if (allDayIndex !== -1) {
                                     const newTimes = [...(newDaysOfWeek[allDayIndex].times || [])];
                                     newTimes.splice(timeIdx, 1);

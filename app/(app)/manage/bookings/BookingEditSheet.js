@@ -328,6 +328,41 @@ export default function BookingEditSheet({ open, setOpen, booking, onUpdate }) {
     }
   }
 
+  // Check if custom time is outside store hours for the selected date
+  const isOutsideStoreHours = (() => {
+    if (!selectedDate || !customTime || !location?.storeHours) return false
+
+    const dayOfWeek = selectedDate.getDay()
+    const storeHour = location.storeHours.find(h => h.d === dayOfWeek)
+    if (!storeHour || !storeHour.open || !storeHour.close) return false
+
+    if (customTime < storeHour.open || customTime >= storeHour.close) return true
+
+    if (customDuration) {
+      const [h, m] = customTime.split(':').map(Number)
+      const endMinutes = h * 60 + m + customDuration
+      const [ch, cm] = storeHour.close.split(':').map(Number)
+      const closeMinutes = ch * 60 + cm
+      if (endMinutes > closeMinutes) return true
+    }
+
+    return false
+  })()
+
+  const storeHoursForSelectedDay = (() => {
+    if (!selectedDate || !location?.storeHours) return null
+    const dayOfWeek = selectedDate.getDay()
+    const storeHour = location.storeHours.find(h => h.d === dayOfWeek)
+    if (!storeHour?.open || !storeHour?.close) return null
+    const formatTime = (t) => {
+      const [h, m] = t.split(':').map(Number)
+      const ampm = h >= 12 ? 'PM' : 'AM'
+      const h12 = h % 12 || 12
+      return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`
+    }
+    return { open: formatTime(storeHour.open), close: formatTime(storeHour.close) }
+  })()
+
   if (!booking) return null
 
   const isOpenSchedule = product?.openSchedule
@@ -449,6 +484,13 @@ export default function BookingEditSheet({ open, setOpen, booking, onUpdate }) {
                     {openScheduleAvailable} spot{openScheduleAvailable !== 1 ? 's' : ''} available
                   </span>
                 </div>
+
+                {/* Warning when time is outside store hours */}
+                {isOutsideStoreHours && storeHoursForSelectedDay && (
+                  <div className="p-3 bg-destructive text-destructive-foreground rounded-md text-sm">
+                    Time is outside store hours ({storeHoursForSelectedDay.open} – {storeHoursForSelectedDay.close}).
+                  </div>
+                )}
 
                 {/* Participants */}
                 <div className="space-y-2 pt-2 border-t">
@@ -638,7 +680,7 @@ export default function BookingEditSheet({ open, setOpen, booking, onUpdate }) {
             })()}
             disabled={
               isOpenSchedule
-                ? !selectedDate || !customTime || !customDuration || participantQty > openScheduleAvailable
+                ? !selectedDate || !customTime || !customDuration || participantQty > openScheduleAvailable || isOutsideStoreHours
                 : !selectedTime
             }
             className="cursor-pointer flex-1"

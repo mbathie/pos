@@ -15,6 +15,8 @@ const PrepaidPackSchema = new mongoose.Schema({
   amount: { type: Number },
   instructionsContent: { type: String },
   tandcContent: { type: String },
+  validityDuration: { type: Number },
+  validityUnit: { type: String, enum: ['month', 'year'] },
   active: { type: Boolean, default: true },
   org: { type: mongoose.Schema.Types.ObjectId, ref: 'Org', required: true },
 }, { timestamps: true });

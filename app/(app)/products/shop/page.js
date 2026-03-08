@@ -24,7 +24,7 @@ export default function Page() {
     const q = search.toLowerCase();
     return products.filter(p =>
       p.name?.toLowerCase().includes(q) ||
-      p.barcode?.toLowerCase().includes(q) ||
+      p.variations?.some(v => v.barcode?.toLowerCase().includes(q)) ||
       p.tags?.some(tag => tag.name?.toLowerCase().includes(q))
     );
   }, [products, search]);

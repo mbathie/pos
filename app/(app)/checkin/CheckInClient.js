@@ -142,6 +142,18 @@ export default function CheckInClient() {
         return
       }
 
+      // Handle expired prepaid
+      if (data.status === 'prepaid-expired') {
+        setAlertData(data)
+        setShowAlertDialog(true)
+        alertTimeoutRef.current = setTimeout(() => {
+          handleCloseAlert()
+        }, 8000)
+        setScanStatus('idle')
+        setIsProcessing(false)
+        return
+      }
+
       // Fallback for other responses
       setAlertData(data)
       setShowAlertDialog(true)
@@ -430,6 +442,11 @@ export default function CheckInClient() {
                   <AlertCircle className="h-5 w-5 text-destructive" />
                   Prepaid Pass Depleted
                 </>
+              ) : alertData?.status === 'prepaid-expired' ? (
+                <>
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                  Prepaid Pass Expired
+                </>
               ) : (
                 <>
                   <AlertCircle className="h-5 w-5 text-amber-600" />
@@ -571,9 +588,16 @@ export default function CheckInClient() {
                           <div key={pass.passId} className="rounded-lg border p-3">
                             <div className="flex items-center justify-between mb-2">
                               <p className="text-sm font-medium">{pass.packName}</p>
-                              <span className="text-xs text-muted-foreground">
-                                {pass.remainingPasses}/{pass.totalPasses} remaining
-                              </span>
+                              <div className="flex items-center gap-2">
+                                {pass.expiresAt && (
+                                  <span className="text-xs text-muted-foreground">
+                                    Expires {new Date(pass.expiresAt).toLocaleDateString()}
+                                  </span>
+                                )}
+                                <span className="text-xs text-muted-foreground">
+                                  {pass.remainingPasses}/{pass.totalPasses} remaining
+                                </span>
+                              </div>
                             </div>
                             <div className="space-y-2">
                               {pass.products.map((product) => (
@@ -803,6 +827,24 @@ export default function CheckInClient() {
                   <AlertCircle className="h-4 w-4 text-destructive" />
                   <AlertDescription>
                     This prepaid pass has been fully used. All passes have been redeemed.
+                  </AlertDescription>
+                </Alert>
+                <div className="flex flex-col items-center gap-2 pt-2">
+                  <Button variant="outline" size="sm" onClick={handleCloseAlert} className="cursor-pointer">
+                    Dismiss
+                  </Button>
+                  <p className="text-xs text-muted-foreground">Auto-closing in 8 seconds</p>
+                </div>
+              </div>
+            )}
+
+            {/* Legacy Prepaid Expired */}
+            {alertData?.status === 'prepaid-expired' && (
+              <div className="space-y-3">
+                <Alert className="bg-destructive/10 border-destructive/20">
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <AlertDescription>
+                    {alertData.message || 'This prepaid pass has expired.'}
                   </AlertDescription>
                 </Alert>
                 <div className="flex flex-col items-center gap-2 pt-2">

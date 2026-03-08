@@ -138,8 +138,8 @@ export default function Page() {
       return false
     }
 
-    // For class, course, membership - check if all slots have customers
-    if (['class', 'course', 'membership'].includes(product.type)) {
+    // For class, course, membership, general - check if all slots have customers
+    if (['class', 'course', 'membership', 'general'].includes(product.type)) {
       const missingCustomers = product.prices?.some(price => {
         const hasMissing = price.customers?.some(c => !c.customer?._id)
         console.log('  📋 Price:', price.name, {

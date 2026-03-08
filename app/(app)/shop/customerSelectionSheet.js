@@ -60,10 +60,7 @@ export default function CustomerSelectionSheet({
       try {
         const params = new URLSearchParams()
         params.append('search', searchQuery)
-        if (waiverRequired) {
-          params.append('requiresWaiver', 'true')
-        }
-        
+
         const res = await fetch(`/api/customers?${params}`)
         if (res.ok) {
           const data = await res.json()

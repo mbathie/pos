@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ProductThumbnail } from '@/components/product-thumbnail';
-import { Package, Ticket } from 'lucide-react';
+import { Package, Ticket, Clock } from 'lucide-react';
 import { IconButton } from '@/components/control-button';
 import { calcCartValuePrepaid } from '@/lib/product';
 
@@ -52,6 +52,8 @@ export default function PrepaidSheet({ open, onOpenChange, prepaid, onAddToCart 
       waiverRequired: prepaid.waiverRequired || false,
       instructionsContent: prepaid.instructionsContent || '',
       tandcContent: prepaid.tandcContent || '',
+      validityDuration: prepaid.validityDuration || 0,
+      validityUnit: prepaid.validityUnit || '',
       passes: packPasses,
       products: (prepaid.products || []).map(p => ({
         _id: p._id,
@@ -87,6 +89,16 @@ export default function PrepaidSheet({ open, onOpenChange, prepaid, onAddToCart 
           <div className="space-y-4 px-4">
             {prepaid.description && (
               <p className="text-sm text-muted-foreground">{prepaid.description}</p>
+            )}
+
+            {/* Validity / Expiry Info */}
+            {prepaid.validityDuration && prepaid.validityUnit && (
+              <div className="flex items-center gap-2 p-3 border rounded-lg bg-muted/50">
+                <Clock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-sm">
+                  Valid for <span className="font-medium">{prepaid.validityDuration} {prepaid.validityUnit}{prepaid.validityDuration > 1 ? 's' : ''}</span> from date of purchase
+                </span>
+              </div>
             )}
 
             {/* Price Quantity Selectors */}

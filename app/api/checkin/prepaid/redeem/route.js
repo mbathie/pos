@@ -30,6 +30,15 @@ export async function POST(request) {
       return NextResponse.json({ error: 'This prepaid pass has been fully used' }, { status: 400 });
     }
 
+    // Check expiry
+    if (pass.expiresAt && new Date() > new Date(pass.expiresAt)) {
+      if (pass.status !== 'expired') {
+        pass.status = 'expired';
+        await pass.save();
+      }
+      return NextResponse.json({ error: `This prepaid pass expired on ${new Date(pass.expiresAt).toLocaleDateString()}` }, { status: 400 });
+    }
+
     if (productIds.length > pass.remainingPasses) {
       return NextResponse.json({
         error: `Not enough passes remaining. Have ${pass.remainingPasses}, need ${productIds.length}`

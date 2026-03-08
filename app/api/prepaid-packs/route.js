@@ -22,7 +22,7 @@ export async function POST(req) {
   const { employee } = result;
 
   const body = await req.json();
-  const { name, description, thumbnail, products = [], prices = [], active = true, waiverRequired = false, instructionsContent, tandcContent } = body || {};
+  const { name, description, thumbnail, products = [], prices = [], active = true, waiverRequired = false, instructionsContent, tandcContent, validityDuration, validityUnit } = body || {};
 
   if (!name) {
     return NextResponse.json({ error: 'Name is required' }, { status: 400 });
@@ -41,6 +41,8 @@ export async function POST(req) {
     waiverRequired,
     instructionsContent,
     tandcContent,
+    validityDuration: validityDuration || undefined,
+    validityUnit: validityUnit || undefined,
     org: employee.org._id,
   });
 

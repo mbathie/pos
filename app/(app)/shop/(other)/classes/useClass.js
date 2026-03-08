@@ -228,12 +228,17 @@ export function useClass({product, setProduct}) {
     const todayStr = dayjs(now).format('YYYY-MM-DD');
     const isToday = selectedDateStr === todayStr;
 
+    // Get the "All" template to fall back on for linkedPrices
+    const allDayConfig = schedule.daysOfWeek.find(d => d.dayIndex === -1);
+
     // Add all selected times for this day
-    dayConfig.times.forEach(timeItem => {
+    dayConfig.times.forEach((timeItem, timeIdx) => {
       if (!timeItem.selected) return; // Skip unselected times
 
       const timeStr = timeItem.time;
       const timeLabel = timeItem.label || '';
+      // Use linkedPrices from this day's entry, falling back to the "All" template
+      const linkedPrices = timeItem.linkedPrices || allDayConfig?.times?.[timeIdx]?.linkedPrices || [];
 
       if (timeStr) {
         const [hours, minutes] = timeStr.split(':');
@@ -261,6 +266,7 @@ export function useClass({product, setProduct}) {
           datetime: iso,
           time: dayjs(classDateTime).format('h:mm A'),
           label: timeLabel,
+          linkedPrices: linkedPrices,
           available: available,
           conflict: isConflict,
           conflictReason: dateIsClosedDay ? (closedDay?.name || 'Closed day') : !withinHours ? 'Outside store hours' : null

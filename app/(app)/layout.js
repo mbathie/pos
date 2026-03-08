@@ -203,7 +203,7 @@ export default function Page({children}) {
 
           <CartSheet />
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4- pt-0 min-h-0 overflow-hidden">
+        <div className="flex flex-1 flex-col gap-4 p-4- pt-0 min-h-0 overflow-auto">
           {children}
         </div>
       </SidebarInset>

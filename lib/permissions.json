@@ -25,6 +25,7 @@
         "/manage/companies",
         "/manage/memberships",
         "/manage/checkins",
+        "/manage/passes",
         "/manage/calendar",
         "/manage/bookings"
       ],

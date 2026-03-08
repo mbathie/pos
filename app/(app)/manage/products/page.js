@@ -193,7 +193,7 @@ export default function ManageProductsPage() {
       const searchLower = filters.search.toLowerCase();
       const matchesSearch = !filters.search ||
         product.name?.toLowerCase().includes(searchLower) ||
-        product.barcode?.toLowerCase().includes(searchLower) ||
+        product.variations?.some(v => v.barcode?.toLowerCase().includes(searchLower)) ||
         product.tags?.some(tag => tag.name?.toLowerCase().includes(searchLower));
       const matchesPublish = filters.publish === 'all' ||
         (filters.publish === 'published' && product.publish !== false) ||

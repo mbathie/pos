@@ -16,7 +16,8 @@ const PrepaidPassSchema = new mongoose.Schema({
   remainingPasses: { type: Number, required: true },
   products: [{ _id: mongoose.Schema.Types.ObjectId, name: String }],
   redemptions: [RedemptionSchema],
-  status: { type: String, enum: ['active', 'depleted'], default: 'active' },
+  expiresAt: { type: Date },
+  status: { type: String, enum: ['active', 'depleted', 'expired'], default: 'active' },
 }, { timestamps: true });
 
 PrepaidPassSchema.index({ org: 1 });

@@ -42,6 +42,44 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
   // Alert dialog state
   const [showOverlapAlert, setShowOverlapAlert] = useState(false)
 
+  // Check if custom time is outside store hours for the selected date
+  const isOutsideStoreHours = (() => {
+    if (!selectedDate || !customTime || !location?.storeHours) return false;
+
+    const dayOfWeek = selectedDate.getDay();
+    const storeHour = location.storeHours.find(h => h.d === dayOfWeek);
+    if (!storeHour || !storeHour.open || !storeHour.close) return false;
+
+    // Check if start time is before opening or after closing
+    if (customTime < storeHour.open || customTime >= storeHour.close) return true;
+
+    // Check if end time (start + duration) exceeds closing time
+    if (customDuration) {
+      const [h, m] = customTime.split(':').map(Number);
+      const endMinutes = h * 60 + m + customDuration;
+      const [ch, cm] = storeHour.close.split(':').map(Number);
+      const closeMinutes = ch * 60 + cm;
+      if (endMinutes > closeMinutes) return true;
+    }
+
+    return false;
+  })();
+
+  const storeHoursForSelectedDay = (() => {
+    if (!selectedDate || !location?.storeHours) return null;
+    const dayOfWeek = selectedDate.getDay();
+    const storeHour = location.storeHours.find(h => h.d === dayOfWeek);
+    if (!storeHour?.open || !storeHour?.close) return null;
+    // Convert 24h to 12h format for display
+    const formatTime = (t) => {
+      const [h, m] = t.split(':').map(Number);
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h % 12 || 12;
+      return `${h12}:${m.toString().padStart(2, '0')} ${ampm}`;
+    };
+    return { open: formatTime(storeHour.open), close: formatTime(storeHour.close) };
+  })();
+
   // Fetch existing schedule data for open schedule products
   useEffect(() => {
     const fetchScheduleData = async () => {
@@ -365,6 +403,13 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                   )}
                 </div>
 
+                {/* Warning when time is outside store hours */}
+                {isOutsideStoreHours && storeHoursForSelectedDay && (
+                  <div className="p-3 bg-destructive text-destructive-foreground rounded-md text-sm">
+                    Time is outside store hours ({storeHoursForSelectedDay.open} – {storeHoursForSelectedDay.close}).
+                  </div>
+                )}
+
                 {/* Participants Selection */}
                 <div className="space-y-2 pl-2">
                   {product.prices?.map((price, priceIdx) => {
@@ -477,9 +522,15 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                           </span>
                         </div>
 
-                        {!time.conflict && time.available > 0 && (
+                        {!time.conflict && time.available > 0 && (() => {
+                          const pricesToShow = product.prices
+                            ?.map((price, idx) => ({ ...price, originalIdx: idx }))
+                            .filter(p => !time.linkedPrices?.length || time.linkedPrices.includes(p.originalIdx)) || [];
+
+                          return (
                           <div className="space-y-2 pl-2">
-                            {product.prices?.map((price, priceIdx) => {
+                            {pricesToShow.map((price) => {
+                              const priceIdx = price.originalIdx;
                               const qty = selectedTime?.quantities?.[priceIdx] || 0;
                               const atCapacity = totalQtyForTime >= time.available;
 
@@ -556,7 +607,8 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                               </div>
                             )}
                           </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     );
                   })}
@@ -582,7 +634,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
               className='cursor-pointer w-full'
               disabled={
                 product.openSchedule
-                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0) || Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable || !meetsMinPurchase || (product.groupMinQty > 0 && totalQuantity < product.groupMinQty)
+                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0) || Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable || !meetsMinPurchase || (product.groupMinQty > 0 && totalQuantity < product.groupMinQty) || isOutsideStoreHours
                   : selectedTimes.length === 0 || !meetsMinPurchase || (product.groupMinQty > 0 && totalQuantity < product.groupMinQty)
               }
               onClick={async () => {
@@ -668,7 +720,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
               className='cursor-pointer w-full'
               disabled={
                 product.openSchedule
-                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0) || Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable || !meetsMinPurchase || (product.groupMinQty > 0 && totalQuantity < product.groupMinQty)
+                  ? !selectedDate || !customTime || !customDuration || Object.values(priceQuantities).every(q => q === 0) || Object.values(priceQuantities).reduce((sum, q) => sum + q, 0) > openScheduleAvailable || !meetsMinPurchase || (product.groupMinQty > 0 && totalQuantity < product.groupMinQty) || isOutsideStoreHours
                   : selectedTimes.length === 0 || !meetsMinPurchase || (product.groupMinQty > 0 && totalQuantity < product.groupMinQty)
               }
               onClick={async () => {
