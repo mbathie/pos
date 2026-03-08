@@ -388,20 +388,31 @@ export default function CheckInClient() {
 
   const orgLogo = org?.branding?.logo || '/logo.png'
 
+  // Get initials from customer name
+  const getInitials = (name) => {
+    if (!name) return '?'
+    const parts = name.trim().split(/\s+/)
+    if (parts.length === 1) return parts[0][0]?.toUpperCase() || '?'
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+  }
+
   // Customer info card used in both unified and legacy views
-  const CustomerInfoCard = ({ customer }) => (
+  const CustomerInfoCard = ({ customer }) => {
+    const [imgError, setImgError] = useState(false)
+    return (
     <div className="p-4 bg-muted/40 rounded-lg">
       <div className="flex items-center gap-4">
         <div className="flex-shrink-0">
-          {customer?.photo ? (
+          {customer?.photo && !imgError ? (
             <img
               src={customer.photo}
               alt={customer.name}
               className="w-16 h-16 rounded-full object-cover border-2 border-border"
+              onError={() => setImgError(true)}
             />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-muted-foreground/10 flex items-center justify-center">
-              <UserCircle className="h-10 w-10 text-muted-foreground" />
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center border-2 border-border">
+              <span className="text-lg font-semibold text-primary">{getInitials(customer?.name)}</span>
             </div>
           )}
         </div>
@@ -413,7 +424,7 @@ export default function CheckInClient() {
         </div>
       </div>
     </div>
-  )
+  )}
 
   return (
     <div className="h-[calc(100vh-4rem)] flex">
