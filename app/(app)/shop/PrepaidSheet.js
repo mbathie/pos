@@ -12,10 +12,20 @@ import { calcCartValuePrepaid } from '@/lib/product';
 export default function PrepaidSheet({ open, onOpenChange, prepaid, onAddToCart, isEditing = false }) {
   const [priceQuantities, setPriceQuantities] = useState({});
 
-  // Reset quantities when a different pack is opened
+  // Reset or restore quantities when sheet opens with a product
   useEffect(() => {
-    setPriceQuantities({});
-  }, [prepaid?._id]);
+    if (!prepaid) return;
+    if (isEditing && prepaid.prices) {
+      // Restore existing quantities from cart product
+      const restored = {};
+      prepaid.prices.forEach((price, idx) => {
+        if (price.qty > 0) restored[idx] = price.qty;
+      });
+      setPriceQuantities(restored);
+    } else {
+      setPriceQuantities({});
+    }
+  }, [prepaid?._id, isEditing]);
 
   if (!prepaid) return null;
 
