@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ResendReceiptDialog } from "@/components/resend-receipt-dialog";
+import { RefundDialog } from "@/components/refund-dialog";
 import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -44,6 +45,7 @@ dayjs.extend(relativeTime);
 export default function TransactionsPage() {
   const router = useRouter();
   const {
+    employee,
     location: globalLocation,
     locations,
     transactionFilters,
@@ -282,11 +284,25 @@ export default function TransactionsPage() {
     }
   };
 
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'succeeded': return 'Succeeded';
+      case 'pending': return 'Pending';
+      case 'failed': return 'Failed';
+      case 'partially_refunded': return 'Partially Refunded';
+      case 'refunded': return 'Refunded';
+      case 'completed': return 'Completed';
+      default: return status;
+    }
+  };
+
   const getStatusBadgeVariant = (status) => {
     switch (status) {
       case 'succeeded': return 'default';
       case 'pending': return 'secondary';
       case 'failed': return 'destructive';
+      case 'refunded': return 'destructive';
+      case 'partially_refunded': return 'outline';
       default: return 'outline';
     }
   };
@@ -339,6 +355,8 @@ export default function TransactionsPage() {
               <SelectItem value="succeeded">Succeeded</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
               <SelectItem value="failed">Failed</SelectItem>
+              <SelectItem value="partially_refunded">Partially Refunded</SelectItem>
+              <SelectItem value="refunded">Refunded</SelectItem>
             </SelectContent>
           </Select>
 
@@ -508,8 +526,8 @@ export default function TransactionsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 align-middle">
-                      <Badge variant={getStatusBadgeVariant(transaction.status)} className="capitalize">
-                        {transaction.status}
+                      <Badge variant={getStatusBadgeVariant(transaction.status)}>
+                        {getStatusLabel(transaction.status)}
                       </Badge>
                     </td>
                     <td className="px-4 py-3 align-middle">
@@ -595,12 +613,24 @@ export default function TransactionsPage() {
                               Send receipt
                             </DropdownMenuItem>
                           )}
-                          {transaction.status === 'succeeded' && (
+                          {(transaction.status === 'succeeded' || transaction.status === 'partially_refunded') && (
                             <>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem className="cursor-pointer">
-                                Refund transaction
-                              </DropdownMenuItem>
+                              <RefundDialog
+                                transaction={transaction}
+                                currentEmployee={employee}
+                                onRefundComplete={() => {
+                                  fetchTransactions();
+                                }}
+                                trigger={
+                                  <DropdownMenuItem
+                                    className="cursor-pointer"
+                                    onSelect={(e) => e.preventDefault()}
+                                  >
+                                    Refund transaction
+                                  </DropdownMenuItem>
+                                }
+                              />
                             </>
                           )}
                         </DropdownMenuContent>

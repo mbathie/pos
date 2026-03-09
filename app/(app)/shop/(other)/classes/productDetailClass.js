@@ -283,7 +283,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
           </SheetDescription>
         </SheetHeader>
 
-        <div className='flex flex-col mx-4 gap-4'>
+        <div className='flex flex-col mx-4 gap-4 flex-1 min-h-0'>
 
           {/* Date Selector */}
           <div className="space-y-2">
@@ -483,11 +483,11 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
 
           {/* Time Slots with +/- buttons per price */}
           {!product.openSchedule && selectedDate && timesForSelectedDate.length > 0 && (
-            <div className="space-y-2">
+            <div className="space-y-2 flex-1 min-h-0 flex flex-col">
               <h3 className="text-sm font-medium">
                 Available Times for {dayjs(selectedDate).format('dddd, MMMM D')}
               </h3>
-              <ScrollArea className="h-[400px] py-3">
+              <ScrollArea className="flex-1 py-3">
                 <div className="space-y-4">
                   {timesForSelectedDate.map((time) => {
                     const selectedTime = selectedTimes.find(t => t.datetime === time.datetime);

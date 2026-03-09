@@ -14,7 +14,7 @@ export async function POST(req, { params }) {
   }
 
   const { id } = await params;
-  const { amount, reason, authorizerId, refundEmployeeId } = await req.json();
+  const { amount, reason, authorizerId, refundEmployeeId, refundMethod } = await req.json();
 
   try {
     // Check if refund action is restricted for this employee's role
@@ -75,7 +75,8 @@ export async function POST(req, { params }) {
       amount: parseFloat(amount),
       employeeId: employeeIdForRefund,
       reason,
-      org
+      org,
+      refundMethod
     });
 
     // Get updated refund summary

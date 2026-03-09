@@ -914,7 +914,7 @@ export default function TransactionDetailsPage() {
                 <>
                   {transaction.refunds.map((refund, index) => (
                     <div key={index} className="flex justify-between">
-                      <span>Refund {transaction.refunds.length > 1 ? `#${index + 1}` : ''} ({dayjs(refund.date).format('DD/MM/YY')}) - {getInitials(refund.employeeId?.name)}</span>
+                      <span>Refund {transaction.refunds.length > 1 ? `#${index + 1}` : ''} ({dayjs(refund.date).format('DD/MM/YY')}) - {getInitials(refund.employeeId?.name)} via {refund.paymentMethod === 'card' ? 'Card' : 'Cash'}</span>
                       <span>-{formatCurrency(refund.amount)}</span>
                     </div>
                   ))}

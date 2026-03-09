@@ -18,9 +18,17 @@ export function RefundDialog({ transaction, onRefundComplete, trigger, currentEm
   const [loading, setLoading] = useState(false);
   const [refundAmount, setRefundAmount] = useState('');
   const [reason, setReason] = useState('');
+  const [refundMethod, setRefundMethod] = useState(transaction?.paymentMethod === 'cash' ? 'cash' : 'card');
   const [refundSummary, setRefundSummary] = useState(null);
   const [showPinDialog, setShowPinDialog] = useState(false);
   const [pendingRefund, setPendingRefund] = useState(null);
+
+  // Reset refund method when transaction changes
+  useEffect(() => {
+    if (transaction) {
+      setRefundMethod(transaction.paymentMethod === 'cash' ? 'cash' : 'card');
+    }
+  }, [transaction?._id]);
 
   // Fetch refund summary when dialog opens
   useEffect(() => {
@@ -61,22 +69,22 @@ export function RefundDialog({ transaction, onRefundComplete, trigger, currentEm
 
     if (needsAuthorization) {
       // Store the refund details and show PIN dialog
-      setPendingRefund({ amount, reason });
+      setPendingRefund({ amount, reason, refundMethod });
       setShowPinDialog(true);
     } else {
       // Process refund directly
-      await processRefund(amount, reason);
+      await processRefund(amount, reason, null, null, refundMethod);
     }
   };
 
-  const processRefund = async (amount, refundReason, authorizerId = null, refundEmployeeId = null) => {
+  const processRefund = async (amount, refundReason, authorizerId = null, refundEmployeeId = null, method = null) => {
     setLoading(true);
 
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/transactions/${transaction._id}/refund`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, reason: refundReason, authorizerId, refundEmployeeId })
+        body: JSON.stringify({ amount, reason: refundReason, authorizerId, refundEmployeeId, refundMethod: method || refundMethod })
       });
 
       if (res.ok) {
@@ -109,7 +117,7 @@ export function RefundDialog({ transaction, onRefundComplete, trigger, currentEm
     // PIN verified, process the pending refund with authorizer ID
     // Use authorizer's ID as the employee who performed the refund
     if (pendingRefund) {
-      processRefund(pendingRefund.amount, pendingRefund.reason, data.authorizer.id, data.authorizer.id);
+      processRefund(pendingRefund.amount, pendingRefund.reason, data.authorizer.id, data.authorizer.id, pendingRefund.refundMethod);
     }
   };
 
@@ -161,16 +169,35 @@ export function RefundDialog({ transaction, onRefundComplete, trigger, currentEm
               )}
             </div>
 
-            {/* Payment Method Badge */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Payment Method:</span>
-              <Badge variant="outline" className="flex items-center gap-1">
-                {transaction.paymentMethod === 'card' ? (
-                  <><CreditCard className="h-3 w-3" /> Stripe</>
-                ) : (
-                  <><Banknote className="h-3 w-3" /> Cash</>
-                )}
-              </Badge>
+            {/* Refund Method Selection */}
+            <div className="space-y-2">
+              <Label>Refund Method</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant={refundMethod === 'cash' ? 'default' : 'outline'}
+                  size="sm"
+                  className="cursor-pointer flex-1"
+                  onClick={() => setRefundMethod('cash')}
+                >
+                  <Banknote className="mr-2 h-4 w-4" />
+                  Cash
+                </Button>
+                <Button
+                  type="button"
+                  variant={refundMethod === 'card' ? 'default' : 'outline'}
+                  size="sm"
+                  className="cursor-pointer flex-1"
+                  onClick={() => setRefundMethod('card')}
+                  disabled={transaction.paymentMethod === 'cash'}
+                >
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Card
+                </Button>
+              </div>
+              {transaction.paymentMethod === 'cash' && (
+                <p className="text-xs text-muted-foreground">Cash transactions can only be refunded in cash</p>
+              )}
             </div>
 
             {/* Warning for fully refunded */}
