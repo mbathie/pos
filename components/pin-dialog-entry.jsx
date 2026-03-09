@@ -79,6 +79,14 @@ export default function PinDialogEntry({ open, onOpenChange, onSuccess }) {
     const value = e.target.value.replace(/\D/g, '').slice(0, 4)
     setPin(value)
     setError('')
+
+    // Auto-submit when 4 digits entered
+    if (value.length === 4) {
+      // Use setTimeout to let state update, then submit
+      setTimeout(() => {
+        document.getElementById('pin-entry-form')?.requestSubmit()
+      }, 0)
+    }
   }
 
   const handleClose = () => {
@@ -114,7 +122,7 @@ export default function PinDialogEntry({ open, onOpenChange, onSuccess }) {
             Please enter your 4-digit employee PIN to access the shop
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
+        <form id="pin-entry-form" onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
           <div className="space-y-2 text-sm">
             <Input
               type="text"
@@ -139,15 +147,9 @@ export default function PinDialogEntry({ open, onOpenChange, onSuccess }) {
           {error && (
             <p className="text-xs text-destructive text-center">{error}</p>
           )}
-          <div className="flex flex-col items-center gap-2">
-            <Button
-              className="w-52"
-              type="submit"
-              disabled={loading || pin.length !== 4}
-            >
-              {loading ? 'Processing...' : 'Verify PIN'}
-            </Button>
-          </div>
+          {loading && (
+            <p className="text-xs text-muted-foreground text-center">Verifying...</p>
+          )}
         </form>
       </DialogContent>
     </Dialog>
