@@ -36,7 +36,7 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
-export default function Cart({ asSheet = false, onClose, onEditGroup }) {
+export default function Cart({ asSheet = false, onClose, onEditGroup, onEditProduct }) {
   const {
     getCurrentCart,
     carts,
@@ -307,27 +307,29 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
                       <span className="text-muted-foreground"> - {item.selectedVariationName}</span>
                     )}
                   </div>
-                  {onEditGroup ? (
+                  <div className="flex items-center gap-3 ml-2">
+                    {onEditGroup && (
+                      <div
+                        className='cursor-pointer p-1 -m-1'
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditGroup(item);
+                        }}
+                      >
+                        <Pencil className='size-3.5'/>
+                      </div>
+                    )}
                     <div
-                      className='ml-2 cursor-pointer mt-0.5'
+                      className='cursor-pointer p-1 -m-1'
                       onClick={(e) => {
                         e.stopPropagation();
-                        onEditGroup(item);
+                        // Remove all products with this gId
+                        const indicesToRemove = item.products.map(p => p.originalIndex).sort((a, b) => b - a)
+                        indicesToRemove.forEach(idx => removeFromCart(idx));
                       }}
                     >
-                      <Pencil className='size-4'/>
+                      <Trash2 className='size-3.5'/>
                     </div>
-                  ) : null}
-                  <div
-                    className='ml-2 cursor-pointer mt-0.5'
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Remove all products with this gId
-                      const indicesToRemove = item.products.map(p => p.originalIndex).sort((a, b) => b - a)
-                      indicesToRemove.forEach(idx => removeFromCart(idx));
-                    }}
-                  >
-                    <Trash2 className='size-4'/>
                   </div>
                   <div className='flex-1' />
                   <div>${groupTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
@@ -392,14 +394,27 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
                   {p.qty}x {p.name}
                 </div>
                 {p.item?.variation && <div className='ml-1'> ({p.item.variation})</div>}
-                <div
-                  className='ml-2 cursor-pointer mt-0.5'
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeFromCart(pIdx);
-                  }}
-                >
-                  <Trash2 className='size-4'/>
+                <div className="flex items-center gap-3 ml-2">
+                  {onEditProduct && (
+                    <div
+                      className='cursor-pointer p-1 -m-1'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditProduct(p, pIdx);
+                      }}
+                    >
+                      <Pencil className='size-3.5'/>
+                    </div>
+                  )}
+                  <div
+                    className='cursor-pointer p-1 -m-1'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFromCart(pIdx);
+                    }}
+                  >
+                    <Trash2 className='size-3.5'/>
+                  </div>
                 </div>
                 <div className='flex-1' />
                 {p.amount?.subtotal != null && <div>${p.amount.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>}
@@ -419,14 +434,27 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
             <div key={pIdx} className="flex flex-col space-y-1">
               <div className="flex">
                 <div>{p.name}</div>
-                <div
-                  className='ml-2 cursor-pointer mt-0.5'
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeFromCart(pIdx);
-                  }}
-                >
-                  <Trash2 className='size-4'/>
+                <div className="flex items-center gap-3 ml-2">
+                  {onEditProduct && (
+                    <div
+                      className='cursor-pointer p-1 -m-1'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditProduct(p, pIdx);
+                      }}
+                    >
+                      <Pencil className='size-3.5'/>
+                    </div>
+                  )}
+                  <div
+                    className='cursor-pointer p-1 -m-1'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFromCart(pIdx);
+                    }}
+                  >
+                    <Trash2 className='size-3.5'/>
+                  </div>
                 </div>
               </div>
               
@@ -478,14 +506,27 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
             <div key={pIdx} className="flex flex-col space-y-1">
               <div className="flex">
                 <div>{p.name}</div>
-                <div
-                  className='ml-1 cursor-pointer mt-0.5'
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeFromCart(pIdx);
-                  }}
-                >
-                  <Trash2 className='size-4'/>
+                <div className="flex items-center gap-3 ml-2">
+                  {onEditProduct && (
+                    <div
+                      className='cursor-pointer p-1 -m-1'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditProduct(p, pIdx);
+                      }}
+                    >
+                      <Pencil className='size-3.5'/>
+                    </div>
+                  )}
+                  <div
+                    className='cursor-pointer p-1 -m-1'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFromCart(pIdx);
+                    }}
+                  >
+                    <Trash2 className='size-3.5'/>
+                  </div>
                 </div>
               </div>
 
@@ -531,14 +572,27 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
             <div key={p._id} className="flex flex-col space-y-1-">
               <div className="flex">
                 <div>{p.name}</div>
-                <div
-                  className="ml-1 cursor-pointer mt-0.5"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeFromCart(pIdx);
-                  }}
-                >
-                  <Trash2 className="size-4" />
+                <div className="flex items-center gap-3 ml-2">
+                  {onEditProduct && (
+                    <div
+                      className='cursor-pointer p-1 -m-1'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditProduct(p, pIdx);
+                      }}
+                    >
+                      <Pencil className='size-3.5'/>
+                    </div>
+                  )}
+                  <div
+                    className='cursor-pointer p-1 -m-1'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFromCart(pIdx);
+                    }}
+                  >
+                    <Trash2 className='size-3.5'/>
+                  </div>
                 </div>
               </div>
               {/* Display prices directly for general products */}
@@ -556,14 +610,27 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
             <div key={pIdx} className="flex flex-col space-y-1">
               <div className="flex">
                 <div>{p.name}</div>
-                <div
-                  className='ml-1 cursor-pointer mt-0.5'
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeFromCart(pIdx);
-                  }}
-                >
-                  <Trash2 className='size-4'/>
+                <div className="flex items-center gap-3 ml-2">
+                  {onEditProduct && (
+                    <div
+                      className='cursor-pointer p-1 -m-1'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditProduct(p, pIdx);
+                      }}
+                    >
+                      <Pencil className='size-3.5'/>
+                    </div>
+                  )}
+                  <div
+                    className='cursor-pointer p-1 -m-1'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFromCart(pIdx);
+                    }}
+                  >
+                    <Trash2 className='size-3.5'/>
+                  </div>
                 </div>
               </div>
 
@@ -581,14 +648,27 @@ export default function Cart({ asSheet = false, onClose, onEditGroup }) {
             <div key={pIdx} className="flex flex-col space-y-1">
               <div className="flex">
                 <div>{p.name}</div>
-                <div
-                  className='ml-1 cursor-pointer mt-0.5'
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeFromCart(pIdx);
-                  }}
-                >
-                  <Trash2 className='size-4'/>
+                <div className="flex items-center gap-3 ml-2">
+                  {onEditProduct && (
+                    <div
+                      className='cursor-pointer p-1 -m-1'
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditProduct(p, pIdx);
+                      }}
+                    >
+                      <Pencil className='size-3.5'/>
+                    </div>
+                  )}
+                  <div
+                    className='cursor-pointer p-1 -m-1'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeFromCart(pIdx);
+                    }}
+                  >
+                    <Trash2 className='size-3.5'/>
+                  </div>
                 </div>
               </div>
               {/* Display prices */}

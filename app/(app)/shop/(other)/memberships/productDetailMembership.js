@@ -8,7 +8,7 @@ import { useGlobals } from '@/lib/globals'
 import { useState, useEffect } from 'react'
 import { Badge } from '@/components/ui/badge'
 
-export default function ProductDetailMembership({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false, groupHasPriceOverride = true }) {
+export default function ProductDetailMembership({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false, groupHasPriceOverride = true, isEditing = false }) {
 
   const { addToCart } = useGlobals()
   const [total, setTotal] = useState(0)
@@ -146,7 +146,7 @@ export default function ProductDetailMembership({ product, setProduct, setOpen, 
               }}
               className="w-full cursor-pointer"
             >
-              {isPartOfGroup ? 'Ok' : 'Add'}
+              {isPartOfGroup ? 'Ok' : isEditing ? 'Update Cart' : 'Add'}
             </Button>
           ) : (
             <SheetClose asChild>
@@ -171,7 +171,7 @@ export default function ProductDetailMembership({ product, setProduct, setOpen, 
                 }}
                 className="w-full cursor-pointer"
               >
-                {isPartOfGroup ? 'Ok' : 'Add'}
+                {isPartOfGroup ? 'Ok' : isEditing ? 'Update Cart' : 'Add'}
               </Button>
             </SheetClose>
           )}

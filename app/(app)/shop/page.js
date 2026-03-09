@@ -103,6 +103,7 @@ export default function Page() {
   const [groupSheetOpen, setGroupSheetOpen] = useState(false)
   const [selectedPrepaid, setSelectedPrepaid] = useState(null)
   const [prepaidSheetOpen, setPrepaidSheetOpen] = useState(false)
+  const [editingCartIndex, setEditingCartIndex] = useState(null) // index of cart item being edited
   const [skipSetup, setSkipSetup] = useState(false)
   const [availableInterfaces, setAvailableInterfaces] = useState([])
   const [showInterfaceSelector, setShowInterfaceSelector] = useState(false)
@@ -112,6 +113,20 @@ export default function Page() {
   const { setTimesClass, setTimesCourse } = useClass({ product, setProduct })
   const { } = useMembership({ product, setProduct })
   const { setQty: setQtyGeneral } = useHandlerGeneral({ setProduct })
+
+  // Handles both add and edit (replace) for cart items
+  const handleAddOrUpdateCart = (product) => {
+    if (editingCartIndex !== null) {
+      removeFromCart(editingCartIndex);
+      setEditingCartIndex(null);
+    }
+    addToCart(product);
+  };
+
+  const handleSheetClose = (v) => {
+    setOpen(v);
+    if (!v) setEditingCartIndex(null);
+  };
 
   useEffect(() => {
     initializeShop()
@@ -540,19 +555,19 @@ export default function Page() {
     <>
       {/* Render appropriate product detail component based on type */}
       {product?.type === 'class' && (
-        <ProductDetailClass product={product} setProduct={setProduct} open={open} setOpen={setOpen} />
+        <ProductDetailClass product={product} setProduct={setProduct} open={open} setOpen={handleSheetClose} isEditing={editingCartIndex !== null} {...(editingCartIndex !== null && { onAddToCart: handleAddOrUpdateCart })} />
       )}
       {product?.type === 'course' && (
-        <ProductDetailCourse product={product} setProduct={setProduct} open={open} setOpen={setOpen} />
+        <ProductDetailCourse product={product} setProduct={setProduct} open={open} setOpen={handleSheetClose} isEditing={editingCartIndex !== null} {...(editingCartIndex !== null && { onAddToCart: handleAddOrUpdateCart })} />
       )}
       {product?.type === 'membership' && (
-        <ProductDetailMembership product={product} setProduct={setProduct} open={open} setOpen={setOpen} />
+        <ProductDetailMembership product={product} setProduct={setProduct} open={open} setOpen={handleSheetClose} isEditing={editingCartIndex !== null} {...(editingCartIndex !== null && { onAddToCart: handleAddOrUpdateCart })} />
       )}
       {product?.type === 'general' && (
-        <ProductDetailGeneral product={product} setQty={setQtyGeneral} open={open} setOpen={setOpen} />
+        <ProductDetailGeneral product={product} setQty={setQtyGeneral} open={open} setOpen={handleSheetClose} isEditing={editingCartIndex !== null} {...(editingCartIndex !== null && { onAddToCart: handleAddOrUpdateCart })} />
       )}
       {(!product?.type || !['class', 'course', 'membership', 'general'].includes(product?.type)) && (
-        <ProductDetail product={product} setProduct={setProduct} open={open} setOpen={setOpen} />
+        <ProductDetail product={product} setProduct={setProduct} open={open} setOpen={handleSheetClose} isEditing={editingCartIndex !== null} {...(editingCartIndex !== null && { onAddToCart: handleAddOrUpdateCart })} />
       )}
 
       {/* Group sheet for product groups */}
@@ -581,9 +596,10 @@ export default function Page() {
       {/* Prepaid sheet for prepaid packs */}
       <PrepaidSheet
         open={prepaidSheetOpen}
-        onOpenChange={setPrepaidSheetOpen}
+        onOpenChange={(v) => { setPrepaidSheetOpen(v); if (!v) setEditingCartIndex(null); }}
         prepaid={selectedPrepaid}
-        onAddToCart={addToCart}
+        onAddToCart={editingCartIndex !== null ? handleAddOrUpdateCart : addToCart}
+        isEditing={editingCartIndex !== null}
       />
 
       <div className="flex space-x-4 flex-1 min-h-0 overflow-hidden">
@@ -810,6 +826,21 @@ export default function Page() {
           onEditGroup={(group) => {
             setSelectedGroup(group);
             setGroupSheetOpen(true);
+          }}
+          onEditProduct={(cartProduct, cartIndex) => {
+            setEditingCartIndex(cartIndex);
+
+            if (cartProduct.type === 'prepaid') {
+              // Prepaid uses its own sheet
+              setSelectedPrepaid(cartProduct);
+              setPrepaidSheetOpen(true);
+            } else {
+              // Set the product with its existing selections
+              setProduct(cartProduct);
+              if (cartProduct.type === 'class') setTimesClass(cartProduct);
+              else if (cartProduct.type === 'course') setTimesCourse(cartProduct);
+              setOpen(true);
+            }
           }}
         />
 

@@ -9,7 +9,7 @@ import { Package, Ticket, Clock } from 'lucide-react';
 import { IconButton } from '@/components/control-button';
 import { calcCartValuePrepaid } from '@/lib/product';
 
-export default function PrepaidSheet({ open, onOpenChange, prepaid, onAddToCart }) {
+export default function PrepaidSheet({ open, onOpenChange, prepaid, onAddToCart, isEditing = false }) {
   const [priceQuantities, setPriceQuantities] = useState({});
 
   // Reset quantities when a different pack is opened
@@ -179,7 +179,7 @@ export default function PrepaidSheet({ open, onOpenChange, prepaid, onAddToCart 
               size="lg"
               disabled={totalQty === 0}
             >
-              Add to Cart
+              {isEditing ? 'Update Cart' : 'Add to Cart'}
             </Button>
           </div>
         </SheetFooter>

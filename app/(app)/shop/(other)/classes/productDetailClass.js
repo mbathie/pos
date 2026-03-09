@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils'
 import { useClass } from './useClass'
 import dayjs from 'dayjs'
 
-export default function ProductDetail({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false, groupHasPriceOverride = true }) {
+export default function ProductDetail({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false, groupHasPriceOverride = true, isEditing = false }) {
 
   if (!product) return null;
 
@@ -703,7 +703,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                 }
               }}
             >
-              {isPartOfGroup ? 'Ok' : 'Add'}
+              {isPartOfGroup ? 'Ok' : isEditing ? 'Update Cart' : 'Add'}
             </Button>
             <Button
               variant="outline"
@@ -791,7 +791,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                 }
               }}
             >
-              Add
+              {isEditing ? 'Update Cart' : 'Add'}
             </Button>
             <Button
               variant="outline"

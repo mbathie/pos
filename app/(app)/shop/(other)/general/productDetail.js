@@ -9,7 +9,7 @@ import { useGlobals } from '@/lib/globals'
 import { useState, useEffect } from 'react'
 import { calcCartValueGeneral } from '@/lib/product'
 
-export default function ProductDetail({ open, setOpen, product, setQty }) {
+export default function ProductDetail({ open, setOpen, product, setQty, onAddToCart, isEditing = false }) {
   if (!product) return null;
 
   const { addToCart } = useGlobals()
@@ -100,7 +100,7 @@ export default function ProductDetail({ open, setOpen, product, setQty }) {
             </div>
           </div>
 
-          <SheetClose asChild>
+          {onAddToCart ? (
             <Button
               type="submit"
               className="w-full cursor-pointer"
@@ -108,16 +108,30 @@ export default function ProductDetail({ open, setOpen, product, setQty }) {
               disabled={!total}
               onClick={async () => {
                 const _product = await calcCartValueGeneral({product})
-
-                // Filter out prices with no quantity
                 _product.prices = _product.prices?.filter(price => (price.qty ?? 0) > 0) || []
-
-                await addToCart(_product)
+                await onAddToCart(_product)
+                setOpen(false)
               }}
             >
-              Add to Cart
+              {isEditing ? 'Update Cart' : 'Add to Cart'}
             </Button>
-          </SheetClose>
+          ) : (
+            <SheetClose asChild>
+              <Button
+                type="submit"
+                className="w-full cursor-pointer"
+                size="lg"
+                disabled={!total}
+                onClick={async () => {
+                  const _product = await calcCartValueGeneral({product})
+                  _product.prices = _product.prices?.filter(price => (price.qty ?? 0) > 0) || []
+                  await addToCart(_product)
+                }}
+              >
+                Add to Cart
+              </Button>
+            </SheetClose>
+          )}
         </SheetFooter>
 
 

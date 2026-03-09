@@ -60,7 +60,7 @@ function extractSlots(daysOfWeek, schedule) {
   return slots;
 }
 
-export default function ProductDetail({ open, setOpen, product, setProduct, onAddToCart, isPartOfGroup = false, groupHasPriceOverride = true }) {
+export default function ProductDetail({ open, setOpen, product, setProduct, onAddToCart, isPartOfGroup = false, groupHasPriceOverride = true, isEditing = false }) {
 
   if (!product) return null;
 
@@ -328,7 +328,7 @@ export default function ProductDetail({ open, setOpen, product, setProduct, onAd
                 }
                 className='w-full mt-2 cursor-pointer'
               >
-                {isPartOfGroup ? 'Ok' : 'Add'}
+                {isPartOfGroup ? 'Ok' : isEditing ? 'Update Cart' : 'Add'}
               </Button>
             </div>
           </div>

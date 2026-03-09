@@ -10,7 +10,7 @@ import { useGlobals } from '@/lib/globals'
 import { IconButton, SelectionCheck } from '@/components/control-button'
 import { calcCartValueShop } from '@/lib/product'
 
-export default function ProductDetail({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false, groupHasPriceOverride = true }) {
+export default function ProductDetail({ product, setProduct, setOpen, open, onAddToCart, isPartOfGroup = false, groupHasPriceOverride = true, isEditing = false }) {
   const [total, setTotal] = useState(0)
   const [modGroups, setModGroups] = useState([])
   const [loadingMods, setLoadingMods] = useState(false)
@@ -348,7 +348,7 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                     setOpen(false)
                   }}
                 >
-                  {isPartOfGroup ? 'Ok' : 'Add to Cart'}
+                  {isPartOfGroup ? 'Ok' : isEditing ? 'Update Cart' : 'Add to Cart'}
                 </Button>
               ) : (
                 <SheetClose asChild>
