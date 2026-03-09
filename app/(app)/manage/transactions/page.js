@@ -31,7 +31,8 @@ import {
   ArrowDown,
   User,
   Mail,
-  FileText
+  FileText,
+  Pencil
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ResendReceiptDialog } from "@/components/resend-receipt-dialog";
@@ -49,7 +50,8 @@ export default function TransactionsPage() {
     location: globalLocation,
     locations,
     transactionFilters,
-    setTransactionFilters
+    setTransactionFilters,
+    loadGroupForEditing
   } = useGlobals();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -611,6 +613,27 @@ export default function TransactionsPage() {
                               }}
                             >
                               Send receipt
+                            </DropdownMenuItem>
+                          )}
+                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'customer-invoice') && (
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(`/api/transactions/${transaction._id}`);
+                                  if (res.ok) {
+                                    const fullTransaction = await res.json();
+                                    loadGroupForEditing(fullTransaction.products, transaction._id);
+                                    router.push('/shop');
+                                  }
+                                } catch (err) {
+                                  console.error('Error loading invoice for editing:', err);
+                                  toast.error('Failed to load invoice');
+                                }
+                              }}
+                            >
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Edit invoice
                             </DropdownMenuItem>
                           )}
                           {(transaction.status === 'succeeded' || transaction.status === 'partially_refunded') && (

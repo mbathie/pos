@@ -726,6 +726,18 @@ export default function TransactionDetailsPage() {
                 Send receipt
               </DropdownMenuItem>
             )}
+            {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'customer-invoice') && (
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onClick={() => {
+                  loadGroupForEditing(transaction.cart?.products, transaction._id);
+                  router.push('/shop');
+                }}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit invoice
+              </DropdownMenuItem>
+            )}
             {(transaction?.status === 'succeeded' || transaction?.status === 'partially_refunded') && (
               <RefundDialog
                 transaction={transaction}
@@ -986,20 +998,6 @@ export default function TransactionDetailsPage() {
                           <span className="text-sm font-normal text-muted-foreground">
                             Qty: {item.groupQty || 1}
                           </span>
-                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'customer-invoice') && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                // Load group products into cart and navigate to shop
-                                loadGroupForEditing(item.products, transaction._id);
-                                router.push('/shop');
-                              }}
-                              className="cursor-pointer h-8 w-8 p-0"
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                          )}
                         </div>
                       </CardTitle>
                     </CardHeader>
@@ -1068,20 +1066,6 @@ export default function TransactionDetailsPage() {
                           <span className="text-sm font-normal text-muted-foreground">
                             Qty: {item.groupQty || 1}
                           </span>
-                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'customer-invoice') && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                // Load group products into cart and navigate to shop
-                                loadGroupForEditing(item.products, transaction._id);
-                                router.push('/shop');
-                              }}
-                              className="cursor-pointer h-8 w-8 p-0"
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                          )}
                         </div>
                       </CardTitle>
                     </CardHeader>
@@ -1150,20 +1134,6 @@ export default function TransactionDetailsPage() {
                           <span className="text-sm font-normal text-muted-foreground">
                             Qty: {item.groupQty || 1}
                           </span>
-                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'customer-invoice') && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                // Load group products into cart and navigate to shop
-                                loadGroupForEditing(item.products, transaction._id);
-                                router.push('/shop');
-                              }}
-                              className="cursor-pointer h-8 w-8 p-0"
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                          )}
                         </div>
                       </CardTitle>
                     </CardHeader>
@@ -1232,20 +1202,6 @@ export default function TransactionDetailsPage() {
                           <span className="text-sm font-normal text-muted-foreground">
                             Qty: {item.groupQty || 1}
                           </span>
-                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'customer-invoice') && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                // Load group products into cart and navigate to shop
-                                loadGroupForEditing(item.products, transaction._id);
-                                router.push('/shop');
-                              }}
-                              className="cursor-pointer h-8 w-8 p-0"
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                          )}
                         </div>
                       </CardTitle>
                     </CardHeader>
@@ -1314,20 +1270,6 @@ export default function TransactionDetailsPage() {
                           <span className="text-sm font-normal text-muted-foreground">
                             Qty: {item.groupQty || 1}
                           </span>
-                          {(transaction.paymentMethod === 'company' || transaction.paymentMethod === 'invoice' || transaction.paymentMethod === 'customer-invoice') && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                // Load group products into cart and navigate to shop
-                                loadGroupForEditing(item.products, transaction._id);
-                                router.push('/shop');
-                              }}
-                              className="cursor-pointer h-8 w-8 p-0"
-                            >
-                              <Pencil className="size-4" />
-                            </Button>
-                          )}
                         </div>
                       </CardTitle>
                     </CardHeader>

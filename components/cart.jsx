@@ -735,13 +735,16 @@ export default function Cart({ asSheet = false, onClose, onEditGroup, onEditProd
                 <ActionButton
                   action={async () => {
                     try {
+                      console.log('📦 Sending update-invoice with', cart.products.length, 'products');
+                      console.log('📦 Products:', cart.products.map(p => `${p.name} (type=${p.type}, qty=${p.qty})`));
                       const response = await fetch(`/api/transactions/${cart.editingTransactionId}/update-invoice`, {
                         method: 'PATCH',
                         headers: {
                           'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                          differentialAmount: differentialTotal
+                          differentialAmount: differentialTotal,
+                          products: cart.products
                         })
                       });
 

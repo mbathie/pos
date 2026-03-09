@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getEmployee } from '@/lib/auth';
 import { connectDB } from '@/lib/mongoose';
-import { Transaction } from '@/models';
+import { Transaction, Order } from '@/models';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
@@ -20,10 +20,14 @@ export async function PATCH(request, { params }) {
     }
 
     const { id } = await params;
-    const { differentialAmount } = await request.json();
+    const { differentialAmount, products } = await request.json();
 
     console.log('📝 Updating invoice for transaction:', id);
     console.log('💰 Differential amount:', differentialAmount);
+    console.log('📦 Products received:', products ? `${products.length} products` : 'NONE');
+    if (products) {
+      products.forEach((p, i) => console.log(`  [${i}] ${p.name} type=${p.type} qty=${p.qty}`));
+    }
 
     // Fetch transaction
     const transaction = await Transaction.findById(id);
@@ -36,8 +40,8 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: 'Transaction does not have an invoice' }, { status: 400 });
     }
 
-    // Verify transaction payment method is invoice or company
-    if (transaction.paymentMethod !== 'invoice' && transaction.paymentMethod !== 'company') {
+    // Verify transaction payment method is invoice, company, or customer-invoice
+    if (transaction.paymentMethod !== 'invoice' && transaction.paymentMethod !== 'company' && transaction.paymentMethod !== 'customer-invoice') {
       return NextResponse.json({ error: 'Transaction is not an invoice' }, { status: 400 });
     }
 
@@ -159,7 +163,7 @@ export async function PATCH(request, { params }) {
       console.log('✅ Finalized new invoice');
 
       // Update transaction with new invoice info
-      await Transaction.findByIdAndUpdate(id, {
+      const updateData = {
         stripeInvoiceId: finalizedInvoice.id,
         invoiceUrl: finalizedInvoice.hosted_invoice_url,
         invoiceStatus: finalizedInvoice.status,
@@ -168,7 +172,31 @@ export async function PATCH(request, { params }) {
         total: newTotal,
         subtotal: transaction.subtotal + differentialAmount,
         voidedInvoiceId: invoice.id // Keep track of the voided invoice
-      });
+      };
+      if (products) {
+        updateData.products = products;
+        console.log('📦 Will update transaction with', products.length, 'products');
+      }
+      const updatedTxn = await Transaction.findByIdAndUpdate(id, updateData, { new: true });
+      console.log('📦 Transaction updated, products count:', updatedTxn?.products?.length);
+
+      // Update connected bump screen order if products changed
+      if (products) {
+        const shopProducts = products.filter(p => p.type === 'shop' && p.bump);
+        if (shopProducts.length > 0) {
+          await Order.findOneAndUpdate(
+            { transaction: id, status: { $ne: 'completed' } },
+            {
+              products: shopProducts.map(p => ({
+                product: p._id,
+                item: p.item || {},
+                qty: p.qty,
+                name: p.name,
+              }))
+            }
+          );
+        }
+      }
 
       console.log('✅ Invoice adjustment completed');
       console.log('   New invoice URL:', finalizedInvoice.hosted_invoice_url);
@@ -208,13 +236,37 @@ export async function PATCH(request, { params }) {
       );
 
       // Update transaction
-      await Transaction.findByIdAndUpdate(id, {
+      const updateData = {
         invoiceAmountDue: finalizedInvoice.amount_due / 100,
         total: finalizedInvoice.total / 100,
         subtotal: finalizedInvoice.subtotal / 100,
         tax: finalizedInvoice.tax / 100,
         invoiceStatus: finalizedInvoice.status
-      });
+      };
+      if (products) {
+        updateData.products = products;
+        console.log('📦 [draft] Will update transaction with', products.length, 'products');
+      }
+      const updatedTxn2 = await Transaction.findByIdAndUpdate(id, updateData, { new: true });
+      console.log('📦 [draft] Transaction updated, products count:', updatedTxn2?.products?.length);
+
+      // Update connected bump screen order if products changed
+      if (products) {
+        const shopProducts = products.filter(p => p.type === 'shop' && p.bump);
+        if (shopProducts.length > 0) {
+          await Order.findOneAndUpdate(
+            { transaction: id, status: { $ne: 'completed' } },
+            {
+              products: shopProducts.map(p => ({
+                product: p._id,
+                item: p.item || {},
+                qty: p.qty,
+                name: p.name,
+              }))
+            }
+          );
+        }
+      }
 
       console.log('✅ Invoice finalized and updated');
 
