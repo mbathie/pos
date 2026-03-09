@@ -623,7 +623,7 @@ export default function TransactionsPage() {
                                   const res = await fetch(`/api/transactions/${transaction._id}`);
                                   if (res.ok) {
                                     const fullTransaction = await res.json();
-                                    loadGroupForEditing(fullTransaction.products, transaction._id);
+                                    loadGroupForEditing(fullTransaction.cart?.products || fullTransaction.products, transaction._id);
                                     router.push('/shop');
                                   }
                                 } catch (err) {
@@ -632,7 +632,6 @@ export default function TransactionsPage() {
                                 }
                               }}
                             >
-                              <Pencil className="mr-2 h-4 w-4" />
                               Edit invoice
                             </DropdownMenuItem>
                           )}

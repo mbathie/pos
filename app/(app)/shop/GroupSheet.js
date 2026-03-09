@@ -214,8 +214,11 @@ export default function GroupSheet({
           if (configured.type === 'class' || configured.type === 'course') {
             total += productTotal;
           } else {
-            // Shop products need qty multiplier
-            total += productTotal * derivedGroupQty;
+            // When editing an existing cart group, amount.subtotal is already the total
+            // for all units (qty × unit price), so don't multiply by groupQty again.
+            // When creating a new group, amount.subtotal is per-attendee, needs groupQty multiplier.
+            const isEditingCartGroup = !!(group.gId);
+            total += isEditingCartGroup ? productTotal : productTotal * derivedGroupQty;
           }
         }
       });

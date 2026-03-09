@@ -174,11 +174,11 @@ export async function PATCH(request, { params }) {
         voidedInvoiceId: invoice.id // Keep track of the voided invoice
       };
       if (products) {
-        updateData.products = products;
-        console.log('📦 Will update transaction with', products.length, 'products');
+        updateData['cart.products'] = products;
+        console.log('📦 Will update transaction cart.products with', products.length, 'products');
       }
       const updatedTxn = await Transaction.findByIdAndUpdate(id, updateData, { new: true });
-      console.log('📦 Transaction updated, products count:', updatedTxn?.products?.length);
+      console.log('📦 Transaction updated, cart.products count:', updatedTxn?.cart?.products?.length);
 
       // Update connected bump screen order if products changed
       if (products) {
@@ -244,11 +244,11 @@ export async function PATCH(request, { params }) {
         invoiceStatus: finalizedInvoice.status
       };
       if (products) {
-        updateData.products = products;
-        console.log('📦 [draft] Will update transaction with', products.length, 'products');
+        updateData['cart.products'] = products;
+        console.log('📦 [draft] Will update transaction cart.products with', products.length, 'products');
       }
       const updatedTxn2 = await Transaction.findByIdAndUpdate(id, updateData, { new: true });
-      console.log('📦 [draft] Transaction updated, products count:', updatedTxn2?.products?.length);
+      console.log('📦 [draft] Transaction updated, cart.products count:', updatedTxn2?.cart?.products?.length);
 
       // Update connected bump screen order if products changed
       if (products) {

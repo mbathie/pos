@@ -77,6 +77,8 @@ export default function Page({ params }) {
 
   function getBumpColor(order) {
     if (order.status !== 'placed') return { card: '', badge: '' };
+    // Don't show bump colors for upcoming/scheduled orders that haven't started yet
+    if (order.notBefore && dayjs(order.notBefore).isAfter(now)) return { card: '', badge: '' };
     const minutesElapsed = now.diff(dayjs(order.createdAt), 'minute');
     if (minutesElapsed >= bumpSettings.red) return { card: 'bg-red-500/10 border-red-500/20', badge: 'bg-red-500/20 border-red-500/30 text-red-200' };
     if (minutesElapsed >= bumpSettings.orange) return { card: 'bg-yellow-500/10 border-yellow-500/20', badge: 'bg-yellow-500/20 border-yellow-500/30 text-yellow-200' };
@@ -195,7 +197,7 @@ export default function Page({ params }) {
       </div>
 
       {/* Scrollable Orders Area */}
-      <div className="overflow-y-auto px-4 py-4-">
+      <div className="overflow-y-auto p-4">
         {/* Loading State */}
         {loading && (
           <div className="text-center py-8 text-muted-foreground">
