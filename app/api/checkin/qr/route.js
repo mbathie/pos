@@ -129,7 +129,7 @@ export async function POST(request) {
       }).populate('pack', 'name')
     ]);
 
-    // Build classes array — filter to time window (or all future in test mode)
+    // Build classes array — include time window + future bookings (with availability flag)
     const classes = [];
     for (const schedule of schedules) {
       for (let li = 0; li < schedule.locations.length; li++) {
@@ -138,11 +138,8 @@ export async function POST(request) {
           const classItem = location.classes[ci];
           const classTime = new Date(classItem.datetime);
 
-          const isInWindow = test
-            ? classTime > now
-            : (classTime >= thirtyMinutesBefore && classTime <= thirtyMinutesAfter);
-
-          if (!isInWindow) continue;
+          // Skip past classes (ended more than 30 min ago)
+          if (classTime < thirtyMinutesBefore) continue;
 
           const customerEntry = classItem.customers.find(c =>
             c.customer.toString() === customer._id.toString()
@@ -152,14 +149,23 @@ export async function POST(request) {
           // In non-test mode, skip non-confirmed (unless already checked in)
           if (!test && customerEntry.status !== 'confirmed' && customerEntry.status !== 'checked in') continue;
 
+          const isInWindow = test
+            ? classTime > now
+            : (classTime >= thirtyMinutesBefore && classTime <= thirtyMinutesAfter);
+
           classes.push({
             scheduleId: schedule._id,
             locationIndex: li,
             classIndex: ci,
-            product: { _id: schedule.product._id, name: schedule.product.name },
+            product: { _id: schedule.product._id, name: schedule.product.name, thumbnail: schedule.product.thumbnail || null },
             datetime: classItem.datetime,
             type: schedule.product.type || 'class',
-            alreadyCheckedIn: customerEntry.status === 'checked in'
+            alreadyCheckedIn: customerEntry.status === 'checked in',
+            canCheckIn: isInWindow,
+            ...((!isInWindow && classTime > thirtyMinutesAfter) && {
+              notYetAvailable: true,
+              availableFrom: new Date(classTime.getTime() - 30 * 60 * 1000).toISOString()
+            })
           });
         }
       }

@@ -105,8 +105,8 @@ export default function CheckInClient() {
         setAlertData(data)
         setShowAlertDialog(true)
 
-        // Pre-select: if only 1 class (not already checked in), select it
-        const availableClasses = (data.classes || []).filter(c => !c.alreadyCheckedIn)
+        // Pre-select: if only 1 class (not already checked in and available now), select it
+        const availableClasses = (data.classes || []).filter(c => !c.alreadyCheckedIn && c.canCheckIn !== false)
         if (availableClasses.length === 1) {
           setSelectedClasses(new Set([`${availableClasses[0].scheduleId}:${availableClasses[0].locationIndex}:${availableClasses[0].classIndex}`]))
         }
@@ -484,7 +484,7 @@ export default function CheckInClient() {
                     <div className="space-y-2">
                       {unifiedData.classes.map((cls) => {
                         const key = `${cls.scheduleId}:${cls.locationIndex}:${cls.classIndex}`
-                        const disabled = cls.alreadyCheckedIn
+                        const disabled = cls.alreadyCheckedIn || cls.notYetAvailable
                         return (
                           <div
                             key={key}
@@ -500,7 +500,7 @@ export default function CheckInClient() {
                             }}
                           >
                             <SelectionCheck
-                              checked={disabled || selectedClasses.has(key)}
+                              checked={cls.alreadyCheckedIn || selectedClasses.has(key)}
                               disabled={disabled}
                               onCheckedChange={(checked) => {
                                 if (disabled) return
@@ -512,14 +512,29 @@ export default function CheckInClient() {
                                 })
                               }}
                             />
+                            {cls.product.thumbnail ? (
+                              <img src={cls.product.thumbnail} alt={cls.product.name} className="w-10 h-10 rounded object-cover shrink-0" />
+                            ) : (
+                              <div className="w-10 h-10 rounded bg-muted flex items-center justify-center shrink-0">
+                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            )}
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium">{cls.product.name}</p>
                               <p className="text-xs text-muted-foreground">
                                 {dayjs(cls.datetime).format('M/D/YYYY, h:mm A')}
                               </p>
+                              {cls.notYetAvailable && (
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Check-in available from {dayjs(cls.availableFrom).format('h:mm A')}
+                                </p>
+                              )}
                             </div>
-                            {disabled && (
+                            {cls.alreadyCheckedIn && (
                               <Badge variant="secondary">Checked In</Badge>
+                            )}
+                            {cls.notYetAvailable && (
+                              <Badge variant="outline">Upcoming</Badge>
                             )}
                           </div>
                         )

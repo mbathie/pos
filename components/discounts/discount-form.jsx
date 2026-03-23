@@ -850,6 +850,34 @@ export default function DiscountForm({
                     );
                   }}
                 />
+                <FormField control={form.control} name="requireCustomer" render={({ field }) => {
+                  const watchedValues = form.watch(['totalUsageLimit', 'perCustomerLimit', 'totalFrequencyCount']);
+                  const hasCustomerTrackingFields = watchedValues.some(v => v && v > 0);
+                  const isLocked = hasCustomerTrackingFields;
+                  const effectiveValue = isLocked ? true : field.value;
+
+                  return (
+                    <FormItem className="md:col-span-2">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <LabelWithInfo info="When enabled, this discount will only apply when a customer is identified. Automatically enabled when using usage limits or frequency restrictions.">
+                            Require Customer
+                          </LabelWithInfo>
+                          <FormDescription>
+                            Discount will only apply when a customer is selected
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={effectiveValue}
+                            onCheckedChange={isLocked ? undefined : field.onChange}
+                            disabled={isLocked}
+                          />
+                        </FormControl>
+                      </div>
+                    </FormItem>
+                  );
+                }} />
               </div>
             </CardContent>
           </Card>
@@ -876,6 +904,16 @@ export default function DiscountForm({
                   setMustTags(selectedTags);
                   form.setValue('mustProducts', Array.from(products));
                   form.setValue('mustCategories', Array.from(categories));
+
+                  // Auto-enable requireCustomer if any selected must-have product is a membership
+                  const allProducts = categoriesWithProducts.flatMap(c => c.products || []);
+                  const hasMembership = Array.from(products).some(id =>
+                    allProducts.find(p => p._id === id && p.type === 'membership')
+                  );
+                  if (hasMembership) {
+                    form.setValue('requireCustomer', true);
+                    form.setValue('autoAssign', true);
+                  }
                 }}
                 placeholder="Select required products/categories/tags"
                 excludeTypes={['divider']}
@@ -1192,36 +1230,6 @@ export default function DiscountForm({
                   )} />
                 </div>
 
-                {/* Require Customer Switch */}
-                <FormField control={form.control} name="requireCustomer" render={({ field }) => {
-                  // Check if any customer tracking fields are set
-                  const watchedValues = form.watch(['totalUsageLimit', 'perCustomerLimit', 'totalFrequencyCount']);
-                  const hasCustomerTrackingFields = watchedValues.some(v => v && v > 0);
-                  
-                  // Auto-enable and lock if customer tracking fields are used
-                  const isLocked = hasCustomerTrackingFields;
-                  const effectiveValue = isLocked ? true : field.value;
-                  
-                  return (
-                    <FormItem className="flex flex-row items-center justify-between space-x-2">
-                      <div className="space-y-0.5 flex-1">
-                        <LabelWithInfo info="When enabled, this discount will only apply when a customer is identified. Automatically enabled when using usage limits or frequency restrictions.">
-                          Require Customer
-                        </LabelWithInfo>
-                        <FormDescription>
-                          Discount will only apply when a customer is selected
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={effectiveValue}
-                          onCheckedChange={isLocked ? undefined : field.onChange}
-                          disabled={isLocked}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  );
-                }} />
               </div>
             </CardContent>
           </Card>

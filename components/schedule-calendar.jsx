@@ -226,6 +226,10 @@ export function ScheduleCalendar({ className, onEventClick, compact = false }) {
     return day.date.format('YYYY-MM-DD') === dayjs().format('YYYY-MM-DD')
   }
 
+  const isPast = (day) => {
+    return day.date.isBefore(dayjs(), 'day')
+  }
+
   return (
     <div className={cn('flex flex-col', className)}>
       {/* Calendar Header */}
@@ -368,7 +372,8 @@ export function ScheduleCalendar({ className, onEventClick, compact = false }) {
                 className={cn(
                   'p-1 border-b border-r cursor-pointer transition-colors hover:bg-muted/50 overflow-hidden',
                   !day.isCurrentMonth && 'bg-muted/20 text-muted-foreground',
-                  isToday(day) && 'bg-primary/5'
+                  isPast(day) && 'opacity-25 bg-muted/30',
+                  isToday(day) && 'bg-primary/5 !opacity-100'
                 )}
               >
                 {/* Day Number */}
