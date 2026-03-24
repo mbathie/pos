@@ -117,8 +117,8 @@ export async function POST(request) {
       updatedCart = calculateCustomDiscount(cart, customDiscountAmount);
     } else {
       // Auto-find best discount if requested and no discount specified
-      if (autoApply && !discountId && !discountCode && customer) {
-        console.log('🔍 [API] Auto-finding best discount for customer...');
+      if (autoApply && !discountId && !discountCode) {
+        console.log('🔍 [API] Auto-finding best discount...');
         const bestDiscount = await findBestAutoDiscount({
           cart,
           customer,

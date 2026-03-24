@@ -19,7 +19,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail, Plus, OctagonAlert, Check, Building2, ChevronsUpDown, User } from "lucide-react";
+import { ChevronDown, ChevronUp, Wifi, WifiOff, Loader2, Trash2, Mail, Plus, OctagonAlert, Check, Building2, ChevronsUpDown, User, ArrowLeft } from "lucide-react";
 import { toast } from 'sonner'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from "@/lib/utils";
@@ -1100,6 +1100,37 @@ export default function Page() {
     })
   }, [cart.products.length])
 
+  // Auto-assign cart customer to empty slots if only 1 slot needs a customer
+  useEffect(() => {
+    if (!cart.customer?._id) return
+
+    // Collect all empty customer slots
+    const emptySlots = []
+    cart.products.forEach((product, pIdx) => {
+      if (['class', 'course', 'membership'].includes(product.type)) {
+        product.prices?.forEach((price, priceIdx) => {
+          price.customers?.forEach((cust, slotIdx) => {
+            if (!cust?.customer?._id) {
+              emptySlots.push({ pIdx, priceIdx, slotIdx })
+            }
+          })
+        })
+      }
+    })
+
+    if (emptySlots.length === 1) {
+      // Auto-assign the cart customer to the single empty slot
+      const { pIdx, priceIdx, slotIdx } = emptySlots[0]
+      console.log('🔄 Auto-assigning cart customer to single empty slot:', cart.customer.name)
+      setCart(draft => {
+        draft.products[pIdx].prices[priceIdx].customers[slotIdx] = {
+          customer: cart.customer,
+          dependent: null
+        }
+      })
+    }
+  }, [cart.customer?._id, cart.products.length])
+
   // Handle custom discount application
   const applyCustomDiscount = async () => {
     const amount = customDiscountDollar;
@@ -1250,8 +1281,20 @@ export default function Page() {
   }
 
   return (
-    <div className="gap-4 flex flex-row -justify-start mx-4 mt-4">
+    <div className="gap-4 flex flex-col mx-4 mt-4">
+      <div>
+        <Button
+          variant="default"
+          size="sm"
+          className="cursor-pointer gap-1"
+          onClick={() => router.push('/shop')}
+        >
+          <ArrowLeft className="size-4" />
+          Back to Cart
+        </Button>
+      </div>
 
+      <div className="gap-4 flex flex-row">
       <Card className="w-full">
         <CardContent>
           <div className="flex flex-col">
@@ -1815,14 +1858,14 @@ export default function Page() {
                         return (
                           <div className="flex items-center gap-2" key={`${pIdx}-${priceIdx}-${slotIdx}`}>
                             <div className="flex-1 flex items-center gap-2">
-                              <span className="text-sm font-medium">{product.name}</span>
-                              <span className="text-sm text-muted-foreground">({price.name}{qty > 1 ? ` - Slot ${slotIdx + 1}` : ''})</span>
+                              <span className="font-medium">{product.name}</span>
+                              <span className="text-muted-foreground">({price.name}{qty > 1 ? ` - Slot ${slotIdx + 1}` : ''})</span>
                               <div className="flex-1 border-b border-dotted border-muted-foreground/30" />
                             </div>
                             <div className="flex items-center gap-2">
                               {customerData ? (
                                 <>
-                                  <span className="text-sm">{customerData.name}</span>
+                                  <span>{customerData.name}</span>
                                   <Trash2
                                     className={`size-4 ${paymentStatus === 'succeeded' || cardPaymentStatus === 'succeeded' ? 'text-muted-foreground cursor-not-allowed opacity-50' : 'cursor-pointer hover:text-destructive'}`}
                                     onClick={() => {
@@ -1845,7 +1888,7 @@ export default function Page() {
                               ) : (
                                 <Button
                                   size="sm"
-                                  variant="outline"
+                                  variant="default"
                                   onClick={() => {
                                     setSelectedSlot({ priceId: price._id, slotIdx, isMinor: false })
                                     setShowCustomerSelection(true)
@@ -1942,7 +1985,7 @@ export default function Page() {
                       </>
                     ) : (
                       <Button
-                        variant="outline"
+                        variant="default"
                         size="sm"
                         onClick={() => {
                           setSelectedSlot({ isShopCustomer: true })
@@ -2604,6 +2647,8 @@ export default function Page() {
         </TabsContent>
       </Tabs>
 
+      </div>
+
       <CustomerSelectionSheet
         open={showCustomerSelection}
         onOpenChange={setShowCustomerSelection}
@@ -2611,6 +2656,7 @@ export default function Page() {
         selectedSlot={selectedSlot}
         singleSelection={true}
         waiverRequired={hasWaiverRequiredProducts}
+        initialSearchQuery={cart.customer?.name || ''}
       />
 
       {/* Customer Selection Sheet for Group Payments */}

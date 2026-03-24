@@ -18,15 +18,27 @@ export async function GET(req) {
     const monthParam = searchParams.get('month') // Format: YYYY-MM
 
     // Parse month parameter or default to current month
+    // Extend range to cover visible overflow days in the 6-row calendar grid
     let startDate, endDate
     if (monthParam) {
       const [year, month] = monthParam.split('-').map(Number)
-      startDate = new Date(year, month - 1, 1)
-      endDate = new Date(year, month, 0, 23, 59, 59) // Last day of month
+      const firstOfMonth = new Date(year, month - 1, 1)
+      const lastOfMonth = new Date(year, month, 0)
+      // Start from the Sunday of the first week
+      startDate = new Date(firstOfMonth)
+      startDate.setDate(startDate.getDate() - firstOfMonth.getDay())
+      // End on the Saturday of the last week (6 rows × 7 days = 42 cells)
+      endDate = new Date(startDate)
+      endDate.setDate(endDate.getDate() + 41)
+      endDate.setHours(23, 59, 59)
     } else {
       const now = new Date()
-      startDate = new Date(now.getFullYear(), now.getMonth(), 1)
-      endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59)
+      const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      startDate = new Date(firstOfMonth)
+      startDate.setDate(startDate.getDate() - firstOfMonth.getDay())
+      endDate = new Date(startDate)
+      endDate.setDate(endDate.getDate() + 41)
+      endDate.setHours(23, 59, 59)
     }
 
     // Fetch all schedules for the org

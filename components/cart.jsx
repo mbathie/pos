@@ -1,7 +1,9 @@
 'use client'
 import Link from 'next/link';
 import { useGlobals } from '@/lib/globals'
-import { Trash2, Info, Save, Clock, Pencil, User, UserPlus, Check } from 'lucide-react'
+import { Trash2, Info, Save, Clock, Pencil, User, UserPlus, Check, Plus, Tag } from 'lucide-react'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
+import CustomerSelectionSheet from '@/app/(app)/shop/customerSelectionSheet'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
@@ -45,12 +47,85 @@ export default function Cart({ asSheet = false, onClose, onEditGroup, onEditProd
     resetCart,
     saveCart,
     switchCart,
-    deleteCart
+    deleteCart,
+    setCart,
+    setAppliedAdjustments,
+    clearAppliedAdjustments
   } = useGlobals()
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false)
   const [selectedCourse, setSelectedCourse] = useState(null)
   const [originalTransaction, setOriginalTransaction] = useState(null)
   const [mounted, setMounted] = useState(false)
+  const [customerSheetOpen, setCustomerSheetOpen] = useState(false)
+
+  // Handle customer selection in cart - apply auto-discounts
+  const handleCartCustomerSelect = async (selected) => {
+    const customer = selected?.customer
+    if (!customer) return
+
+    setCart(draft => {
+      draft.customer = customer
+    })
+
+    // Auto-apply adjustments with the new customer
+    try {
+      const response = await fetch('/api/adjustments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cart: { ...cart, customer },
+          customer,
+          autoApply: true
+        })
+      })
+
+      if (response.ok) {
+        const updatedCart = await response.json()
+        setAppliedAdjustments(updatedCart.adjustments)
+        setCart(draft => {
+          draft.adjustments = updatedCart.adjustments
+          draft.subtotal = updatedCart.subtotal
+          draft.tax = updatedCart.tax
+          draft.total = updatedCart.total
+        })
+        if (updatedCart.adjustments?.discounts?.items?.length > 0) {
+          const d = updatedCart.adjustments.discounts.items[0]
+          toast.success(`Discount applied: ${d.name} (-$${d.amount?.toFixed(2)})`)
+        }
+      }
+    } catch (error) {
+      console.error('Error applying adjustments:', error)
+    }
+  }
+
+  const handleRemoveCartCustomer = async () => {
+    setCart(draft => {
+      draft.customer = null
+      draft.adjustments = null
+    })
+    clearAppliedAdjustments()
+
+    // Re-apply surcharges without customer
+    try {
+      const response = await fetch('/api/adjustments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cart: { ...cart, customer: null, adjustments: null } })
+      })
+      if (response.ok) {
+        const updatedCart = await response.json()
+        setCart(draft => {
+          draft.adjustments = updatedCart.adjustments
+          draft.subtotal = updatedCart.subtotal
+          draft.tax = updatedCart.tax
+          draft.total = updatedCart.total
+        })
+      }
+    } catch (error) {
+      console.error('Error re-applying adjustments:', error)
+    }
+  }
+
   const [saveCartDialogOpen, setSaveCartDialogOpen] = useState(false)
   const [saveCartSearchQuery, setSaveCartSearchQuery] = useState('')
   const [saveCartCustomers, setSaveCartCustomers] = useState([])
@@ -134,8 +209,56 @@ export default function Cart({ asSheet = false, onClose, onEditGroup, onEditProd
   // Get current cart
   const cart = getCurrentCart()
 
+  // Helper to find discount applied to a specific product
+  const getProductDiscount = (productId) => {
+    const discountItems = cart.adjustments?.discounts?.items || []
+    for (const d of discountItems) {
+      const affected = d.affectedProducts?.find(ap =>
+        ap.productId?.toString() === productId?.toString()
+      )
+      if (affected) return { name: d.name, amount: affected.amount, value: d.value, type: d.type }
+    }
+    return null
+  }
+
   // Show visual indicator for stale carts
   const isStale = cart.stale
+
+  // Auto-apply adjustments when cart products change
+  useEffect(() => {
+    if (!mounted || !cart.products?.length) return
+
+    const applyCartAdjustments = async () => {
+      try {
+        const response = await fetch('/api/adjustments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            cart,
+            customer: cart.customer || null,
+            autoApply: true
+          })
+        })
+        if (response.ok) {
+          const updatedCart = await response.json()
+          setAppliedAdjustments(updatedCart.adjustments)
+          setCart(draft => {
+            draft.adjustments = updatedCart.adjustments
+            draft.subtotal = updatedCart.subtotal
+            draft.tax = updatedCart.tax
+            draft.total = updatedCart.total
+          })
+        }
+      } catch (error) {
+        console.error('Error auto-applying adjustments:', error)
+      }
+    }
+
+    const timer = setTimeout(applyCartAdjustments, 500)
+    return () => clearTimeout(timer)
+    // Use product IDs as dependency to avoid re-running on total changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, cart.products?.map(p => p._id).join(','), cart.customer?._id])
 
   // Check if we're editing a transaction
   const isEditingTransaction = !!cart.editingTransactionId
@@ -415,9 +538,41 @@ export default function Cart({ asSheet = false, onClose, onEditGroup, onEditProd
                   >
                     <Trash2 className='size-3.5'/>
                   </div>
+                  {getProductDiscount(p._id) && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className='cursor-pointer p-1 -m-1'>
+                            <Tag className='size-3.5 text-primary'/>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className='font-medium'>{getProductDiscount(p._id).name}</p>
+                          <p className='text-xs text-muted-foreground'>
+                            {getProductDiscount(p._id).type === 'percent'
+                              ? `${getProductDiscount(p._id).value}% discount`
+                              : `$${getProductDiscount(p._id).value} discount`}
+                          </p>
+                          <p className='text-xs'>Saving: -${getProductDiscount(p._id).amount.toFixed(2)}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
                 </div>
                 <div className='flex-1' />
-                {p.amount?.subtotal != null && <div>${p.amount.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>}
+                {p.amount?.subtotal != null && (() => {
+                  const discount = getProductDiscount(p._id)
+                  if (discount) {
+                    const discounted = (p.amount.subtotal - discount.amount).toFixed(2)
+                    return (
+                      <div className='flex items-center gap-2'>
+                        <span className='line-through text-muted-foreground'>${p.amount.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span>${discounted}</span>
+                      </div>
+                    )
+                  }
+                  return <div>${p.amount.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                })()}
               </div>
               {p.item?.mods && p.item.mods.length > 0 && (
                 <div className='text-xs ml-1 text-muted-foreground'>
@@ -696,6 +851,14 @@ export default function Cart({ asSheet = false, onClose, onEditGroup, onEditProd
         {/* Only show totals and payment when cart has products */}
         {cart.products.length > 0 && (
           <>
+            {(() => {
+              const discountTotal = cart.adjustments?.discounts?.total || 0
+              const surchargeTotal = cart.adjustments?.surcharges?.total || 0
+              const adjSubtotal = +(cart.subtotal - discountTotal + surchargeTotal).toFixed(2)
+              const taxRate = cart.subtotal > 0 ? cart.tax / cart.subtotal : 0
+              const adjTax = +(adjSubtotal * taxRate).toFixed(2)
+              const adjTotal = +(adjSubtotal + adjTax).toFixed(2)
+              return (
             <div className='flex flex-col text-sm'>
               <div className='flex'>
                 <div className=''>Subtotal</div>
@@ -703,7 +866,7 @@ export default function Cart({ asSheet = false, onClose, onEditGroup, onEditProd
                   {isEditingTransaction ? (
                     differentialSubtotal.toLocaleString('en-US', { style: 'currency', currency: 'USD', signDisplay: 'always' })
                   ) : (
-                    `$${cart.subtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    `$${adjSubtotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                   )}
                 </div>
               </div>
@@ -713,21 +876,56 @@ export default function Cart({ asSheet = false, onClose, onEditGroup, onEditProd
                   {isEditingTransaction ? (
                     differentialTax.toLocaleString('en-US', { style: 'currency', currency: 'USD', signDisplay: 'always' })
                   ) : (
-                    `$${cart.tax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    `$${adjTax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                   )}
                 </div>
               </div>
+              {!isEditingTransaction && cart.adjustments?.surcharges?.items?.map((s, i) => (
+                <div key={i} className='flex text-muted-foreground'>
+                  <div>{s.name}</div>
+                  <div className='ml-auto'>+${s.amount?.toFixed(2)}</div>
+                </div>
+              ))}
               <div className='flex font-semibold'>
                 <div className='uppercase'>Total</div>
                 <div className='ml-auto'>
                   {isEditingTransaction ? (
                     differentialTotal.toLocaleString('en-US', { style: 'currency', currency: 'USD', signDisplay: 'always' })
                   ) : (
-                    `$${cart.total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    `$${adjTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
                   )}
                 </div>
               </div>
             </div>
+              )
+            })()}
+
+            {/* Customer Selection */}
+            {!isEditingTransaction && (
+              <div className='flex items-center gap-2 mt-2 mb-1'>
+                {cart.customer ? (
+                  <div className='flex items-center gap-2 flex-1 text-sm'>
+                    <User className='size-4 text-muted-foreground' />
+                    <span className='font-medium truncate'>{cart.customer.name}</span>
+                    <Trash2
+                      className='size-4 cursor-pointer hover:text-destructive ml-auto shrink-0'
+                      onClick={handleRemoveCartCustomer}
+                    />
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full cursor-pointer"
+                    onClick={() => setCustomerSheetOpen(true)}
+                    disabled={!cart.products.length}
+                  >
+                    <Plus className="size-3" />
+                    Customer
+                  </Button>
+                )}
+              </div>
+            )}
 
             <div className='flex flex-col gap-2 mt-2'>
               {/* Payment Button or Update Invoice Button */}
@@ -1026,6 +1224,19 @@ export default function Cart({ asSheet = false, onClose, onEditGroup, onEditProd
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Customer Selection Sheet for Cart */}
+      <CustomerSelectionSheet
+        open={customerSheetOpen}
+        onOpenChange={setCustomerSheetOpen}
+        onConfirm={(selected) => {
+          handleCartCustomerSelect(selected)
+          setCustomerSheetOpen(false)
+        }}
+        selectedSlot={{ isShopCustomer: true }}
+        singleSelection={true}
+        waiverRequired={cart.products?.some(p => p.waiverRequired)}
+      />
 
     </div>
 

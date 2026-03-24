@@ -12,13 +12,14 @@ import { cn } from "@/lib/utils"
 import dayjs from 'dayjs'
 import { Input } from "@/components/ui/input"
 
-export default function CustomerSelectionSheet({ 
-  open, 
-  onOpenChange, 
+export default function CustomerSelectionSheet({
+  open,
+  onOpenChange,
   onConfirm,
   selectedSlot,
   singleSelection = true,
-  waiverRequired = false
+  waiverRequired = false,
+  initialSearchQuery = ''
 }) {
   const [searchQuery, setSearchQuery] = useState('')
   const [customers, setCustomers] = useState([])
@@ -27,26 +28,32 @@ export default function CustomerSelectionSheet({
   const [selectedDependent, setSelectedDependent] = useState(null)
   const [selectedMinors, setSelectedMinors] = useState([]) // [{ customer, dependent }]
   const [showNewCustomer, setShowNewCustomer] = useState(false)
-  const [showSearch, setShowSearch] = useState(false)
+  const [showSearch, setShowSearch] = useState(true)
   const [newCustomer, setNewCustomer] = useState({ name: '', email: '', phone: '' })
   const [creatingCustomer, setCreatingCustomer] = useState(false)
 
   // Get slot type (minor or adult)
   const isMinorSlot = selectedSlot?.isMinor || false
 
-  // Reset state when sheet closes
+  // Reset state when sheet opens/closes
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      // Pre-fill search if initialSearchQuery provided
+      if (initialSearchQuery) {
+        setSearchQuery(initialSearchQuery)
+        setShowSearch(true)
+      }
+    } else {
       setSearchQuery('')
       setCustomers([])
       setSelectedCustomer(null)
       setSelectedDependent(null)
       setSelectedMinors([])
       setShowNewCustomer(false)
-      setShowSearch(false)
+      setShowSearch(true)
       setNewCustomer({ name: '', email: '', phone: '' })
     }
-  }, [open])
+  }, [open, initialSearchQuery])
 
   // Fetch customers when search changes
   useEffect(() => {
@@ -253,10 +260,11 @@ export default function CustomerSelectionSheet({
                         return (
                           <div key={customer._id} className="px-3 py-2 border-b">
                             {/* Parent row with checkbox */}
-                            <div className="flex items-center justify-between">
+                            <div className={cn("flex items-center justify-between", waiverRequired && !customer.waiver?.signed && "opacity-50")}>
                               <div className="flex items-center gap-2">
                                 <Checkbox
                                   checked={parentChecked}
+                                  disabled={waiverRequired && !customer.waiver?.signed}
                                   onCheckedChange={(checked) => {
                                     if (checked) setSelectedCustomer(customer)
                                     else {
@@ -268,6 +276,9 @@ export default function CustomerSelectionSheet({
                                 <div className="flex flex-col">
                                   <span className="font-medium">{customer.name}</span>
                                   <span className="text-xs text-muted-foreground">{customer.email}</span>
+                                  {waiverRequired && !customer.waiver?.signed && (
+                                    <span className="text-xs text-destructive">Waiver not signed</span>
+                                  )}
                                 </div>
                               </div>
                               {customer.waiver?.signed && (
@@ -313,13 +324,16 @@ export default function CustomerSelectionSheet({
                       }
 
                       // Adult slot search item (unchanged)
+                      const needsWaiver = waiverRequired && !customer.waiver?.signed
                       return (
                         <CommandItem
                           key={customer._id}
                           // Include multiple searchable tokens so the Command
                           // component matches by name, email, phone, or ID.
                           value={`${customer.name} ${customer.email ?? ''} ${customer.phone ?? ''} ${customer.memberId ?? ''}`}
-                          onSelect={() => handleSelectCustomer(customer)}
+                          onSelect={() => !needsWaiver && handleSelectCustomer(customer)}
+                          disabled={needsWaiver}
+                          className={needsWaiver ? 'opacity-50' : ''}
                         >
                           <div className="flex flex-col">
                             <div className="flex items-center gap-2">
@@ -331,6 +345,9 @@ export default function CustomerSelectionSheet({
                             <span className="text-sm text-muted-foreground">
                               {customer.email} • {customer.memberId ? `#${customer.memberId}` : 'No ID'}
                             </span>
+                            {needsWaiver && (
+                              <Badge variant="destructive" className="text-xs">Waiver not signed</Badge>
+                            )}
                           </div>
                         </CommandItem>
                       )
