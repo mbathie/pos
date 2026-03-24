@@ -137,25 +137,26 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
         setSelectedDate(date);
       }
 
-      // Restore open schedule state (customTime, customDuration, priceQuantities)
+      // Restore priceQuantities from product.prices qty values
+      if (product.prices) {
+        const quantities = {};
+        product.prices.forEach((price, idx) => {
+          if (price.qty > 0) {
+            quantities[idx] = price.qty;
+          }
+        });
+        if (Object.keys(quantities).length > 0) {
+          setPriceQuantities(quantities);
+        }
+      }
+
+      // Restore open schedule state (customTime, customDuration)
       if (product.openSchedule) {
         if (product.selectedTimes[0]?.time) {
           setCustomTime(product.selectedTimes[0].time);
         }
         if (product.selectedTimes[0]?.duration) {
           setCustomDuration(product.selectedTimes[0].duration);
-        }
-        // Restore priceQuantities from product.prices qty values
-        if (product.prices) {
-          const quantities = {};
-          product.prices.forEach((price, idx) => {
-            if (price.qty > 0) {
-              quantities[idx] = price.qty;
-            }
-          });
-          if (Object.keys(quantities).length > 0) {
-            setPriceQuantities(quantities);
-          }
         }
       }
     }
@@ -692,8 +693,8 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                       ...price,
                       qty: quantities[idx] || 0
                     })),
-                    selectedTimes: selectedTimes.map(({ datetime, time, label, available, conflict, conflictReason }) => ({
-                      datetime, time, label, available, conflict, conflictReason
+                    selectedTimes: selectedTimes.map(({ datetime, time, label, available, conflict, conflictReason, quantities }) => ({
+                      datetime, time, label, available, conflict, conflictReason, quantities
                     }))
                   };
 
@@ -779,8 +780,8 @@ export default function ProductDetail({ product, setProduct, setOpen, open, onAd
                       ...price,
                       qty: quantities[idx] || 0
                     })),
-                    selectedTimes: selectedTimes.map(({ datetime, time, label, available, conflict, conflictReason }) => ({
-                      datetime, time, label, available, conflict, conflictReason
+                    selectedTimes: selectedTimes.map(({ datetime, time, label, available, conflict, conflictReason, quantities }) => ({
+                      datetime, time, label, available, conflict, conflictReason, quantities
                     }))
                   };
 
